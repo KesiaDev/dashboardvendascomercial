@@ -154,7 +154,47 @@ function Dashboard() {
               ))}
             </SelectContent>
           </Select>
-          <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn("justify-start text-left font-normal gap-2", !dateRange?.from && "text-muted-foreground")}
+              >
+                <CalendarIcon className="h-4 w-4" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {formatDate(dateRange.from, "dd/MM/yy", { locale: ptBR })} – {formatDate(dateRange.to, "dd/MM/yy", { locale: ptBR })}
+                    </>
+                  ) : (
+                    formatDate(dateRange.from, "dd/MM/yy", { locale: ptBR })
+                  )
+                ) : (
+                  <span>Selecionar datas</span>
+                )}
+                {dateRange?.from && (
+                  <X
+                    className="h-3.5 w-3.5 ml-1 opacity-60 hover:opacity-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDateRange(undefined);
+                    }}
+                  />
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+                locale={ptBR}
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+          <Tabs value={dateRange?.from ? "" : period} onValueChange={(v) => { setPeriod(v as Period); setDateRange(undefined); }}>
             <TabsList>
               <TabsTrigger value="week">Semana</TabsTrigger>
               <TabsTrigger value="month">Mês</TabsTrigger>
