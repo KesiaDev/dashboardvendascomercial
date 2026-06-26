@@ -9,8 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format as formatDate } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
-import { CalendarDays, TrendingUp, TrendingDown, AlertTriangle, CircleDollarSign } from "lucide-react";
+import { CalendarDays, TrendingUp, TrendingDown, AlertTriangle, CircleDollarSign, CalendarIcon, X } from "lucide-react";
 
 export const Route = createFileRoute("/_app/")({
   component: Dashboard,
@@ -66,6 +73,7 @@ async function fetchSales(): Promise<Sale[]> {
 function Dashboard() {
   const [period, setPeriod] = useState<Period>("week");
   const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const { format: money, currency, convert } = useCurrency();
 
   const { data: sales = [], isLoading } = useQuery({
@@ -74,14 +82,18 @@ function Dashboard() {
   });
 
   const filtered = useMemo(() => {
-    const start = periodStart(period);
+    const usingRange = !!(dateRange?.from);
+    const start = usingRange ? dateRange!.from! : periodStart(period);
+    const end = usingRange && dateRange?.to ? new Date(dateRange.to.getTime() + 24 * 60 * 60 * 1000 - 1) : null;
     return sales.filter((s) => {
-      if (!s.data_venda) return period === "all";
-      if (start && new Date(s.data_venda) < start) return false;
+      if (!s.data_venda) return !usingRange && period === "all";
+      const d = new Date(s.data_venda);
+      if (start && d < start) return false;
+      if (end && d > end) return false;
       if (groupFilter !== "all" && s.produto_grupo !== groupFilter) return false;
       return true;
     });
-  }, [sales, period, groupFilter]);
+  }, [sales, period, groupFilter, dateRange]);
 
   const totals = useMemo(() => computeTotals(filtered), [filtered]);
 
