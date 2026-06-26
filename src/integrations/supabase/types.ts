@@ -98,6 +98,89 @@ export type Database = {
         }
         Relationships: []
       }
+      clint_lost_statuses: {
+        Row: {
+          id: string
+          label: string | null
+          occurrences: number
+          origin_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          label?: string | null
+          occurrences?: number
+          origin_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          label?: string | null
+          occurrences?: number
+          origin_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      clint_origin_stages: {
+        Row: {
+          id: string
+          label: string
+          origin_id: string
+          stage_order: number
+          synced_at: string
+          type: string
+        }
+        Insert: {
+          id: string
+          label: string
+          origin_id: string
+          stage_order: number
+          synced_at?: string
+          type: string
+        }
+        Update: {
+          id?: string
+          label?: string
+          origin_id?: string
+          stage_order?: number
+          synced_at?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clint_origin_stages_origin_id_fkey"
+            columns: ["origin_id"]
+            isOneToOne: false
+            referencedRelation: "clint_origins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clint_origins: {
+        Row: {
+          archived: boolean
+          group_name: string | null
+          id: string
+          name: string
+          synced_at: string
+        }
+        Insert: {
+          archived?: boolean
+          group_name?: string | null
+          id: string
+          name: string
+          synced_at?: string
+        }
+        Update: {
+          archived?: boolean
+          group_name?: string | null
+          id?: string
+          name?: string
+          synced_at?: string
+        }
+        Relationships: []
+      }
       clint_sync_log: {
         Row: {
           error: string | null
