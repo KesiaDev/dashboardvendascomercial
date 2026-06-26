@@ -41,13 +41,22 @@ type Period = "week" | "month" | "quarter" | "semester" | "year" | "all";
 function periodStart(p: Period): Date | null {
   const now = new Date();
   if (p === "all") return null;
-  const d = new Date(now);
-  if (p === "week") d.setDate(now.getDate() - 7);
-  else if (p === "month") d.setMonth(now.getMonth() - 1);
-  else if (p === "quarter") d.setMonth(now.getMonth() - 3);
-  else if (p === "semester") d.setMonth(now.getMonth() - 6);
-  else d.setFullYear(now.getFullYear() - 1);
-  return d;
+  if (p === "week") {
+    const d = new Date(now);
+    d.setDate(now.getDate() - 7);
+    return d;
+  }
+  if (p === "month") return new Date(now.getFullYear(), now.getMonth(), 1);
+  if (p === "quarter") {
+    const qStartMonth = Math.floor(now.getMonth() / 3) * 3;
+    return new Date(now.getFullYear(), qStartMonth, 1);
+  }
+  if (p === "semester") {
+    const sStartMonth = now.getMonth() < 6 ? 0 : 6;
+    return new Date(now.getFullYear(), sStartMonth, 1);
+  }
+  // year
+  return new Date(now.getFullYear(), 0, 1);
 }
 
 async function fetchSales(): Promise<Sale[]> {
