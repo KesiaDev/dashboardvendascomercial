@@ -1,6 +1,7 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
 import { BarChart3, Upload } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -27,6 +28,7 @@ function AppLayout() {
             </nav>
             <div className="mx-2 h-6 w-px bg-border" />
             <CurrencyToggle />
+            <ThemeToggle />
           </div>
         </div>
       </header>
