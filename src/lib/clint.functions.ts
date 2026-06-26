@@ -98,7 +98,7 @@ export const syncClintDeals = createServerFn({ method: "POST" })
           stage: d.stage ?? null,
           stage_id: d.stage_id ?? null,
           status: d.status,
-          value: d.value ?? null,
+          value: parseClintNumber(d.value),
           currency: d.currency ?? null,
           created_at: d.created_at ?? null,
           won_at: d.won_at ?? null,
