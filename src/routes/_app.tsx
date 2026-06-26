@@ -1,5 +1,5 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
-import { BarChart3, Upload } from "lucide-react";
+import { BarChart3, Upload, Users } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import logoIcon from "@/assets/logo-icon.png";
