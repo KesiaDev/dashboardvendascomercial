@@ -14,7 +14,126 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      sales: {
+        Row: {
+          cidade: string | null
+          cupom: string | null
+          data_confirmacao: string | null
+          data_venda: string | null
+          email_cliente: string | null
+          estado: string | null
+          faturamento_liquido_brl: number | null
+          id: string
+          imported_at: string
+          meio_pagamento: string | null
+          moeda_original: string | null
+          moeda_recebimento: string | null
+          nome_cliente: string | null
+          numero_parcela: number | null
+          origem_checkout: string | null
+          pais: string | null
+          preco_oferta: number | null
+          preco_total: number | null
+          produto_grupo: string
+          produto_original: string
+          raw: Json | null
+          status: string
+          tem_coproducao: string | null
+          transacao: string
+          updated_at: string
+          valor_recebido_convertido: number | null
+        }
+        Insert: {
+          cidade?: string | null
+          cupom?: string | null
+          data_confirmacao?: string | null
+          data_venda?: string | null
+          email_cliente?: string | null
+          estado?: string | null
+          faturamento_liquido_brl?: number | null
+          id?: string
+          imported_at?: string
+          meio_pagamento?: string | null
+          moeda_original?: string | null
+          moeda_recebimento?: string | null
+          nome_cliente?: string | null
+          numero_parcela?: number | null
+          origem_checkout?: string | null
+          pais?: string | null
+          preco_oferta?: number | null
+          preco_total?: number | null
+          produto_grupo: string
+          produto_original: string
+          raw?: Json | null
+          status: string
+          tem_coproducao?: string | null
+          transacao: string
+          updated_at?: string
+          valor_recebido_convertido?: number | null
+        }
+        Update: {
+          cidade?: string | null
+          cupom?: string | null
+          data_confirmacao?: string | null
+          data_venda?: string | null
+          email_cliente?: string | null
+          estado?: string | null
+          faturamento_liquido_brl?: number | null
+          id?: string
+          imported_at?: string
+          meio_pagamento?: string | null
+          moeda_original?: string | null
+          moeda_recebimento?: string | null
+          nome_cliente?: string | null
+          numero_parcela?: number | null
+          origem_checkout?: string | null
+          pais?: string | null
+          preco_oferta?: number | null
+          preco_total?: number | null
+          produto_grupo?: string
+          produto_original?: string
+          raw?: Json | null
+          status?: string
+          tem_coproducao?: string | null
+          transacao?: string
+          updated_at?: string
+          valor_recebido_convertido?: number | null
+        }
+        Relationships: []
+      }
+      weekly_imports: {
+        Row: {
+          created_at: string
+          filename: string | null
+          id: string
+          new_rows: number
+          period_end: string | null
+          period_start: string | null
+          total_rows: number
+          updated_rows: number
+        }
+        Insert: {
+          created_at?: string
+          filename?: string | null
+          id?: string
+          new_rows?: number
+          period_end?: string | null
+          period_start?: string | null
+          total_rows?: number
+          updated_rows?: number
+        }
+        Update: {
+          created_at?: string
+          filename?: string | null
+          id?: string
+          new_rows?: number
+          period_end?: string | null
+          period_start?: string | null
+          total_rows?: number
+          updated_rows?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
