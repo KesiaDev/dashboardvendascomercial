@@ -6,7 +6,6 @@ function parseClintNumber(v: unknown): number | null {
   if (v === null || v === undefined || v === "") return null;
   if (typeof v === "number") return Number.isFinite(v) ? v : null;
   const s = String(v).trim().replace(/\s/g, "");
-  // Handle "1.234,56" or "149,00" or "149.00"
   const normalized = s.includes(",") ? s.replace(/\./g, "").replace(",", ".") : s;
   const n = Number(normalized);
   return Number.isFinite(n) ? n : null;
@@ -51,6 +50,60 @@ export const syncClintUsers = createServerFn({ method: "POST" }).handler(async (
   return { count: rows.length };
 });
 
+/**
+ * Sincroniza os funis (origins) da Clint e suas etapas (stages).
+ * Necessário para reconstruir o gráfico de funil e o filtro por origem.
+ */
+export const syncClintOrigins = createServerFn({ method: "POST" }).handler(async () => {
+  const token = process.env.CLINT_API_TOKEN;
+  if (!token) throw new Error("CLINT_API_TOKEN not configured");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  let page = 1;
+  const origins: any[] = [];
+  while (true) {
+    const data = await clintFetch(`/v1/origins?limit=100&page=${page}`, token);
+    origins.push(...(data.data ?? []));
+    if (!data.hasNext) break;
+    page += 1;
+    if (page > 20) break;
+  }
+
+  const originRows = origins.map((o: any) => ({
+    id: o.id,
+    name: o.name,
+    group_name: o.group?.name?.trim() ?? null,
+    archived: !!o.archived_at,
+    synced_at: new Date().toISOString(),
+  }));
+
+  const stageRows = origins.flatMap((o: any) =>
+    (o.stages ?? []).map((s: any) => ({
+      id: s.id,
+      origin_id: o.id,
+      label: s.label,
+      stage_order: s.order,
+      type: s.type,
+      synced_at: new Date().toISOString(),
+    })),
+  );
+
+  if (originRows.length) {
+    const { error } = await supabaseAdmin
+      .from("clint_origins")
+      .upsert(originRows, { onConflict: "id" });
+    if (error) throw error;
+  }
+  if (stageRows.length) {
+    const { error } = await supabaseAdmin
+      .from("clint_origin_stages")
+      .upsert(stageRows, { onConflict: "id" });
+    if (error) throw error;
+  }
+
+  return { origins: originRows.length, stages: stageRows.length };
+});
+
 export const syncClintDeals = createServerFn({ method: "POST" })
   .inputValidator((d: { sinceDays?: number; full?: boolean }) => d ?? {})
   .handler(async ({ data }) => {
@@ -71,18 +124,13 @@ export const syncClintDeals = createServerFn({ method: "POST" })
     if (logErr) throw logErr;
     const logId = logRow!.id;
 
-    // Reference data for enrichment
-    const [lostStatuses, origins] = await Promise.all([
-      clintFetch(`/v1/lost-status?limit=200`, token),
-      clintFetch(`/v1/origins?limit=200`, token),
-    ]);
-    const lostMap = new Map<string, string>(
-      (lostStatuses.data ?? []).map((g: any) => [g.id, g.name]),
-    );
+    // Origin names (no /v1/lost-status endpoint exists in Clint API)
+    const originsResp = await clintFetch(`/v1/origins?limit=200`, token);
     const originMap = new Map<string, string>(
-      (origins.data ?? []).map((g: any) => [g.id, g.name]),
+      (originsResp.data ?? []).map((g: any) => [g.id, g.name]),
     );
 
+    const lostIds = new Set<string>();
     let page = 1;
     let total = 0;
     try {
@@ -93,33 +141,35 @@ export const syncClintDeals = createServerFn({ method: "POST" })
         const items: any[] = resp.data ?? [];
         if (items.length === 0) break;
 
-        const rows = items.map((d: any) => ({
-          id: d.id,
-          user_id: d.user?.id ?? null,
-          user_email: d.user?.email ?? null,
-          user_name: d.user?.full_name?.trim() ?? null,
-          contact_id: d.contact?.id ?? null,
-          contact_name: d.contact?.name ?? null,
-          contact_email: d.contact?.email ?? null,
-          contact_phone: d.contact?.phone ?? null,
-          contact_ddi: d.contact?.ddi ?? null,
-          origin_id: d.origin_id ?? null,
-          origin_name: d.origin_id ? originMap.get(d.origin_id) ?? null : null,
-          stage: d.stage ?? null,
-          stage_id: d.stage_id ?? null,
-          status: d.status,
-          value: parseClintNumber(d.value),
-          currency: d.currency ?? null,
-          created_at: d.created_at ?? null,
-          won_at: d.won_at ?? null,
-          lost_at: d.lost_at ?? null,
-          lost_status_id: d.lost_status_id ?? null,
-          lost_status_name: d.lost_status_id ? lostMap.get(d.lost_status_id) ?? null : null,
-          updated_at: d.updated_at ?? null,
-          updated_stage_at: d.updated_stage_at ?? null,
-          raw: d,
-          synced_at: new Date().toISOString(),
-        }));
+        const rows = items.map((d: any) => {
+          if (d.lost_status_id) lostIds.add(d.lost_status_id);
+          return {
+            id: d.id,
+            user_id: d.user?.id ?? null,
+            user_email: d.user?.email ?? null,
+            user_name: d.user?.full_name?.trim() ?? null,
+            contact_id: d.contact?.id ?? null,
+            contact_name: d.contact?.name ?? null,
+            contact_email: d.contact?.email ?? null,
+            contact_phone: d.contact?.phone ?? null,
+            contact_ddi: d.contact?.ddi ?? null,
+            origin_id: d.origin_id ?? null,
+            origin_name: d.origin_id ? (originMap.get(d.origin_id) ?? null) : null,
+            stage: d.stage ?? null,
+            stage_id: d.stage_id ?? null,
+            status: d.status,
+            value: parseClintNumber(d.value),
+            currency: d.currency ?? null,
+            created_at: d.created_at ?? null,
+            won_at: d.won_at ?? null,
+            lost_at: d.lost_at ?? null,
+            lost_status_id: d.lost_status_id ?? null,
+            updated_at: d.updated_at ?? null,
+            updated_stage_at: d.updated_stage_at ?? null,
+            raw: d,
+            synced_at: new Date().toISOString(),
+          };
+        });
 
         const { error } = await supabaseAdmin
           .from("clint_deals")
@@ -129,7 +179,16 @@ export const syncClintDeals = createServerFn({ method: "POST" })
 
         if (!resp.hasNext) break;
         page += 1;
-        if (total >= 50_000) break; // safety cap per run
+        if (total >= 50_000) break;
+      }
+
+      // Register newly seen lost_status_ids (preserve user-set labels via ignoreDuplicates)
+      if (lostIds.size) {
+        const rows = Array.from(lostIds).map((id) => ({ id, label: null }));
+        const { error } = await supabaseAdmin
+          .from("clint_lost_statuses")
+          .upsert(rows, { onConflict: "id", ignoreDuplicates: true });
+        if (error) throw error;
       }
 
       await supabaseAdmin
@@ -155,3 +214,49 @@ export const syncClintDeals = createServerFn({ method: "POST" })
       throw e;
     }
   });
+
+/** Permite o usuário renomear um motivo de perda (lost_status_id) com label amigável. */
+export const setLostStatusLabel = createServerFn({ method: "POST" })
+  .inputValidator((d: { id: string; label: string | null }) => d)
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("clint_lost_statuses")
+      .upsert(
+        { id: data.id, label: data.label, updated_at: new Date().toISOString() },
+        { onConflict: "id" },
+      );
+    if (error) throw error;
+    return { ok: true };
+  });
+
+/**
+ * Backfill: gera linhas em clint_lost_statuses para todos os lost_status_id já existentes
+ * em clint_deals (útil pra quem já tem dados sincronizados antes desta versão).
+ */
+export const backfillLostStatuses = createServerFn({ method: "POST" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const ids = new Set<string>();
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await supabaseAdmin
+      .from("clint_deals")
+      .select("lost_status_id")
+      .not("lost_status_id", "is", null)
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    for (const r of data) if (r.lost_status_id) ids.add(r.lost_status_id);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  if (ids.size) {
+    const rows = Array.from(ids).map((id) => ({ id, label: null }));
+    const { error } = await supabaseAdmin
+      .from("clint_lost_statuses")
+      .upsert(rows, { onConflict: "id", ignoreDuplicates: true });
+    if (error) throw error;
+  }
+  return { count: ids.size };
+});

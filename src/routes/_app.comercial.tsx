@@ -1,9 +1,15 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { syncClintUsers, syncClintDeals } from "@/lib/clint.functions";
+import {
+  syncClintUsers,
+  syncClintDeals,
+  syncClintOrigins,
+  setLostStatusLabel,
+  backfillLostStatuses,
+} from "@/lib/clint.functions";
 import { useCurrency } from "@/lib/currency-context";
 import { formatInt, formatPct } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +18,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { format as formatDate, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -25,6 +41,8 @@ import {
   Tooltip,
   CartesianGrid,
   Cell,
+  PieChart,
+  Pie,
 } from "recharts";
 import {
   RefreshCw,
@@ -35,6 +53,9 @@ import {
   TrendingUp,
   CircleDollarSign,
   Target,
+  Filter,
+  Pencil,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -53,21 +74,28 @@ type Deal = {
   created_at: string | null;
   won_at: string | null;
   lost_at: string | null;
-  lost_status_name: string | null;
+  lost_status_id: string | null;
   stage: string | null;
+  stage_id: string | null;
+  origin_id: string | null;
   origin_name: string | null;
 };
+
+type Origin = { id: string; name: string; group_name: string | null; archived: boolean };
+type Stage = { id: string; origin_id: string; label: string; stage_order: number; type: string };
+type LostStatus = { id: string; label: string | null };
 
 type Period = "week" | "month" | "quarter" | "semester" | "year" | "all";
 
 function periodStart(p: Period): Date | null {
   if (p === "all") return null;
-  const d = new Date();
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if (p === "week") d.setDate(d.getDate() - 7);
-  else if (p === "month") d.setMonth(d.getMonth() - 1);
-  else if (p === "quarter") d.setMonth(d.getMonth() - 3);
-  else if (p === "semester") d.setMonth(d.getMonth() - 6);
-  else if (p === "year") d.setFullYear(d.getFullYear() - 1);
+  else if (p === "month") return new Date(now.getFullYear(), now.getMonth(), 1);
+  else if (p === "quarter") return new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+  else if (p === "semester") return new Date(now.getFullYear(), now.getMonth() < 6 ? 0 : 6, 1);
+  else if (p === "year") return new Date(now.getFullYear(), 0, 1);
   return d;
 }
 
@@ -79,7 +107,7 @@ async function fetchDeals(): Promise<Deal[]> {
     const { data, error } = await supabase
       .from("clint_deals")
       .select(
-        "id,user_id,user_name,user_email,status,value,currency,created_at,won_at,lost_at,lost_status_name,stage,origin_name",
+        "id,user_id,user_name,user_email,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
       )
       .order("created_at", { ascending: false })
       .range(from, from + pageSize - 1);
@@ -90,6 +118,32 @@ async function fetchDeals(): Promise<Deal[]> {
     from += pageSize;
   }
   return all;
+}
+
+async function fetchOrigins(): Promise<Origin[]> {
+  const { data, error } = await supabase
+    .from("clint_origins")
+    .select("id,name,group_name,archived")
+    .order("name");
+  if (error) throw error;
+  return (data ?? []) as Origin[];
+}
+
+async function fetchStages(): Promise<Stage[]> {
+  const { data, error } = await supabase
+    .from("clint_origin_stages")
+    .select("id,origin_id,label,stage_order,type")
+    .order("stage_order");
+  if (error) throw error;
+  return (data ?? []) as Stage[];
+}
+
+async function fetchLostStatuses(): Promise<LostStatus[]> {
+  const { data, error } = await supabase
+    .from("clint_lost_statuses")
+    .select("id,label");
+  if (error) throw error;
+  return (data ?? []) as LostStatus[];
 }
 
 async function fetchLastSync() {
@@ -103,47 +157,101 @@ async function fetchLastSync() {
   return data;
 }
 
-const SELLER_COLORS = [
-  "#6366f1",
-  "#f59e0b",
-  "#10b981",
-  "#ec4899",
-  "#06b6d4",
-  "#ef4444",
-  "#8b5cf6",
-  "#84cc16",
+const COLORS = [
+  "#8b5cf6", "#6366f1", "#3b82f6", "#06b6d4", "#10b981",
+  "#84cc16", "#f59e0b", "#ef4444", "#ec4899", "#a855f7",
+  "#0ea5e9", "#14b8a6", "#eab308", "#f97316", "#f43f5e",
 ];
+
+function fmtDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return "—";
+  const d = Math.floor(ms / 86400000);
+  const h = Math.floor((ms % 86400000) / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return `${d}d ${h}h ${m}m`;
+}
 
 function Comercial() {
   const qc = useQueryClient();
   const [period, setPeriod] = useState<Period>("month");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const { format: money, convert } = useCurrency();
+  const [originId, setOriginId] = useState<string>("");
+  const { format: money, currency, brlPerEur: rate } = useCurrency();
 
   const { data: deals = [], isLoading } = useQuery({
     queryKey: ["clint_deals"],
     queryFn: fetchDeals,
   });
+  const { data: origins = [] } = useQuery({ queryKey: ["clint_origins"], queryFn: fetchOrigins });
+  const { data: stages = [] } = useQuery({ queryKey: ["clint_stages"], queryFn: fetchStages });
+  const { data: lostStatuses = [] } = useQuery({
+    queryKey: ["clint_lost_statuses"],
+    queryFn: fetchLostStatuses,
+  });
   const { data: lastSync } = useQuery({ queryKey: ["clint_last_sync"], queryFn: fetchLastSync });
 
   const syncUsersFn = useServerFn(syncClintUsers);
+  const syncOriginsFn = useServerFn(syncClintOrigins);
   const syncDealsFn = useServerFn(syncClintDeals);
+  const backfillFn = useServerFn(backfillLostStatuses);
 
   const syncMutation = useMutation({
     mutationFn: async (full: boolean) => {
       await syncUsersFn({ data: undefined as any });
-      const r = await syncDealsFn({ data: { full, sinceDays: 180 } });
+      await syncOriginsFn({ data: undefined as any });
+      const r = await syncDealsFn({ data: { full, sinceDays: 365 } });
+      await backfillFn({ data: undefined as any });
       return r;
     },
     onSuccess: (r) => {
       toast.success(`Sincronizado: ${r.count} negócios atualizados`);
       qc.invalidateQueries({ queryKey: ["clint_deals"] });
+      qc.invalidateQueries({ queryKey: ["clint_origins"] });
+      qc.invalidateQueries({ queryKey: ["clint_stages"] });
+      qc.invalidateQueries({ queryKey: ["clint_lost_statuses"] });
       qc.invalidateQueries({ queryKey: ["clint_last_sync"] });
     },
     onError: (e: any) => toast.error(`Erro: ${e?.message ?? e}`),
   });
 
-  const { currency, brlPerEur: rate } = useCurrency();
+  // Auto-select a sensible default origin once data loads
+  useEffect(() => {
+    if (originId || origins.length === 0) return;
+    // Try Pipeline V3 (10 stages) → Funil Sessão Estratégica → first non-archived w/ deals
+    const candidates = [
+      origins.find((o) => /pipeline_comercial-v3/i.test(o.name) && !o.archived),
+      origins.find((o) => /funil.*sess[aã]o.*estrat[eé]gica/i.test(o.name) && !o.archived),
+    ].filter(Boolean) as Origin[];
+    const pick = candidates[0];
+    if (pick) {
+      // Make sure stages exist for that origin (10-stage v3 vs 2-stage v3)
+      const stagesFor = stages.filter((s) => s.origin_id === pick.id).length;
+      if (stagesFor >= 4) {
+        setOriginId(pick.id);
+        return;
+      }
+      // Fallback: pick any origin with same name + most stages
+      const sameName = origins.filter((o) => o.name === pick.name);
+      const best = sameName
+        .map((o) => ({ o, count: stages.filter((s) => s.origin_id === o.id).length }))
+        .sort((a, b) => b.count - a.count)[0];
+      if (best) setOriginId(best.o.id);
+    }
+  }, [origins, stages, originId]);
+
+  const currentStages = useMemo(
+    () =>
+      stages
+        .filter((s) => s.origin_id === originId)
+        .sort((a, b) => a.stage_order - b.stage_order),
+    [stages, originId],
+  );
+
+  const stageOrderById = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of currentStages) m.set(s.id, s.stage_order);
+    return m;
+  }, [currentStages]);
 
   const filtered = useMemo(() => {
     const usingRange = !!dateRange?.from;
@@ -153,13 +261,124 @@ function Comercial() {
         ? new Date(dateRange.to.getTime() + 24 * 60 * 60 * 1000 - 1)
         : null;
     return deals.filter((d) => {
+      if (originId && d.origin_id !== originId) return false;
       if (!d.created_at) return !usingRange && period === "all";
       const dt = new Date(d.created_at);
       if (start && dt < start) return false;
       if (end && dt > end) return false;
       return true;
     });
-  }, [deals, period, dateRange]);
+  }, [deals, period, dateRange, originId]);
+
+  // KPIs + funnel
+  const metrics = useMemo(() => {
+    let won = 0;
+    let lost = 0;
+    let open = 0;
+    let revenueDisplay = 0;
+    const cycleMs: number[] = [];
+    const stageReached = new Map<number, number>(); // order -> count reached
+    let respondedBase = 0;
+    let reuniaoAgendada = 0;
+    let reuniaoRealizada = 0;
+
+    // identify "reunião agendada/realizada" stage orders if they exist
+    const reuniaoAgOrder = currentStages.find((s) =>
+      /reuni[ãa]o\s*(1|agendada)/i.test(s.label),
+    )?.stage_order;
+    const reuniaoReOrder = currentStages.find((s) =>
+      /reuni[ãa]o\s*(2|realizada)/i.test(s.label),
+    )?.stage_order;
+    const baseOrder = 1; // base is always order 1
+
+    for (const d of filtered) {
+      if (d.status === "WON") {
+        won += 1;
+        const v = d.value ?? 0;
+        const dealCur = (d.currency ?? "BRL").toUpperCase();
+        let display = v;
+        if (dealCur !== currency) {
+          if (dealCur === "EUR" && currency === "BRL") display = v * rate;
+          else if (dealCur === "BRL" && currency === "EUR") display = v / rate;
+        }
+        revenueDisplay += display;
+        if (d.won_at && d.created_at) {
+          cycleMs.push(new Date(d.won_at).getTime() - new Date(d.created_at).getTime());
+        }
+      } else if (d.status === "LOST") {
+        lost += 1;
+      } else {
+        open += 1;
+      }
+
+      const order = d.stage_id ? stageOrderById.get(d.stage_id) : undefined;
+      if (order !== undefined) {
+        // Reached this stage AND every previous one
+        for (let i = 1; i <= order; i++) {
+          stageReached.set(i, (stageReached.get(i) ?? 0) + 1);
+        }
+        if (order > baseOrder) respondedBase += 1;
+        if (reuniaoAgOrder && order >= reuniaoAgOrder) reuniaoAgendada += 1;
+        if (reuniaoReOrder && order >= reuniaoReOrder) reuniaoRealizada += 1;
+      }
+    }
+
+    const total = filtered.length;
+    const closed = won + lost;
+    const convRate = closed > 0 ? won / closed : 0;
+    const respRate = total > 0 ? respondedBase / total : 0;
+    const noShow =
+      reuniaoAgendada > 0 ? (reuniaoAgendada - reuniaoRealizada) / reuniaoAgendada : 0;
+    const avgCycle = cycleMs.length
+      ? cycleMs.reduce((a, b) => a + b, 0) / cycleMs.length
+      : 0;
+
+    return {
+      total,
+      won,
+      lost,
+      open,
+      revenue: revenueDisplay,
+      convRate,
+      respRate,
+      noShow,
+      avgCycle,
+      stageReached,
+      reuniaoAgendada,
+      reuniaoRealizada,
+    };
+  }, [filtered, currentStages, stageOrderById, currency, rate]);
+
+  const funnelData = useMemo(() => {
+    const max = metrics.stageReached.get(1) ?? 0;
+    return currentStages.map((s) => {
+      const count = metrics.stageReached.get(s.stage_order) ?? 0;
+      const pct = max > 0 ? count / max : 0;
+      return { label: s.label, count, pct, type: s.type };
+    });
+  }, [currentStages, metrics]);
+
+  const lostLabelById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const l of lostStatuses) if (l.label) m.set(l.id, l.label);
+    return m;
+  }, [lostStatuses]);
+
+  const lostData = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const d of filtered) {
+      if (d.status !== "LOST" || !d.lost_status_id) continue;
+      m.set(d.lost_status_id, (m.get(d.lost_status_id) ?? 0) + 1);
+    }
+    return Array.from(m.entries())
+      .map(([id, count]) => ({
+        id,
+        name: lostLabelById.get(id) ?? `Motivo ${id.slice(0, 6)}`,
+        unnamed: !lostLabelById.has(id),
+        value: count,
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [filtered, lostLabelById]);
 
   const sellers = useMemo(() => {
     const map = new Map<
@@ -171,7 +390,7 @@ function Comercial() {
         won: number;
         lost: number;
         open: number;
-        revenue: number; // in display currency
+        revenue: number;
       }
     >();
     for (const d of filtered) {
@@ -189,45 +408,55 @@ function Comercial() {
       cur.leads += 1;
       if (d.status === "WON") {
         cur.won += 1;
-        // Convert value to display currency
         const v = d.value ?? 0;
         const dealCur = (d.currency ?? "BRL").toUpperCase();
-        let display = 0;
-        if (dealCur === currency) display = v;
-        else if (dealCur === "EUR" && currency === "BRL") display = v * rate;
-        else if (dealCur === "BRL" && currency === "EUR") display = v / rate;
-        else display = v;
+        let display = v;
+        if (dealCur !== currency) {
+          if (dealCur === "EUR" && currency === "BRL") display = v * rate;
+          else if (dealCur === "BRL" && currency === "EUR") display = v / rate;
+        }
         cur.revenue += display;
       } else if (d.status === "LOST") cur.lost += 1;
       else cur.open += 1;
       map.set(key, cur);
     }
-    return Array.from(map.values()).sort((a, b) => b.won - a.won);
+    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
   }, [filtered, currency, rate]);
 
-  const totals = useMemo(() => {
-    const t = sellers.reduce(
-      (acc, s) => {
-        acc.leads += s.leads;
-        acc.won += s.won;
-        acc.lost += s.lost;
-        acc.open += s.open;
-        acc.revenue += s.revenue;
-        return acc;
-      },
-      { leads: 0, won: 0, lost: 0, open: 0, revenue: 0 },
-    );
-    const closed = t.won + t.lost;
-    return { ...t, convRate: closed > 0 ? t.won / closed : 0 };
-  }, [sellers]);
+  const setLabelFn = useServerFn(setLostStatusLabel);
+  const renameMutation = useMutation({
+    mutationFn: async (vars: { id: string; label: string | null }) =>
+      setLabelFn({ data: vars }),
+    onSuccess: () => {
+      toast.success("Motivo atualizado");
+      qc.invalidateQueries({ queryKey: ["clint_lost_statuses"] });
+    },
+    onError: (e: any) => toast.error(`Erro: ${e?.message ?? e}`),
+  });
+
+  // Group origins for nicer dropdown
+  const originsByGroup = useMemo(() => {
+    const m = new Map<string, Origin[]>();
+    for (const o of origins) {
+      if (o.archived) continue;
+      const g = o.group_name ?? "Outros";
+      if (!m.has(g)) m.set(g, []);
+      m.get(g)!.push(o);
+    }
+    for (const arr of m.values()) arr.sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(m.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [origins]);
+
+  const currentOrigin = origins.find((o) => o.id === originId);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Performance Comercial</h2>
           <p className="text-sm text-muted-foreground">
-            Negócios da Clint por vendedor — leads, conversão e faturamento ganho.
+            Dados reais da Clint por funil — funil de etapas, conversão, motivos de perda e
+            performance por vendedor.
           </p>
           {lastSync && (
             <p className="text-xs text-muted-foreground mt-1">
@@ -245,84 +474,112 @@ function Comercial() {
             </p>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={() => syncMutation.mutate(false)}
-            disabled={syncMutation.isPending}
-            variant="default"
-            size="sm"
-          >
-            <RefreshCw
-              className={cn("h-4 w-4 mr-2", syncMutation.isPending && "animate-spin")}
-            />
-            {syncMutation.isPending ? "Sincronizando…" : "Sincronizar Clint"}
-          </Button>
-        </div>
+        <Button
+          onClick={() => syncMutation.mutate(false)}
+          disabled={syncMutation.isPending}
+          size="sm"
+        >
+          <RefreshCw
+            className={cn("h-4 w-4 mr-2", syncMutation.isPending && "animate-spin")}
+          />
+          {syncMutation.isPending ? "Sincronizando…" : "Sincronizar Clint"}
+        </Button>
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "justify-start text-left font-normal gap-2",
-                !dateRange?.from && "text-muted-foreground",
-              )}
-            >
-              <CalendarIcon className="h-4 w-4" />
-              {dateRange?.from ? (
-                dateRange.to ? (
-                  <>
-                    {formatDate(dateRange.from, "dd/MM/yy", { locale: ptBR })} –{" "}
-                    {formatDate(dateRange.to, "dd/MM/yy", { locale: ptBR })}
-                  </>
-                ) : (
-                  formatDate(dateRange.from, "dd/MM/yy", { locale: ptBR })
-                )
-              ) : (
-                <span>Selecionar datas</span>
-              )}
-              {dateRange?.from && (
-                <X
-                  className="h-3.5 w-3.5 ml-1 opacity-60 hover:opacity-100"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDateRange(undefined);
-                  }}
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-3 py-4">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Funil:</span>
+          </div>
+          <Select value={originId} onValueChange={setOriginId}>
+            <SelectTrigger className="w-[320px]">
+              <SelectValue placeholder="Selecione um funil" />
+            </SelectTrigger>
+            <SelectContent>
+              {originsByGroup.map(([group, list]) => (
+                <SelectGroup key={group}>
+                  <SelectLabel>{group}</SelectLabel>
+                  {list.map((o) => {
+                    const sc = stages.filter((s) => s.origin_id === o.id).length;
+                    return (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.name}{" "}
+                        <span className="text-muted-foreground ml-1">({sc} etapas)</span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectGroup>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "justify-start text-left font-normal gap-2",
+                    !dateRange?.from && "text-muted-foreground",
+                  )}
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                  {dateRange?.from ? (
+                    dateRange.to ? (
+                      <>
+                        {formatDate(dateRange.from, "dd/MM/yy", { locale: ptBR })} –{" "}
+                        {formatDate(dateRange.to, "dd/MM/yy", { locale: ptBR })}
+                      </>
+                    ) : (
+                      formatDate(dateRange.from, "dd/MM/yy", { locale: ptBR })
+                    )
+                  ) : (
+                    <span>Datas</span>
+                  )}
+                  {dateRange?.from && (
+                    <X
+                      className="h-3.5 w-3.5 ml-1 opacity-60 hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDateRange(undefined);
+                      }}
+                    />
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={2}
+                  locale={ptBR}
+                  className="p-3 pointer-events-auto"
                 />
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="range"
-              selected={dateRange}
-              onSelect={setDateRange}
-              numberOfMonths={2}
-              locale={ptBR}
-              className="p-3 pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-        <Tabs
-          value={dateRange?.from ? "" : period}
-          onValueChange={(v) => {
-            setPeriod(v as Period);
-            setDateRange(undefined);
-          }}
-        >
-          <TabsList>
-            <TabsTrigger value="week">Semana</TabsTrigger>
-            <TabsTrigger value="month">Mês</TabsTrigger>
-            <TabsTrigger value="quarter">Trimestre</TabsTrigger>
-            <TabsTrigger value="semester">Semestre</TabsTrigger>
-            <TabsTrigger value="year">Ano</TabsTrigger>
-            <TabsTrigger value="all">Tudo</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+              </PopoverContent>
+            </Popover>
+            <Tabs
+              value={dateRange?.from ? "" : period}
+              onValueChange={(v) => {
+                setPeriod(v as Period);
+                setDateRange(undefined);
+              }}
+            >
+              <TabsList>
+                <TabsTrigger value="week">Sem</TabsTrigger>
+                <TabsTrigger value="month">Mês</TabsTrigger>
+                <TabsTrigger value="quarter">Trim</TabsTrigger>
+                <TabsTrigger value="semester">Sem.</TabsTrigger>
+                <TabsTrigger value="year">Ano</TabsTrigger>
+                <TabsTrigger value="all">Tudo</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </CardContent>
+      </Card>
 
       {isLoading ? (
         <div className="text-muted-foreground">Carregando…</div>
@@ -334,13 +591,10 @@ function Comercial() {
               <h2 className="text-lg font-semibold">Nenhum dado da Clint ainda</h2>
               <p className="text-sm text-muted-foreground mt-1">
                 Clique em <span className="font-medium text-foreground">Sincronizar Clint</span>{" "}
-                para puxar os negócios dos últimos 6 meses.
+                para puxar os negócios.
               </p>
             </div>
-            <Button
-              onClick={() => syncMutation.mutate(false)}
-              disabled={syncMutation.isPending}
-            >
+            <Button onClick={() => syncMutation.mutate(false)} disabled={syncMutation.isPending}>
               <RefreshCw
                 className={cn("h-4 w-4 mr-2", syncMutation.isPending && "animate-spin")}
               />
@@ -348,38 +602,166 @@ function Comercial() {
             </Button>
           </CardContent>
         </Card>
+      ) : !originId ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            Selecione um funil acima para visualizar os indicadores. Se a lista estiver vazia,
+            clique em <span className="font-medium text-foreground">Sincronizar Clint</span>.
+          </CardContent>
+        </Card>
       ) : (
         <>
-          {/* KPIs globais */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+          {/* KPIs principais */}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             <Kpi
-              title="Leads recebidos"
-              value={formatInt(totals.leads)}
+              title="Negócios recebidos"
+              value={formatInt(metrics.total)}
               icon={<Users className="h-4 w-4 text-primary" />}
             />
             <Kpi
-              title="Convertidos"
-              value={formatInt(totals.won)}
-              icon={<Trophy className="h-4 w-4 text-success" />}
-              accent="success"
-            />
-            <Kpi
-              title="Perdidos"
-              value={formatInt(totals.lost)}
-              icon={<X className="h-4 w-4 text-destructive" />}
-            />
-            <Kpi
-              title="Taxa conversão"
-              value={formatPct(totals.convRate)}
+              title="Taxa de conversão"
+              value={formatPct(metrics.convRate)}
               icon={<Target className="h-4 w-4 text-primary" />}
               subtitle="ganhos ÷ fechados"
             />
             <Kpi
+              title="Vendas totais"
+              value={formatInt(metrics.won)}
+              icon={<Trophy className="h-4 w-4 text-success" />}
+              accent="success"
+            />
+            <Kpi
               title="Faturamento ganho"
-              value={money(totals.revenue)}
+              value={money(metrics.revenue)}
               icon={<CircleDollarSign className="h-4 w-4 text-success" />}
               accent="success"
             />
+            <Kpi
+              title="Ciclo médio de venda"
+              value={fmtDuration(metrics.avgCycle)}
+              icon={<Clock className="h-4 w-4 text-primary" />}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Kpi
+              title="Taxa de resposta"
+              value={formatPct(metrics.respRate)}
+              icon={<TrendingUp className="h-4 w-4 text-primary" />}
+              subtitle="passou da Base"
+            />
+            <Kpi
+              title="% No Show"
+              value={formatPct(metrics.noShow)}
+              icon={<X className="h-4 w-4 text-destructive" />}
+              subtitle={`${metrics.reuniaoAgendada - metrics.reuniaoRealizada} de ${metrics.reuniaoAgendada}`}
+            />
+            <Kpi
+              title="Perdidos"
+              value={formatInt(metrics.lost)}
+              icon={<X className="h-4 w-4 text-destructive" />}
+            />
+            <Kpi
+              title="Em aberto"
+              value={formatInt(metrics.open)}
+              icon={<Target className="h-4 w-4 text-muted-foreground" />}
+            />
+          </div>
+
+          {/* Funil de etapas + Motivos de perda */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Mudança de etapa</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Negócios que alcançaram cada etapa (acumulado pela ordem)
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {funnelData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Sem etapas configuradas.</p>
+                ) : (
+                  funnelData.map((s, i) => (
+                    <div key={s.label} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">{s.label}</span>
+                        <span className="text-muted-foreground tabular-nums">
+                          {formatInt(s.count)}{" "}
+                          <span className="opacity-60">({formatPct(s.pct)})</span>
+                        </span>
+                      </div>
+                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
+                        <div
+                          className="h-full transition-all"
+                          style={{
+                            width: `${Math.max(2, s.pct * 100)}%`,
+                            background: COLORS[i % COLORS.length],
+                            opacity: s.type === "CLOSING" ? 1 : 0.85,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Motivo de perda</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Clique no lápis para renomear o motivo (a API da Clint não devolve o nome).
+                </p>
+              </CardHeader>
+              <CardContent>
+                {lostData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">
+                    Nenhum negócio perdido no período.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-[200px_1fr]">
+                    <div className="h-[220px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={lostData}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius={50}
+                            outerRadius={90}
+                            paddingAngle={2}
+                          >
+                            {lostData.map((_, i) => (
+                              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{
+                              background: "var(--popover)",
+                              border: "1px solid var(--border)",
+                              borderRadius: 8,
+                              color: "var(--foreground)",
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="max-h-[220px] overflow-y-auto space-y-1">
+                      {lostData.slice(0, 20).map((l, i) => (
+                        <LostRow
+                          key={l.id}
+                          color={COLORS[i % COLORS.length]}
+                          item={l}
+                          onRename={(label) =>
+                            renameMutation.mutate({ id: l.id, label: label || null })
+                          }
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Ranking de faturamento */}
@@ -424,7 +806,7 @@ function Comercial() {
                   />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                     {sellers.map((_, i) => (
-                      <Cell key={i} fill={SELLER_COLORS[i % SELLER_COLORS.length]} />
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -446,7 +828,7 @@ function Comercial() {
                   <Card key={s.email || s.name} className="overflow-hidden">
                     <div
                       className="h-1"
-                      style={{ background: SELLER_COLORS[i % SELLER_COLORS.length] }}
+                      style={{ background: COLORS[i % COLORS.length] }}
                     />
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2">
@@ -475,7 +857,7 @@ function Comercial() {
                             className="h-full transition-all"
                             style={{
                               width: `${Math.min(100, conv * 100)}%`,
-                              background: SELLER_COLORS[i % SELLER_COLORS.length],
+                              background: COLORS[i % COLORS.length],
                             }}
                           />
                         </div>
@@ -489,6 +871,73 @@ function Comercial() {
         </>
       )}
     </div>
+  );
+}
+
+function LostRow({
+  color,
+  item,
+  onRename,
+}: {
+  color: string;
+  item: { id: string; name: string; unnamed: boolean; value: number };
+  onRename: (label: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(item.unnamed ? "" : item.name);
+  useEffect(() => {
+    setVal(item.unnamed ? "" : item.name);
+  }, [item.name, item.unnamed]);
+
+  if (editing) {
+    return (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onRename(val.trim());
+          setEditing(false);
+        }}
+        className="flex items-center gap-2 rounded-md border border-border bg-secondary/30 p-2"
+      >
+        <span
+          className="h-3 w-3 shrink-0 rounded-sm"
+          style={{ background: color }}
+        />
+        <Input
+          autoFocus
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          placeholder="Nome do motivo"
+          className="h-8"
+        />
+        <Button type="submit" size="sm" variant="default" className="h-8">
+          OK
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-8"
+          onClick={() => setEditing(false)}
+        >
+          ✕
+        </Button>
+      </form>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      className="flex w-full items-center gap-2 rounded-md border border-border bg-secondary/30 p-2 text-left hover:bg-secondary/60 transition"
+    >
+      <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: color }} />
+      <span className={cn("flex-1 text-sm truncate", item.unnamed && "italic text-muted-foreground")}>
+        {item.name}
+      </span>
+      <span className="text-sm font-semibold tabular-nums">{formatInt(item.value)}</span>
+      <Pencil className="h-3.5 w-3.5 opacity-40" />
+    </button>
   );
 }
 
