@@ -2,6 +2,7 @@ import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
 import { BarChart3, Upload } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
+import logoIcon from "@/assets/logo-icon.png";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -13,12 +14,10 @@ function AppLayout() {
       <header className="border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-bold">
-              LL
-            </div>
+            <img src={logoIcon} alt="Mentoria Gestor de Tráfego" className="h-10 w-10 object-contain" />
             <div>
               <h1 className="text-sm font-semibold leading-tight">Dashboard de Vendas</h1>
-              <p className="text-xs text-muted-foreground leading-tight">Resultado semanal por produto</p>
+              <p className="text-xs text-muted-foreground leading-tight">Mentoria Gestor de Tráfego</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
