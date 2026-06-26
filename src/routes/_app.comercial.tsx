@@ -500,10 +500,8 @@ function Comercial() {
             </SelectTrigger>
             <SelectContent>
               {originsByGroup.map(([group, list]) => (
-                <div key={group}>
-                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                    {group}
-                  </div>
+                <SelectGroup key={group}>
+                  <SelectLabel>{group}</SelectLabel>
                   {list.map((o) => {
                     const sc = stages.filter((s) => s.origin_id === o.id).length;
                     return (
@@ -513,7 +511,7 @@ function Comercial() {
                       </SelectItem>
                     );
                   })}
-                </div>
+                </SelectGroup>
               ))}
             </SelectContent>
           </Select>
