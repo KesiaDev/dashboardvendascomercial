@@ -12,12 +12,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
-import { CalendarDays, TrendingUp, TrendingDown, AlertTriangle, CircleDollarSign, CalendarIcon, X } from "lucide-react";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
+import { CalendarDays, TrendingUp, AlertTriangle, CircleDollarSign, CalendarIcon, X, LineChart as LineChartIcon } from "lucide-react";
 
 export const Route = createFileRoute("/_app/")({
   component: Dashboard,
@@ -105,6 +106,7 @@ function Dashboard() {
   }, [sales, period, groupFilter, dateRange]);
 
   const totals = useMemo(() => computeTotals(filtered), [filtered]);
+  const monthly = useMemo(() => computeMonthlyBreakdown(filtered), [filtered]);
 
   const byGroup = useMemo(() => {
     const map = new Map<string, Sale[]>();
@@ -232,16 +234,20 @@ function Dashboard() {
           icon={<CircleDollarSign className="h-4 w-4 text-primary" />}
         />
 
+        {/* "Cancelado" no Hotmart = checkout nao concluido (pagamento nunca efetivado, faturamento_liquido_brl
+            reflete o preco da oferta, nao dinheiro recebido) - nao e perda financeira real, por isso nao entra
+            aqui. Perda financeira real e so Chargeback/Reembolso (dinheiro que entrou e foi devolvido/contestado). */}
         <KpiCard
-          title="Cancelados"
-          value={formatInt(totals.byStatus.cancelado.count)}
-          subtitle={`${formatPct(totals.cancelRate)} das transações`}
-          icon={<TrendingDown className="h-4 w-4 text-muted-foreground" />}
+          title="Chargeback"
+          value={formatInt(totals.byStatus.chargeback.count)}
+          subtitle={`${money(totals.byStatus.chargeback.brl)} · ${formatPct(totals.chargebackRate)} das transações`}
+          icon={<AlertTriangle className="h-4 w-4 text-destructive" />}
+          accent="destructive"
         />
         <KpiCard
-          title="Chargeback + Reembolso"
-          value={formatInt(totals.byStatus.chargeback.count + totals.byStatus.reembolso.count)}
-          subtitle={money(totals.byStatus.chargeback.brl + totals.byStatus.reembolso.brl)}
+          title="Reembolso"
+          value={formatInt(totals.byStatus.reembolso.count)}
+          subtitle={`${money(totals.byStatus.reembolso.brl)} · ${formatPct(totals.refundRate)} das transações`}
           icon={<AlertTriangle className="h-4 w-4 text-destructive" />}
           accent="destructive"
         />
@@ -303,6 +309,79 @@ function Dashboard() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Evolução Mensal */}
+      <div>
+        <div className="mb-4 flex items-center gap-2">
+          <LineChartIcon className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-lg font-semibold">Evolução mensal</h3>
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Card>
+            <CardContent className="pt-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mês</TableHead>
+                    <TableHead className="text-right">Faturamento</TableHead>
+                    <TableHead className="text-right">Chargeback</TableHead>
+                    <TableHead className="text-right">Reembolso</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {monthly.map((row) => (
+                    <TableRow key={row.month}>
+                      <TableCell className="font-medium capitalize">{row.label}</TableCell>
+                      <TableCell className="text-right">{money(row.faturamentoBRL)}</TableCell>
+                      <TableCell className="text-right">
+                        {formatInt(row.chargeback.count)} <span className="text-muted-foreground">({formatPct(row.chargeback.pct)})</span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatInt(row.reembolso.count)} <span className="text-muted-foreground">({formatPct(row.reembolso.pct)})</span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Faturamento e perdas (chargeback/reembolso) mês a mês</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[320px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthly} margin={{ left: 4, right: 8, top: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
+                  <YAxis
+                    yAxisId="brl"
+                    tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                    tickFormatter={(v) => `${currency === "EUR" ? "€" : "R$"}${Math.round(v / 1000)}k`}
+                  />
+                  <YAxis
+                    yAxisId="pct"
+                    orientation="right"
+                    tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                    tickFormatter={(v) => `${Math.round(v * 100)}%`}
+                  />
+                  <Tooltip
+                    contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)" }}
+                    formatter={(v: number, name: string) =>
+                      name === "Faturamento" ? money(v) : formatPct(v)
+                    }
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Line yAxisId="brl" type="monotone" dataKey="faturamentoBRL" name="Faturamento" stroke="var(--success)" strokeWidth={2} dot={false} />
+                  <Line yAxisId="pct" type="monotone" dataKey="chargeback.pct" name="% Chargeback" stroke={STATUS_COLORS.chargeback} strokeWidth={2} dot={false} />
+                  <Line yAxisId="pct" type="monotone" dataKey="reembolso.pct" name="% Reembolso" stroke={STATUS_COLORS.reembolso} strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Cards por produto */}
@@ -413,6 +492,8 @@ interface Totals {
   grossApprovedBRL: number;
   aprovadoCount: number;
   cancelRate: number;
+  chargebackRate: number;
+  refundRate: number;
   byStatus: Record<StatusCategory, { count: number; brl: number }>;
   byCurrency: Record<string, { count: number; total: number }>;
 }
@@ -450,7 +531,47 @@ function computeTotals(sales: Sale[]): Totals {
 
 
   const total = sales.length;
-  const cancelRate = total > 0 ? (byStatus.cancelado.count + byStatus.chargeback.count + byStatus.reembolso.count) / total : 0;
+  // Cada taxa é independente (count_da_categoria / total) - nunca somadas entre si.
+  // Antes, cancelRate somava cancelado+chargeback+reembolso, misturando 3 categorias num so numero.
+  const cancelRate = total > 0 ? byStatus.cancelado.count / total : 0;
+  const chargebackRate = total > 0 ? byStatus.chargeback.count / total : 0;
+  const refundRate = total > 0 ? byStatus.reembolso.count / total : 0;
 
-  return { total, netBRL, grossApprovedBRL, aprovadoCount, cancelRate, byStatus, byCurrency };
+  return { total, netBRL, grossApprovedBRL, aprovadoCount, cancelRate, chargebackRate, refundRate, byStatus, byCurrency };
+}
+
+interface MonthlyRow {
+  month: string; // "2026-01"
+  label: string; // "jan/26"
+  total: number;
+  faturamentoBRL: number;
+  cancelado: { count: number; pct: number };
+  chargeback: { count: number; pct: number };
+  reembolso: { count: number; pct: number };
+}
+
+function computeMonthlyBreakdown(sales: Sale[]): MonthlyRow[] {
+  const byMonth = new Map<string, Sale[]>();
+  for (const s of sales) {
+    if (!s.data_venda) continue;
+    const month = s.data_venda.slice(0, 7); // YYYY-MM
+    const arr = byMonth.get(month) ?? [];
+    arr.push(s);
+    byMonth.set(month, arr);
+  }
+  return Array.from(byMonth.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, monthSales]) => {
+      const t = computeTotals(monthSales);
+      const [y, m] = month.split("-").map(Number);
+      return {
+        month,
+        label: formatDate(new Date(y, m - 1, 1), "MMM/yy", { locale: ptBR }),
+        total: t.total,
+        faturamentoBRL: t.netBRL,
+        cancelado: { count: t.byStatus.cancelado.count, pct: t.cancelRate },
+        chargeback: { count: t.byStatus.chargeback.count, pct: t.chargebackRate },
+        reembolso: { count: t.byStatus.reembolso.count, pct: t.refundRate },
+      };
+    });
 }
