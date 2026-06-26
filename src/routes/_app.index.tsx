@@ -158,18 +158,19 @@ function Dashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          title={`Faturamento líquido (${currency})`}
+          title={`Faturamento (${currency})`}
           value={money(totals.netBRL)}
           subtitle={`${formatInt(totals.aprovadoCount)} vendas aprovadas`}
           icon={<TrendingUp className="h-4 w-4 text-success" />}
           accent="success"
         />
         <KpiCard
-          title="Total bruto aprovado"
-          value={money(totals.grossApprovedBRL)}
-          subtitle="Somando valor recebido convertido"
+          title="Ticket médio"
+          value={money(totals.aprovadoCount > 0 ? totals.netBRL / totals.aprovadoCount : 0)}
+          subtitle="Receita ÷ vendas aprovadas"
           icon={<CircleDollarSign className="h-4 w-4 text-primary" />}
         />
+
         <KpiCard
           title="Cancelados"
           value={formatInt(totals.byStatus.cancelado.count)}
@@ -261,7 +262,8 @@ function Dashboard() {
                   </Badge>
                 </div>
                 <p className="text-2xl font-semibold mt-2">{money(t.netBRL)}</p>
-                <p className="text-xs text-muted-foreground">faturamento líquido em {currency}</p>
+                <p className="text-xs text-muted-foreground">faturamento em {currency} (vendas aprovadas)</p>
+
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-3 pt-0 text-sm">
                 <StatusBox label="Aprovado" cat="aprovado" data={t.byStatus.aprovado} money={money} />
@@ -277,7 +279,7 @@ function Dashboard() {
       {/* Por moeda */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Total bruto por moeda (somente aprovadas)</CardTitle>
+          <CardTitle className="text-base">Vendas aprovadas por moeda (valor original)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -369,12 +371,14 @@ function computeTotals(sales: Sale[]): Totals {
 
   for (const s of sales) {
     const cat = categorizeStatus(s.status);
-    const brl = s.faturamento_liquido_brl ?? 0;
+    // Receita real em BRL = valor que efetivamente caiu na conta (já convertido).
+    // Fallback p/ faturamento_liquido_brl se valor_recebido vier nulo.
+    const brl = s.valor_recebido_convertido ?? s.faturamento_liquido_brl ?? 0;
     byStatus[cat].count += 1;
     byStatus[cat].brl += brl;
     if (cat === "aprovado") {
       netBRL += brl;
-      grossApprovedBRL += s.valor_recebido_convertido ?? brl;
+      grossApprovedBRL += brl;
       aprovadoCount += 1;
       const cur = s.moeda_original || "—";
       if (!byCurrency[cur]) byCurrency[cur] = { count: 0, total: 0 };
@@ -382,6 +386,7 @@ function computeTotals(sales: Sale[]): Totals {
       byCurrency[cur].total += s.preco_oferta ?? 0;
     }
   }
+
 
   const total = sales.length;
   const cancelRate = total > 0 ? (byStatus.cancelado.count + byStatus.chargeback.count + byStatus.reembolso.count) / total : 0;
