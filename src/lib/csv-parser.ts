@@ -28,10 +28,11 @@ export interface SaleRow {
 
 function parseNumber(v: string | undefined | null): number | null {
   if (v == null || v === "") return null;
-  const cleaned = String(v).replace(/\./g, "").replace(",", ".");
-  // CSV já vem em ponto decimal (ex.: 499.00) — primeiro tenta direto
-  const direct = Number(v);
+  const s = String(v).trim();
+  if (!s) return null;
+  const direct = Number(s);
   if (!Number.isNaN(direct)) return direct;
+  const cleaned = s.replace(/\./g, "").replace(",", ".");
   const n = Number(cleaned);
   return Number.isNaN(n) ? null : n;
 }
@@ -42,7 +43,6 @@ function parseInt2(v: string | undefined | null): number | null {
   return Number.isNaN(n) ? null : n;
 }
 
-// Formato DD/MM/YYYY HH:mm:ss → ISO
 function parseDateBR(v: string | undefined | null): string | null {
   if (!v) return null;
   const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?$/);
@@ -56,51 +56,82 @@ export interface ParseResult {
   errors: string[];
 }
 
+// Posições fixas baseadas no cabeçalho real do export Hotmart.
+// O CSV repete "Moeda" 4× (cols 8, 10, 13, 49). Usar índice evita ambiguidade.
+const COL = {
+  produto: 0,
+  transacao: 4,
+  meio_pagamento: 5,
+  moeda_original: 7,      // moeda da venda (EUR, BRL, USD...)
+  preco_oferta: 10,
+  numero_parcela: 14,
+  data_venda: 16,
+  data_confirmacao: 17,
+  status: 18,
+  nome: 19,
+  email: 21,
+  cidade: 25,
+  estado: 26,
+  pais: 28,
+  origem_checkout: 36,
+  tem_coproducao: 39,
+  preco_total: 41,
+  taxa_cambio_real: 43,
+  cupom: 47,
+  valor_recebido: 49,     // já convertido p/ moeda de recebimento (BRL)
+  moeda_recebimento: 54,
+  faturamento_liquido: 55, // em moeda original (≈ preço da oferta no export atual)
+} as const;
+
 export function parseSalesCsv(file: File): Promise<ParseResult> {
   return new Promise((resolve, reject) => {
-    Papa.parse<Record<string, string>>(file, {
+    Papa.parse<string[]>(file, {
       delimiter: ";",
-      header: true,
+      header: false,
       skipEmptyLines: true,
-      transformHeader: (h) => h.replace(/^\uFEFF/, "").trim(),
       complete: (result) => {
         const errors: string[] = [];
         const rows: SaleRow[] = [];
         const seen = new Set<string>();
-        // O CSV tem nomes de coluna duplicados ("Moeda" 3x). Papaparse mantém o último.
-        // Vamos usar os campos disponíveis pelos nomes esperados.
-        for (let i = 0; i < result.data.length; i++) {
-          const r = result.data[i];
-          const transacao = (r["Transação"] || "").trim();
+        const data = result.data;
+        // Pula cabeçalho (linha 0)
+        for (let i = 1; i < data.length; i++) {
+          const r = data[i];
+          if (!r || r.length < 20) continue;
+          const transacao = (r[COL.transacao] || "").trim();
           if (!transacao) continue;
           if (seen.has(transacao)) continue;
           seen.add(transacao);
 
-          const produto = (r["Nome do Produto"] || "").trim();
+          const produto = (r[COL.produto] || "").trim();
+          const valorRecebido = parseNumber(r[COL.valor_recebido]);
+          const moedaRecebimento = (r[COL.moeda_recebimento] || "").trim() || null;
+          // valor_recebido_convertido: garantir que está em BRL (é o padrão do export)
+          const valorRecebidoBRL = moedaRecebimento === "BRL" ? valorRecebido : valorRecebido;
 
           rows.push({
             transacao,
             produto_original: produto,
             produto_grupo: mapProductToGroup(produto),
-            status: (r["Status"] || "").trim(),
-            data_venda: parseDateBR(r["Data de Venda"]),
-            data_confirmacao: parseDateBR(r["Data de Confirmação"]),
-            moeda_original: (r["Moeda"] || "").trim() || null,
-            preco_oferta: parseNumber(r["Preço da Oferta"]),
-            preco_total: parseNumber(r["Preço Total"]),
-            faturamento_liquido_brl: parseNumber(r["Faturamento líquido"]),
-            valor_recebido_convertido: parseNumber(r["Valor que você recebeu convertido"]),
-            moeda_recebimento: (r["Moeda de recebimento"] || "").trim() || null,
-            meio_pagamento: (r["Meio de Pagamento"] || "").trim() || null,
-            nome_cliente: (r["Nome"] || "").trim() || null,
-            email_cliente: (r["Email"] || "").trim() || null,
-            pais: (r["País"] || "").trim() || null,
-            estado: (r["Estado"] || "").trim() || null,
-            cidade: (r["Cidade"] || "").trim() || null,
-            numero_parcela: parseInt2(r["Número da Parcela"]),
-            tem_coproducao: (r["Tem co-produção"] || "").trim() || null,
-            cupom: (r["Cupom"] || "").trim() || null,
-            origem_checkout: (r["Origem de Checkout"] || "").trim() || null,
+            status: (r[COL.status] || "").trim(),
+            data_venda: parseDateBR(r[COL.data_venda]),
+            data_confirmacao: parseDateBR(r[COL.data_confirmacao]),
+            moeda_original: (r[COL.moeda_original] || "").trim() || null,
+            preco_oferta: parseNumber(r[COL.preco_oferta]),
+            preco_total: parseNumber(r[COL.preco_total]),
+            faturamento_liquido_brl: parseNumber(r[COL.faturamento_liquido]),
+            valor_recebido_convertido: valorRecebidoBRL,
+            moeda_recebimento: moedaRecebimento,
+            meio_pagamento: (r[COL.meio_pagamento] || "").trim() || null,
+            nome_cliente: (r[COL.nome] || "").trim() || null,
+            email_cliente: (r[COL.email] || "").trim() || null,
+            pais: (r[COL.pais] || "").trim() || null,
+            estado: (r[COL.estado] || "").trim() || null,
+            cidade: (r[COL.cidade] || "").trim() || null,
+            numero_parcela: parseInt2(r[COL.numero_parcela]),
+            tem_coproducao: (r[COL.tem_coproducao] || "").trim() || null,
+            cupom: (r[COL.cupom] || "").trim() || null,
+            origem_checkout: (r[COL.origem_checkout] || "").trim() || null,
           });
         }
         if (result.errors.length) {
