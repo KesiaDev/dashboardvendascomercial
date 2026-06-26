@@ -2,6 +2,16 @@ import { createServerFn } from "@tanstack/react-start";
 
 const CLINT_BASE = "https://api.clint.digital";
 
+function parseClintNumber(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  const s = String(v).trim().replace(/\s/g, "");
+  // Handle "1.234,56" or "149,00" or "149.00"
+  const normalized = s.includes(",") ? s.replace(/\./g, "").replace(",", ".") : s;
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : null;
+}
+
 async function clintFetch(path: string, token: string) {
   const res = await fetch(`${CLINT_BASE}${path}`, {
     headers: { "api-token": token, accept: "application/json" },
