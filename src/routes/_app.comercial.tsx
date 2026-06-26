@@ -176,7 +176,7 @@ function Comercial() {
   const [period, setPeriod] = useState<Period>("month");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [originId, setOriginId] = useState<string>("");
-  const { format: money, convert, currency, brlPerEur: rate } = useCurrency();
+  const { format: money, currency, brlPerEur: rate } = useCurrency();
 
   const { data: deals = [], isLoading } = useQuery({
     queryKey: ["clint_deals"],
