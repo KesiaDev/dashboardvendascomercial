@@ -143,9 +143,7 @@ function Comercial() {
     onError: (e: any) => toast.error(`Erro: ${e?.message ?? e}`),
   });
 
-  // Convert deal value to display currency. Clint values are in deal.currency (EUR/BRL).
-  // Use the user's currency context: if BRL display, EUR deals *= rate; if EUR display, BRL deals /= rate.
-  const { currency, rate } = useCurrency();
+  const { currency, brlPerEur: rate } = useCurrency();
 
   const filtered = useMemo(() => {
     const usingRange = !!dateRange?.from;
