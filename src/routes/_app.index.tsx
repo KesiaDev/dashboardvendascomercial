@@ -146,6 +146,8 @@ function Dashboard() {
             <TabsList>
               <TabsTrigger value="week">Semana</TabsTrigger>
               <TabsTrigger value="month">Mês</TabsTrigger>
+              <TabsTrigger value="quarter">Trimestre</TabsTrigger>
+              <TabsTrigger value="semester">Semestre</TabsTrigger>
               <TabsTrigger value="year">Ano</TabsTrigger>
               <TabsTrigger value="all">Tudo</TabsTrigger>
             </TabsList>
