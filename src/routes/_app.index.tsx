@@ -9,8 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format as formatDate } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
-import { CalendarDays, TrendingUp, TrendingDown, AlertTriangle, CircleDollarSign } from "lucide-react";
+import { CalendarDays, TrendingUp, TrendingDown, AlertTriangle, CircleDollarSign, CalendarIcon, X } from "lucide-react";
 
 export const Route = createFileRoute("/_app/")({
   component: Dashboard,
@@ -66,6 +73,7 @@ async function fetchSales(): Promise<Sale[]> {
 function Dashboard() {
   const [period, setPeriod] = useState<Period>("week");
   const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const { format: money, currency, convert } = useCurrency();
 
   const { data: sales = [], isLoading } = useQuery({
@@ -74,14 +82,18 @@ function Dashboard() {
   });
 
   const filtered = useMemo(() => {
-    const start = periodStart(period);
+    const usingRange = !!(dateRange?.from);
+    const start = usingRange ? dateRange!.from! : periodStart(period);
+    const end = usingRange && dateRange?.to ? new Date(dateRange.to.getTime() + 24 * 60 * 60 * 1000 - 1) : null;
     return sales.filter((s) => {
-      if (!s.data_venda) return period === "all";
-      if (start && new Date(s.data_venda) < start) return false;
+      if (!s.data_venda) return !usingRange && period === "all";
+      const d = new Date(s.data_venda);
+      if (start && d < start) return false;
+      if (end && d > end) return false;
       if (groupFilter !== "all" && s.produto_grupo !== groupFilter) return false;
       return true;
     });
-  }, [sales, period, groupFilter]);
+  }, [sales, period, groupFilter, dateRange]);
 
   const totals = useMemo(() => computeTotals(filtered), [filtered]);
 
@@ -142,7 +154,47 @@ function Dashboard() {
               ))}
             </SelectContent>
           </Select>
-          <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn("justify-start text-left font-normal gap-2", !dateRange?.from && "text-muted-foreground")}
+              >
+                <CalendarIcon className="h-4 w-4" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {formatDate(dateRange.from, "dd/MM/yy", { locale: ptBR })} – {formatDate(dateRange.to, "dd/MM/yy", { locale: ptBR })}
+                    </>
+                  ) : (
+                    formatDate(dateRange.from, "dd/MM/yy", { locale: ptBR })
+                  )
+                ) : (
+                  <span>Selecionar datas</span>
+                )}
+                {dateRange?.from && (
+                  <X
+                    className="h-3.5 w-3.5 ml-1 opacity-60 hover:opacity-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDateRange(undefined);
+                    }}
+                  />
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+                locale={ptBR}
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+          <Tabs value={dateRange?.from ? "" : period} onValueChange={(v) => { setPeriod(v as Period); setDateRange(undefined); }}>
             <TabsList>
               <TabsTrigger value="week">Semana</TabsTrigger>
               <TabsTrigger value="month">Mês</TabsTrigger>
