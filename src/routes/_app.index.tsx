@@ -29,23 +29,17 @@ type Sale = {
   moeda_recebimento: string | null;
 };
 
-type Period = "week" | "month" | "year" | "all";
+type Period = "week" | "month" | "quarter" | "semester" | "year" | "all";
 
 function periodStart(p: Period): Date | null {
   const now = new Date();
   if (p === "all") return null;
-  if (p === "week") {
-    const d = new Date(now);
-    d.setDate(now.getDate() - 7);
-    return d;
-  }
-  if (p === "month") {
-    const d = new Date(now);
-    d.setMonth(now.getMonth() - 1);
-    return d;
-  }
   const d = new Date(now);
-  d.setFullYear(now.getFullYear() - 1);
+  if (p === "week") d.setDate(now.getDate() - 7);
+  else if (p === "month") d.setMonth(now.getMonth() - 1);
+  else if (p === "quarter") d.setMonth(now.getMonth() - 3);
+  else if (p === "semester") d.setMonth(now.getMonth() - 6);
+  else d.setFullYear(now.getFullYear() - 1);
   return d;
 }
 
