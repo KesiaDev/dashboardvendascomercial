@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_GROUPS, getGroupById, categorizeStatus, STATUS_LABELS, STATUS_COLORS, type StatusCategory } from "@/lib/product-groups";
 import { formatBRL, formatInt, formatPct } from "@/lib/format";
+import { useCurrency } from "@/lib/currency-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
