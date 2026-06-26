@@ -14,6 +14,150 @@ export type Database = {
   }
   public: {
     Tables: {
+      clint_deals: {
+        Row: {
+          contact_ddi: string | null
+          contact_email: string | null
+          contact_id: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string | null
+          currency: string | null
+          id: string
+          lost_at: string | null
+          lost_status_id: string | null
+          lost_status_name: string | null
+          origin_id: string | null
+          origin_name: string | null
+          raw: Json | null
+          stage: string | null
+          stage_id: string | null
+          status: string
+          synced_at: string
+          updated_at: string | null
+          updated_stage_at: string | null
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+          value: number | null
+          won_at: string | null
+        }
+        Insert: {
+          contact_ddi?: string | null
+          contact_email?: string | null
+          contact_id?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          currency?: string | null
+          id: string
+          lost_at?: string | null
+          lost_status_id?: string | null
+          lost_status_name?: string | null
+          origin_id?: string | null
+          origin_name?: string | null
+          raw?: Json | null
+          stage?: string | null
+          stage_id?: string | null
+          status: string
+          synced_at?: string
+          updated_at?: string | null
+          updated_stage_at?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+          value?: number | null
+          won_at?: string | null
+        }
+        Update: {
+          contact_ddi?: string | null
+          contact_email?: string | null
+          contact_id?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          lost_at?: string | null
+          lost_status_id?: string | null
+          lost_status_name?: string | null
+          origin_id?: string | null
+          origin_name?: string | null
+          raw?: Json | null
+          stage?: string | null
+          stage_id?: string | null
+          status?: string
+          synced_at?: string
+          updated_at?: string | null
+          updated_stage_at?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+          value?: number | null
+          won_at?: string | null
+        }
+        Relationships: []
+      }
+      clint_sync_log: {
+        Row: {
+          error: string | null
+          finished_at: string | null
+          id: string
+          kind: string
+          rows_synced: number
+          since: string | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          kind: string
+          rows_synced?: number
+          since?: string | null
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          kind?: string
+          rows_synced?: number
+          since?: string | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      clint_users: {
+        Row: {
+          active: boolean
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          synced_at: string
+        }
+        Insert: {
+          active?: boolean
+          email?: string | null
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          synced_at?: string
+        }
+        Update: {
+          active?: boolean
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          synced_at?: string
+        }
+        Relationships: []
+      }
       sales: {
         Row: {
           cidade: string | null
