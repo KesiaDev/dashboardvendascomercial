@@ -72,6 +72,7 @@ async function fetchSales(): Promise<Sale[]> {
 function Dashboard() {
   const [period, setPeriod] = useState<Period>("week");
   const [groupFilter, setGroupFilter] = useState<string>("all");
+  const { format: money, currency, convert } = useCurrency();
 
   const { data: sales = [], isLoading } = useQuery({
     queryKey: ["sales"],
@@ -161,15 +162,15 @@ function Dashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          title="Faturamento líquido (BRL)"
-          value={formatBRL(totals.netBRL)}
+          title={`Faturamento líquido (${currency})`}
+          value={money(totals.netBRL)}
           subtitle={`${formatInt(totals.aprovadoCount)} vendas aprovadas`}
           icon={<TrendingUp className="h-4 w-4 text-success" />}
           accent="success"
         />
         <KpiCard
           title="Total bruto aprovado"
-          value={formatBRL(totals.grossApprovedBRL)}
+          value={money(totals.grossApprovedBRL)}
           subtitle="Somando valor recebido convertido"
           icon={<CircleDollarSign className="h-4 w-4 text-primary" />}
         />
@@ -182,7 +183,7 @@ function Dashboard() {
         <KpiCard
           title="Chargeback + Reembolso"
           value={formatInt(totals.byStatus.chargeback.count + totals.byStatus.reembolso.count)}
-          subtitle={formatBRL(totals.byStatus.chargeback.brl + totals.byStatus.reembolso.brl)}
+          subtitle={money(totals.byStatus.chargeback.brl + totals.byStatus.reembolso.brl)}
           icon={<AlertTriangle className="h-4 w-4 text-destructive" />}
           accent="destructive"
         />
@@ -192,17 +193,17 @@ function Dashboard() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Faturamento líquido por produto (BRL)</CardTitle>
+            <CardTitle className="text-base">Faturamento líquido por produto ({currency})</CardTitle>
           </CardHeader>
           <CardContent className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={byGroup.map((g) => ({ name: g.group.label, value: g.totals.netBRL }))} margin={{ left: 4, right: 8, top: 8, bottom: 60 }}>
+              <BarChart data={byGroup.map((g) => ({ name: g.group.label, value: convert(g.totals.netBRL) }))} margin={{ left: 4, right: 8, top: 8, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} angle={-25} textAnchor="end" interval={0} />
-                <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v) => `R$${Math.round(v / 1000)}k`} />
+                <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v) => `${currency === "EUR" ? "€" : "R$"}${Math.round(v / 1000)}k`} />
                 <Tooltip
                   contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)" }}
-                  formatter={(v: number) => formatBRL(v)}
+                  formatter={(v: number) => new Intl.NumberFormat(currency === "EUR" ? "de-DE" : "pt-BR", { style: "currency", currency }).format(v)}
                 />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                   {byGroup.map((g) => (
@@ -263,14 +264,14 @@ function Dashboard() {
                     {formatInt(t.total)} transações
                   </Badge>
                 </div>
-                <p className="text-2xl font-semibold mt-2">{formatBRL(t.netBRL)}</p>
-                <p className="text-xs text-muted-foreground">faturamento líquido em BRL</p>
+                <p className="text-2xl font-semibold mt-2">{money(t.netBRL)}</p>
+                <p className="text-xs text-muted-foreground">faturamento líquido em {currency}</p>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-3 pt-0 text-sm">
-                <StatusBox label="Aprovado" cat="aprovado" data={t.byStatus.aprovado} />
-                <StatusBox label="Cancelado" cat="cancelado" data={t.byStatus.cancelado} />
-                <StatusBox label="Chargeback" cat="chargeback" data={t.byStatus.chargeback} />
-                <StatusBox label="Reembolso" cat="reembolso" data={t.byStatus.reembolso} />
+                <StatusBox label="Aprovado" cat="aprovado" data={t.byStatus.aprovado} money={money} />
+                <StatusBox label="Cancelado" cat="cancelado" data={t.byStatus.cancelado} money={money} />
+                <StatusBox label="Chargeback" cat="chargeback" data={t.byStatus.chargeback} money={money} />
+                <StatusBox label="Reembolso" cat="reembolso" data={t.byStatus.reembolso} money={money} />
               </CardContent>
             </Card>
           ))}
@@ -334,7 +335,7 @@ function KpiCard({
   );
 }
 
-function StatusBox({ label, cat, data }: { label: string; cat: StatusCategory; data: { count: number; brl: number } }) {
+function StatusBox({ label, cat, data, money }: { label: string; cat: StatusCategory; data: { count: number; brl: number }; money: (v: number) => string }) {
   return (
     <div className="rounded-md border border-border bg-secondary/30 p-2.5">
       <div className="flex items-center gap-1.5">
@@ -342,7 +343,7 @@ function StatusBox({ label, cat, data }: { label: string; cat: StatusCategory; d
         <span className="text-xs text-muted-foreground">{label}</span>
       </div>
       <p className="text-sm font-semibold mt-1">{formatInt(data.count)}</p>
-      <p className="text-xs text-muted-foreground">{formatBRL(data.brl)}</p>
+      <p className="text-xs text-muted-foreground">{money(data.brl)}</p>
     </div>
   );
 }
