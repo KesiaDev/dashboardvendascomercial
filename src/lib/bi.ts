@@ -13,6 +13,7 @@ export type Deal = {
   user_id: string | null;
   user_name: string | null;
   user_email: string | null;
+  contact_email: string | null;
   status: string;
   value: number | null;
   currency: string | null;
@@ -58,7 +59,7 @@ export async function fetchAllDeals(): Promise<Deal[]> {
     const { data, error } = await supabase
       .from("clint_deals")
       .select(
-        "id,user_id,user_name,user_email,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
+        "id,user_id,user_name,user_email,contact_email,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
       )
       .order("created_at", { ascending: false })
       .range(from, from + pageSize - 1);
@@ -208,4 +209,109 @@ export function computeAreaKpis(
   const revenue = sellers.reduce((s, x) => s + x.revenue, 0);
   const closed = won + lost;
   return { leads, won, lost, open, revenue, convRate: closed > 0 ? won / closed : 0 };
+}
+
+// ── Cruzamento Clint x Hotmart (vendedor x produto) ─────────────────────────
+// Não existe FK formal entre clint_deals e sales (Hotmart). O vínculo é feito
+// por e-mail do cliente (contact_email <-> email_cliente) + data mais próxima
+// entre won_at e data_venda, para o caso de o mesmo cliente ter mais de um
+// negócio na Clint ao longo do tempo.
+
+export type SaleRecord = {
+  transacao: string;
+  produto_grupo: string;
+  produto_original: string;
+  status: string;
+  data_venda: string | null;
+  email_cliente: string | null;
+  faturamento_liquido_brl: number | null;
+};
+
+export async function fetchAllSales(): Promise<SaleRecord[]> {
+  const all: SaleRecord[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await supabase
+      .from("sales")
+      .select("transacao,produto_grupo,produto_original,status,data_venda,email_cliente,faturamento_liquido_brl")
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all.push(...(data as SaleRecord[]));
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
+export type SellerProductRow = {
+  seller: string;
+  produto_grupo: string;
+  vendas: number;
+  faturamento: number;
+};
+
+export type SellerProductResult = {
+  rows: SellerProductRow[];
+  matched: number;
+  unmatched: number;
+  unmatchedRevenue: number;
+};
+
+/**
+ * Cruza vendas aprovadas da Hotmart com negócios ganhos da Clint via e-mail do
+ * cliente, escolhendo — quando há mais de um negócio do mesmo e-mail — o que
+ * tiver won_at mais próximo de data_venda. Vendas sem e-mail correspondente na
+ * Clint entram em `unmatched` (produto identificado, vendedor não).
+ */
+export function matchSellerProduct(allDeals: Deal[], allSales: SaleRecord[]): SellerProductResult {
+  const dealsByEmail = new Map<string, Deal[]>();
+  for (const d of allDeals) {
+    if (d.status !== "WON" || !d.user_name) continue;
+    const email = d.contact_email?.trim().toLowerCase();
+    if (!email) continue;
+    if (!dealsByEmail.has(email)) dealsByEmail.set(email, []);
+    dealsByEmail.get(email)!.push(d);
+  }
+
+  const agg = new Map<string, SellerProductRow>();
+  let matched = 0;
+  let unmatched = 0;
+  let unmatchedRevenue = 0;
+
+  for (const s of allSales) {
+    if (s.status !== "aprovado") continue;
+    const email = s.email_cliente?.trim().toLowerCase();
+    const candidates = email ? dealsByEmail.get(email) : undefined;
+    if (!candidates || candidates.length === 0) {
+      unmatched += 1;
+      unmatchedRevenue += s.faturamento_liquido_brl ?? 0;
+      continue;
+    }
+    let best = candidates[0];
+    if (candidates.length > 1 && s.data_venda) {
+      const saleTime = new Date(s.data_venda).getTime();
+      best = candidates.reduce((closest, cur) => {
+        const closestDelta = closest.won_at ? Math.abs(new Date(closest.won_at).getTime() - saleTime) : Infinity;
+        const curDelta = cur.won_at ? Math.abs(new Date(cur.won_at).getTime() - saleTime) : Infinity;
+        return curDelta < closestDelta ? cur : closest;
+      }, best);
+    }
+
+    const seller = best.user_name!.trim();
+    const key = `${seller}::${s.produto_grupo}`;
+    const cur = agg.get(key) ?? { seller, produto_grupo: s.produto_grupo, vendas: 0, faturamento: 0 };
+    cur.vendas += 1;
+    cur.faturamento += s.faturamento_liquido_brl ?? 0;
+    agg.set(key, cur);
+    matched += 1;
+  }
+
+  return {
+    rows: Array.from(agg.values()).sort((a, b) => b.faturamento - a.faturamento),
+    matched,
+    unmatched,
+    unmatchedRevenue,
+  };
 }
