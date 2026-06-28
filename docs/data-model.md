@@ -40,9 +40,19 @@ weekly_imports
   (log avulso de cada upload de CSV em /import)
 ```
 
-**Gap conhecido**: não existe hoje uma chave que ligue um `clint_deals.id` a uma
-`sales.transacao` da mesma venda. Cruzar Clint × Hotmart por vendedor/negócio
-individual ainda depende de inferência por nome/data/valor — ver roadmap.md.
+**Cruzamento Clint × Hotmart (implementado em `bi.ts::matchSellerProduct`)**: não
+existe FK formal entre `clint_deals.id` e `sales.transacao`, mas o vínculo é feito em
+tempo de consulta por `contact_email` (Clint) = `email_cliente` (Hotmart), escolhendo
+— quando o mesmo e-mail tem mais de um negócio ganho — o que tiver `won_at` mais
+próximo de `data_venda`. Cobertura típica: a função expõe `matched`/`unmatched` para
+acompanhar a taxa de identificação (vendas Hotmart sem e-mail correspondente na Clint
+ficam em `unmatched`, contabilizadas mas sem vendedor atribuído). Ver `/vendedor-produto`.
+
+Achado relevante: a Clint guarda em `clint_deals.raw->fields->sck` um código que já
+identifica o vendedor em boa parte dos negócios ganhos (ex.: `mse.gisele`,
+`igt20.joao`) — o mesmo tipo de parâmetro de rastreio que a Hotmart usa internamente.
+Não é usado como chave principal (e-mail é mais confiável/universal), mas é uma fonte
+alternativa de validação se a taxa de match por e-mail cair.
 
 ## Tabelas
 

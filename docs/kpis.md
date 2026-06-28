@@ -74,6 +74,25 @@ Convenção desta tabela: **Origem** indica a tabela/campo exato usado hoje no c
   "Reunião Agendada"/"Reunião Realizada" (heurística por regex no nome da etapa).
 - **Objetivo**: medir qualidade de agendamento — drill-down por pipeline.
 
+## Vendedor × Produto (cruzamento Clint × Hotmart)
+
+### Produto mais vendido por vendedor
+- **Descrição**: para cada vendedor, quantidade e faturamento de cada grupo de
+  produto vendido — respondendo "quem vende mais o quê".
+- **Fórmula**: vendas Hotmart aprovadas, atribuídas ao `user_name` do negócio Clint
+  cujo `contact_email` bate com o `email_cliente` da venda (mais próximo por data
+  quando há ambiguidade), agrupado por `produto_grupo`.
+- **Origem**: `clint_deals` (status, user_name, contact_email, won_at) × `sales`
+  (email_cliente, produto_grupo, faturamento_liquido_brl, data_venda). Implementado em
+  `bi.ts::matchSellerProduct`.
+- **Periodicidade**: todo o histórico (sem filtro de período na v1 — ver roadmap.md).
+- **Objetivo**: orientar especialização de vendedor por produto e detectar quem
+  converte melhor em qual oferta.
+- **Limitação conhecida**: cobre só as vendas Hotmart cujo e-mail também aparece em
+  algum negócio ganho na Clint. Vendas sem correspondência aparecem como
+  `unmatched` (contabilizadas no total, sem vendedor atribuído) — a página
+  `/vendedor-produto` mostra essa taxa de identificação explicitamente.
+
 ## Financeiro (Hotmart / `sales`)
 
 ### Faturamento líquido

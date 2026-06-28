@@ -14,6 +14,19 @@
 - [x] Correção: "Convertidos"/faturamento usam `won_at` no período (não `created_at`)
 - [x] Agente IA restrito à área COMERCIAL + comparação mês atual vs anterior
 
+## Vendedor × Produto — implementado fora de ordem (2026-06-28)
+
+Entre a Sprint 2 e a Sprint 3, foi implementado o item de cruzamento Clint × Hotmart
+que originalmente estava planejado para a Sprint 4 (ver checklist abaixo). Motivo:
+era uma pergunta de negócio direta ("qual produto cada vendedor vende mais") que não
+dependia de `bi_deal_events` nem de `bi_targets` — só precisava do `sales` (já
+existente desde antes da Sprint 1) cruzado com `clint_deals` por e-mail.
+
+- [x] `bi.ts::fetchAllSales`, `matchSellerProduct`
+- [x] `/vendedor-produto`: produto mais vendido por vendedor, com taxa de
+      identificação visível (matched vs unmatched)
+- [x] Documentado em data-model.md (substitui o "gap conhecido" anterior)
+
 ## Sprint 2 — Documentação ✅ concluída (2026-06-28)
 
 - [x] `docs/business-model.md`
@@ -62,8 +75,9 @@ Checklist técnico:
 - [ ] `bi_products`: catálogo formal de produtos (hoje só existe como mapa de
       keywords em `product-groups.ts`) — necessário para relacionar Clint × Hotmart
       por produto, não só por nome de texto
-- [ ] Cruzamento Clint × Hotmart: criar mecanismo de vinculação configurável entre
-      `clint_deals` e `sales` (hoje não há FK nem chave comum)
+- [x] ~~Cruzamento Clint × Hotmart~~ — **implementado fora de ordem em 2026-06-28**
+      (`bi.ts::matchSellerProduct`, página `/vendedor-produto`), via e-mail do
+      cliente. Ver data-model.md para detalhes e taxa de cobertura.
 - [ ] Dashboard Financeiro completo (`/financeiro`): receita Hotmart + Clint, lucro
 
 ## Sprint 5 — Agente IA proativo

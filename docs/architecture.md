@@ -63,6 +63,7 @@ vendedor" dessa mesma página já usa a camada BI (todos os funis, sem seleção
   | `/` (`_app.index.tsx`) | Dashboard financeiro: faturamento, ticket médio, chargeback/reembolso, por produto e mês | `sales` (Hotmart CSV) |
   | `/comercial` | Performance por funil Clint: KPIs, funil de etapas, motivos de perda, ranking e detalhe por vendedor (consolidado, todos os funis) | `clint_deals` + `bi_pipeline_areas` |
   | `/executivo` | Dashboard executivo por área de negócio (sem seleção de pipeline) | `bi.ts` (camada BI) |
+  | `/vendedor-produto` | Produto mais vendido por vendedor (cruzamento Clint × Hotmart) | `bi.ts::matchSellerProduct` |
   | `/areas` | Configuração manual do dicionário de pipelines | `bi_pipeline_areas` + `clint_origins` |
   | `/agente` | Chat com o Agente IA | `askAgent` (server function) |
   | `/import` | Upload semanal de CSV de vendas Hotmart | `sales`, `weekly_imports` |
