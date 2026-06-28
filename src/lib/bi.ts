@@ -5,7 +5,11 @@
  * uma área de negócio (via bi_pipeline_areas) sem precisar tocar em código
  * de dashboard nenhum.
  */
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchAllDealsFn,
+  fetchAllSalesFn,
+  fetchPipelineAreasFn,
+} from "@/lib/data.functions";
 import type { BusinessArea } from "@/lib/pipeline-areas";
 
 export type Deal = {
