@@ -1,5 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 
+// Combined sync function used by the public cron trigger (n8n daily 6am).
+export async function runFullClintSync() {
+  const token = process.env.CLINT_API_TOKEN;
+  if (!token) throw new Error("CLINT_API_TOKEN not configured");
+  const users = await syncClintUsers();
+  const origins = await syncClintOrigins();
+  const deals = await syncClintDeals({ data: { sinceDays: 7 } });
+  return { ok: true, synced_at: new Date().toISOString(), results: { users, origins, deals } };
+}
+
+
 const CLINT_BASE = "https://api.clint.digital";
 
 function parseClintNumber(v: unknown): number | null {
