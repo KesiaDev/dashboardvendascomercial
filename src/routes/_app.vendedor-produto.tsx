@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { fetchAllDeals, fetchAllSales, matchSellerProduct, periodRange, type Period } from "@/lib/bi";
+import { fetchProductConfig } from "@/lib/product-config.functions";
 import { formatInt } from "@/lib/format";
 import { formatBRL } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,9 +18,29 @@ function VendedorProduto() {
   const [period, setPeriod] = useState<Period>("month");
   const { data: deals = [], isLoading: l1 } = useQuery({ queryKey: ["bi_deals"], queryFn: fetchAllDeals });
   const { data: sales = [], isLoading: l2 } = useQuery({ queryKey: ["bi_sales"], queryFn: fetchAllSales });
+  // Falha silenciosa se a tabela ainda não existir (migration bi_product_config
+  // pendente) — nesse caso nenhum produto é filtrado, comportamento de hoje.
+  const { data: productConfig = [] } = useQuery({
+    queryKey: ["bi_product_config"],
+    queryFn: fetchProductConfig,
+    retry: false,
+    throwOnError: false,
+  });
+
+  const inactiveProductIds = useMemo(
+    () => new Set(productConfig.filter((p) => !p.ativo).map((p) => p.product_id)),
+    [productConfig],
+  );
+  const activeSales = useMemo(
+    () => (inactiveProductIds.size === 0 ? sales : sales.filter((s) => !inactiveProductIds.has(s.produto_grupo))),
+    [sales, inactiveProductIds],
+  );
 
   const { start, end } = periodRange(period);
-  const result = useMemo(() => matchSellerProduct(deals, sales, start, end), [deals, sales, start, end]);
+  const result = useMemo(
+    () => matchSellerProduct(deals, activeSales, start, end),
+    [deals, activeSales, start, end],
+  );
 
   const bySeller = useMemo(() => {
     const m = new Map<string, { total: number; revenue: number; produtos: typeof result.rows }>();
@@ -48,6 +69,13 @@ function VendedorProduto() {
             Cruza vendas aprovadas da Hotmart com negócios ganhos da Clint pelo e-mail do
             cliente — mostra qual produto cada vendedor mais vende.
           </p>
+          {inactiveProductIds.size > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {inactiveProductIds.size} produto{inactiveProductIds.size > 1 ? "s" : ""} marcado
+              {inactiveProductIds.size > 1 ? "s" : ""} como inativo em{" "}
+              <a href="/areas" className="underline">/areas</a> não entram nesta contagem.
+            </p>
+          )}
         </div>
         <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
           <TabsList>

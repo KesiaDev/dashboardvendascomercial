@@ -46,6 +46,27 @@ export type Database = {
           },
         ]
       }
+      bi_product_config: {
+        Row: {
+          ativo: boolean
+          label: string
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          label: string
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          label?: string
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clint_deals: {
         Row: {
           contact_ddi: string | null

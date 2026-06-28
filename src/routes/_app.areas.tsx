@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { fetchOriginsFn, fetchPipelineAreasFn } from "@/lib/data.functions";
 import { setPipelineArea } from "@/lib/clint.functions";
+import { syncProductConfig, setProductActive, fetchProductConfig } from "@/lib/product-config.functions";
 import { AREA_LABELS, AREA_ORDER, type BusinessArea } from "@/lib/pipeline-areas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
@@ -49,6 +51,7 @@ async function fetchRows(): Promise<Row[]> {
 
 function AreasConfig() {
   const qc = useQueryClient();
+  const [view, setView] = useState<"pipelines" | "produtos">("pipelines");
   const [filter, setFilter] = useState<BusinessArea | "ALL">("ALL");
   const { data: rows = [], isLoading } = useQuery({ queryKey: ["bi_areas_config"], queryFn: fetchRows });
 
@@ -63,6 +66,34 @@ function AreasConfig() {
     onError: (e: any) => toast.error(`Erro: ${e?.message ?? e}`),
   });
 
+  const syncProductsFn = useServerFn(syncProductConfig);
+  const setProductActiveFn = useServerFn(setProductActive);
+  const { data: products = [], isLoading: productsLoading } = useQuery({
+    queryKey: ["bi_product_config"],
+    queryFn: fetchProductConfig,
+  });
+  const syncProductsMutation = useMutation({
+    mutationFn: () => syncProductsFn({ data: undefined as any }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bi_product_config"] }),
+    onError: (e: any) => toast.error(`Erro ao sincronizar produtos: ${e?.message ?? e}`),
+  });
+  const productMutation = useMutation({
+    mutationFn: (vars: { productId: string; ativo: boolean }) => setProductActiveFn({ data: vars }),
+    onSuccess: () => {
+      toast.success("Produto atualizado");
+      qc.invalidateQueries({ queryKey: ["bi_product_config"] });
+    },
+    onError: (e: any) => toast.error(`Erro: ${e?.message ?? e}`),
+  });
+
+  // Garante que todo produto de PRODUCT_GROUPS tenha uma linha aqui, na primeira
+  // vez que a lista vier vazia (ex.: antes da migration ser aplicada não há nada).
+  useEffect(() => {
+    if (view === "produtos" && !productsLoading && products.length === 0 && !syncProductsMutation.isPending) {
+      syncProductsMutation.mutate();
+    }
+  }, [view, productsLoading, products.length]);
+
   const grouped = useMemo(() => {
     const filtered = filter === "ALL" ? rows : rows.filter((r) => r.area === filter);
     const m = new Map<string, Row[]>();
@@ -76,91 +107,139 @@ function AreasConfig() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Dicionário de Pipelines</h2>
-        <p className="text-sm text-muted-foreground">
-          Cada pipeline da Clint é classificado automaticamente em uma área de negócio (com base
-          no grupo da Clint). Reclassifique aqui se algum estiver errado — o dashboard executivo
-          usa essa configuração para nunca mais depender de escolha manual de funil.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">
+            {view === "pipelines" ? "Dicionário de Pipelines" : "Produtos"}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {view === "pipelines"
+              ? "Cada pipeline da Clint é classificado automaticamente em uma área de negócio (com base no grupo da Clint). Reclassifique aqui se algum estiver errado — o dashboard executivo usa essa configuração para nunca mais depender de escolha manual de funil."
+              : "Marque como inativo qualquer produto que não deva entrar em Vendedor x Produto (ex.: ofertas descontinuadas ou que não geram comissão hoje)."}
+          </p>
+        </div>
+        <Tabs value={view} onValueChange={(v) => setView(v as "pipelines" | "produtos")}>
+          <TabsList>
+            <TabsTrigger value="pipelines">Pipelines</TabsTrigger>
+            <TabsTrigger value="produtos">Produtos</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-2 py-4">
-          <button
-            onClick={() => setFilter("ALL")}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-              filter === "ALL" ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/70"
-            }`}
-          >
-            Todos ({rows.length})
-          </button>
-          {AREA_ORDER.map((a) => {
-            const count = rows.filter((r) => r.area === a).length;
-            return (
+      {view === "pipelines" ? (
+        <>
+          <Card>
+            <CardContent className="flex flex-wrap items-center gap-2 py-4">
               <button
-                key={a}
-                onClick={() => setFilter(a)}
+                onClick={() => setFilter("ALL")}
                 className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-                  filter === a ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/70"
+                  filter === "ALL" ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/70"
                 }`}
               >
-                {AREA_LABELS[a]} ({count})
+                Todos ({rows.length})
               </button>
-            );
-          })}
-        </CardContent>
-      </Card>
+              {AREA_ORDER.map((a) => {
+                const count = rows.filter((r) => r.area === a).length;
+                return (
+                  <button
+                    key={a}
+                    onClick={() => setFilter(a)}
+                    className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                      filter === a ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/70"
+                    }`}
+                  >
+                    {AREA_LABELS[a]} ({count})
+                  </button>
+                );
+              })}
+            </CardContent>
+          </Card>
 
-      {isLoading ? (
-        <div className="text-muted-foreground">Carregando…</div>
+          {isLoading ? (
+            <div className="text-muted-foreground">Carregando…</div>
+          ) : (
+            grouped.map(([group, items]) => (
+              <Card key={group}>
+                <CardHeader>
+                  <CardTitle className="text-base">{group}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {items.map((r) => (
+                    <div
+                      key={r.pipeline_id}
+                      className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-secondary/30 p-2.5"
+                    >
+                      <span className="flex-1 text-sm font-medium min-w-[200px]">{r.name}</span>
+                      {r.auto_classified && (
+                        <span className="text-xs text-muted-foreground italic">auto</span>
+                      )}
+                      <Select
+                        value={r.area}
+                        onValueChange={(v) =>
+                          mutation.mutate({ pipelineId: r.pipeline_id, area: v, ativo: r.ativo })
+                        }
+                      >
+                        <SelectTrigger className="w-[220px] h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {AREA_ORDER.map((a) => (
+                            <SelectItem key={a} value={a}>
+                              {AREA_LABELS[a]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Ativo</span>
+                        <Switch
+                          checked={r.ativo}
+                          onCheckedChange={(checked) =>
+                            mutation.mutate({ pipelineId: r.pipeline_id, area: r.area, ativo: checked })
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </>
       ) : (
-        grouped.map(([group, items]) => (
-          <Card key={group}>
-            <CardHeader>
-              <CardTitle className="text-base">{group}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {items.map((r) => (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Catálogo de produtos</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {productsLoading || syncProductsMutation.isPending ? (
+              <div className="text-muted-foreground">Carregando…</div>
+            ) : products.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                Nenhum produto encontrado. Verifique se a migration `bi_product_config`
+                já foi aplicada no banco.
+              </p>
+            ) : (
+              products.map((p) => (
                 <div
-                  key={r.pipeline_id}
+                  key={p.product_id}
                   className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-secondary/30 p-2.5"
                 >
-                  <span className="flex-1 text-sm font-medium min-w-[200px]">{r.name}</span>
-                  {r.auto_classified && (
-                    <span className="text-xs text-muted-foreground italic">auto</span>
-                  )}
-                  <Select
-                    value={r.area}
-                    onValueChange={(v) =>
-                      mutation.mutate({ pipelineId: r.pipeline_id, area: v, ativo: r.ativo })
-                    }
-                  >
-                    <SelectTrigger className="w-[220px] h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {AREA_ORDER.map((a) => (
-                        <SelectItem key={a} value={a}>
-                          {AREA_LABELS[a]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <span className="flex-1 text-sm font-medium min-w-[200px]">{p.label}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Ativo</span>
                     <Switch
-                      checked={r.ativo}
+                      checked={p.ativo}
                       onCheckedChange={(checked) =>
-                        mutation.mutate({ pipelineId: r.pipeline_id, area: r.area, ativo: checked })
+                        productMutation.mutate({ productId: p.product_id, ativo: checked })
                       }
                     />
                   </div>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        ))
+              ))
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
   );
