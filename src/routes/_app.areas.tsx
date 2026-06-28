@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchOriginsFn, fetchPipelineAreasFn } from "@/lib/data.functions";
 import { setPipelineArea } from "@/lib/clint.functions";
 import { AREA_LABELS, AREA_ORDER, type BusinessArea } from "@/lib/pipeline-areas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
