@@ -7,6 +7,7 @@ import {
   syncClintUsers,
   syncClintDeals,
   syncClintOrigins,
+  syncPipelineAreas,
   setLostStatusLabel,
   backfillLostStatuses,
 } from "@/lib/clint.functions";
@@ -192,6 +193,7 @@ function Comercial() {
 
   const syncUsersFn = useServerFn(syncClintUsers);
   const syncOriginsFn = useServerFn(syncClintOrigins);
+  const syncAreasFn = useServerFn(syncPipelineAreas);
   const syncDealsFn = useServerFn(syncClintDeals);
   const backfillFn = useServerFn(backfillLostStatuses);
 
@@ -199,6 +201,7 @@ function Comercial() {
     mutationFn: async (full: boolean) => {
       await syncUsersFn({ data: undefined as any });
       await syncOriginsFn({ data: undefined as any });
+      await syncAreasFn({ data: undefined as any });
       const r = await syncDealsFn({ data: { full, sinceDays: 365 } });
       await backfillFn({ data: undefined as any });
       return r;

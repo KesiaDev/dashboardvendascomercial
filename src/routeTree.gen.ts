@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppImportRouteImport } from './routes/_app.import'
+import { Route as AppExecutivoRouteImport } from './routes/_app.executivo'
 import { Route as AppComercialRouteImport } from './routes/_app.comercial'
+import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
 
@@ -30,9 +32,19 @@ const AppImportRoute = AppImportRouteImport.update({
   path: '/import',
   getParentRoute: () => AppRoute,
 } as any)
+const AppExecutivoRoute = AppExecutivoRouteImport.update({
+  id: '/executivo',
+  path: '/executivo',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppComercialRoute = AppComercialRouteImport.update({
   id: '/comercial',
   path: '/comercial',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAreasRoute = AppAreasRouteImport.update({
+  id: '/areas',
+  path: '/areas',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAgenteRoute = AppAgenteRouteImport.update({
@@ -49,13 +61,17 @@ const ApiPublicSyncTriggerRoute = ApiPublicSyncTriggerRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/agente': typeof AppAgenteRoute
+  '/areas': typeof AppAreasRoute
   '/comercial': typeof AppComercialRoute
+  '/executivo': typeof AppExecutivoRoute
   '/import': typeof AppImportRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
 export interface FileRoutesByTo {
   '/agente': typeof AppAgenteRoute
+  '/areas': typeof AppAreasRoute
   '/comercial': typeof AppComercialRoute
+  '/executivo': typeof AppExecutivoRoute
   '/import': typeof AppImportRoute
   '/': typeof AppIndexRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
@@ -64,7 +80,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/_app/agente': typeof AppAgenteRoute
+  '/_app/areas': typeof AppAreasRoute
   '/_app/comercial': typeof AppComercialRoute
+  '/_app/executivo': typeof AppExecutivoRoute
   '/_app/import': typeof AppImportRoute
   '/_app/': typeof AppIndexRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
@@ -74,16 +92,27 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/agente'
+    | '/areas'
     | '/comercial'
+    | '/executivo'
     | '/import'
     | '/api/public/sync/trigger'
   fileRoutesByTo: FileRoutesByTo
-  to: '/agente' | '/comercial' | '/import' | '/' | '/api/public/sync/trigger'
+  to:
+    | '/agente'
+    | '/areas'
+    | '/comercial'
+    | '/executivo'
+    | '/import'
+    | '/'
+    | '/api/public/sync/trigger'
   id:
     | '__root__'
     | '/_app'
     | '/_app/agente'
+    | '/_app/areas'
     | '/_app/comercial'
+    | '/_app/executivo'
     | '/_app/import'
     | '/_app/'
     | '/api/public/sync/trigger'
@@ -117,11 +146,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppImportRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/executivo': {
+      id: '/_app/executivo'
+      path: '/executivo'
+      fullPath: '/executivo'
+      preLoaderRoute: typeof AppExecutivoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/comercial': {
       id: '/_app/comercial'
       path: '/comercial'
       fullPath: '/comercial'
       preLoaderRoute: typeof AppComercialRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/areas': {
+      id: '/_app/areas'
+      path: '/areas'
+      fullPath: '/areas'
+      preLoaderRoute: typeof AppAreasRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/agente': {
@@ -143,14 +186,18 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppAgenteRoute: typeof AppAgenteRoute
+  AppAreasRoute: typeof AppAreasRoute
   AppComercialRoute: typeof AppComercialRoute
+  AppExecutivoRoute: typeof AppExecutivoRoute
   AppImportRoute: typeof AppImportRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppAgenteRoute: AppAgenteRoute,
+  AppAreasRoute: AppAreasRoute,
   AppComercialRoute: AppComercialRoute,
+  AppExecutivoRoute: AppExecutivoRoute,
   AppImportRoute: AppImportRoute,
   AppIndexRoute: AppIndexRoute,
 }
@@ -164,3 +211,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

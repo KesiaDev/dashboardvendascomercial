@@ -6,8 +6,9 @@ export async function runFullClintSync() {
   if (!token) throw new Error("CLINT_API_TOKEN not configured");
   const users = await syncClintUsers();
   const origins = await syncClintOrigins();
+  const areas = await syncPipelineAreas();
   const deals = await syncClintDeals({ data: { sinceDays: 90 } });
-  return { ok: true, synced_at: new Date().toISOString(), results: { users, origins, deals } };
+  return { ok: true, synced_at: new Date().toISOString(), results: { users, origins, areas, deals } };
 }
 
 
@@ -271,3 +272,58 @@ export const backfillLostStatuses = createServerFn({ method: "POST" }).handler(a
   }
   return { count: ids.size };
 });
+
+/**
+ * Classifica automaticamente todos os pipelines em áreas de negócio
+ * (Comercial, Implantação, Pós-venda, Financeiro, Marketing...) com base
+ * no group_name que a própria Clint já atribui a cada origin. Roda com
+ * ignoreDuplicates: true para nunca sobrescrever uma classificação manual.
+ */
+export const syncPipelineAreas = createServerFn({ method: "POST" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { classifyByGroupName } = await import("@/lib/pipeline-areas");
+
+  const { data: origins, error } = await supabaseAdmin
+    .from("clint_origins")
+    .select("id,group_name,archived");
+  if (error) throw error;
+
+  const rows = (origins ?? []).map((o) => ({
+    pipeline_id: o.id,
+    area: classifyByGroupName(o.group_name),
+    ativo: !o.archived,
+    auto_classified: true,
+    updated_at: new Date().toISOString(),
+  }));
+
+  if (rows.length) {
+    const { error: upErr } = await supabaseAdmin
+      .from("bi_pipeline_areas")
+      .upsert(rows, { onConflict: "pipeline_id", ignoreDuplicates: true });
+    if (upErr) throw upErr;
+  }
+  return { classified: rows.length };
+});
+
+/**
+ * Reclassificação manual de um pipeline específico (usado na tela de
+ * configuração de áreas). Marca auto_classified=false para essa origin
+ * nunca mais ser sobrescrita por syncPipelineAreas.
+ */
+export const setPipelineArea = createServerFn({ method: "POST" })
+  .inputValidator((d: { pipelineId: string; area: string; ativo: boolean }) => d)
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("bi_pipeline_areas").upsert(
+      {
+        pipeline_id: data.pipelineId,
+        area: data.area,
+        ativo: data.ativo,
+        auto_classified: false,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "pipeline_id" },
+    );
+    if (error) throw error;
+    return { ok: true };
+  });
