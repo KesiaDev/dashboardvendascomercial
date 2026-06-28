@@ -217,10 +217,10 @@ function Comercial() {
   // Auto-select a sensible default origin once data loads
   useEffect(() => {
     if (originId || origins.length === 0) return;
-    // Priority: Funil Sessão Estratégica (commercial) → Pipeline V3 → any active with most stages
+    // Default: PIPELINE_COMERCIAL-V3 (main commercial funnel with full team data)
     const candidates = [
-      origins.find((o) => /funil.*sess[aã]o.*estrat[eé]gica/i.test(o.name) && !o.archived),
       origins.find((o) => /pipeline_comercial-v3/i.test(o.name) && !o.archived),
+      origins.find((o) => /funil.*sess[aã]o.*estrat[eé]gica/i.test(o.name) && !o.archived),
     ].filter(Boolean) as Origin[];
     const pick = candidates[0];
     if (pick) {
