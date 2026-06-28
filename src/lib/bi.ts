@@ -335,21 +335,7 @@ export function cleanSellerName(name: string): string {
 }
 
 export async function fetchAllSales(): Promise<SaleRecord[]> {
-  const all: SaleRecord[] = [];
-  let from = 0;
-  const pageSize = 1000;
-  while (true) {
-    const { data, error } = await supabase
-      .from("sales")
-      .select("transacao,produto_grupo,produto_original,status,data_venda,email_cliente,faturamento_liquido_brl,nome_afiliado")
-      .range(from, from + pageSize - 1);
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    all.push(...(data as SaleRecord[]));
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return all;
+  return (await fetchAllSalesFn()) as SaleRecord[];
 }
 
 /**
