@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchOriginsFn, fetchStagesFn, fetchLostStatusesFn, fetchLastSyncFn, fetchAllDealsFn } from "@/lib/data.functions";
 import {
   syncClintUsers,
   syncClintDeals,
