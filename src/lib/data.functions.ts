@@ -129,6 +129,17 @@ export const fetchPipelineAreasFn = createServerFn({ method: "GET" }).handler(as
   return data ?? [];
 });
 
+// ───── bi_product_config ─────
+export const fetchProductConfigFn = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = await admin();
+  const { data, error } = await supabase
+    .from("bi_product_config")
+    .select("product_id,label,ativo")
+    .order("label");
+  if (error) throw new Error(error.message);
+  return data ?? [];
+});
+
 // ───── weekly_imports ─────
 export const fetchImportsFn = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = await admin();

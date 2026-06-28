@@ -1,15 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchProductConfigFn } from "@/lib/data.functions";
 
 export type ProductConfig = { product_id: string; label: string; ativo: boolean };
 
+// RLS de bi_product_config é restrita a service_role (mesma política aplicada
+// a todas as outras tabelas) — leitura precisa passar por server function.
 export async function fetchProductConfig(): Promise<ProductConfig[]> {
-  const { data, error } = await supabase
-    .from("bi_product_config")
-    .select("product_id,label,ativo")
-    .order("label");
-  if (error) throw error;
-  return (data ?? []) as ProductConfig[];
+  return (await fetchProductConfigFn()) as ProductConfig[];
 }
 
 /**
