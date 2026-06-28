@@ -269,6 +269,23 @@ function Comercial() {
     });
   }, [deals, period, dateRange, originId]);
 
+  // Deals filtrados SÓ por período (sem filtro de funil) — para "Detalhe por vendedor"
+  const filteredAllOrigins = useMemo(() => {
+    const usingRange = !!dateRange?.from;
+    const start = usingRange ? dateRange!.from! : periodStart(period);
+    const end =
+      usingRange && dateRange?.to
+        ? new Date(dateRange.to.getTime() + 24 * 60 * 60 * 1000 - 1)
+        : null;
+    return deals.filter((d) => {
+      if (!d.created_at) return !usingRange && period === "all";
+      const dt = new Date(d.created_at);
+      if (start && dt < start) return false;
+      if (end && dt > end) return false;
+      return true;
+    });
+  }, [deals, period, dateRange]);
+
   // KPIs + funnel
   const metrics = useMemo(() => {
     let won = 0;
@@ -392,7 +409,8 @@ function Comercial() {
         revenue: number;
       }
     >();
-    for (const d of filtered) {
+    // Usa filteredAllOrigins para mostrar performance consolidada de todos os funis
+    for (const d of filteredAllOrigins) {
       if (!d.user_id) continue;
       const key = d.user_id;
       const cur = map.get(key) ?? {
@@ -420,7 +438,7 @@ function Comercial() {
       map.set(key, cur);
     }
     return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
-  }, [filtered, currency, rate]);
+  }, [filteredAllOrigins, currency, rate]);
 
   const setLabelFn = useServerFn(setLostStatusLabel);
   const renameMutation = useMutation({
@@ -818,6 +836,7 @@ function Comercial() {
             <div className="mb-4 flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-lg font-semibold">Detalhe por vendedor</h3>
+              <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">todos os funis</span>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {sellers.map((s, i) => {
