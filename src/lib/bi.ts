@@ -190,7 +190,7 @@ export function rankSellers(
   const ensure = (id: string, name: string, email: string): SellerStats => {
     let cur = map.get(id);
     if (!cur) {
-      cur = { user_id: id, name, email, leads: 0, won: 0, lost: 0, open: 0, revenue: 0 };
+      cur = { user_id: id, name: cleanSellerName(name), email, leads: 0, won: 0, lost: 0, open: 0, revenue: 0 };
       map.set(id, cur);
     }
     return cur;
@@ -339,6 +339,16 @@ function isResetRelacional(produtoOriginal: string): boolean {
   return produtoOriginal.toLowerCase().includes("reset relacional");
 }
 
+/**
+ * Colapsa espaços duplos (comuns em nomes vindos da Clint, ex.: "Fabio  Nadal")
+ * antes de usar o nome como chave de agrupamento — sem isso, a mesma pessoa
+ * vira duas linhas diferentes quando uma venda casa por afiliado (nome limpo)
+ * e outra pelo cruzamento Clint (nome com espaço duplo).
+ */
+export function cleanSellerName(name: string): string {
+  return name.trim().replace(/\s+/g, " ");
+}
+
 export async function fetchAllSales(): Promise<SaleRecord[]> {
   const all: SaleRecord[] = [];
   let from = 0;
@@ -454,8 +464,9 @@ export function matchSellerProduct(
 
     const affiliateSeller = matchAffiliateToSeller(s.nome_afiliado);
     if (affiliateSeller) {
-      const key = `${affiliateSeller}::${s.produto_grupo}`;
-      const cur = agg.get(key) ?? { seller: affiliateSeller, produto_grupo: s.produto_grupo, vendas: 0, faturamento: 0 };
+      const seller = cleanSellerName(affiliateSeller);
+      const key = `${seller}::${s.produto_grupo}`;
+      const cur = agg.get(key) ?? { seller, produto_grupo: s.produto_grupo, vendas: 0, faturamento: 0 };
       cur.vendas += 1;
       cur.faturamento += s.faturamento_liquido_brl ?? 0;
       agg.set(key, cur);
@@ -480,7 +491,7 @@ export function matchSellerProduct(
       }, best);
     }
 
-    const seller = effectiveWinner(best)!.name.trim();
+    const seller = cleanSellerName(effectiveWinner(best)!.name);
     const key = `${seller}::${s.produto_grupo}`;
     const cur = agg.get(key) ?? { seller, produto_grupo: s.produto_grupo, vendas: 0, faturamento: 0 };
     cur.vendas += 1;

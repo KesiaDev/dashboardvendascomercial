@@ -11,7 +11,7 @@ import {
   setLostStatusLabel,
   backfillLostStatuses,
 } from "@/lib/clint.functions";
-import { fetchAllSales, findPhantomWonDeals, isExcludedSeller, effectiveWinner } from "@/lib/bi";
+import { fetchAllSales, findPhantomWonDeals, isExcludedSeller, effectiveWinner, cleanSellerName } from "@/lib/bi";
 import { useCurrency } from "@/lib/currency-context";
 import { formatInt, formatPct } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -433,7 +433,7 @@ function Comercial() {
     for (const d of filteredAllOrigins) {
       if (!d.user_id) continue;
       const cur = map.get(d.user_id) ?? {
-        name: d.user_name ?? d.user_email ?? "—",
+        name: cleanSellerName(d.user_name ?? d.user_email ?? "—"),
         email: d.user_email ?? "",
         leads: 0,
         won: 0,
@@ -460,7 +460,7 @@ function Comercial() {
 
       if (!map.has(winner.id)) {
         map.set(winner.id, {
-          name: winner.name,
+          name: cleanSellerName(winner.name),
           email: winner.email,
           leads: 0,
           won: 0,
