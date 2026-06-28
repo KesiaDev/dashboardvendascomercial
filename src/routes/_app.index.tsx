@@ -61,23 +61,7 @@ function periodStart(p: Period): Date | null {
 }
 
 async function fetchSales(): Promise<Sale[]> {
-  const all: Sale[] = [];
-  let from = 0;
-  const pageSize = 1000;
-  // paginar para evitar limite de 1000
-  while (true) {
-    const { data, error } = await supabase
-      .from("sales")
-      .select("transacao,produto_grupo,produto_original,status,data_venda,moeda_original,preco_oferta,faturamento_liquido_brl,valor_recebido_convertido,moeda_recebimento")
-      .order("data_venda", { ascending: false })
-      .range(from, from + pageSize - 1);
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    all.push(...(data as Sale[]));
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return all;
+  return (await fetchSalesDashboardFn()) as Sale[];
 }
 
 function Dashboard() {
