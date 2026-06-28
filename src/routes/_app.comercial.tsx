@@ -217,20 +217,19 @@ function Comercial() {
   // Auto-select a sensible default origin once data loads
   useEffect(() => {
     if (originId || origins.length === 0) return;
-    // Try Pipeline V3 (10 stages) → Funil Sessão Estratégica → first non-archived w/ deals
+    // Priority: Funil Sessão Estratégica (commercial) → Pipeline V3 → any active with most stages
     const candidates = [
-      origins.find((o) => /pipeline_comercial-v3/i.test(o.name) && !o.archived),
       origins.find((o) => /funil.*sess[aã]o.*estrat[eé]gica/i.test(o.name) && !o.archived),
+      origins.find((o) => /pipeline_comercial-v3/i.test(o.name) && !o.archived),
     ].filter(Boolean) as Origin[];
     const pick = candidates[0];
     if (pick) {
-      // Make sure stages exist for that origin (10-stage v3 vs 2-stage v3)
       const stagesFor = stages.filter((s) => s.origin_id === pick.id).length;
       if (stagesFor >= 4) {
         setOriginId(pick.id);
         return;
       }
-      // Fallback: pick any origin with same name + most stages
+      // Fallback: pick same-name origin with most stages
       const sameName = origins.filter((o) => o.name === pick.name);
       const best = sameName
         .map((o) => ({ o, count: stages.filter((s) => s.origin_id === o.id).length }))
