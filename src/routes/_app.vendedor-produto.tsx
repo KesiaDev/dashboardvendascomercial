@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { fetchAllDeals, fetchAllSales, matchSellerProduct } from "@/lib/bi";
+import { fetchAllDeals, fetchAllSales, matchSellerProduct, periodRange, type Period } from "@/lib/bi";
 import { formatInt } from "@/lib/format";
 import { formatBRL } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Users } from "lucide-react";
 
@@ -13,10 +14,12 @@ export const Route = createFileRoute("/_app/vendedor-produto")({
 });
 
 function VendedorProduto() {
+  const [period, setPeriod] = useState<Period>("month");
   const { data: deals = [], isLoading: l1 } = useQuery({ queryKey: ["bi_deals"], queryFn: fetchAllDeals });
   const { data: sales = [], isLoading: l2 } = useQuery({ queryKey: ["bi_sales"], queryFn: fetchAllSales });
 
-  const result = useMemo(() => matchSellerProduct(deals, sales), [deals, sales]);
+  const { start, end } = periodRange(period);
+  const result = useMemo(() => matchSellerProduct(deals, sales, start, end), [deals, sales, start, end]);
 
   const bySeller = useMemo(() => {
     const m = new Map<string, { total: number; revenue: number; produtos: typeof result.rows }>();
@@ -38,12 +41,25 @@ function VendedorProduto() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Vendedor × Produto</h2>
-        <p className="text-sm text-muted-foreground">
-          Cruza vendas aprovadas da Hotmart com negócios ganhos da Clint pelo e-mail do
-          cliente — mostra qual produto cada vendedor mais vende.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">Vendedor × Produto</h2>
+          <p className="text-sm text-muted-foreground">
+            Cruza vendas aprovadas da Hotmart com negócios ganhos da Clint pelo e-mail do
+            cliente — mostra qual produto cada vendedor mais vende.
+          </p>
+        </div>
+        <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+          <TabsList>
+            <TabsTrigger value="day">Dia</TabsTrigger>
+            <TabsTrigger value="week">Sem</TabsTrigger>
+            <TabsTrigger value="month">Mês</TabsTrigger>
+            <TabsTrigger value="quarter">Trim</TabsTrigger>
+            <TabsTrigger value="semester">Sem.</TabsTrigger>
+            <TabsTrigger value="year">Ano</TabsTrigger>
+            <TabsTrigger value="all">Tudo</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {isLoading ? (

@@ -27,12 +27,13 @@ export type Deal = {
   origin_name: string | null;
 };
 
-export type Period = "week" | "month" | "quarter" | "semester" | "year" | "all";
+export type Period = "day" | "week" | "month" | "quarter" | "semester" | "year" | "all";
 
 export function periodStart(p: Period): Date | null {
   if (p === "all") return null;
   const now = new Date();
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (p === "day") return d;
   if (p === "week") d.setDate(d.getDate() - 7);
   else if (p === "month") return new Date(now.getFullYear(), now.getMonth(), 1);
   else if (p === "quarter") return new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
@@ -286,7 +287,12 @@ export type SellerProductResult = {
  * tiver won_at mais próximo de data_venda. Vendas sem e-mail correspondente na
  * Clint entram em `unmatched` (produto identificado, vendedor não).
  */
-export function matchSellerProduct(allDeals: Deal[], allSales: SaleRecord[]): SellerProductResult {
+export function matchSellerProduct(
+  allDeals: Deal[],
+  allSales: SaleRecord[],
+  start: Date | null = null,
+  end: Date | null = null,
+): SellerProductResult {
   const dealsByEmail = new Map<string, Deal[]>();
   for (const d of allDeals) {
     if (d.status !== "WON" || !d.user_name) continue;
@@ -306,6 +312,13 @@ export function matchSellerProduct(allDeals: Deal[], allSales: SaleRecord[]): Se
     // "Aprovado", "Cancelado"...) — normaliza com a mesma função usada no
     // dashboard financeiro (/) em vez de comparar string literal.
     if (categorizeStatus(s.status) !== "aprovado") continue;
+    if (s.data_venda) {
+      const saleDate = new Date(s.data_venda);
+      if (start && saleDate < start) continue;
+      if (end && saleDate > end) continue;
+    } else if (start) {
+      continue;
+    }
     const email = s.email_cliente?.trim().toLowerCase();
     const candidates = email ? dealsByEmail.get(email) : undefined;
     if (!candidates || candidates.length === 0) {
