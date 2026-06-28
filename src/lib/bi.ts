@@ -110,6 +110,23 @@ export function filterByPeriodCreated(deals: Deal[], start: Date | null, end: Da
   });
 }
 
+/**
+ * Nomes excluídos de qualquer ranking/agregação por vendedor — pessoas que têm
+ * negócios na Clint mas cujos resultados não devem ser expostos nos dashboards
+ * (ex.: equipe interna, suporte). Comparação por nome normalizado (sem acento,
+ * minúsculo, sem espaços duplicados) para resistir a variações de grafia.
+ */
+const EXCLUDED_SELLERS = new Set([
+  "camila faria",
+  "aline gonçalves",
+  "késia nandi",
+]);
+
+function isExcludedSeller(name: string | null | undefined): boolean {
+  if (!name) return false;
+  return EXCLUDED_SELLERS.has(name.toLowerCase().trim().replace(/\s+/g, " "));
+}
+
 export type SellerStats = {
   user_id: string;
   name: string;
@@ -182,7 +199,9 @@ export function rankSellers(
     cur.revenue += convertValue(d.value, d.currency, currency, rate);
   }
 
-  return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
+  return Array.from(map.values())
+    .filter((s) => !isExcludedSeller(s.name))
+    .sort((a, b) => b.revenue - a.revenue);
 }
 
 export type AreaKpis = {
@@ -314,7 +333,9 @@ export function matchSellerProduct(allDeals: Deal[], allSales: SaleRecord[]): Se
   }
 
   return {
-    rows: Array.from(agg.values()).sort((a, b) => b.faturamento - a.faturamento),
+    rows: Array.from(agg.values())
+      .filter((r) => !isExcludedSeller(r.seller))
+      .sort((a, b) => b.faturamento - a.faturamento),
     matched,
     unmatched,
     unmatchedRevenue,
