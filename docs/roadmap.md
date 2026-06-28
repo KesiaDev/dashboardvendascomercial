@@ -68,6 +68,11 @@ Checklist técnico:
 
 ## Sprint 4 — Métricas diárias, metas e produtos
 
+> Detalhamento completo desta sprint (modelo de negócio extraído da planilha, dicionário
+> de entidades e ordem de implementação sugerida) em
+> [business-model.md](./business-model.md), [data-dictionary.md](./data-dictionary.md)
+> e [gap-analysis.md](./gap-analysis.md) (2026-06-28).
+
 - [ ] `bi_daily_metrics`: snapshot diário consolidado por área/vendedor (permite
       gráfico de série histórica e projeção de fechamento de mês)
 - [ ] `bi_targets`: metas por produto/vendedor/mês — **alimentada pela planilha**

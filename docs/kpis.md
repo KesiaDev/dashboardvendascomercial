@@ -112,6 +112,85 @@ Convenção desta tabela: **Origem** indica a tabela/campo exato usado hoje no c
 - **Origem**: `sales.status` normalizado via `categorizeStatus()`.
 - **Objetivo**: saúde financeira — alerta se subir mês a mês.
 
+## Planejamento Estratégico (Planilha de Metas)
+
+KPIs extraídos de `docs/business/acompanhamento-metas-2026.xlsx`. **Nenhum destes
+existe hoje na camada BI** — são calculados manualmente célula a célula na planilha.
+Ver análise completa em [business-model.md](./business-model.md#camada-de-planejamento-estratégico-planilha-de-metas-2026)
+e plano de implementação em [gap-analysis.md](./gap-analysis.md).
+
+### Investimento Total (+ imposto)
+- **Fórmula**: `Investimento Captação + RMKT + Mensageria + Distribuição`, depois `× 1.12` (12% de imposto sobre tráfego).
+- **Origem**: aba "Planilha de Metas"/"Planilha de Realizado", uma linha por funil.
+- **Objetivo**: base de custo de aquisição usada em CAC e ROAS.
+- **Frequência**: mensal, com totalizador trimestral.
+
+### Leads Pagas / Leads Orgânicas
+- **Fórmula**: contagem direta, vinda do gerenciador de anúncios (pagas) e tráfego não pago (orgânicas).
+- **Origem**: aba "Planilha de Metas"/"Realizado", por funil/mês.
+- **Objetivo**: volume de topo de funil — input de CPL e Conversão.
+- **Frequência**: mensal.
+
+### Conversão
+- **Fórmula**: `Vendas / Leads (Pagas + Orgânicas)`.
+- **Origem**: aba "Planilha de Metas"/"Realizado"; também por etapa de Renovação (`Conversão de Mentoria/ACC/TM`, taxas fixas assumidas: 15% / 35% / 70%).
+- **Objetivo**: eficiência do funil de aquisição — comparável com a Conversão comercial (`won/(won+lost)`) que já existe na camada BI, mas aqui é "lead pago→venda", não "negócio aberto→fechado".
+- **Frequência**: mensal.
+
+### CPL (Custo por Lead)
+- **Fórmula**: `Investimento Captação / Leads Pagas` (CPL "pago captação") e `Investimento Total + Imposto / Leads Pagas` (CPL "Total" — inclui RMKT/mensageria/distribuição/imposto).
+- **Origem**: aba "Planilha de Metas"/"Realizado".
+- **Objetivo**: custo de geração de demanda, isolado do custo de conversão (CAC).
+- **Frequência**: mensal.
+
+### Ticket Médio
+- **Fórmula**: `Faturamento / Vendas` (ou valor fixo assumido por produto/funil em metas futuras).
+- **Origem**: aba "Planilha de Metas"/"Realizado".
+- **Objetivo**: valor médio por venda — varia muito por funil (R$1.674 em Mentoria até R$19.200 em LDP).
+- **Frequência**: mensal.
+
+### CAC (Custo de Aquisição de Cliente)
+- **Fórmula**: `Investimento Total + Imposto / Vendas`.
+- **Origem**: aba "Planilha de Metas"/"Realizado".
+- **Objetivo**: quanto custa converter um cliente, por funil — comparar com Ticket Médio para saber se o funil é saudável.
+- **Frequência**: mensal.
+
+### ROAS (Return on Ad Spend)
+- **Fórmula**: `Faturamento / Investimento Total + Imposto`.
+- **Origem**: aba "Planilha de Metas"/"Realizado".
+- **Objetivo**: retorno bruto sobre o investimento em tráfego — usado para decidir onde escalar verba.
+- **Frequência**: mensal, com observação: **não existe "ROI" na planilha** (a palavra não aparece em nenhuma célula) — só ROAS. ROAS ≠ ROI: ROAS não desconta o custo do produto/equipe/imposto sobre venda, só o investimento em tráfego. Se o pedido original era "ROI", hoje a empresa só mede ROAS.
+
+### OKR — Meta / Realizado / Evolução
+- **Fórmula**: `Evolução = Realizado / Meta`, por funil e por indicador (Leads, Faturamento, Vendas Únicas, Conversão), com Total geral.
+- **Origem**: abas "OKR T1" e "OKR T2".
+- **Objetivo**: acompanhamento trimestral de meta batida/não batida por canal.
+- **Frequência**: trimestral.
+
+### Split Meta Marketing / Meta Comercial
+- **Fórmula**: cada funil tem um % fixo de responsabilidade definido manualmente (ex.: IGT = 50/50, Webinar = 70% Marketing / 30% Comercial, alguns funis 100% Comercial) — comentários da planilha confirmam os percentuais por linha.
+- **Origem**: aba "OKR T2" (colunas `Meta Marketing` / `Meta Comercial` / `Realizado Marketing` / `Realizado Comercial`).
+- **Objetivo**: dividir a responsabilidade pela meta entre os dois times — hoje a camada BI não faz nenhuma distinção entre lead vindo de marketing vs trabalhado pelo comercial.
+- **Frequência**: trimestral (só aparece a partir do T2 — T1 não tinha esse split).
+
+### Comissão (por funil)
+- **Fórmula**: valor fixo informado manualmente por funil e mês (não há fórmula visível — provavelmente % sobre faturamento calculado fora da planilha).
+- **Origem**: aba "Comissões" (IGT, FGRS, Webinar Mentoria, Perpétuo, Webinar FGRS, Renovação) + linha "Comissões" da aba "Budget Trimestre".
+- **Objetivo**: custo de comissão de vendas, alimenta o budget trimestral — **diferente** do conceito de "crédito por vendedor" (`won_by`) implementado hoje em `bi.ts`: aqui é comissão agregada por **funil**, não por pessoa.
+- **Frequência**: mensal, com total trimestral.
+
+### Budget: Previsto vs Realizado vs Progresso
+- **Fórmula**: `Progresso = Realizado / Previsto`, por categoria de custo (Tráfego, Impostos, Meios de Pagamento, Comissões, Eventos, Equipe, Ferramentas, Analistas, Treinamentos e Consultorias) e por mês.
+- **Origem**: aba "Budget Trimestre".
+- **Objetivo**: controle orçamentário — saber se a empresa está gastando mais ou menos que o planejado em cada categoria. Junto com a linha "Faturamento Total", dá a base para calcular **margem/lucro** (Faturamento − soma das categorias de custo), que a planilha não calcula explicitamente em nenhuma célula.
+- **Frequência**: mensal, com total trimestral.
+
+### Orçamento Anual: Alcançado / Para Alcançar
+- **Fórmula**: `Alcançado = Valor Final atingido / Meta do ano`; `Para Alcançar = 1 − Alcançado` (gap percentual restante).
+- **Origem**: aba "Backlog" (Orçamento, Faturamento, Leads, Vendas FE, Investimento Tráfego — metas anuais).
+- **Objetivo**: visão de progresso anual consolidado — o número que o board/sócios acompanham.
+- **Frequência**: anual, atualizado manualmente. **Atenção**: esta aba tem fórmulas quebradas (`#REF!`, `#DIV/0!` em algumas células de "Vendas LT" e "Para Alcançar") — não é uma fonte 100% confiável hoje mesmo dentro da própria planilha.
+
 ## KPIs ainda não implementados (ver roadmap.md)
 
 Os itens abaixo fazem parte da visão completa de BI pedida, mas **dependem de
