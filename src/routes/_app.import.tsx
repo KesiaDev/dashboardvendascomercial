@@ -27,24 +27,11 @@ interface ImportLog {
 }
 
 async function fetchImports(): Promise<ImportLog[]> {
-  const { data, error } = await supabase
-    .from("weekly_imports")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(20);
-  if (error) throw error;
-  return (data ?? []) as ImportLog[];
+  return (await fetchImportsFn()) as ImportLog[];
 }
 
 async function fetchGroupCounts(): Promise<Record<string, number>> {
-  const { data, error } = await supabase.from("sales").select("produto_grupo");
-  if (error) throw error;
-  const counts: Record<string, number> = {};
-  for (const row of data ?? []) {
-    const g = (row as { produto_grupo: string }).produto_grupo;
-    counts[g] = (counts[g] ?? 0) + 1;
-  }
-  return counts;
+  return await fetchGroupCountsFn();
 }
 
 function ImportPage() {
