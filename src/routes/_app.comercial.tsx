@@ -397,6 +397,13 @@ function Comercial() {
   }, [filtered, lostLabelById]);
 
   const sellers = useMemo(() => {
+    const usingRange = !!dateRange?.from;
+    const start = usingRange ? dateRange!.from! : periodStart(period);
+    const end =
+      usingRange && dateRange?.to
+        ? new Date(dateRange.to.getTime() + 24 * 60 * 60 * 1000 - 1)
+        : null;
+
     const map = new Map<
       string,
       {
@@ -409,11 +416,11 @@ function Comercial() {
         revenue: number;
       }
     >();
-    // Usa filteredAllOrigins para mostrar performance consolidada de todos os funis
+
+    // Leads recebidos no período (created_at), todos os funis
     for (const d of filteredAllOrigins) {
       if (!d.user_id) continue;
-      const key = d.user_id;
-      const cur = map.get(key) ?? {
+      const cur = map.get(d.user_id) ?? {
         name: d.user_name ?? d.user_email ?? "—",
         email: d.user_email ?? "",
         leads: 0,
@@ -423,22 +430,44 @@ function Comercial() {
         revenue: 0,
       };
       cur.leads += 1;
-      if (d.status === "WON") {
-        cur.won += 1;
-        const v = d.value ?? 0;
-        const dealCur = (d.currency ?? "BRL").toUpperCase();
-        let display = v;
-        if (dealCur !== currency) {
-          if (dealCur === "EUR" && currency === "BRL") display = v * rate;
-          else if (dealCur === "BRL" && currency === "EUR") display = v / rate;
-        }
-        cur.revenue += display;
-      } else if (d.status === "LOST") cur.lost += 1;
-      else cur.open += 1;
-      map.set(key, cur);
+      if (d.status === "OPEN") cur.open += 1;
+      else if (d.status === "LOST") cur.lost += 1;
+      map.set(d.user_id, cur);
     }
+
+    // Ganhos do período por won_at — conta vendas FECHADAS no período,
+    // independente de quando o lead foi criado ou em qual funil
+    for (const d of deals) {
+      if (!d.user_id || d.status !== "WON" || !d.won_at || !(d.value && d.value > 0)) continue;
+      const wonDate = new Date(d.won_at);
+      if (start && wonDate < start) continue;
+      if (end && wonDate > end) continue;
+
+      if (!map.has(d.user_id)) {
+        map.set(d.user_id, {
+          name: d.user_name ?? d.user_email ?? "—",
+          email: d.user_email ?? "",
+          leads: 0,
+          won: 0,
+          lost: 0,
+          open: 0,
+          revenue: 0,
+        });
+      }
+      const cur = map.get(d.user_id)!;
+      cur.won += 1;
+      const v = d.value ?? 0;
+      const dealCur = (d.currency ?? "BRL").toUpperCase();
+      let display = v;
+      if (dealCur !== currency) {
+        if (dealCur === "EUR" && currency === "BRL") display = v * rate;
+        else if (dealCur === "BRL" && currency === "EUR") display = v / rate;
+      }
+      cur.revenue += display;
+    }
+
     return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
-  }, [filteredAllOrigins, currency, rate]);
+  }, [deals, filteredAllOrigins, period, dateRange, currency, rate]);
 
   const setLabelFn = useServerFn(setLostStatusLabel);
   const renameMutation = useMutation({
