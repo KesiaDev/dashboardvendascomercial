@@ -45,40 +45,7 @@ function ImportPage() {
 
   const importMutation = useMutation({
     mutationFn: async ({ rows, filename }: { rows: SaleRow[]; filename: string }) => {
-      // dedupe: pegar existentes
-      const txs = rows.map((r) => r.transacao);
-      const existing = new Set<string>();
-      // consultar em lotes (limite de URL)
-      const batchSize = 500;
-      for (let i = 0; i < txs.length; i += batchSize) {
-        const chunk = txs.slice(i, i + batchSize);
-        const { data, error } = await supabase.from("sales").select("transacao").in("transacao", chunk);
-        if (error) throw error;
-        for (const r of data ?? []) existing.add((r as { transacao: string }).transacao);
-      }
-
-      // upsert em lotes
-      const upBatch = 500;
-      for (let i = 0; i < rows.length; i += upBatch) {
-        const chunk = rows.slice(i, i + upBatch).map((r) => ({ ...r, updated_at: new Date().toISOString() }));
-        const { error } = await supabase.from("sales").upsert(chunk, { onConflict: "transacao" });
-        if (error) throw error;
-      }
-
-      const newRows = rows.filter((r) => !existing.has(r.transacao)).length;
-      const updatedRows = rows.length - newRows;
-      const dates = rows.map((r) => r.data_venda).filter((d): d is string => !!d).sort();
-
-      await supabase.from("weekly_imports").insert({
-        filename,
-        total_rows: rows.length,
-        new_rows: newRows,
-        updated_rows: updatedRows,
-        period_start: dates[0] ?? null,
-        period_end: dates[dates.length - 1] ?? null,
-      });
-
-      return { newRows, updatedRows, total: rows.length };
+      return await importSalesFn({ data: { rows: rows as any, filename } });
     },
     onSuccess: (r) => {
       toast.success(`Importação concluída: ${r.newRows} novas, ${r.updatedRows} atualizadas`);
