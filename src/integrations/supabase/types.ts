@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      bi_pipeline_areas: {
+        Row: {
+          area: string
+          ativo: boolean
+          auto_classified: boolean
+          pipeline_id: string
+          updated_at: string
+        }
+        Insert: {
+          area: string
+          ativo?: boolean
+          auto_classified?: boolean
+          pipeline_id: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          ativo?: boolean
+          auto_classified?: boolean
+          pipeline_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bi_pipeline_areas_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: true
+            referencedRelation: "clint_origins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clint_deals: {
         Row: {
           contact_ddi: string | null
