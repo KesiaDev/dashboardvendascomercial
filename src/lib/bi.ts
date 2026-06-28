@@ -132,17 +132,24 @@ export function isExcludedSeller(name: string | null | undefined): boolean {
 }
 
 /**
- * Quem deve levar o crédito pela venda: somente won_by (quem marcou o
- * negócio como ganho na Clint) — é o mesmo critério do relatório nativo
- * "Vendas por Vendedor" da Clint. Sem fallback para o responsável (user):
- * testamos e, sempre que won_by existe, ele já é idêntico ao responsável —
- * então um fallback nunca mudaria nada e só desalinharia do que aparece na
- * Clint. Negócios sem won_by (boa parte hoje) não são creditados a ninguém
- * aqui, mas continuam contando nos totais agregados (computeAreaKpis).
+ * Quem deve levar o crédito pela venda: prioriza won_by (quem marcou o
+ * negócio como ganho na Clint — mesmo critério do relatório nativo "Vendas
+ * por Vendedor" da Clint), com fallback para o responsável (user) quando
+ * won_by não está preenchido. SEM fallback, qualquer período em que a Clint
+ * não tenha sido sincronizada (ou que won_by simplesmente não exista para
+ * aquele negócio, o que é a maioria dos casos hoje) faz o ranking por
+ * vendedor inteiro cair a zero — já aconteceu em produção em 2026-06-28.
+ * Os números por vendedor não vão bater 1:1 com o relatório nativo da
+ * Clint quando won_by estiver ausente, mas nunca ficam vazios.
  */
 export function effectiveWinner(d: Deal): { id: string; name: string; email: string } | null {
-  if (!d.won_by_user_id) return null;
-  return { id: d.won_by_user_id, name: d.won_by_name ?? d.won_by_email ?? "—", email: d.won_by_email ?? "" };
+  if (d.won_by_user_id) {
+    return { id: d.won_by_user_id, name: d.won_by_name ?? d.won_by_email ?? "—", email: d.won_by_email ?? "" };
+  }
+  if (d.user_id) {
+    return { id: d.user_id, name: d.user_name ?? d.user_email ?? "—", email: d.user_email ?? "" };
+  }
+  return null;
 }
 
 export type SellerStats = {
