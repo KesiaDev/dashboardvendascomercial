@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchImportsFn, fetchGroupCountsFn, importSalesFn } from "@/lib/data.functions";
 import { parseSalesCsv, type SaleRow } from "@/lib/csv-parser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
