@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchSalesDashboardFn } from "@/lib/data.functions";
 import { PRODUCT_GROUPS, getGroupById, categorizeStatus, STATUS_LABELS, STATUS_COLORS, type StatusCategory } from "@/lib/product-groups";
 import { formatInt, formatPct } from "@/lib/format";
 import { useCurrency } from "@/lib/currency-context";
