@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchOriginsFn, fetchStagesFn, fetchLostStatusesFn, fetchLastSyncFn, fetchAllDealsFn } from "@/lib/data.functions";
 import {
   syncClintUsers,
   syncClintDeals,
@@ -106,61 +106,23 @@ function periodStart(p: Period): Date | null {
 }
 
 async function fetchDeals(): Promise<Deal[]> {
-  const all: Deal[] = [];
-  let from = 0;
-  const pageSize = 1000;
-  while (true) {
-    const { data, error } = await supabase
-      .from("clint_deals")
-      .select(
-        "id,user_id,user_name,user_email,won_by_user_id,won_by_name,won_by_email,contact_email,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
-      )
-      .order("created_at", { ascending: false })
-      .range(from, from + pageSize - 1);
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    all.push(...(data as Deal[]));
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return all;
+  return (await fetchAllDealsFn()) as Deal[];
 }
 
 async function fetchOrigins(): Promise<Origin[]> {
-  const { data, error } = await supabase
-    .from("clint_origins")
-    .select("id,name,group_name,archived")
-    .order("name");
-  if (error) throw error;
-  return (data ?? []) as Origin[];
+  return (await fetchOriginsFn()) as Origin[];
 }
 
 async function fetchStages(): Promise<Stage[]> {
-  const { data, error } = await supabase
-    .from("clint_origin_stages")
-    .select("id,origin_id,label,stage_order,type")
-    .order("stage_order");
-  if (error) throw error;
-  return (data ?? []) as Stage[];
+  return (await fetchStagesFn()) as Stage[];
 }
 
 async function fetchLostStatuses(): Promise<LostStatus[]> {
-  const { data, error } = await supabase
-    .from("clint_lost_statuses")
-    .select("id,label");
-  if (error) throw error;
-  return (data ?? []) as LostStatus[];
+  return (await fetchLostStatusesFn()) as LostStatus[];
 }
 
 async function fetchLastSync() {
-  const { data } = await supabase
-    .from("clint_sync_log")
-    .select("*")
-    .eq("kind", "deals")
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data;
+  return await fetchLastSyncFn();
 }
 
 const COLORS = [

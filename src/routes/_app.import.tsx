@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchImportsFn, fetchGroupCountsFn, importSalesFn } from "@/lib/data.functions";
 import { parseSalesCsv, type SaleRow } from "@/lib/csv-parser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,24 +27,11 @@ interface ImportLog {
 }
 
 async function fetchImports(): Promise<ImportLog[]> {
-  const { data, error } = await supabase
-    .from("weekly_imports")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(20);
-  if (error) throw error;
-  return (data ?? []) as ImportLog[];
+  return (await fetchImportsFn()) as ImportLog[];
 }
 
 async function fetchGroupCounts(): Promise<Record<string, number>> {
-  const { data, error } = await supabase.from("sales").select("produto_grupo");
-  if (error) throw error;
-  const counts: Record<string, number> = {};
-  for (const row of data ?? []) {
-    const g = (row as { produto_grupo: string }).produto_grupo;
-    counts[g] = (counts[g] ?? 0) + 1;
-  }
-  return counts;
+  return await fetchGroupCountsFn();
 }
 
 function ImportPage() {
@@ -58,40 +45,7 @@ function ImportPage() {
 
   const importMutation = useMutation({
     mutationFn: async ({ rows, filename }: { rows: SaleRow[]; filename: string }) => {
-      // dedupe: pegar existentes
-      const txs = rows.map((r) => r.transacao);
-      const existing = new Set<string>();
-      // consultar em lotes (limite de URL)
-      const batchSize = 500;
-      for (let i = 0; i < txs.length; i += batchSize) {
-        const chunk = txs.slice(i, i + batchSize);
-        const { data, error } = await supabase.from("sales").select("transacao").in("transacao", chunk);
-        if (error) throw error;
-        for (const r of data ?? []) existing.add((r as { transacao: string }).transacao);
-      }
-
-      // upsert em lotes
-      const upBatch = 500;
-      for (let i = 0; i < rows.length; i += upBatch) {
-        const chunk = rows.slice(i, i + upBatch).map((r) => ({ ...r, updated_at: new Date().toISOString() }));
-        const { error } = await supabase.from("sales").upsert(chunk, { onConflict: "transacao" });
-        if (error) throw error;
-      }
-
-      const newRows = rows.filter((r) => !existing.has(r.transacao)).length;
-      const updatedRows = rows.length - newRows;
-      const dates = rows.map((r) => r.data_venda).filter((d): d is string => !!d).sort();
-
-      await supabase.from("weekly_imports").insert({
-        filename,
-        total_rows: rows.length,
-        new_rows: newRows,
-        updated_rows: updatedRows,
-        period_start: dates[0] ?? null,
-        period_end: dates[dates.length - 1] ?? null,
-      });
-
-      return { newRows, updatedRows, total: rows.length };
+      return await importSalesFn({ data: { rows: rows as any, filename } });
     },
     onSuccess: (r) => {
       toast.success(`Importação concluída: ${r.newRows} novas, ${r.updatedRows} atualizadas`);

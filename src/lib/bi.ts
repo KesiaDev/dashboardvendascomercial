@@ -5,7 +5,11 @@
  * uma área de negócio (via bi_pipeline_areas) sem precisar tocar em código
  * de dashboard nenhum.
  */
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchAllDealsFn,
+  fetchAllSalesFn,
+  fetchPipelineAreasFn,
+} from "@/lib/data.functions";
 import type { BusinessArea } from "@/lib/pipeline-areas";
 
 export type Deal = {
@@ -56,32 +60,13 @@ export function periodRange(period: Period, dateRange?: { from?: Date; to?: Date
 }
 
 export async function fetchAllDeals(): Promise<Deal[]> {
-  const all: Deal[] = [];
-  let from = 0;
-  const pageSize = 1000;
-  while (true) {
-    const { data, error } = await supabase
-      .from("clint_deals")
-      .select(
-        "id,user_id,user_name,user_email,won_by_user_id,won_by_name,won_by_email,contact_email,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
-      )
-      .order("created_at", { ascending: false })
-      .range(from, from + pageSize - 1);
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    all.push(...(data as Deal[]));
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return all;
+  return (await fetchAllDealsFn()) as Deal[];
 }
 
 export type PipelineArea = { pipeline_id: string; area: string; ativo: boolean };
 
 export async function fetchPipelineAreas(): Promise<PipelineArea[]> {
-  const { data, error } = await supabase.from("bi_pipeline_areas").select("pipeline_id,area,ativo");
-  if (error) throw error;
-  return (data ?? []) as PipelineArea[];
+  return (await fetchPipelineAreasFn()) as PipelineArea[];
 }
 
 export function buildAreaMap(areas: PipelineArea[]): Map<string, BusinessArea> {
@@ -350,21 +335,7 @@ export function cleanSellerName(name: string): string {
 }
 
 export async function fetchAllSales(): Promise<SaleRecord[]> {
-  const all: SaleRecord[] = [];
-  let from = 0;
-  const pageSize = 1000;
-  while (true) {
-    const { data, error } = await supabase
-      .from("sales")
-      .select("transacao,produto_grupo,produto_original,status,data_venda,email_cliente,faturamento_liquido_brl,nome_afiliado")
-      .range(from, from + pageSize - 1);
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    all.push(...(data as SaleRecord[]));
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return all;
+  return (await fetchAllSalesFn()) as SaleRecord[];
 }
 
 /**
