@@ -30,18 +30,11 @@ type Row = {
 };
 
 async function fetchRows(): Promise<Row[]> {
-  const { data: origins, error: e1 } = await supabase
-    .from("clint_origins")
-    .select("id,name,group_name,archived")
-    .order("name");
-  if (e1) throw e1;
-  const { data: areas, error: e2 } = await supabase
-    .from("bi_pipeline_areas")
-    .select("pipeline_id,area,ativo,auto_classified");
-  if (e2) throw e2;
+  const origins = (await fetchOriginsFn()) as Array<{ id: string; name: string; group_name: string | null; archived: boolean }>;
+  const areas = (await fetchPipelineAreasFn()) as Array<{ pipeline_id: string; area: string; ativo: boolean; auto_classified: boolean }>;
 
-  const areaById = new Map((areas ?? []).map((a) => [a.pipeline_id, a]));
-  return (origins ?? []).map((o) => {
+  const areaById = new Map(areas.map((a) => [a.pipeline_id, a]));
+  return origins.map((o) => {
     const a = areaById.get(o.id);
     return {
       pipeline_id: o.id,
