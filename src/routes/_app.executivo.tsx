@@ -3,11 +3,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchAllDeals,
+  fetchAllSales,
   fetchPipelineAreas,
   buildAreaMap,
   filterDealsByArea,
   rankSellers,
   computeAreaKpis,
+  findPhantomWonDeals,
   periodRange,
   type Period,
 } from "@/lib/bi";
@@ -44,6 +46,7 @@ function Executivo() {
   const { format: money, currency, brlPerEur: rate } = useCurrency();
 
   const { data: deals = [], isLoading } = useQuery({ queryKey: ["bi_deals"], queryFn: fetchAllDeals });
+  const { data: sales = [] } = useQuery({ queryKey: ["bi_sales"], queryFn: fetchAllSales });
   const { data: pipelineAreas = [] } = useQuery({
     queryKey: ["bi_pipeline_areas"],
     queryFn: fetchPipelineAreas,
@@ -51,25 +54,26 @@ function Executivo() {
 
   const areaMap = useMemo(() => buildAreaMap(pipelineAreas), [pipelineAreas]);
   const dealsInArea = useMemo(() => filterDealsByArea(deals, areaMap, area), [deals, areaMap, area]);
+  const phantomWonIds = useMemo(() => findPhantomWonDeals(deals, sales), [deals, sales]);
   const { start, end } = periodRange(period);
 
   const kpis = useMemo(
-    () => computeAreaKpis(dealsInArea, start, end, currency, rate),
-    [dealsInArea, start, end, currency, rate],
+    () => computeAreaKpis(dealsInArea, start, end, currency, rate, phantomWonIds),
+    [dealsInArea, start, end, currency, rate, phantomWonIds],
   );
   const sellers = useMemo(
-    () => rankSellers(dealsInArea, start, end, currency, rate),
-    [dealsInArea, start, end, currency, rate],
+    () => rankSellers(dealsInArea, start, end, currency, rate, phantomWonIds),
+    [dealsInArea, start, end, currency, rate, phantomWonIds],
   );
 
   // Visão geral por área (para o card "Todas as áreas")
   const byArea = useMemo(() => {
     return AREA_ORDER.filter((a) => a !== "TESTES" && a !== "OUTROS").map((a) => {
       const d = filterDealsByArea(deals, areaMap, a);
-      const k = computeAreaKpis(d, start, end, currency, rate);
+      const k = computeAreaKpis(d, start, end, currency, rate, phantomWonIds);
       return { area: a, ...k };
     });
-  }, [deals, areaMap, start, end, currency, rate]);
+  }, [deals, areaMap, start, end, currency, rate, phantomWonIds]);
 
   return (
     <div className="space-y-6">
@@ -79,6 +83,13 @@ function Executivo() {
           <p className="text-sm text-muted-foreground">
             Visão consolidada por área de negócio — sem precisar escolher pipeline.
           </p>
+          {phantomWonIds.size > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {phantomWonIds.size} ganho{phantomWonIds.size > 1 ? "s" : ""} descontado
+              {phantomWonIds.size > 1 ? "s" : ""} do faturamento: venda cancelada/reembolsada na
+              Hotmart depois de marcada como ganha na Clint.
+            </p>
+          )}
         </div>
         <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
           <TabsList>

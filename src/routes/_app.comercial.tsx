@@ -11,6 +11,7 @@ import {
   setLostStatusLabel,
   backfillLostStatuses,
 } from "@/lib/clint.functions";
+import { fetchAllSales, findPhantomWonDeals, isExcludedSeller } from "@/lib/bi";
 import { useCurrency } from "@/lib/currency-context";
 import { formatInt, formatPct } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,6 +70,7 @@ type Deal = {
   user_id: string | null;
   user_name: string | null;
   user_email: string | null;
+  contact_email: string | null;
   status: string;
   value: number | null;
   currency: string | null;
@@ -108,7 +110,7 @@ async function fetchDeals(): Promise<Deal[]> {
     const { data, error } = await supabase
       .from("clint_deals")
       .select(
-        "id,user_id,user_name,user_email,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
+        "id,user_id,user_name,user_email,contact_email,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
       )
       .order("created_at", { ascending: false })
       .range(from, from + pageSize - 1);
@@ -183,6 +185,8 @@ function Comercial() {
     queryKey: ["clint_deals"],
     queryFn: fetchDeals,
   });
+  const { data: sales = [] } = useQuery({ queryKey: ["bi_sales"], queryFn: fetchAllSales });
+  const phantomWonIds = useMemo(() => findPhantomWonDeals(deals, sales), [deals, sales]);
   const { data: origins = [] } = useQuery({ queryKey: ["clint_origins"], queryFn: fetchOrigins });
   const { data: stages = [] } = useQuery({ queryKey: ["clint_stages"], queryFn: fetchStages });
   const { data: lostStatuses = [] } = useQuery({
@@ -311,7 +315,7 @@ function Comercial() {
     const baseOrder = 1; // base is always order 1
 
     for (const d of filtered) {
-      if (d.status === "WON") {
+      if (d.status === "WON" && !phantomWonIds.has(d.id)) {
         won += 1;
         const v = d.value ?? 0;
         const dealCur = (d.currency ?? "BRL").toUpperCase();
@@ -366,7 +370,7 @@ function Comercial() {
       reuniaoAgendada,
       reuniaoRealizada,
     };
-  }, [filtered, currentStages, stageOrderById, currency, rate]);
+  }, [filtered, currentStages, stageOrderById, currency, rate, phantomWonIds]);
 
   const funnelData = useMemo(() => {
     const max = metrics.stageReached.get(1) ?? 0;
@@ -442,6 +446,7 @@ function Comercial() {
     // independente de quando o lead foi criado ou em qual funil
     for (const d of deals) {
       if (!d.user_id || d.status !== "WON" || !d.won_at || !(d.value && d.value > 0)) continue;
+      if (phantomWonIds.has(d.id)) continue;
       const wonDate = new Date(d.won_at);
       if (start && wonDate < start) continue;
       if (end && wonDate > end) continue;
@@ -469,8 +474,10 @@ function Comercial() {
       cur.revenue += display;
     }
 
-    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
-  }, [deals, filteredAllOrigins, period, dateRange, currency, rate]);
+    return Array.from(map.values())
+      .filter((s) => !isExcludedSeller(s.name))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [deals, filteredAllOrigins, period, dateRange, currency, rate, phantomWonIds]);
 
   const setLabelFn = useServerFn(setLostStatusLabel);
   const renameMutation = useMutation({

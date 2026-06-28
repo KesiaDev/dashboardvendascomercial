@@ -123,7 +123,7 @@ const EXCLUDED_SELLERS = new Set([
   "késia nandi",
 ]);
 
-function isExcludedSeller(name: string | null | undefined): boolean {
+export function isExcludedSeller(name: string | null | undefined): boolean {
   if (!name) return false;
   return EXCLUDED_SELLERS.has(name.toLowerCase().trim().replace(/\s+/g, " "));
 }
@@ -160,6 +160,7 @@ export function rankSellers(
   end: Date | null,
   currency: "BRL" | "EUR",
   rate: number,
+  phantomWonIds?: Set<string>,
 ): SellerStats[] {
   const map = new Map<string, SellerStats>();
   const ensure = (d: Deal): SellerStats => {
@@ -192,6 +193,7 @@ export function rankSellers(
 
   for (const d of allDealsInArea) {
     if (!d.user_id || d.status !== "WON" || !d.won_at || !(d.value && d.value > 0)) continue;
+    if (phantomWonIds?.has(d.id)) continue;
     const wonDate = new Date(d.won_at);
     if (start && wonDate < start) continue;
     if (end && wonDate > end) continue;
@@ -220,8 +222,9 @@ export function computeAreaKpis(
   end: Date | null,
   currency: "BRL" | "EUR",
   rate: number,
+  phantomWonIds?: Set<string>,
 ): AreaKpis {
-  const sellers = rankSellers(allDealsInArea, start, end, currency, rate);
+  const sellers = rankSellers(allDealsInArea, start, end, currency, rate, phantomWonIds);
   const leads = sellers.reduce((s, x) => s + x.leads, 0);
   const won = sellers.reduce((s, x) => s + x.won, 0);
   const lost = sellers.reduce((s, x) => s + x.lost, 0);
@@ -265,6 +268,44 @@ export async function fetchAllSales(): Promise<SaleRecord[]> {
     from += pageSize;
   }
   return all;
+}
+
+/**
+ * Identifica negócios WON na Clint cuja venda Hotmart correspondente foi
+ * cancelada/reembolsada/reclamada depois — "ganho fantasma": a Clint nunca
+ * foi atualizada manualmente, então o dashboard continua contando esse
+ * faturamento. Casa por e-mail, escolhendo a venda com data_venda mais
+ * próxima de won_at (mesmo critério de matchSellerProduct). Usado para
+ * descontar visualmente sem alterar nada na Clint.
+ */
+export function findPhantomWonDeals(allDeals: Deal[], allSales: SaleRecord[]): Set<string> {
+  const salesByEmail = new Map<string, SaleRecord[]>();
+  for (const s of allSales) {
+    const email = s.email_cliente?.trim().toLowerCase();
+    if (!email || !s.data_venda) continue;
+    if (!salesByEmail.has(email)) salesByEmail.set(email, []);
+    salesByEmail.get(email)!.push(s);
+  }
+
+  const phantoms = new Set<string>();
+  for (const d of allDeals) {
+    if (d.status !== "WON" || !d.won_at || !d.contact_email) continue;
+    const email = d.contact_email.trim().toLowerCase();
+    const candidates = salesByEmail.get(email);
+    if (!candidates || candidates.length === 0) continue;
+
+    const wonTime = new Date(d.won_at).getTime();
+    const closest = candidates.reduce((best, cur) => {
+      const bestDelta = Math.abs(new Date(best.data_venda!).getTime() - wonTime);
+      const curDelta = Math.abs(new Date(cur.data_venda!).getTime() - wonTime);
+      return curDelta < bestDelta ? cur : best;
+    });
+
+    if (categorizeStatus(closest.status) !== "aprovado") {
+      phantoms.add(d.id);
+    }
+  }
+  return phantoms;
 }
 
 export type SellerProductRow = {
