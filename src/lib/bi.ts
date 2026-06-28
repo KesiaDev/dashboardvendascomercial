@@ -217,6 +217,8 @@ export function computeAreaKpis(
 // entre won_at e data_venda, para o caso de o mesmo cliente ter mais de um
 // negócio na Clint ao longo do tempo.
 
+import { categorizeStatus } from "@/lib/product-groups";
+
 export type SaleRecord = {
   transacao: string;
   produto_grupo: string;
@@ -281,7 +283,10 @@ export function matchSellerProduct(allDeals: Deal[], allSales: SaleRecord[]): Se
   let unmatchedRevenue = 0;
 
   for (const s of allSales) {
-    if (s.status !== "aprovado") continue;
+    // sales.status guarda o valor bruto do export Hotmart ("Completo",
+    // "Aprovado", "Cancelado"...) — normaliza com a mesma função usada no
+    // dashboard financeiro (/) em vez de comparar string literal.
+    if (categorizeStatus(s.status) !== "aprovado") continue;
     const email = s.email_cliente?.trim().toLowerCase();
     const candidates = email ? dealsByEmail.get(email) : undefined;
     if (!candidates || candidates.length === 0) {
