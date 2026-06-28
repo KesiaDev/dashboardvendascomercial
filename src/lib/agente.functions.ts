@@ -63,7 +63,7 @@ export const askAgent = createServerFn({ method: "POST" })
     const client = new Anthropic({ apiKey });
 
     const resp = await client.messages.create({
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       max_tokens: 1500,
       system:
         "Você é o Agente Comercial da LLMídia. Analise os dados de vendas da Clint CRM e responda perguntas sobre performance por vendedor, tendências de conversão e oportunidades de melhoria. Seja direto e use os números reais dos dados.\n\nDados (últimos 30 dias):\n" +
