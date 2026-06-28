@@ -73,6 +73,9 @@ export type Database = {
           user_name: string | null
           value: number | null
           won_at: string | null
+          won_by_email: string | null
+          won_by_name: string | null
+          won_by_user_id: string | null
         }
         Insert: {
           contact_ddi?: string | null
@@ -100,6 +103,9 @@ export type Database = {
           user_name?: string | null
           value?: number | null
           won_at?: string | null
+          won_by_email?: string | null
+          won_by_name?: string | null
+          won_by_user_id?: string | null
         }
         Update: {
           contact_ddi?: string | null
@@ -127,6 +133,9 @@ export type Database = {
           user_name?: string | null
           value?: number | null
           won_at?: string | null
+          won_by_email?: string | null
+          won_by_name?: string | null
+          won_by_user_id?: string | null
         }
         Relationships: []
       }
@@ -287,6 +296,7 @@ export type Database = {
           meio_pagamento: string | null
           moeda_original: string | null
           moeda_recebimento: string | null
+          nome_afiliado: string | null
           nome_cliente: string | null
           numero_parcela: number | null
           origem_checkout: string | null
@@ -315,6 +325,7 @@ export type Database = {
           meio_pagamento?: string | null
           moeda_original?: string | null
           moeda_recebimento?: string | null
+          nome_afiliado?: string | null
           nome_cliente?: string | null
           numero_parcela?: number | null
           origem_checkout?: string | null
@@ -343,6 +354,7 @@ export type Database = {
           meio_pagamento?: string | null
           moeda_original?: string | null
           moeda_recebimento?: string | null
+          nome_afiliado?: string | null
           nome_cliente?: string | null
           numero_parcela?: number | null
           origem_checkout?: string | null

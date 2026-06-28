@@ -11,7 +11,7 @@ import {
   setLostStatusLabel,
   backfillLostStatuses,
 } from "@/lib/clint.functions";
-import { fetchAllSales, findPhantomWonDeals, isExcludedSeller } from "@/lib/bi";
+import { fetchAllSales, findPhantomWonDeals, isExcludedSeller, effectiveWinner } from "@/lib/bi";
 import { useCurrency } from "@/lib/currency-context";
 import { formatInt, formatPct } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +70,9 @@ type Deal = {
   user_id: string | null;
   user_name: string | null;
   user_email: string | null;
+  won_by_user_id: string | null;
+  won_by_name: string | null;
+  won_by_email: string | null;
   contact_email: string | null;
   status: string;
   value: number | null;
@@ -110,7 +113,7 @@ async function fetchDeals(): Promise<Deal[]> {
     const { data, error } = await supabase
       .from("clint_deals")
       .select(
-        "id,user_id,user_name,user_email,contact_email,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
+        "id,user_id,user_name,user_email,won_by_user_id,won_by_name,won_by_email,contact_email,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
       )
       .order("created_at", { ascending: false })
       .range(from, from + pageSize - 1);
@@ -315,7 +318,9 @@ function Comercial() {
     const baseOrder = 1; // base is always order 1
 
     for (const d of filtered) {
-      if (d.status === "WON" && !phantomWonIds.has(d.id)) {
+      const winner = effectiveWinner(d);
+      const excluded = isExcludedSeller(d.user_name) || (winner && isExcludedSeller(winner.name));
+      if (d.status === "WON" && !phantomWonIds.has(d.id) && !excluded) {
         won += 1;
         const v = d.value ?? 0;
         const dealCur = (d.currency ?? "BRL").toUpperCase();
@@ -445,16 +450,18 @@ function Comercial() {
     // Ganhos do período por won_at — conta vendas FECHADAS no período,
     // independente de quando o lead foi criado ou em qual funil
     for (const d of deals) {
-      if (!d.user_id || d.status !== "WON" || !d.won_at || !(d.value && d.value > 0)) continue;
+      if (d.status !== "WON" || !d.won_at || !(d.value && d.value > 0)) continue;
       if (phantomWonIds.has(d.id)) continue;
+      const winner = effectiveWinner(d);
+      if (!winner) continue;
       const wonDate = new Date(d.won_at);
       if (start && wonDate < start) continue;
       if (end && wonDate > end) continue;
 
-      if (!map.has(d.user_id)) {
-        map.set(d.user_id, {
-          name: d.user_name ?? d.user_email ?? "—",
-          email: d.user_email ?? "",
+      if (!map.has(winner.id)) {
+        map.set(winner.id, {
+          name: winner.name,
+          email: winner.email,
           leads: 0,
           won: 0,
           lost: 0,
@@ -462,7 +469,7 @@ function Comercial() {
           revenue: 0,
         });
       }
-      const cur = map.get(d.user_id)!;
+      const cur = map.get(winner.id)!;
       cur.won += 1;
       const v = d.value ?? 0;
       const dealCur = (d.currency ?? "BRL").toUpperCase();

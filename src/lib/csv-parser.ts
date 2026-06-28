@@ -5,6 +5,7 @@ export interface SaleRow {
   transacao: string;
   produto_original: string;
   produto_grupo: string;
+  nome_afiliado: string | null;
   status: string;
   data_venda: string | null;
   data_confirmacao: string | null;
@@ -60,6 +61,7 @@ export interface ParseResult {
 // O CSV repete "Moeda" 4× (cols 8, 10, 13, 49). Usar índice evita ambiguidade.
 const COL = {
   produto: 0,
+  nome_afiliado: 3,
   transacao: 4,
   meio_pagamento: 5,
   moeda_original: 7,      // moeda da venda (EUR, BRL, USD...)
@@ -113,6 +115,7 @@ export function parseSalesCsv(file: File): Promise<ParseResult> {
             transacao,
             produto_original: produto,
             produto_grupo: mapProductToGroup(produto),
+            nome_afiliado: (r[COL.nome_afiliado] || "").trim() || null,
             status: (r[COL.status] || "").trim(),
             data_venda: parseDateBR(r[COL.data_venda]),
             data_confirmacao: parseDateBR(r[COL.data_confirmacao]),

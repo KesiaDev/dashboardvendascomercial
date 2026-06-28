@@ -142,6 +142,18 @@ export const syncClintDeals = createServerFn({ method: "POST" })
       (originsResp.data ?? []).map((g: any) => [g.id, g.name]),
     );
 
+    // Mapa de usuários para resolver d.won_by (vem como UUID puro na API, não
+    // como objeto igual d.user) — usa a tabela já sincronizada por syncClintUsers.
+    const { data: usersRows } = await supabaseAdmin
+      .from("clint_users")
+      .select("id,first_name,last_name,email");
+    const userMap = new Map<string, { name: string | null; email: string | null }>(
+      (usersRows ?? []).map((u: any) => [
+        u.id,
+        { name: `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email || null, email: u.email ?? null },
+      ]),
+    );
+
     const lostIds = new Set<string>();
     let page = 1;
     let total = 0;
@@ -155,11 +167,15 @@ export const syncClintDeals = createServerFn({ method: "POST" })
 
         const rows = items.map((d: any) => {
           if (d.lost_status_id) lostIds.add(d.lost_status_id);
+          const wonByUser = d.won_by ? userMap.get(d.won_by) : undefined;
           return {
             id: d.id,
             user_id: d.user?.id ?? null,
             user_email: d.user?.email ?? null,
             user_name: d.user?.full_name?.trim() ?? null,
+            won_by_user_id: d.won_by ?? null,
+            won_by_name: wonByUser?.name ?? null,
+            won_by_email: wonByUser?.email ?? null,
             contact_id: d.contact?.id ?? null,
             contact_name: d.contact?.name ?? null,
             contact_email: d.contact?.email ?? null,

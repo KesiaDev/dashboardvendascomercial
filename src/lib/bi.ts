@@ -13,6 +13,9 @@ export type Deal = {
   user_id: string | null;
   user_name: string | null;
   user_email: string | null;
+  won_by_user_id: string | null;
+  won_by_name: string | null;
+  won_by_email: string | null;
   contact_email: string | null;
   status: string;
   value: number | null;
@@ -60,7 +63,7 @@ export async function fetchAllDeals(): Promise<Deal[]> {
     const { data, error } = await supabase
       .from("clint_deals")
       .select(
-        "id,user_id,user_name,user_email,contact_email,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
+        "id,user_id,user_name,user_email,won_by_user_id,won_by_name,won_by_email,contact_email,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
       )
       .order("created_at", { ascending: false })
       .range(from, from + pageSize - 1);
@@ -128,6 +131,20 @@ export function isExcludedSeller(name: string | null | undefined): boolean {
   return EXCLUDED_SELLERS.has(name.toLowerCase().trim().replace(/\s+/g, " "));
 }
 
+/**
+ * Quem deve levar o crédito pela venda: somente won_by (quem marcou o
+ * negócio como ganho na Clint) — é o mesmo critério do relatório nativo
+ * "Vendas por Vendedor" da Clint. Sem fallback para o responsável (user):
+ * testamos e, sempre que won_by existe, ele já é idêntico ao responsável —
+ * então um fallback nunca mudaria nada e só desalinharia do que aparece na
+ * Clint. Negócios sem won_by (boa parte hoje) não são creditados a ninguém
+ * aqui, mas continuam contando nos totais agregados (computeAreaKpis).
+ */
+export function effectiveWinner(d: Deal): { id: string; name: string; email: string } | null {
+  if (!d.won_by_user_id) return null;
+  return { id: d.won_by_user_id, name: d.won_by_name ?? d.won_by_email ?? "—", email: d.won_by_email ?? "" };
+}
+
 export type SellerStats = {
   user_id: string;
   name: string;
@@ -163,41 +180,37 @@ export function rankSellers(
   phantomWonIds?: Set<string>,
 ): SellerStats[] {
   const map = new Map<string, SellerStats>();
-  const ensure = (d: Deal): SellerStats => {
-    const key = d.user_id!;
-    let cur = map.get(key);
+  const ensure = (id: string, name: string, email: string): SellerStats => {
+    let cur = map.get(id);
     if (!cur) {
-      cur = {
-        user_id: key,
-        name: d.user_name ?? d.user_email ?? "—",
-        email: d.user_email ?? "",
-        leads: 0,
-        won: 0,
-        lost: 0,
-        open: 0,
-        revenue: 0,
-      };
-      map.set(key, cur);
+      cur = { user_id: id, name, email, leads: 0, won: 0, lost: 0, open: 0, revenue: 0 };
+      map.set(id, cur);
     }
     return cur;
   };
 
+  // Leads recebidos: contam para quem o negócio está atribuído (user), não
+  // para quem eventualmente vier a ganhá-lo.
   const createdInPeriod = filterByPeriodCreated(allDealsInArea, start, end);
   for (const d of createdInPeriod) {
     if (!d.user_id) continue;
-    const cur = ensure(d);
+    const cur = ensure(d.user_id, d.user_name ?? d.user_email ?? "—", d.user_email ?? "");
     cur.leads += 1;
     if (d.status === "OPEN") cur.open += 1;
     else if (d.status === "LOST") cur.lost += 1;
   }
 
+  // Ganhos e faturamento: crédito para quem marcou como ganho (won_by),
+  // com fallback para o responsável quando a Clint não registrou won_by.
   for (const d of allDealsInArea) {
-    if (!d.user_id || d.status !== "WON" || !d.won_at || !(d.value && d.value > 0)) continue;
+    if (d.status !== "WON" || !d.won_at || !(d.value && d.value > 0)) continue;
     if (phantomWonIds?.has(d.id)) continue;
+    const winner = effectiveWinner(d);
+    if (!winner) continue;
     const wonDate = new Date(d.won_at);
     if (start && wonDate < start) continue;
     if (end && wonDate > end) continue;
-    const cur = ensure(d);
+    const cur = ensure(winner.id, winner.name, winner.email);
     cur.won += 1;
     cur.revenue += convertValue(d.value, d.currency, currency, rate);
   }
@@ -216,6 +229,12 @@ export type AreaKpis = {
   convRate: number;
 };
 
+/**
+ * Totais da área: somam TODOS os negócios ganhos, mesmo os que não têm
+ * won_by preenchido (diferente de rankSellers, que só credita quem tem
+ * won_by). Isso evita que o faturamento total da empresa caia só porque
+ * ninguém marcou explicitamente quem fechou aquele negócio na Clint.
+ */
 export function computeAreaKpis(
   allDealsInArea: Deal[],
   start: Date | null,
@@ -224,12 +243,31 @@ export function computeAreaKpis(
   rate: number,
   phantomWonIds?: Set<string>,
 ): AreaKpis {
-  const sellers = rankSellers(allDealsInArea, start, end, currency, rate, phantomWonIds);
-  const leads = sellers.reduce((s, x) => s + x.leads, 0);
-  const won = sellers.reduce((s, x) => s + x.won, 0);
-  const lost = sellers.reduce((s, x) => s + x.lost, 0);
-  const open = sellers.reduce((s, x) => s + x.open, 0);
-  const revenue = sellers.reduce((s, x) => s + x.revenue, 0);
+  let leads = 0;
+  let lost = 0;
+  let open = 0;
+  for (const d of filterByPeriodCreated(allDealsInArea, start, end)) {
+    if (!d.user_id || isExcludedSeller(d.user_name)) continue;
+    leads += 1;
+    if (d.status === "OPEN") open += 1;
+    else if (d.status === "LOST") lost += 1;
+  }
+
+  let won = 0;
+  let revenue = 0;
+  for (const d of allDealsInArea) {
+    if (d.status !== "WON" || !d.won_at || !(d.value && d.value > 0)) continue;
+    if (phantomWonIds?.has(d.id)) continue;
+    if (isExcludedSeller(d.user_name)) continue;
+    const winner = effectiveWinner(d);
+    if (winner && isExcludedSeller(winner.name)) continue;
+    const wonDate = new Date(d.won_at);
+    if (start && wonDate < start) continue;
+    if (end && wonDate > end) continue;
+    won += 1;
+    revenue += convertValue(d.value, d.currency, currency, rate);
+  }
+
   const closed = won + lost;
   return { leads, won, lost, open, revenue, convRate: closed > 0 ? won / closed : 0 };
 }
@@ -250,7 +288,49 @@ export type SaleRecord = {
   data_venda: string | null;
   email_cliente: string | null;
   faturamento_liquido_brl: number | null;
+  nome_afiliado: string | null;
 };
+
+/**
+ * Vendedores conhecidos para casar com "Nome do Afiliado" da Hotmart — esse
+ * campo vem do próprio link de afiliado de cada vendedor (ex.: "Gisele
+ * Gagliano Pimentel", "FABIO NADAL GRIGOLO 08299996988"), então o nome bate
+ * por tokens (primeiro+último nome), não por igualdade exata. É mais
+ * confiável que o cruzamento por e-mail porque vem direto da Hotmart, sem
+ * adivinhação de qual negócio da Clint corresponde à venda.
+ */
+const KNOWN_SELLERS = ["Gisele Pimentel", "Fabio Nadal", "João Pessoa", "Rita Bandeira", "Luana Guimarães"];
+
+const ACCENT_MAP: Record<string, string> = {
+  á: "a", à: "a", â: "a", ã: "a", ä: "a",
+  é: "e", è: "e", ê: "e", ë: "e",
+  í: "i", ì: "i", î: "i", ï: "i",
+  ó: "o", ò: "o", ô: "o", õ: "o", ö: "o",
+  ú: "u", ù: "u", û: "u", ü: "u",
+  ç: "c", ñ: "n",
+};
+
+function normalizeName(s: string): string {
+  return s
+    .toLowerCase()
+    .split("")
+    .map((ch) => ACCENT_MAP[ch] ?? ch)
+    .join("");
+}
+
+function matchAffiliateToSeller(nomeAfiliado: string | null): string | null {
+  if (!nomeAfiliado) return null;
+  const normalized = normalizeName(nomeAfiliado);
+  for (const seller of KNOWN_SELLERS) {
+    const tokens = normalizeName(seller).split(/\s+/);
+    if (tokens.every((t) => normalized.includes(t))) return seller;
+  }
+  return null;
+}
+
+function isResetRelacional(produtoOriginal: string): boolean {
+  return produtoOriginal.toLowerCase().includes("reset relacional");
+}
 
 export async function fetchAllSales(): Promise<SaleRecord[]> {
   const all: SaleRecord[] = [];
@@ -259,7 +339,7 @@ export async function fetchAllSales(): Promise<SaleRecord[]> {
   while (true) {
     const { data, error } = await supabase
       .from("sales")
-      .select("transacao,produto_grupo,produto_original,status,data_venda,email_cliente,faturamento_liquido_brl")
+      .select("transacao,produto_grupo,produto_original,status,data_venda,email_cliente,faturamento_liquido_brl,nome_afiliado")
       .range(from, from + pageSize - 1);
     if (error) throw error;
     if (!data || data.length === 0) break;
@@ -281,6 +361,7 @@ export async function fetchAllSales(): Promise<SaleRecord[]> {
 export function findPhantomWonDeals(allDeals: Deal[], allSales: SaleRecord[]): Set<string> {
   const salesByEmail = new Map<string, SaleRecord[]>();
   for (const s of allSales) {
+    if (isResetRelacional(s.produto_original)) continue;
     const email = s.email_cliente?.trim().toLowerCase();
     if (!email || !s.data_venda) continue;
     if (!salesByEmail.has(email)) salesByEmail.set(email, []);
@@ -323,10 +404,12 @@ export type SellerProductResult = {
 };
 
 /**
- * Cruza vendas aprovadas da Hotmart com negócios ganhos da Clint via e-mail do
- * cliente, escolhendo — quando há mais de um negócio do mesmo e-mail — o que
- * tiver won_at mais próximo de data_venda. Vendas sem e-mail correspondente na
- * Clint entram em `unmatched` (produto identificado, vendedor não).
+ * Atribui cada venda da Hotmart a um vendedor. Prioriza o "Nome do Afiliado"
+ * do próprio export Hotmart — é o link de afiliado de cada vendedor, dado
+ * direto pela Hotmart, sem nenhuma adivinhação. Só recorre ao cruzamento por
+ * e-mail com negócio ganho na Clint (com mesmo critério de tie-break:
+ * won_at mais próximo de data_venda) quando o afiliado é a empresa/vazio.
+ * Exclui linhas "Reset Relacional" (não é produto vendido, é evento de CRM).
  */
 export function matchSellerProduct(
   allDeals: Deal[],
@@ -336,7 +419,7 @@ export function matchSellerProduct(
 ): SellerProductResult {
   const dealsByEmail = new Map<string, Deal[]>();
   for (const d of allDeals) {
-    if (d.status !== "WON" || !d.user_name) continue;
+    if (d.status !== "WON" || !effectiveWinner(d)) continue;
     const email = d.contact_email?.trim().toLowerCase();
     if (!email) continue;
     if (!dealsByEmail.has(email)) dealsByEmail.set(email, []);
@@ -349,6 +432,7 @@ export function matchSellerProduct(
   let unmatchedRevenue = 0;
 
   for (const s of allSales) {
+    if (isResetRelacional(s.produto_original)) continue;
     // sales.status guarda o valor bruto do export Hotmart ("Completo",
     // "Aprovado", "Cancelado"...) — normaliza com a mesma função usada no
     // dashboard financeiro (/) em vez de comparar string literal.
@@ -360,6 +444,18 @@ export function matchSellerProduct(
     } else if (start) {
       continue;
     }
+
+    const affiliateSeller = matchAffiliateToSeller(s.nome_afiliado);
+    if (affiliateSeller) {
+      const key = `${affiliateSeller}::${s.produto_grupo}`;
+      const cur = agg.get(key) ?? { seller: affiliateSeller, produto_grupo: s.produto_grupo, vendas: 0, faturamento: 0 };
+      cur.vendas += 1;
+      cur.faturamento += s.faturamento_liquido_brl ?? 0;
+      agg.set(key, cur);
+      matched += 1;
+      continue;
+    }
+
     const email = s.email_cliente?.trim().toLowerCase();
     const candidates = email ? dealsByEmail.get(email) : undefined;
     if (!candidates || candidates.length === 0) {
@@ -377,7 +473,7 @@ export function matchSellerProduct(
       }, best);
     }
 
-    const seller = best.user_name!.trim();
+    const seller = effectiveWinner(best)!.name.trim();
     const key = `${seller}::${s.produto_grupo}`;
     const cur = agg.get(key) ?? { seller, produto_grupo: s.produto_grupo, vendas: 0, faturamento: 0 };
     cur.vendas += 1;
