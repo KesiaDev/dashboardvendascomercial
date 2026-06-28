@@ -60,19 +60,13 @@ export function periodRange(period: Period, dateRange?: { from?: Date; to?: Date
 }
 
 export async function fetchAllDeals(): Promise<Deal[]> {
-  const all: Deal[] = [];
-  let from = 0;
-  const pageSize = 1000;
-export async function fetchAllDeals(): Promise<Deal[]> {
   return (await fetchAllDealsFn()) as Deal[];
 }
 
 export type PipelineArea = { pipeline_id: string; area: string; ativo: boolean };
 
 export async function fetchPipelineAreas(): Promise<PipelineArea[]> {
-  const { data, error } = await supabase.from("bi_pipeline_areas").select("pipeline_id,area,ativo");
-  if (error) throw error;
-  return (data ?? []) as PipelineArea[];
+  return (await fetchPipelineAreasFn()) as PipelineArea[];
 }
 
 export function buildAreaMap(areas: PipelineArea[]): Map<string, BusinessArea> {
