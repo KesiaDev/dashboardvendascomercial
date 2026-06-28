@@ -63,21 +63,8 @@ export async function fetchAllDeals(): Promise<Deal[]> {
   const all: Deal[] = [];
   let from = 0;
   const pageSize = 1000;
-  while (true) {
-    const { data, error } = await supabase
-      .from("clint_deals")
-      .select(
-        "id,user_id,user_name,user_email,won_by_user_id,won_by_name,won_by_email,contact_email,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
-      )
-      .order("created_at", { ascending: false })
-      .range(from, from + pageSize - 1);
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    all.push(...(data as Deal[]));
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return all;
+export async function fetchAllDeals(): Promise<Deal[]> {
+  return (await fetchAllDealsFn()) as Deal[];
 }
 
 export type PipelineArea = { pipeline_id: string; area: string; ativo: boolean };
