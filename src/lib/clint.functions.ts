@@ -342,7 +342,8 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" }).handler(asy
     ]),
   );
 
-  const since = new Date(Date.now() - 90 * 86_400_000).toISOString();
+  // 35 dias cobre mês atual (até 31 dias) + semana + dia anterior com margem
+  const since = new Date(Date.now() - 35 * 86_400_000).toISOString();
   const all: any[] = [];
   let page = 1;
   while (true) {
@@ -352,7 +353,7 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" }).handler(asy
     if (!items.length) break;
     all.push(...items);
     if (!resp.hasNext) break;
-    if (++page > 200) break;
+    if (++page > 50) break; // teto de 50 páginas = 10k deals
   }
 
   const EXCLUDED = new Set(["camila faria", "aline goncalves", "kesia nandi"]);

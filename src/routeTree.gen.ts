@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppVendedorProdutoRouteImport } from './routes/_app.vendedor-produto'
+import { Route as AppRankingRouteImport } from './routes/_app.ranking'
 import { Route as AppProdutividadeRouteImport } from './routes/_app.produtividade'
 import { Route as AppImportRouteImport } from './routes/_app.import'
 import { Route as AppExecutivoRouteImport } from './routes/_app.executivo'
@@ -32,6 +33,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppVendedorProdutoRoute = AppVendedorProdutoRouteImport.update({
   id: '/vendedor-produto',
   path: '/vendedor-produto',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRankingRoute = AppRankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
   getParentRoute: () => AppRoute,
 } as any)
 const AppProdutividadeRoute = AppProdutividadeRouteImport.update({
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/executivo': typeof AppExecutivoRoute
   '/import': typeof AppImportRoute
   '/produtividade': typeof AppProdutividadeRoute
+  '/ranking': typeof AppRankingRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/executivo': typeof AppExecutivoRoute
   '/import': typeof AppImportRoute
   '/produtividade': typeof AppProdutividadeRoute
+  '/ranking': typeof AppRankingRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/': typeof AppIndexRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/_app/executivo': typeof AppExecutivoRoute
   '/_app/import': typeof AppImportRoute
   '/_app/produtividade': typeof AppProdutividadeRoute
+  '/_app/ranking': typeof AppRankingRoute
   '/_app/vendedor-produto': typeof AppVendedorProdutoRoute
   '/_app/': typeof AppIndexRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/executivo'
     | '/import'
     | '/produtividade'
+    | '/ranking'
     | '/vendedor-produto'
     | '/api/public/sync/trigger'
   fileRoutesByTo: FileRoutesByTo
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
     | '/executivo'
     | '/import'
     | '/produtividade'
+    | '/ranking'
     | '/vendedor-produto'
     | '/'
     | '/api/public/sync/trigger'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/_app/executivo'
     | '/_app/import'
     | '/_app/produtividade'
+    | '/_app/ranking'
     | '/_app/vendedor-produto'
     | '/_app/'
     | '/api/public/sync/trigger'
@@ -168,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/vendedor-produto'
       fullPath: '/vendedor-produto'
       preLoaderRoute: typeof AppVendedorProdutoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ranking': {
+      id: '/_app/ranking'
+      path: '/ranking'
+      fullPath: '/ranking'
+      preLoaderRoute: typeof AppRankingRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/produtividade': {
@@ -229,6 +248,7 @@ interface AppRouteChildren {
   AppExecutivoRoute: typeof AppExecutivoRoute
   AppImportRoute: typeof AppImportRoute
   AppProdutividadeRoute: typeof AppProdutividadeRoute
+  AppRankingRoute: typeof AppRankingRoute
   AppVendedorProdutoRoute: typeof AppVendedorProdutoRoute
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -240,6 +260,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppExecutivoRoute: AppExecutivoRoute,
   AppImportRoute: AppImportRoute,
   AppProdutividadeRoute: AppProdutividadeRoute,
+  AppRankingRoute: AppRankingRoute,
   AppVendedorProdutoRoute: AppVendedorProdutoRoute,
   AppIndexRoute: AppIndexRoute,
 }
@@ -253,3 +274,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
