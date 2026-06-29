@@ -1,23 +1,29 @@
 // Mapeamento dos nomes de produto (CSV) para os grupos do dashboard.
 // A correspondência é feita por palavras-chave em ordem (a primeira que casar ganha).
 
+export type ProductCategoria = "entrada" | "upsell" | "renovacao" | "outro";
+
 export interface ProductGroup {
   id: string;
   label: string;
   color: string; // tailwind/hsl token-friendly hex
+  /** Posição na escada de valor — ver docs/business-model.md (escada de upsell). */
+  categoria: ProductCategoria;
+  /** Produto do qual este é upsell/renovação — null se for produto de entrada/paralelo. */
+  parentId: string | null;
 }
 
 export const PRODUCT_GROUPS: ProductGroup[] = [
-  { id: "gtp_au", label: "Gestor Tráfego Pago 2.0 - AU", color: "#6366f1" },
-  { id: "formacao_rs", label: "Formação Gestor Redes Sociais 2.0", color: "#06b6d4" },
-  { id: "accelerator", label: "Programa Accelerator", color: "#10b981" },
-  { id: "estrategista", label: "Estrategista de Infoprodutos", color: "#f59e0b" },
-  { id: "master_scale", label: "Master and Scale 2025", color: "#ec4899" },
-  { id: "traffic_master", label: "Traffic Master", color: "#8b5cf6" },
-  { id: "renov_mentoria", label: "Renovação Mentoria", color: "#3b82f6" },
-  { id: "renov_tm", label: "Renovação Traffic Master", color: "#a855f7" },
-  { id: "renov_acc", label: "Renovação Accelerator", color: "#14b8a6" },
-  { id: "outros", label: "Outros", color: "#64748b" },
+  { id: "gtp_au", label: "Gestor Tráfego Pago 2.0 - AU", color: "#6366f1", categoria: "entrada", parentId: null },
+  { id: "formacao_rs", label: "Formação Gestor Redes Sociais 2.0", color: "#06b6d4", categoria: "entrada", parentId: null },
+  { id: "accelerator", label: "Programa Accelerator", color: "#10b981", categoria: "upsell", parentId: "gtp_au" },
+  { id: "estrategista", label: "Estrategista de Infoprodutos", color: "#f59e0b", categoria: "outro", parentId: null },
+  { id: "master_scale", label: "Master and Scale 2025", color: "#ec4899", categoria: "outro", parentId: null },
+  { id: "traffic_master", label: "Traffic Master", color: "#8b5cf6", categoria: "upsell", parentId: "accelerator" },
+  { id: "renov_mentoria", label: "Renovação Mentoria", color: "#3b82f6", categoria: "renovacao", parentId: "gtp_au" },
+  { id: "renov_tm", label: "Renovação Traffic Master", color: "#a855f7", categoria: "renovacao", parentId: "traffic_master" },
+  { id: "renov_acc", label: "Renovação Accelerator", color: "#14b8a6", categoria: "renovacao", parentId: "accelerator" },
+  { id: "outros", label: "Outros", color: "#64748b", categoria: "outro", parentId: null },
 ];
 
 export function mapProductToGroup(productName: string): string {

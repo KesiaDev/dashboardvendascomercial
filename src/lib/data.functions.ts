@@ -134,7 +134,18 @@ export const fetchProductConfigFn = createServerFn({ method: "GET" }).handler(as
   const supabase = await admin();
   const { data, error } = await supabase
     .from("bi_product_config")
-    .select("product_id,label,ativo")
+    .select("product_id,label,ativo,categoria,produto_pai_id")
+    .order("label");
+  if (error) throw new Error(error.message);
+  return data ?? [];
+});
+
+// ───── bi_channels ─────
+export const fetchChannelsFn = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = await admin();
+  const { data, error } = await supabase
+    .from("bi_channels")
+    .select("id,label,tipo,clint_group_names,sck_prefixes")
     .order("label");
   if (error) throw new Error(error.message);
   return data ?? [];
