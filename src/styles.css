@@ -108,3 +108,86 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
+
+/* ── Ranking celebration animations ──────────────────────────────────────── */
+@keyframes rk-slideUp {
+  from { transform: translateY(60px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes rk-float {
+  0%, 100% { transform: translateY(0px)    rotate(0deg); }
+  50%       { transform: translateY(-10px) rotate(5deg); }
+}
+@keyframes rk-crown {
+  0%, 100% { transform: translateY(0) scale(1);      }
+  50%       { transform: translateY(-6px) scale(1.15); }
+}
+@keyframes rk-glow {
+  0%, 100% { box-shadow: 0 0 20px 4px  rgba(251,191,36,0.25); }
+  50%       { box-shadow: 0 0 40px 12px rgba(251,191,36,0.55); }
+}
+@keyframes rk-badge {
+  0%, 100% { transform: scale(1);    }
+  50%       { transform: scale(1.18); }
+}
+@keyframes rk-fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* canvas overlay */
+.rk-confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 9999; }
+
+/* podium pedestals */
+.rk-pedestal-1 { height: 120px; background: linear-gradient(180deg,#FBBF24 0%,#D97706 100%); box-shadow: 0 0 30px rgba(251,191,36,0.4); }
+.rk-pedestal-2 { height: 80px;  background: linear-gradient(180deg,#94A3B8 0%,#64748B 100%); }
+.rk-pedestal-3 { height: 55px;  background: linear-gradient(180deg,#FB923C 0%,#C2410C 100%); }
+.rk-podium-order-1 { order: 2; } /* #1 center */
+.rk-podium-order-2 { order: 1; } /* #2 left   */
+.rk-podium-order-3 { order: 3; } /* #3 right  */
+
+/* podium item entrance */
+.rk-podium-item           { opacity: 0; }
+.rk-podium-item.rk-show   { animation: rk-slideUp 0.6s ease-out both; opacity: 1; }
+.rk-podium-item.rk-show.rk-d1 { animation-delay: 0.1s; }
+.rk-podium-item.rk-show.rk-d2 { animation-delay: 0.3s; }
+.rk-podium-item.rk-show.rk-d3 { animation-delay: 0.5s; }
+
+/* avatar gold glow for #1 */
+.rk-avatar-glow { animation: rk-glow 2.5s ease-in-out infinite; border-radius: 9999px; }
+
+/* floating trophy icons */
+.rk-crown-pulse { animation: rk-crown 2.5s ease-in-out infinite; }
+.rk-crown-pulse.rk-d0 { animation-delay: 0s;   }
+.rk-crown-pulse.rk-d1 { animation-delay: 0.3s; }
+
+/* floating sparkles (up to 5 per section) */
+.rk-spark-0 { animation: rk-float 2.5s ease-in-out infinite 0.0s; }
+.rk-spark-1 { animation: rk-float 2.9s ease-in-out infinite 0.3s; }
+.rk-spark-2 { animation: rk-float 3.3s ease-in-out infinite 0.8s; }
+.rk-spark-3 { animation: rk-float 3.7s ease-in-out infinite 1.2s; }
+.rk-spark-4 { animation: rk-float 4.1s ease-in-out infinite 1.6s; }
+
+/* badge bounce per podium position */
+.rk-badge-1 { animation: rk-badge 1.8s ease-in-out infinite; }
+.rk-badge-2 { animation: rk-badge 2.1s ease-in-out infinite 0.2s; }
+.rk-badge-3 { animation: rk-badge 2.4s ease-in-out infinite 0.4s; }
+
+/* destaque cards */
+.rk-destaque-top  { background: linear-gradient(135deg,rgba(251,191,36,0.12) 0%,rgba(139,92,246,0.08) 100%); border-color: rgba(251,191,36,0.35); }
+.rk-destaque-base { border-color: rgba(255,255,255,0.08); }
+
+/* page fade-ins with stagger */
+.rk-fadein   { animation: rk-fadeIn 0.4s ease-out both; }
+.rk-fadein-1 { animation: rk-fadeIn 0.5s ease-out 0.15s both; }
+.rk-fadein-2 { animation: rk-fadeIn 0.4s ease-out 0.20s both; }
+.rk-fadein-3 { animation: rk-fadeIn 0.4s ease-out 0.30s both; }
+.rk-fadein-4 { animation: rk-fadeIn 0.4s ease-out 0.40s both; }
+
+/* rank row stagger */
+.rk-row-0 { animation: rk-fadeIn 0.4s ease-out 0.00s both; }
+.rk-row-1 { animation: rk-fadeIn 0.4s ease-out 0.07s both; }
+.rk-row-2 { animation: rk-fadeIn 0.4s ease-out 0.14s both; }
+.rk-row-3 { animation: rk-fadeIn 0.4s ease-out 0.21s both; }
+.rk-row-4 { animation: rk-fadeIn 0.4s ease-out 0.28s both; }
+.rk-row-5 { animation: rk-fadeIn 0.4s ease-out 0.35s both; }
