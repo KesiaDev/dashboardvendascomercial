@@ -322,6 +322,94 @@ export const syncPipelineAreas = createServerFn({ method: "POST" }).handler(asyn
 });
 
 /**
+ * Busca o ranking de vendedores DIRETO da API da Clint (mesma fonte que o
+ * n8n), sem depender do DB local. Retorna rankings pré-computados para mês,
+ * semana, hoje e dia anterior — atribuição por won_by (quem fechou) com
+ * fallback para user (responsável), excluindo sellers internos.
+ */
+export const fetchClintRankingFn = createServerFn({ method: "GET" }).handler(async () => {
+  const token = process.env.CLINT_API_TOKEN;
+  if (!token) throw new Error("CLINT_API_TOKEN not configured");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { data: usersRows = [] } = await supabaseAdmin
+    .from("clint_users")
+    .select("id,first_name,last_name,email");
+  const userMap = new Map<string, string>(
+    (usersRows as any[]).map((u) => [
+      u.id,
+      `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || (u.email as string) || "—",
+    ]),
+  );
+
+  const since = new Date(Date.now() - 90 * 86_400_000).toISOString();
+  const all: any[] = [];
+  let page = 1;
+  while (true) {
+    const q = new URLSearchParams({ limit: "200", page: String(page), updated_at_start: since });
+    const resp = await clintFetch(`/v1/deals?${q}`, token);
+    const items: any[] = resp.data ?? [];
+    if (!items.length) break;
+    all.push(...items);
+    if (!resp.hasNext) break;
+    if (++page > 200) break;
+  }
+
+  const EXCLUDED = new Set(["camila faria", "aline goncalves", "kesia nandi"]);
+  const normStr = (s: string) =>
+    s.trim().toLowerCase().replace(/\s+/g, " ")
+      .normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+  function buildRanking(start: Date, end: Date | null) {
+    const map = new Map<string, { name: string; won: number; revenue: number }>();
+    for (const d of all) {
+      if (d.status !== "WON" || !d.won_at) continue;
+      const wonAt = new Date(d.won_at);
+      if (wonAt < start) continue;
+      if (end && wonAt > end) continue;
+      const v = parseFloat(String(d.value ?? 0)) || 0;
+      if (v <= 0) continue;
+      const uid = d.won_by ?? d.user?.id;
+      if (!uid) continue;
+      const name = (d.won_by
+        ? userMap.get(d.won_by)
+        : (d.user?.full_name?.trim() ?? d.user?.email)) ?? "—";
+      const clean = name.trim().replace(/\s+/g, " ");
+      if (EXCLUDED.has(normStr(clean))) continue;
+      const cur = map.get(uid) ?? { name: clean, won: 0, revenue: 0 };
+      cur.won += 1;
+      cur.revenue += v;
+      map.set(uid, cur);
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .map((s, i) => ({ user_id: `clint-${i}`, name: s.name, won: s.won, revenue: s.revenue, leads: 0, lost: 0, open: 0, email: "" }));
+  }
+
+  const now = new Date();
+  const todayStart     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterdayStart = new Date(todayStart.getTime() - 86_400_000);
+  const weekStart      = new Date(todayStart.getTime() - 7 * 86_400_000);
+  const monthStart     = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const mes    = buildRanking(monthStart, null);
+  const semana = buildRanking(weekStart, null);
+  const dia    = buildRanking(todayStart, null);
+  const diaAnterior = buildRanking(yesterdayStart, todayStart);
+
+  return {
+    mes,
+    semana,
+    dia,
+    destaques: {
+      dia:    diaAnterior[0] ?? null,
+      semana: semana[0]      ?? null,
+      mes:    mes[0]         ?? null,
+    },
+  };
+});
+
+/**
  * Reclassificação manual de um pipeline específico (usado na tela de
  * configuração de áreas). Marca auto_classified=false para essa origin
  * nunca mais ser sobrescrita por syncPipelineAreas.

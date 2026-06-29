@@ -1,14 +1,8 @@
-import { useMemo, useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { fetchAllDealsFn, fetchPipelineAreasFn } from "@/lib/data.functions";
-import {
-  rankSellers,
-  filterDealsByArea,
-  buildAreaMap,
-  type Deal,
-  type SellerStats,
-} from "@/lib/bi";
+import { fetchClintRankingFn } from "@/lib/clint.functions";
+import type { SellerStats } from "@/lib/bi";
 import { useCurrency } from "@/lib/currency-context";
 import { formatCurrency } from "@/lib/format";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -280,48 +274,21 @@ function RankRow({ rank, seller, currency }: { rank: number; seller: SellerStats
 
 // ── Main page ───────────────────────────────────────────────────────────────
 function RankingPage() {
-  const { currency, brlPerEur } = useCurrency();
+  useCurrency(); // keeps toggle state alive; ranking always shows EUR (Clint returns EUR)
+  const currency = "EUR";
 
-  const { data: rawDeals = [], isLoading } = useQuery({
-    queryKey: ["deals"],
-    queryFn: () => fetchAllDealsFn(),
+  const { data, isLoading } = useQuery({
+    queryKey: ["clint-ranking"],
+    queryFn: () => fetchClintRankingFn(),
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: pipelineAreas = [] } = useQuery({
-    queryKey: ["pipelineAreas"],
-    queryFn: () => fetchPipelineAreasFn(),
-    staleTime: 30 * 60 * 1000,
-  });
-
-  const allDeals = useMemo(() => {
-    const areaMap = buildAreaMap(pipelineAreas as any[]);
-    return filterDealsByArea(rawDeals as Deal[], areaMap, "COMERCIAL");
-  }, [rawDeals, pipelineAreas]);
-
-  const { destaques, ranking } = useMemo(() => {
-    const now = new Date();
-    const todayStart    = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterdayStart = new Date(todayStart.getTime() - 86_400_000);
-    const weekStart     = new Date(todayStart.getTime() - 7 * 86_400_000);
-    const monthStart    = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const rank = (start: Date, end: Date | null) =>
-      rankSellers(allDeals, start, end, currency, brlPerEur);
-
-    return {
-      destaques: {
-        dia:    rank(yesterdayStart, todayStart)[0] ?? null,
-        semana: rank(weekStart, null)[0] ?? null,
-        mes:    rank(monthStart, null)[0] ?? null,
-      },
-      ranking: {
-        mes:    rank(monthStart, null),
-        semana: rank(weekStart, null),
-        dia:    rank(todayStart, null),
-      },
-    };
-  }, [allDeals, currency, brlPerEur]);
+  const destaques = data?.destaques ?? { dia: null, semana: null, mes: null };
+  const ranking = {
+    mes:    (data?.mes    ?? []) as SellerStats[],
+    semana: (data?.semana ?? []) as SellerStats[],
+    dia:    (data?.dia    ?? []) as SellerStats[],
+  };
 
   return (
     <>
