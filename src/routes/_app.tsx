@@ -25,7 +25,7 @@ function AppLayout() {
               <NavLink to="/produtividade" icon={<Activity className="h-4 w-4" />}>Produtividade</NavLink>
               <NavLink to="/vendedor-produto" icon={<ChartBar className="h-4 w-4" />}>Vendedor x Produto</NavLink>
               <NavLink to="/agente" icon={<Bot className="h-4 w-4" />}>Agente IA</NavLink>
-              <NavLink to="/import" icon={<Upload className="h-4 w-4" />}>Importar</NavLink>
+              <NavLink to="/import" icon={<Upload className="h-4 w-4" />} iconOnly />
               <NavLink to="/areas" icon={<Settings className="h-4 w-4" />}>Áreas</NavLink>
             </nav>
             <div className="mx-2 h-6 w-px bg-border" />
@@ -41,15 +41,16 @@ function AppLayout() {
   );
 }
 
-function NavLink({ to, icon, children }: { to: string; icon: React.ReactNode; children: React.ReactNode }) {
+function NavLink({ to, icon, children, iconOnly }: { to: string; icon: React.ReactNode; children?: React.ReactNode; iconOnly?: boolean }) {
   return (
     <Link
       to={to}
       activeOptions={{ exact: true }}
       className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground [&.active]:bg-secondary [&.active]:text-foreground"
+      title={iconOnly ? String(children) : undefined}
     >
       {icon}
-      {children}
+      {!iconOnly && children}
     </Link>
   );
 }
