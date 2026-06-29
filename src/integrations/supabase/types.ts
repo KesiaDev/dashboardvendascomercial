@@ -98,7 +98,15 @@ export type Database = {
           produto_pai_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bi_product_config_produto_pai_id_fkey"
+            columns: ["produto_pai_id"]
+            isOneToOne: false
+            referencedRelation: "bi_product_config"
+            referencedColumns: ["product_id"]
+          },
+        ]
       }
       clint_deals: {
         Row: {
