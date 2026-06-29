@@ -125,7 +125,7 @@ export type Database = {
           created_at?: string
           fonte?: string
           granularidade?: string
-          id?: number
+          id?: never
           indicador: string
           periodo: string
           product_id?: string | null
@@ -136,7 +136,7 @@ export type Database = {
           created_at?: string
           fonte?: string
           granularidade?: string
-          id?: number
+          id?: never
           indicador?: string
           periodo?: string
           product_id?: string | null
