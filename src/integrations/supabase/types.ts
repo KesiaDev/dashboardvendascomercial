@@ -108,6 +108,57 @@ export type Database = {
           },
         ]
       }
+      bi_targets: {
+        Row: {
+          channel_id: string | null
+          created_at: string
+          fonte: string
+          granularidade: string
+          id: number
+          indicador: string
+          periodo: string
+          product_id: string | null
+          valor: number
+        }
+        Insert: {
+          channel_id?: string | null
+          created_at?: string
+          fonte?: string
+          granularidade?: string
+          id?: never
+          indicador: string
+          periodo: string
+          product_id?: string | null
+          valor: number
+        }
+        Update: {
+          channel_id?: string | null
+          created_at?: string
+          fonte?: string
+          granularidade?: string
+          id?: never
+          indicador?: string
+          periodo?: string
+          product_id?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bi_targets_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "bi_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bi_targets_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "bi_product_config"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
       clint_deals: {
         Row: {
           contact_ddi: string | null
