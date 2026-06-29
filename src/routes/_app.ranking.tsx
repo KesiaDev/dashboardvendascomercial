@@ -307,7 +307,7 @@ function RankingPage() {
     const monthStart    = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const rank = (start: Date, end: Date | null) =>
-      rankSellers(allDeals, start, end, currency, brlPerEur);
+      rankSellers(allDeals, start, end, currency, brlPerEur, undefined, true);
 
     return {
       destaques: {

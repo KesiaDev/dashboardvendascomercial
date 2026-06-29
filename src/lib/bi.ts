@@ -287,6 +287,7 @@ export function rankSellers(
   currency: "BRL" | "EUR",
   rate: number,
   phantomWonIds?: Set<string>,
+  wonByOnly?: boolean,
 ): SellerStats[] {
   const map = new Map<string, SellerStats>();
   const ensure = (id: string, name: string, email: string): SellerStats => {
@@ -310,10 +311,13 @@ export function rankSellers(
   }
 
   // Ganhos e faturamento: crédito para quem marcou como ganho (won_by),
-  // com fallback para o responsável quando a Clint não registrou won_by.
+  // com fallback para o responsável quando a Clint não registrou won_by
+  // (salvo quando wonByOnly=true — aí só conta deals com won_by explícito,
+  // igualando ao relatório nativo da Clint).
   for (const d of allDealsInArea) {
     if (d.status !== "WON" || !d.won_at || !(d.value && d.value > 0)) continue;
     if (phantomWonIds?.has(d.id)) continue;
+    if (wonByOnly && !d.won_by_user_id) continue;
     const winner = effectiveWinner(d);
     if (!winner) continue;
     const wonDate = new Date(d.won_at);
