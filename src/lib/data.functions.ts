@@ -162,6 +162,27 @@ export const fetchTargetsFn = createServerFn({ method: "GET" }).handler(async ()
   return data ?? [];
 });
 
+// ───── bi_team_activity / bi_followup_activities ─────
+export const fetchTeamActivityFn = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = await admin();
+  const { data, error } = await supabase
+    .from("bi_team_activity")
+    .select("periodo_inicio,periodo_fim,user_name,ligacoes,emails,tarefas,reunioes_agendadas,whatsapp,negocios_trabalhados")
+    .order("periodo_inicio", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+});
+
+export const fetchFollowupActivitiesFn = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = await admin();
+  const { data, error } = await supabase
+    .from("bi_followup_activities")
+    .select("periodo_inicio,periodo_fim,titulo_atividade,quantidade")
+    .order("periodo_inicio", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+});
+
 // ───── weekly_imports ─────
 export const fetchImportsFn = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = await admin();

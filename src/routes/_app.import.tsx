@@ -3,13 +3,28 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchImportsFn, fetchGroupCountsFn, importSalesFn } from "@/lib/data.functions";
 import { parseSalesCsv, type SaleRow } from "@/lib/csv-parser";
+import {
+  parseProdutividadeCsv,
+  parseNegociosTrabalhadosCsv,
+  parseFollowupCsv,
+  type ProdutividadeRow,
+  type NegociosTrabalhadosRow,
+  type FollowupRow,
+} from "@/lib/team-activity-csv";
+import { importProdutividade, importNegociosTrabalhados, importFollowup } from "@/lib/team-activity.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, Trash2 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, Trash2, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateBR, formatInt } from "@/lib/format";
 import { PRODUCT_GROUPS, getGroupById } from "@/lib/product-groups";
+import { format as formatDate } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/import")({
   component: ImportPage,
@@ -40,6 +55,11 @@ function ImportPage() {
   const [preview, setPreview] = useState<{ rows: SaleRow[]; filename: string } | null>(null);
   const [isParsing, setIsParsing] = useState(false);
 
+  const [activityRange, setActivityRange] = useState<DateRange | undefined>();
+  const [produtividadePreview, setProdutividadePreview] = useState<{ rows: ProdutividadeRow[]; filename: string } | null>(null);
+  const [trabalhadosPreview, setTrabalhadosPreview] = useState<{ rows: NegociosTrabalhadosRow[]; filename: string } | null>(null);
+  const [followupPreview, setFollowupPreview] = useState<{ rows: FollowupRow[]; filename: string } | null>(null);
+
   const { data: imports = [] } = useQuery({ queryKey: ["imports"], queryFn: fetchImports });
   const { data: groupCounts = {} } = useQuery({ queryKey: ["group-counts"], queryFn: fetchGroupCounts });
 
@@ -54,6 +74,48 @@ function ImportPage() {
       qc.invalidateQueries({ queryKey: ["sales"] });
       qc.invalidateQueries({ queryKey: ["imports"] });
       qc.invalidateQueries({ queryKey: ["group-counts"] });
+    },
+    onError: (e: Error) => toast.error(`Erro: ${e.message}`),
+  });
+
+  const periodoInicio = activityRange?.from ? formatDate(activityRange.from, "yyyy-MM-dd") : null;
+  const periodoFim = activityRange?.to ? formatDate(activityRange.to, "yyyy-MM-dd") : null;
+
+  const produtividadeMutation = useMutation({
+    mutationFn: async () => {
+      if (!periodoInicio || !periodoFim || !produtividadePreview) throw new Error("Selecione o período e o arquivo");
+      return await importProdutividade({ data: { periodoInicio, periodoFim, rows: produtividadePreview.rows } });
+    },
+    onSuccess: (r) => {
+      toast.success(`Produtividade importada: ${r.imported} vendedores`);
+      setProdutividadePreview(null);
+      qc.invalidateQueries({ queryKey: ["bi_team_activity"] });
+    },
+    onError: (e: Error) => toast.error(`Erro: ${e.message}`),
+  });
+
+  const trabalhadosMutation = useMutation({
+    mutationFn: async () => {
+      if (!periodoInicio || !periodoFim || !trabalhadosPreview) throw new Error("Selecione o período e o arquivo");
+      return await importNegociosTrabalhados({ data: { periodoInicio, periodoFim, rows: trabalhadosPreview.rows } });
+    },
+    onSuccess: (r) => {
+      toast.success(`Negócios trabalhados importados: ${r.imported} vendedores`);
+      setTrabalhadosPreview(null);
+      qc.invalidateQueries({ queryKey: ["bi_team_activity"] });
+    },
+    onError: (e: Error) => toast.error(`Erro: ${e.message}`),
+  });
+
+  const followupMutation = useMutation({
+    mutationFn: async () => {
+      if (!periodoInicio || !periodoFim || !followupPreview) throw new Error("Selecione o período e o arquivo");
+      return await importFollowup({ data: { periodoInicio, periodoFim, rows: followupPreview.rows } });
+    },
+    onSuccess: (r) => {
+      toast.success(`Follow-up importado: ${r.imported} atividades`);
+      setFollowupPreview(null);
+      qc.invalidateQueries({ queryKey: ["bi_followup_activities"] });
     },
     onError: (e: Error) => toast.error(`Erro: ${e.message}`),
   });
@@ -169,6 +231,86 @@ function ImportPage() {
         </Card>
       )}
 
+      {/* Atividade do time (Clint — sem API, só export manual) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Atividade do time (Clint)</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Ligações, e-mails, tarefas, reuniões, WhatsApp e negócios trabalhados não têm API —
+            exporte em Indicadores → dashboard → ⋮ → "Exportar dados em CSV" e suba aqui. Recomendado:
+            toda semana (ou quando quiser), referente ao período selecionado abaixo.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn("justify-start text-left font-normal gap-2", !activityRange?.from && "text-muted-foreground")}
+              >
+                <CalendarIcon className="h-4 w-4" />
+                {activityRange?.from ? (
+                  activityRange.to ? (
+                    <>
+                      {formatDate(activityRange.from, "dd/MM/yy", { locale: ptBR })} –{" "}
+                      {formatDate(activityRange.to, "dd/MM/yy", { locale: ptBR })}
+                    </>
+                  ) : (
+                    formatDate(activityRange.from, "dd/MM/yy", { locale: ptBR })
+                  )
+                ) : (
+                  <span>Período do export (obrigatório)</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={activityRange}
+                onSelect={setActivityRange}
+                numberOfMonths={2}
+                locale={ptBR}
+                className="p-3 pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <ActivityUploadCard
+              title="Produtividade time"
+              description="Ligações, e-mails, tarefas, reuniões, WhatsApp por vendedor"
+              parse={parseProdutividadeCsv}
+              preview={produtividadePreview}
+              setPreview={setProdutividadePreview}
+              onConfirm={() => produtividadeMutation.mutate()}
+              isPending={produtividadeMutation.isPending}
+              renderCount={(rows) => `${rows.length} vendedores`}
+            />
+            <ActivityUploadCard
+              title="Negócios trabalhados"
+              description="Por vendedor"
+              parse={parseNegociosTrabalhadosCsv}
+              preview={trabalhadosPreview}
+              setPreview={setTrabalhadosPreview}
+              onConfirm={() => trabalhadosMutation.mutate()}
+              isPending={trabalhadosMutation.isPending}
+              renderCount={(rows) => `${rows.length} vendedores`}
+            />
+            <ActivityUploadCard
+              title="Gráfico de follow-up"
+              description="Atividades por tipo/tag, time todo"
+              parse={parseFollowupCsv}
+              preview={followupPreview}
+              setPreview={setFollowupPreview}
+              onConfirm={() => followupMutation.mutate()}
+              isPending={followupMutation.isPending}
+              renderCount={(rows) => `${rows.length} tipos`}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Mapeamento atual */}
       <Card>
         <CardHeader>
@@ -227,6 +369,80 @@ function ImportPage() {
       <p className="text-xs text-muted-foreground">
         Veja os resultados no <Link to="/" className="text-primary underline">Dashboard</Link>.
       </p>
+    </div>
+  );
+}
+
+function ActivityUploadCard<T>({
+  title,
+  description,
+  parse,
+  preview,
+  setPreview,
+  onConfirm,
+  isPending,
+  renderCount,
+}: {
+  title: string;
+  description: string;
+  parse: (text: string) => T[];
+  preview: { rows: T[]; filename: string } | null;
+  setPreview: (p: { rows: T[]; filename: string } | null) => void;
+  onConfirm: () => void;
+  isPending: boolean;
+  renderCount: (rows: T[]) => string;
+}) {
+  const handle = async (file: File) => {
+    try {
+      const text = await file.text();
+      const rows = parse(text);
+      if (rows.length === 0) {
+        toast.error("Nenhuma linha válida encontrada no arquivo.");
+        return;
+      }
+      setPreview({ rows, filename: file.name });
+    } catch (e) {
+      toast.error(`Erro ao ler CSV: ${(e as Error).message}`);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-border p-4 space-y-3">
+      <div>
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      {preview ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm">
+            <FileSpreadsheet className="h-4 w-4 text-primary shrink-0" />
+            <span className="truncate">{preview.filename}</span>
+          </div>
+          <Badge variant="secondary" className="text-xs">{renderCount(preview.rows)}</Badge>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setPreview(null)} disabled={isPending}>
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={onConfirm} disabled={isPending}>
+              {isPending ? "Importando…" : "Importar"}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <label className="flex items-center justify-center gap-2 rounded-md border border-dashed border-border bg-secondary/20 px-3 py-4 text-sm text-muted-foreground cursor-pointer hover:bg-secondary/40">
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handle(f);
+            }}
+          />
+          <Upload className="h-4 w-4" />
+          Selecionar CSV
+        </label>
+      )}
     </div>
   );
 }

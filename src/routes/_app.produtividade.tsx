@@ -7,16 +7,19 @@ import {
   buildAreaMap,
   filterDealsByArea,
   periodRange,
+  cleanSellerName,
   type Period,
 } from "@/lib/bi";
 import { fetchStagesFn, fetchLostStatusesFn } from "@/lib/data.functions";
+import { fetchTeamActivity, fetchFollowupActivities } from "@/lib/team-activity.functions";
 import { AREA_LABELS, AREA_ORDER, type BusinessArea } from "@/lib/pipeline-areas";
 import { useCurrency } from "@/lib/currency-context";
 import { formatInt, formatPct } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
+import { format as formatDate } from "date-fns";
 import { Users, Trophy, Target, Clock, LayoutGrid } from "lucide-react";
 
 export const Route = createFileRoute("/_app/produtividade")({
@@ -55,6 +58,8 @@ function Produtividade() {
   const { data: pipelineAreas = [] } = useQuery({ queryKey: ["bi_pipeline_areas"], queryFn: fetchPipelineAreas });
   const { data: stages = [] } = useQuery({ queryKey: ["clint_stages"], queryFn: fetchStages });
   const { data: lostStatuses = [] } = useQuery({ queryKey: ["clint_lost_statuses"], queryFn: fetchLostStatuses });
+  const { data: teamActivity = [] } = useQuery({ queryKey: ["bi_team_activity"], queryFn: fetchTeamActivity });
+  const { data: followupActivities = [] } = useQuery({ queryKey: ["bi_followup_activities"], queryFn: fetchFollowupActivities });
 
   const areaMap = useMemo(() => buildAreaMap(pipelineAreas), [pipelineAreas]);
   const dealsInArea = useMemo(() => filterDealsByArea(deals, areaMap, area), [deals, areaMap, area]);
@@ -98,10 +103,24 @@ function Produtividade() {
       .sort((a, b) => b.count - a.count);
   }, [dealsInArea, start, end, lostLabel]);
 
+  const lostByDay = useMemo(() => {
+    const lost = dealsInArea.filter((d) => d.status === "LOST" && inPeriod(d.lost_at));
+    const map = new Map<string, number>();
+    for (const d of lost) {
+      const key = new Date(d.lost_at!).toISOString().slice(0, 10);
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, count]) => ({ day: formatDate(new Date(key), "dd/MM"), count }));
+  }, [dealsInArea, start, end]);
+
   const funnelBySeller = useMemo(() => {
-    const open = dealsInArea.filter((d) => d.status === "OPEN");
+    // Snapshot atual de cada negócio (não filtra por período nem status) —
+    // mesma definição do export "Detalhamento do funil por vendedor" da Clint:
+    // conta em qual etapa cada negócio está agora, incluindo ganhos/perdidos.
     const sellers = new Map<string, Map<string, number>>();
-    for (const d of open) {
+    for (const d of dealsInArea) {
       const user = d.user_name ?? d.user_email ?? "—";
       const stage = d.stage_id ? stageLabel.get(d.stage_id) ?? d.stage ?? "—" : d.stage ?? "—";
       if (!sellers.has(user)) sellers.set(user, new Map());
@@ -129,6 +148,51 @@ function Produtividade() {
       }))
       .sort((a, b) => new Date(b.data ?? 0).getTime() - new Date(a.data ?? 0).getTime());
   }, [dealsInArea, start, end]);
+
+  // Produtividade do time: importada via CSV (sem API na Clint para isso) —
+  // usa sempre o período mais recente importado, cruzado com negócios
+  // recebidos por vendedor no mesmo intervalo de datas.
+  const latestActivityPeriod = useMemo(() => {
+    if (teamActivity.length === 0) return null;
+    return teamActivity.reduce((latest, r) => (r.periodo_fim > latest.periodo_fim ? r : latest), teamActivity[0]);
+  }, [teamActivity]);
+
+  const teamProductivity = useMemo(() => {
+    if (!latestActivityPeriod) return [];
+    const rangeStart = new Date(latestActivityPeriod.periodo_inicio);
+    const rangeEnd = new Date(`${latestActivityPeriod.periodo_fim}T23:59:59`);
+    const leadsByUser = new Map<string, number>();
+    for (const d of dealsInArea) {
+      if (!d.created_at) continue;
+      const dt = new Date(d.created_at);
+      if (dt < rangeStart || dt > rangeEnd) continue;
+      const user = cleanSellerName(d.user_name ?? d.user_email ?? "—");
+      leadsByUser.set(user, (leadsByUser.get(user) ?? 0) + 1);
+    }
+    return teamActivity
+      .filter((r) => r.periodo_inicio === latestActivityPeriod.periodo_inicio && r.periodo_fim === latestActivityPeriod.periodo_fim)
+      .map((r) => {
+        const recebidos = leadsByUser.get(cleanSellerName(r.user_name)) ?? 0;
+        return {
+          ...r,
+          negociosRecebidos: recebidos,
+          pctTrabalhados: recebidos > 0 ? r.negocios_trabalhados / recebidos : null,
+        };
+      })
+      .sort((a, b) => b.negocios_trabalhados - a.negocios_trabalhados);
+  }, [teamActivity, latestActivityPeriod, dealsInArea]);
+
+  const latestFollowupPeriod = useMemo(() => {
+    if (followupActivities.length === 0) return null;
+    return followupActivities.reduce((latest, r) => (r.periodo_fim > latest.periodo_fim ? r : latest), followupActivities[0]);
+  }, [followupActivities]);
+
+  const followupRows = useMemo(() => {
+    if (!latestFollowupPeriod) return [];
+    return followupActivities
+      .filter((r) => r.periodo_inicio === latestFollowupPeriod.periodo_inicio && r.periodo_fim === latestFollowupPeriod.periodo_fim)
+      .sort((a, b) => b.quantidade - a.quantidade);
+  }, [followupActivities, latestFollowupPeriod]);
 
   return (
     <div className="space-y-6">
@@ -232,11 +296,11 @@ function Produtividade() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Funil por vendedor — em aberto</CardTitle>
+                <CardTitle className="text-base">Detalhamento do funil por vendedor</CardTitle>
               </CardHeader>
               <CardContent className="max-h-[280px] overflow-y-auto">
                 {funnelBySeller.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-12 text-center">Nenhum negócio em aberto.</p>
+                  <p className="text-sm text-muted-foreground py-12 text-center">Nenhum negócio encontrado.</p>
                 ) : (
                   <table className="w-full text-sm">
                     <thead>
@@ -260,6 +324,113 @@ function Produtividade() {
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Perdidos por dia — {AREA_LABELS[area]}</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[200px]">
+              {lostByDay.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-12 text-center">Nenhuma perda no período.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={lostByDay} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="day" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
+                    <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
+                    <Tooltip
+                      contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)" }}
+                    />
+                    <Area type="monotone" dataKey="count" stroke="#ef4444" fill="#ef4444" fillOpacity={0.2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Produtividade do time</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {latestActivityPeriod
+                  ? `Período importado: ${formatDate(new Date(latestActivityPeriod.periodo_inicio), "dd/MM/yy")} – ${formatDate(new Date(latestActivityPeriod.periodo_fim), "dd/MM/yy")}. Ligações/e-mails/tarefas/reuniões/WhatsApp vêm de CSV (sem API na Clint) — importe em /import.`
+                  : "Nenhum dado importado ainda. Vá em /import → \"Atividade do time\" para subir o CSV exportado da Clint."}
+              </p>
+            </CardHeader>
+            {teamProductivity.length > 0 && (
+              <CardContent className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="py-2 pr-4">Vendedor</th>
+                      <th className="py-2 pr-4 text-right">Ligações</th>
+                      <th className="py-2 pr-4 text-right">Emails</th>
+                      <th className="py-2 pr-4 text-right">Tarefas</th>
+                      <th className="py-2 pr-4 text-right">Reuniões</th>
+                      <th className="py-2 pr-4 text-right">WhatsApp</th>
+                      <th className="py-2 pr-4 text-right">Trabalhados</th>
+                      <th className="py-2 text-right">% sobre recebidos</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {teamProductivity.map((r) => (
+                      <tr key={r.user_name} className="border-b border-border/50">
+                        <td className="py-1.5 pr-4 font-medium">{r.user_name}</td>
+                        <td className="py-1.5 pr-4 text-right tabular-nums">{formatInt(r.ligacoes)}</td>
+                        <td className="py-1.5 pr-4 text-right tabular-nums">{formatInt(r.emails)}</td>
+                        <td className="py-1.5 pr-4 text-right tabular-nums">{formatInt(r.tarefas)}</td>
+                        <td className="py-1.5 pr-4 text-right tabular-nums">{formatInt(r.reunioes_agendadas)}</td>
+                        <td className="py-1.5 pr-4 text-right tabular-nums">{formatInt(r.whatsapp)}</td>
+                        <td className="py-1.5 pr-4 text-right tabular-nums">
+                          {formatInt(r.negocios_trabalhados)}
+                          <span className="text-muted-foreground"> / {formatInt(r.negociosRecebidos)}</span>
+                        </td>
+                        <td className="py-1.5 text-right tabular-nums">
+                          {r.pctTrabalhados !== null ? (
+                            <Badge variant="secondary" className="text-xs">{formatPct(r.pctTrabalhados)}</Badge>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            )}
+          </Card>
+
+          {followupRows.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Atividades de follow-up — time todo</CardTitle>
+                {latestFollowupPeriod && (
+                  <p className="text-xs text-muted-foreground">
+                    Período importado: {formatDate(new Date(latestFollowupPeriod.periodo_inicio), "dd/MM/yy")} –{" "}
+                    {formatDate(new Date(latestFollowupPeriod.periodo_fim), "dd/MM/yy")}
+                  </p>
+                )}
+              </CardHeader>
+              <CardContent className="max-h-[240px] overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="py-2 pr-4">Tipo de atividade</th>
+                      <th className="py-2 text-right">Quantidade</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {followupRows.map((r) => (
+                      <tr key={r.titulo_atividade} className="border-b border-border/50">
+                        <td className="py-1.5 pr-4">{r.titulo_atividade}</td>
+                        <td className="py-1.5 text-right tabular-nums">{formatInt(r.quantidade)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

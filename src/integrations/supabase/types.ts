@@ -108,6 +108,75 @@ export type Database = {
           },
         ]
       }
+      bi_team_activity: {
+        Row: {
+          emails: number
+          id: number
+          imported_at: string
+          ligacoes: number
+          negocios_trabalhados: number
+          periodo_fim: string
+          periodo_inicio: string
+          reunioes_agendadas: number
+          tarefas: number
+          user_name: string
+          whatsapp: number
+        }
+        Insert: {
+          emails?: number
+          id?: number
+          imported_at?: string
+          ligacoes?: number
+          negocios_trabalhados?: number
+          periodo_fim: string
+          periodo_inicio: string
+          reunioes_agendadas?: number
+          tarefas?: number
+          user_name: string
+          whatsapp?: number
+        }
+        Update: {
+          emails?: number
+          id?: number
+          imported_at?: string
+          ligacoes?: number
+          negocios_trabalhados?: number
+          periodo_fim?: string
+          periodo_inicio?: string
+          reunioes_agendadas?: number
+          tarefas?: number
+          user_name?: string
+          whatsapp?: number
+        }
+        Relationships: []
+      }
+      bi_followup_activities: {
+        Row: {
+          id: number
+          imported_at: string
+          periodo_fim: string
+          periodo_inicio: string
+          quantidade: number
+          titulo_atividade: string
+        }
+        Insert: {
+          id?: number
+          imported_at?: string
+          periodo_fim: string
+          periodo_inicio: string
+          quantidade?: number
+          titulo_atividade: string
+        }
+        Update: {
+          id?: number
+          imported_at?: string
+          periodo_fim?: string
+          periodo_inicio?: string
+          quantidade?: number
+          titulo_atividade?: string
+        }
+        Relationships: []
+      }
       bi_targets: {
         Row: {
           channel_id: string | null
