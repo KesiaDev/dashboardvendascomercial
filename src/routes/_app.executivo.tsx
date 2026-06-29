@@ -23,6 +23,7 @@ import { formatInt, formatPct } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   BarChart,
   Bar,
@@ -247,56 +248,69 @@ function Executivo() {
                 ainda não importamos gasto real de mídia.
               </p>
             </CardHeader>
-            <CardContent className="overflow-x-auto">
+            <CardContent>
               {metaComparison.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-8 text-center">
                   Nenhuma meta cadastrada para este período.
                 </p>
               ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-muted-foreground">
-                      <th className="py-2 pr-4">Canal</th>
-                      <th className="py-2 pr-4 text-right">Leads (real / meta)</th>
-                      <th className="py-2 pr-4 text-right">Vendas (real / meta)</th>
-                      <th className="py-2 pr-4 text-right">Faturamento (real / meta)</th>
-                      <th className="py-2 text-right">Investimento (meta)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {metaComparison.map((c) => {
-                      const faturamentoPct = c.faturamentoMeta > 0 ? c.faturamentoRealizado / c.faturamentoMeta : null;
-                      return (
-                        <tr key={c.channelId} className="border-b border-border/50">
-                          <td className="py-2 pr-4 font-medium">{c.label}</td>
-                          <td className="py-2 pr-4 text-right tabular-nums">
-                            {formatInt(c.leadsRealizado)} / {formatInt(Math.round(c.leadsMeta))}
-                          </td>
-                          <td className="py-2 pr-4 text-right tabular-nums">
-                            {formatInt(c.vendasRealizado)} / {formatInt(Math.round(c.vendasMeta))}
-                          </td>
-                          <td className="py-2 pr-4 text-right tabular-nums">
-                            <span className="font-semibold">{money(c.faturamentoRealizado)}</span>
-                            {" / "}
-                            {money(c.faturamentoMeta)}
-                            {faturamentoPct !== null && (
-                              <Badge
-                                variant="secondary"
-                                className="ml-2 text-xs"
-                                style={faturamentoPct >= 1 ? { color: "var(--success)" } : undefined}
-                              >
-                                {formatPct(faturamentoPct)}
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="py-2 text-right tabular-nums text-muted-foreground">
-                            {money(c.investimentoMeta)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {metaComparison.map((c) => {
+                    const pct = c.faturamentoMeta > 0 ? c.faturamentoRealizado / c.faturamentoMeta : null;
+                    const onTrack = pct !== null && pct >= 1;
+                    return (
+                      <div key={c.channelId} className="rounded-lg border border-border p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold">{c.label}</p>
+                          {pct !== null && (
+                            <Badge
+                              variant={onTrack ? "default" : "secondary"}
+                              className="text-xs"
+                              style={onTrack ? { backgroundColor: "var(--success)", color: "white" } : undefined}
+                            >
+                              {formatPct(pct)}
+                            </Badge>
+                          )}
+                        </div>
+
+                        <div>
+                          <div className="flex items-baseline justify-between">
+                            <span className="text-lg font-semibold tabular-nums">{money(c.faturamentoRealizado)}</span>
+                            <span className="text-xs text-muted-foreground">meta {money(c.faturamentoMeta)}</span>
+                          </div>
+                          <Progress value={Math.min((pct ?? 0) * 100, 100)} className="mt-2 h-1.5" />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 border-t border-border/50 pt-3">
+                          <div>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Users className="h-3 w-3" /> Leads
+                            </p>
+                            <p className="text-sm font-medium tabular-nums">
+                              {formatInt(c.leadsRealizado)}
+                              <span className="text-muted-foreground font-normal"> / {formatInt(Math.round(c.leadsMeta))}</span>
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Trophy className="h-3 w-3" /> Vendas
+                            </p>
+                            <p className="text-sm font-medium tabular-nums">
+                              {formatInt(c.vendasRealizado)}
+                              <span className="text-muted-foreground font-normal"> / {formatInt(Math.round(c.vendasMeta))}</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        {c.investimentoMeta > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Investimento planejado: <span className="font-medium">{money(c.investimentoMeta)}</span>
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </CardContent>
           </Card>
