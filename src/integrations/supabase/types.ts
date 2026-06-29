@@ -41,6 +41,33 @@ export type Database = {
         }
         Relationships: []
       }
+      bi_followup_activities: {
+        Row: {
+          id: number
+          imported_at: string
+          periodo_fim: string
+          periodo_inicio: string
+          quantidade: number
+          titulo_atividade: string
+        }
+        Insert: {
+          id?: never
+          imported_at?: string
+          periodo_fim: string
+          periodo_inicio: string
+          quantidade?: number
+          titulo_atividade: string
+        }
+        Update: {
+          id?: never
+          imported_at?: string
+          periodo_fim?: string
+          periodo_inicio?: string
+          quantidade?: number
+          titulo_atividade?: string
+        }
+        Relationships: []
+      }
       bi_pipeline_areas: {
         Row: {
           area: string
@@ -158,6 +185,48 @@ export type Database = {
             referencedColumns: ["product_id"]
           },
         ]
+      }
+      bi_team_activity: {
+        Row: {
+          emails: number
+          id: number
+          imported_at: string
+          ligacoes: number
+          negocios_trabalhados: number
+          periodo_fim: string
+          periodo_inicio: string
+          reunioes_agendadas: number
+          tarefas: number
+          user_name: string
+          whatsapp: number
+        }
+        Insert: {
+          emails?: number
+          id?: never
+          imported_at?: string
+          ligacoes?: number
+          negocios_trabalhados?: number
+          periodo_fim: string
+          periodo_inicio: string
+          reunioes_agendadas?: number
+          tarefas?: number
+          user_name: string
+          whatsapp?: number
+        }
+        Update: {
+          emails?: number
+          id?: never
+          imported_at?: string
+          ligacoes?: number
+          negocios_trabalhados?: number
+          periodo_fim?: string
+          periodo_inicio?: string
+          reunioes_agendadas?: number
+          tarefas?: number
+          user_name?: string
+          whatsapp?: number
+        }
+        Relationships: []
       }
       clint_deals: {
         Row: {
