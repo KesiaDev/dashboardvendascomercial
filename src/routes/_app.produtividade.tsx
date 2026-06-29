@@ -149,6 +149,17 @@ function Produtividade() {
       .sort((a, b) => new Date(b.data ?? 0).getTime() - new Date(a.data ?? 0).getTime());
   }, [dealsInArea, start, end]);
 
+  const salesByVendor = useMemo(() => {
+    const groups = new Map<string, { vendedor: string; total: number; items: typeof salesDetail }>();
+    for (const s of salesDetail) {
+      const g = groups.get(s.vendedor) ?? { vendedor: s.vendedor, total: 0, items: [] };
+      g.total += s.valor;
+      g.items.push(s);
+      groups.set(s.vendedor, g);
+    }
+    return Array.from(groups.values()).sort((a, b) => b.total - a.total);
+  }, [salesDetail]);
+
   // Produtividade do time: importada via CSV (sem API na Clint para isso) —
   // usa sempre o período mais recente importado, cruzado com negócios
   // recebidos por vendedor no mesmo intervalo de datas.
@@ -436,41 +447,43 @@ function Produtividade() {
             <CardHeader>
               <CardTitle className="text-base">Detalhamento das vendas — {AREA_LABELS[area]}</CardTitle>
             </CardHeader>
-            <CardContent className="overflow-x-auto">
-              {salesDetail.length === 0 ? (
+            <CardContent className="space-y-5">
+              {salesByVendor.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-12 text-center">Nenhuma venda no período.</p>
               ) : (
-                <>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border text-left text-muted-foreground">
-                        <th className="py-2 pr-4">Contato</th>
-                        <th className="py-2 pr-4">Email</th>
-                        <th className="py-2 pr-4">Origem</th>
-                        <th className="py-2 pr-4">Vendedor</th>
-                        <th className="py-2 text-right">Valor</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {salesDetail.slice(0, 100).map((s) => (
-                        <tr key={s.id} className="border-b border-border/50">
-                          <td className="py-1.5 pr-4">{s.contato}</td>
-                          <td className="py-1.5 pr-4 text-muted-foreground">{s.email}</td>
-                          <td className="py-1.5 pr-4 text-muted-foreground">{s.origem}</td>
-                          <td className="py-1.5 pr-4">
-                            <Badge variant="secondary" className="text-xs">{s.vendedor}</Badge>
-                          </td>
-                          <td className="py-1.5 text-right tabular-nums font-medium">{money(s.valor)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {salesDetail.length > 100 && (
-                    <p className="pt-3 text-xs text-muted-foreground">
-                      Mostrando as 100 vendas mais recentes de {formatInt(salesDetail.length)} no período.
-                    </p>
-                  )}
-                </>
+                salesByVendor.map((g) => (
+                  <div key={g.vendedor}>
+                    <div className="flex items-center justify-between border-b border-border pb-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge className="text-xs">{g.vendedor}</Badge>
+                        <span className="text-xs text-muted-foreground">{formatInt(g.items.length)} venda{g.items.length > 1 ? "s" : ""}</span>
+                      </div>
+                      <span className="text-sm font-semibold tabular-nums">{money(g.total)}</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-muted-foreground">
+                            <th className="py-1.5 pr-4">Contato</th>
+                            <th className="py-1.5 pr-4">Email</th>
+                            <th className="py-1.5 pr-4">Origem</th>
+                            <th className="py-1.5 text-right">Valor</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {g.items.map((s) => (
+                            <tr key={s.id} className="border-b border-border/50">
+                              <td className="py-1.5 pr-4">{s.contato}</td>
+                              <td className="py-1.5 pr-4 text-muted-foreground">{s.email}</td>
+                              <td className="py-1.5 pr-4 text-muted-foreground">{s.origem}</td>
+                              <td className="py-1.5 text-right tabular-nums font-medium">{money(s.valor)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))
               )}
             </CardContent>
           </Card>
