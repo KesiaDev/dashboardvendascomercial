@@ -9,8 +9,12 @@ import {
   fetchAllDealsFn,
   fetchAllSalesFn,
   fetchPipelineAreasFn,
+  fetchOriginsFn,
+  fetchTargetsFn,
+  fetchChannelsFn,
 } from "@/lib/data.functions";
 import type { BusinessArea } from "@/lib/pipeline-areas";
+import { classifyChannel } from "@/lib/channels";
 
 export type Deal = {
   id: string;
@@ -73,6 +77,118 @@ export function buildAreaMap(areas: PipelineArea[]): Map<string, BusinessArea> {
   const m = new Map<string, BusinessArea>();
   for (const a of areas) m.set(a.pipeline_id, a.area as BusinessArea);
   return m;
+}
+
+export type Origin = { id: string; name: string; group_name: string | null; archived: boolean };
+
+export async function fetchOrigins(): Promise<Origin[]> {
+  return (await fetchOriginsFn()) as Origin[];
+}
+
+export type ChannelInfo = { id: string; label: string };
+
+export async function fetchChannels(): Promise<ChannelInfo[]> {
+  return (await fetchChannelsFn()) as ChannelInfo[];
+}
+
+export type Target = {
+  granularidade: string;
+  periodo: string;
+  channel_id: string | null;
+  product_id: string | null;
+  indicador: string;
+  valor: number;
+  fonte: string;
+};
+
+export async function fetchTargets(): Promise<Target[]> {
+  return (await fetchTargetsFn()) as Target[];
+}
+
+export type ChannelComparison = {
+  channelId: string;
+  label: string;
+  leadsRealizado: number;
+  leadsMeta: number;
+  vendasRealizado: number;
+  vendasMeta: number;
+  faturamentoRealizado: number;
+  faturamentoMeta: number;
+  investimentoMeta: number;
+};
+
+/**
+ * Cruza metas planejadas (bi_targets, vindas da planilha 2026) contra leads/vendas
+ * reais da Clint, classificando cada deal em canal via group_name (mesmo
+ * dicionário usado para a meta). Investimento aparece só como meta — não há
+ * gasto real de mídia importado ainda (bi_investments, ver gap-analysis.md).
+ */
+export function compareMetaRealizado(
+  allDeals: Deal[],
+  origins: Origin[],
+  channels: ChannelInfo[],
+  targets: Target[],
+  start: Date | null,
+  end: Date | null,
+): ChannelComparison[] {
+  const originToChannel = new Map<string, string>();
+  for (const o of origins) originToChannel.set(o.id, classifyChannel(o.group_name, null));
+
+  const inPeriod = (iso: string | null) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    if (start && d < start) return false;
+    if (end && d > end) return false;
+    return true;
+  };
+
+  const realizado = new Map<string, { leads: number; vendas: number; faturamento: number }>();
+  for (const d of allDeals) {
+    const channelId = d.origin_id ? originToChannel.get(d.origin_id) : undefined;
+    if (!channelId || channelId === "outros") continue;
+    const cur = realizado.get(channelId) ?? { leads: 0, vendas: 0, faturamento: 0 };
+    if (inPeriod(d.created_at)) cur.leads += 1;
+    if (d.status === "WON" && d.value && d.value > 0 && inPeriod(d.won_at)) {
+      cur.vendas += 1;
+      cur.faturamento += d.value;
+    }
+    realizado.set(channelId, cur);
+  }
+
+  const meta = new Map<string, { leads: number; vendas: number; faturamento: number; investimento: number }>();
+  for (const t of targets) {
+    if (!t.channel_id || t.product_id) continue;
+    const periodo = new Date(t.periodo);
+    if (start && periodo < start) continue;
+    if (end && periodo > end) continue;
+    const cur = meta.get(t.channel_id) ?? { leads: 0, vendas: 0, faturamento: 0, investimento: 0 };
+    if (t.indicador === "leads_pagas" || t.indicador === "leads") cur.leads += t.valor;
+    else if (t.indicador === "vendas") cur.vendas += t.valor;
+    else if (t.indicador === "faturamento") cur.faturamento += t.valor;
+    else if (t.indicador === "investimento_total_imposto") cur.investimento += t.valor;
+    meta.set(t.channel_id, cur);
+  }
+
+  const labelById = new Map(channels.map((c) => [c.id, c.label]));
+  const ids = new Set([...realizado.keys(), ...meta.keys()]);
+
+  return Array.from(ids)
+    .map((id) => {
+      const r = realizado.get(id) ?? { leads: 0, vendas: 0, faturamento: 0 };
+      const m = meta.get(id) ?? { leads: 0, vendas: 0, faturamento: 0, investimento: 0 };
+      return {
+        channelId: id,
+        label: labelById.get(id) ?? id,
+        leadsRealizado: r.leads,
+        leadsMeta: m.leads,
+        vendasRealizado: r.vendas,
+        vendasMeta: m.vendas,
+        faturamentoRealizado: r.faturamento,
+        faturamentoMeta: m.faturamento,
+        investimentoMeta: m.investimento,
+      };
+    })
+    .sort((a, b) => b.faturamentoMeta - a.faturamentoMeta);
 }
 
 /** Filtra deals por área de negócio (via origin_id → bi_pipeline_areas), ignorando

@@ -5,11 +5,15 @@ import {
   fetchAllDeals,
   fetchAllSales,
   fetchPipelineAreas,
+  fetchOrigins,
+  fetchChannels,
+  fetchTargets,
   buildAreaMap,
   filterDealsByArea,
   rankSellers,
   computeAreaKpis,
   findPhantomWonDeals,
+  compareMetaRealizado,
   periodRange,
   type Period,
 } from "@/lib/bi";
@@ -51,11 +55,19 @@ function Executivo() {
     queryKey: ["bi_pipeline_areas"],
     queryFn: fetchPipelineAreas,
   });
+  const { data: origins = [] } = useQuery({ queryKey: ["clint_origins"], queryFn: fetchOrigins });
+  const { data: channels = [] } = useQuery({ queryKey: ["bi_channels"], queryFn: fetchChannels });
+  const { data: targets = [] } = useQuery({ queryKey: ["bi_targets"], queryFn: fetchTargets });
 
   const areaMap = useMemo(() => buildAreaMap(pipelineAreas), [pipelineAreas]);
   const dealsInArea = useMemo(() => filterDealsByArea(deals, areaMap, area), [deals, areaMap, area]);
   const phantomWonIds = useMemo(() => findPhantomWonDeals(deals, sales), [deals, sales]);
   const { start, end } = periodRange(period);
+
+  const metaComparison = useMemo(
+    () => compareMetaRealizado(deals, origins, channels, targets, start, end),
+    [deals, origins, channels, targets, start, end],
+  );
 
   const kpis = useMemo(
     () => computeAreaKpis(dealsInArea, start, end, currency, rate, phantomWonIds),
@@ -223,6 +235,69 @@ function Executivo() {
                   })}
                 </tbody>
               </table>
+            </CardContent>
+          </Card>
+
+          {/* Meta vs Realizado por canal de aquisição (planilha 2026) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Meta vs Realizado — Canais de aquisição</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Meta vem da planilha de planejamento 2026. Investimento aparece só como meta —
+                ainda não importamos gasto real de mídia.
+              </p>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              {metaComparison.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  Nenhuma meta cadastrada para este período.
+                </p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="py-2 pr-4">Canal</th>
+                      <th className="py-2 pr-4 text-right">Leads (real / meta)</th>
+                      <th className="py-2 pr-4 text-right">Vendas (real / meta)</th>
+                      <th className="py-2 pr-4 text-right">Faturamento (real / meta)</th>
+                      <th className="py-2 text-right">Investimento (meta)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metaComparison.map((c) => {
+                      const faturamentoPct = c.faturamentoMeta > 0 ? c.faturamentoRealizado / c.faturamentoMeta : null;
+                      return (
+                        <tr key={c.channelId} className="border-b border-border/50">
+                          <td className="py-2 pr-4 font-medium">{c.label}</td>
+                          <td className="py-2 pr-4 text-right tabular-nums">
+                            {formatInt(c.leadsRealizado)} / {formatInt(Math.round(c.leadsMeta))}
+                          </td>
+                          <td className="py-2 pr-4 text-right tabular-nums">
+                            {formatInt(c.vendasRealizado)} / {formatInt(Math.round(c.vendasMeta))}
+                          </td>
+                          <td className="py-2 pr-4 text-right tabular-nums">
+                            <span className="font-semibold">{money(c.faturamentoRealizado)}</span>
+                            {" / "}
+                            {money(c.faturamentoMeta)}
+                            {faturamentoPct !== null && (
+                              <Badge
+                                variant="secondary"
+                                className="ml-2 text-xs"
+                                style={faturamentoPct >= 1 ? { color: "var(--success)" } : undefined}
+                              >
+                                {formatPct(faturamentoPct)}
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="py-2 text-right tabular-nums text-muted-foreground">
+                            {money(c.investimentoMeta)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
             </CardContent>
           </Card>
 
