@@ -381,11 +381,9 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         if (end && wonAt >= end) continue; // end exclusivo
         const v = parseFloat(String(d.value ?? 0)) || 0;
         if (v <= 0) continue;
-        const uid = d.won_by ?? d.user?.id;
+        const uid = d.user?.id;
         if (!uid) continue;
-        const name = (d.won_by
-          ? userMap.get(d.won_by)
-          : (d.user?.full_name?.trim() ?? d.user?.email)) ?? "—";
+        const name = d.user?.full_name?.trim() ?? d.user?.email ?? "—";
         const clean = name.trim().replace(/\s+/g, " ");
         if (EXCLUDED.has(normStr(clean))) continue;
         const cur = map.get(uid) ?? { name: clean, won: 0, revenue: 0 };
