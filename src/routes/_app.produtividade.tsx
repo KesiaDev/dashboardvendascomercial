@@ -127,11 +127,15 @@ function Produtividade() {
       const m = sellers.get(user)!;
       m.set(stage, (m.get(stage) ?? 0) + 1);
     }
-    const rows: { user: string; stage: string; count: number }[] = [];
+    const groups: { user: string; total: number; stages: { stage: string; count: number }[] }[] = [];
     for (const [user, stageMap] of sellers) {
-      for (const [stage, count] of stageMap) rows.push({ user, stage, count });
+      const stages = Array.from(stageMap.entries())
+        .map(([stage, count]) => ({ stage, count }))
+        .sort((a, b) => b.count - a.count);
+      const total = stages.reduce((sum, s) => sum + s.count, 0);
+      groups.push({ user, total, stages });
     }
-    return rows.sort((a, b) => a.user.localeCompare(b.user) || b.count - a.count);
+    return groups.sort((a, b) => b.total - a.total);
   }, [dealsInArea, stageLabel]);
 
   const salesDetail = useMemo(() => {
@@ -309,28 +313,28 @@ function Produtividade() {
               <CardHeader>
                 <CardTitle className="text-base">Detalhamento do funil por vendedor</CardTitle>
               </CardHeader>
-              <CardContent className="max-h-[280px] overflow-y-auto">
+              <CardContent className="max-h-[400px] overflow-y-auto space-y-4">
                 {funnelBySeller.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-12 text-center">Nenhum negócio encontrado.</p>
                 ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border text-left text-muted-foreground">
-                        <th className="py-2 pr-4">Vendedor</th>
-                        <th className="py-2 pr-4">Etapa</th>
-                        <th className="py-2 text-right">Qtd</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {funnelBySeller.map((r, i) => (
-                        <tr key={`${r.user}-${r.stage}-${i}`} className="border-b border-border/50">
-                          <td className="py-1.5 pr-4">{r.user}</td>
-                          <td className="py-1.5 pr-4 text-muted-foreground">{r.stage}</td>
-                          <td className="py-1.5 text-right tabular-nums">{formatInt(r.count)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  funnelBySeller.map((g) => (
+                    <div key={g.user}>
+                      <div className="flex items-center justify-between border-b border-border pb-1.5 mb-1.5">
+                        <Badge className="text-xs">{g.user}</Badge>
+                        <span className="text-xs text-muted-foreground">{formatInt(g.total)} negócios</span>
+                      </div>
+                      <table className="w-full text-sm">
+                        <tbody>
+                          {g.stages.map((s) => (
+                            <tr key={s.stage} className="border-b border-border/50">
+                              <td className="py-1 pr-4 text-muted-foreground">{s.stage}</td>
+                              <td className="py-1 text-right tabular-nums">{formatInt(s.count)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))
                 )}
               </CardContent>
             </Card>
