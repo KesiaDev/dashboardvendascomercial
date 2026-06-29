@@ -11,72 +11,69 @@ async function admin() {
   return supabaseAdmin;
 }
 
+/**
+ * Busca todas as páginas de uma tabela em paralelo (1 round-trip pro count +
+ * N round-trips simultâneos), em vez de sequencial — corta o tempo de
+ * carregamento de páginas que leem clint_deals/sales inteiro de ~N*latência
+ * pra ~1*latência.
+ */
+async function fetchAllPaged<T>(supabase: any, table: string, select: string, orderBy: string): Promise<T[]> {
+  const pageSize = 1000;
+  const { count, error: countError } = await supabase.from(table).select("*", { count: "exact", head: true });
+  if (countError) throw new Error(countError.message);
+  const total = count ?? 0;
+  if (total === 0) return [];
+
+  const pages = Math.ceil(total / pageSize);
+  const results = await Promise.all(
+    Array.from({ length: pages }, (_, i) => {
+      const from = i * pageSize;
+      return supabase
+        .from(table)
+        .select(select)
+        .order(orderBy, { ascending: false })
+        .range(from, from + pageSize - 1);
+    }),
+  );
+  const all: T[] = [];
+  for (const { data, error } of results) {
+    if (error) throw new Error(error.message);
+    all.push(...((data ?? []) as T[]));
+  }
+  return all;
+}
+
 // ───── clint_deals ─────
 export const fetchAllDealsFn = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = await admin();
-  const all: any[] = [];
-  let from = 0;
-  const pageSize = 1000;
-  while (true) {
-    const { data, error } = await supabase
-      .from("clint_deals")
-      .select(
-        "id,user_id,user_name,user_email,won_by_user_id,won_by_name,won_by_email,contact_email,contact_name,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
-      )
-      .order("created_at", { ascending: false })
-      .range(from, from + pageSize - 1);
-    if (error) throw new Error(error.message);
-    if (!data || data.length === 0) break;
-    all.push(...data);
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return all;
+  return fetchAllPaged<any>(
+    supabase,
+    "clint_deals",
+    "id,user_id,user_name,user_email,won_by_user_id,won_by_name,won_by_email,contact_email,contact_name,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
+    "created_at",
+  );
 });
 
 // ───── sales (full read for BI) ─────
 export const fetchAllSalesFn = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = await admin();
-  const all: any[] = [];
-  let from = 0;
-  const pageSize = 1000;
-  while (true) {
-    const { data, error } = await supabase
-      .from("sales")
-      .select(
-        "transacao,produto_grupo,produto_original,status,data_venda,email_cliente,faturamento_liquido_brl,nome_afiliado",
-      )
-      .range(from, from + pageSize - 1);
-    if (error) throw new Error(error.message);
-    if (!data || data.length === 0) break;
-    all.push(...data);
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return all;
+  return fetchAllPaged<any>(
+    supabase,
+    "sales",
+    "transacao,produto_grupo,produto_original,status,data_venda,email_cliente,faturamento_liquido_brl,nome_afiliado",
+    "transacao",
+  );
 });
 
 // ───── sales (dashboard projection) ─────
 export const fetchSalesDashboardFn = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = await admin();
-  const all: any[] = [];
-  let from = 0;
-  const pageSize = 1000;
-  while (true) {
-    const { data, error } = await supabase
-      .from("sales")
-      .select(
-        "transacao,produto_grupo,produto_original,status,data_venda,moeda_original,preco_oferta,faturamento_liquido_brl,valor_recebido_convertido,moeda_recebimento",
-      )
-      .order("data_venda", { ascending: false })
-      .range(from, from + pageSize - 1);
-    if (error) throw new Error(error.message);
-    if (!data || data.length === 0) break;
-    all.push(...data);
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return all;
+  return fetchAllPaged<any>(
+    supabase,
+    "sales",
+    "transacao,produto_grupo,produto_original,status,data_venda,moeda_original,preco_oferta,faturamento_liquido_brl,valor_recebido_convertido,moeda_recebimento",
+    "data_venda",
+  );
 });
 
 // ───── clint_origins / stages / lost_statuses / sync log ─────
