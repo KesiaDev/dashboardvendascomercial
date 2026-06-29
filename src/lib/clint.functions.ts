@@ -327,88 +327,94 @@ export const syncPipelineAreas = createServerFn({ method: "POST" }).handler(asyn
  * semana, hoje e dia anterior — atribuição por won_by (quem fechou) com
  * fallback para user (responsável), excluindo sellers internos.
  */
-export const fetchClintRankingFn = createServerFn({ method: "GET" }).handler(async () => {
-  const token = process.env.CLINT_API_TOKEN;
-  if (!token) throw new Error("CLINT_API_TOKEN not configured");
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+export const fetchClintRankingFn = createServerFn({ method: "GET" })
+  .inputValidator((d: { year: number; month: number }) => d)
+  .handler(async ({ data }) => {
+    const token = process.env.CLINT_API_TOKEN;
+    if (!token) throw new Error("CLINT_API_TOKEN not configured");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  const { data: usersRows = [] } = await supabaseAdmin
-    .from("clint_users")
-    .select("id,first_name,last_name,email");
-  const userMap = new Map<string, string>(
-    (usersRows as any[]).map((u) => [
-      u.id,
-      `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || (u.email as string) || "—",
-    ]),
-  );
+    const { data: usersRows = [] } = await supabaseAdmin
+      .from("clint_users")
+      .select("id,first_name,last_name,email");
+    const userMap = new Map<string, string>(
+      (usersRows as any[]).map((u) => [
+        u.id,
+        `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || (u.email as string) || "—",
+      ]),
+    );
 
-  // 35 dias cobre mês atual (até 31 dias) + semana + dia anterior com margem
-  const since = new Date(Date.now() - 35 * 86_400_000).toISOString();
-  const all: any[] = [];
-  let page = 1;
-  while (true) {
-    const q = new URLSearchParams({ limit: "200", page: String(page), updated_at_start: since });
-    const resp = await clintFetch(`/v1/deals?${q}`, token);
-    const items: any[] = resp.data ?? [];
-    if (!items.length) break;
-    all.push(...items);
-    if (!resp.hasNext) break;
-    if (++page > 50) break; // teto de 50 páginas = 10k deals
-  }
+    const now = new Date();
+    const targetYear  = data.year;
+    const targetMonth = data.month; // 1-indexed
+    const isCurrentMonth =
+      targetYear === now.getFullYear() && targetMonth === now.getMonth() + 1;
 
-  const EXCLUDED = new Set(["camila faria", "aline goncalves", "kesia nandi"]);
-  const normStr = (s: string) =>
-    s.trim().toLowerCase().replace(/\s+/g, " ")
-      .normalize("NFD").replace(/[̀-ͯ]/g, "");
+    const monthStart = new Date(targetYear, targetMonth - 1, 1);
+    const monthEnd   = new Date(targetYear, targetMonth, 1); // 1º do mês seguinte (exclusive)
 
-  function buildRanking(start: Date, end: Date | null) {
-    const map = new Map<string, { name: string; won: number; revenue: number }>();
-    for (const d of all) {
-      if (d.status !== "WON" || !d.won_at) continue;
-      const wonAt = new Date(d.won_at);
-      if (wonAt < start) continue;
-      if (end && wonAt > end) continue;
-      const v = parseFloat(String(d.value ?? 0)) || 0;
-      if (v <= 0) continue;
-      const uid = d.won_by ?? d.user?.id;
-      if (!uid) continue;
-      const name = (d.won_by
-        ? userMap.get(d.won_by)
-        : (d.user?.full_name?.trim() ?? d.user?.email)) ?? "—";
-      const clean = name.trim().replace(/\s+/g, " ");
-      if (EXCLUDED.has(normStr(clean))) continue;
-      const cur = map.get(uid) ?? { name: clean, won: 0, revenue: 0 };
-      cur.won += 1;
-      cur.revenue += v;
-      map.set(uid, cur);
+    // Busca desde 3 dias antes do início do mês alvo
+    const since = new Date(monthStart.getTime() - 3 * 86_400_000).toISOString();
+    const all: any[] = [];
+    let page = 1;
+    while (true) {
+      const q = new URLSearchParams({ limit: "200", page: String(page), updated_at_start: since });
+      const resp = await clintFetch(`/v1/deals?${q}`, token);
+      const items: any[] = resp.data ?? [];
+      if (!items.length) break;
+      all.push(...items);
+      if (!resp.hasNext) break;
+      if (++page > 50) break;
     }
-    return Array.from(map.values())
-      .sort((a, b) => b.revenue - a.revenue)
-      .map((s, i) => ({ user_id: `clint-${i}`, name: s.name, won: s.won, revenue: s.revenue, leads: 0, lost: 0, open: 0, email: "" }));
-  }
 
-  const now = new Date();
-  const todayStart     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterdayStart = new Date(todayStart.getTime() - 86_400_000);
-  const weekStart      = new Date(todayStart.getTime() - 7 * 86_400_000);
-  const monthStart     = new Date(now.getFullYear(), now.getMonth(), 1);
+    const EXCLUDED = new Set(["camila faria", "aline goncalves", "kesia nandi"]);
+    const normStr = (s: string) =>
+      s.trim().toLowerCase().replace(/\s+/g, " ")
+        .normalize("NFD").replace(/[̀-ͯ]/g, "");
 
-  const mes    = buildRanking(monthStart, null);
-  const semana = buildRanking(weekStart, null);
-  const dia    = buildRanking(todayStart, null);
-  const diaAnterior = buildRanking(yesterdayStart, todayStart);
+    function buildRanking(start: Date, end: Date | null) {
+      const map = new Map<string, { name: string; won: number; revenue: number }>();
+      for (const d of all) {
+        if (d.status !== "WON" || !d.won_at) continue;
+        const wonAt = new Date(d.won_at);
+        if (wonAt < start) continue;
+        if (end && wonAt >= end) continue; // end exclusivo
+        const v = parseFloat(String(d.value ?? 0)) || 0;
+        if (v <= 0) continue;
+        const uid = d.won_by ?? d.user?.id;
+        if (!uid) continue;
+        const name = (d.won_by
+          ? userMap.get(d.won_by)
+          : (d.user?.full_name?.trim() ?? d.user?.email)) ?? "—";
+        const clean = name.trim().replace(/\s+/g, " ");
+        if (EXCLUDED.has(normStr(clean))) continue;
+        const cur = map.get(uid) ?? { name: clean, won: 0, revenue: 0 };
+        cur.won += 1;
+        cur.revenue += v;
+        map.set(uid, cur);
+      }
+      return Array.from(map.values())
+        .sort((a, b) => b.revenue - a.revenue)
+        .map((s, i) => ({ user_id: `clint-${i}`, name: s.name, won: s.won, revenue: s.revenue, leads: 0, lost: 0, open: 0, email: "" }));
+    }
 
-  return {
-    mes,
-    semana,
-    dia,
-    destaques: {
-      dia:    diaAnterior[0] ?? null,
-      semana: semana[0]      ?? null,
-      mes:    mes[0]         ?? null,
-    },
-  };
-});
+    const mes = buildRanking(monthStart, monthEnd);
+
+    const todayStart     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart.getTime() - 86_400_000);
+    const weekStart      = new Date(todayStart.getTime() - 7 * 86_400_000);
+
+    return {
+      mes,
+      semana: isCurrentMonth ? buildRanking(weekStart, null) : [],
+      dia:    isCurrentMonth ? buildRanking(todayStart, null) : [],
+      destaques: {
+        dia:    isCurrentMonth ? (buildRanking(yesterdayStart, todayStart)[0] ?? null) : null,
+        semana: isCurrentMonth ? (buildRanking(weekStart, null)[0] ?? null) : null,
+        mes:    mes[0] ?? null,
+      },
+    };
+  });
 
 /**
  * Reclassificação manual de um pipeline específico (usado na tela de

@@ -8,8 +8,25 @@ import { formatCurrency } from "@/lib/format";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getSellerPhoto } from "@/lib/seller-photos";
 import { Crown, Star, TrendingUp, CalendarDays, Trophy, Sparkles } from "lucide-react";
+
+const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+function buildMonthOptions() {
+  const now = new Date();
+  return Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    return {
+      value: `${d.getFullYear()}-${d.getMonth() + 1}`,
+      label: i === 0 ? `${MONTHS_PT[d.getMonth()]} ${d.getFullYear()} (atual)` : `${MONTHS_PT[d.getMonth()]} ${d.getFullYear()}`,
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+    };
+  });
+}
 
 export const Route = createFileRoute("/_app/ranking")({ component: RankingPage });
 
@@ -274,12 +291,18 @@ function RankRow({ rank, seller, currency }: { rank: number; seller: SellerStats
 
 // ── Main page ───────────────────────────────────────────────────────────────
 function RankingPage() {
-  useCurrency(); // keeps toggle state alive; ranking always shows EUR (Clint returns EUR)
+  useCurrency();
   const currency = "EUR";
 
+  const now = new Date();
+  const monthOptions = buildMonthOptions();
+  const [selectedValue, setSelectedValue] = useState(monthOptions[0].value);
+  const selected = monthOptions.find((o) => o.value === selectedValue) ?? monthOptions[0];
+  const isCurrentMonth = selected.year === now.getFullYear() && selected.month === now.getMonth() + 1;
+
   const { data, isLoading } = useQuery({
-    queryKey: ["clint-ranking"],
-    queryFn: () => fetchClintRankingFn(),
+    queryKey: ["clint-ranking", selected.year, selected.month],
+    queryFn: () => fetchClintRankingFn({ data: { year: selected.year, month: selected.month } }),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -295,14 +318,26 @@ function RankingPage() {
       {!isLoading && <Confetti />}
 
       <div className="space-y-8">
-        <div className="rk-fadein flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/25">
-            <Trophy className="h-5 w-5 text-white" />
+        <div className="rk-fadein flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/25">
+              <Trophy className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Ranking de Campeões</h1>
+              <p className="text-sm text-muted-foreground">Performance da equipe em tempo real 🚀</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Ranking de Campeões</h1>
-            <p className="text-sm text-muted-foreground">Performance da equipe em tempo real 🚀</p>
-          </div>
+          <Select value={selectedValue} onValueChange={setSelectedValue}>
+            <SelectTrigger className="w-52">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <Podium top3={ranking.mes.slice(0, 3)} currency={currency} />
@@ -312,11 +347,17 @@ function RankingPage() {
             <Sparkles className="h-5 w-5 text-amber-400" />
             <h2 className="text-base font-semibold">Destaques do período</h2>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <DestaqueCard label="Destaque do dia anterior" icon={CalendarDays} seller={destaques.dia}    accentClass="text-blue-400"   currency={currency} fadeClass="rk-fadein-2" />
-            <DestaqueCard label="Destaque da semana"       icon={TrendingUp}   seller={destaques.semana} accentClass="text-violet-400" currency={currency} fadeClass="rk-fadein-3" />
-            <DestaqueCard label="Campeão do mês"           icon={Crown}        seller={destaques.mes}    accentClass="text-amber-400"  currency={currency} fadeClass="rk-fadein-4" isTop />
-          </div>
+          {isCurrentMonth ? (
+            <div className="grid gap-4 sm:grid-cols-3">
+              <DestaqueCard label="Destaque do dia anterior" icon={CalendarDays} seller={destaques.dia}    accentClass="text-blue-400"   currency={currency} fadeClass="rk-fadein-2" />
+              <DestaqueCard label="Destaque da semana"       icon={TrendingUp}   seller={destaques.semana} accentClass="text-violet-400" currency={currency} fadeClass="rk-fadein-3" />
+              <DestaqueCard label="Campeão do mês"           icon={Crown}        seller={destaques.mes}    accentClass="text-amber-400"  currency={currency} fadeClass="rk-fadein-4" isTop />
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-1 max-w-sm">
+              <DestaqueCard label={`Campeão — ${selected.label}`} icon={Crown} seller={destaques.mes} accentClass="text-amber-400" currency={currency} fadeClass="rk-fadein-2" isTop />
+            </div>
+          )}
         </section>
 
         <Card className="rk-fadein-4">
@@ -327,26 +368,32 @@ function RankingPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="mes">
-              <TabsList>
-                <TabsTrigger value="dia">Hoje</TabsTrigger>
-                <TabsTrigger value="semana">7 dias</TabsTrigger>
-                <TabsTrigger value="mes">Mês</TabsTrigger>
-              </TabsList>
-              {(["dia", "semana", "mes"] as const).map((tab) => (
-                <TabsContent key={tab} value={tab} className="mt-4 space-y-2">
-                  {ranking[tab].length === 0 ? (
-                    <p className="py-6 text-center text-sm text-muted-foreground">
-                      Sem vendas fechadas nesse período.
-                    </p>
-                  ) : (
-                    ranking[tab].map((s, i) => (
-                      <RankRow key={s.user_id} rank={i} seller={s} currency={currency} />
-                    ))
-                  )}
-                </TabsContent>
-              ))}
-            </Tabs>
+            {isCurrentMonth ? (
+              <Tabs defaultValue="mes">
+                <TabsList>
+                  <TabsTrigger value="dia">Hoje</TabsTrigger>
+                  <TabsTrigger value="semana">7 dias</TabsTrigger>
+                  <TabsTrigger value="mes">Mês</TabsTrigger>
+                </TabsList>
+                {(["dia", "semana", "mes"] as const).map((tab) => (
+                  <TabsContent key={tab} value={tab} className="mt-4 space-y-2">
+                    {ranking[tab].length === 0 ? (
+                      <p className="py-6 text-center text-sm text-muted-foreground">Sem vendas fechadas nesse período.</p>
+                    ) : (
+                      ranking[tab].map((s, i) => <RankRow key={s.user_id} rank={i} seller={s} currency={currency} />)
+                    )}
+                  </TabsContent>
+                ))}
+              </Tabs>
+            ) : (
+              <div className="mt-2 space-y-2">
+                {ranking.mes.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">Sem vendas nesse mês.</p>
+                ) : (
+                  ranking.mes.map((s, i) => <RankRow key={s.user_id} rank={i} seller={s} currency={currency} />)
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
