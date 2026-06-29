@@ -34,5 +34,9 @@ export const syncChannels = createServerFn({ method: "POST" }).handler(async () 
 
   const { error } = await supabaseAdmin.from("bi_channels").upsert(rows, { onConflict: "id" });
   if (error) throw error;
+
+  const ids = rows.map((r) => r.id);
+  await supabaseAdmin.from("bi_channels").delete().not("id", "in", `(${ids.join(",")})`);
+
   return { synced: rows.length };
 });

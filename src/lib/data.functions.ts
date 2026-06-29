@@ -151,6 +151,17 @@ export const fetchChannelsFn = createServerFn({ method: "GET" }).handler(async (
   return data ?? [];
 });
 
+// ───── bi_targets ─────
+export const fetchTargetsFn = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = await admin();
+  const { data, error } = await supabase
+    .from("bi_targets")
+    .select("granularidade,periodo,channel_id,product_id,indicador,valor,fonte")
+    .order("periodo");
+  if (error) throw new Error(error.message);
+  return data ?? [];
+});
+
 // ───── weekly_imports ─────
 export const fetchImportsFn = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = await admin();
