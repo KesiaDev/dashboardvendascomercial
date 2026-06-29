@@ -21,7 +21,7 @@ export const fetchAllDealsFn = createServerFn({ method: "GET" }).handler(async (
     const { data, error } = await supabase
       .from("clint_deals")
       .select(
-        "id,user_id,user_name,user_email,won_by_user_id,won_by_name,won_by_email,contact_email,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
+        "id,user_id,user_name,user_email,won_by_user_id,won_by_name,won_by_email,contact_email,contact_name,status,value,currency,created_at,won_at,lost_at,lost_status_id,stage,stage_id,origin_id,origin_name",
       )
       .order("created_at", { ascending: false })
       .range(from, from + pageSize - 1);

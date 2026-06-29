@@ -25,6 +25,7 @@ export type Deal = {
   won_by_name: string | null;
   won_by_email: string | null;
   contact_email: string | null;
+  contact_name: string | null;
   status: string;
   value: number | null;
   currency: string | null;
