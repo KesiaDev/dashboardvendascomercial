@@ -296,7 +296,7 @@ function RankingPage() {
 
   const allDeals = useMemo(() => {
     const areaMap = buildAreaMap(pipelineAreas as any[]);
-    return filterDealsByArea(rawDeals as Deal[], areaMap, null);
+    return filterDealsByArea(rawDeals as Deal[], areaMap, "COMERCIAL");
   }, [rawDeals, pipelineAreas]);
 
   const { destaques, ranking } = useMemo(() => {
@@ -307,7 +307,7 @@ function RankingPage() {
     const monthStart    = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const rank = (start: Date, end: Date | null) =>
-      rankSellers(allDeals, start, end, currency, brlPerEur, undefined, true);
+      rankSellers(allDeals, start, end, currency, brlPerEur);
 
     return {
       destaques: {
