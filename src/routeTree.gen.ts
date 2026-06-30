@@ -15,6 +15,7 @@ import { Route as AppVendedorProdutoRouteImport } from './routes/_app.vendedor-p
 import { Route as AppRankingRouteImport } from './routes/_app.ranking'
 import { Route as AppProdutividadeRouteImport } from './routes/_app.produtividade'
 import { Route as AppImportRouteImport } from './routes/_app.import'
+import { Route as AppFechamentoRouteImport } from './routes/_app.fechamento'
 import { Route as AppExecutivoRouteImport } from './routes/_app.executivo'
 import { Route as AppComercialRouteImport } from './routes/_app.comercial'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
@@ -50,6 +51,11 @@ const AppImportRoute = AppImportRouteImport.update({
   path: '/import',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFechamentoRoute = AppFechamentoRouteImport.update({
+  id: '/fechamento',
+  path: '/fechamento',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppExecutivoRoute = AppExecutivoRouteImport.update({
   id: '/executivo',
   path: '/executivo',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/areas': typeof AppAreasRoute
   '/comercial': typeof AppComercialRoute
   '/executivo': typeof AppExecutivoRoute
+  '/fechamento': typeof AppFechamentoRoute
   '/import': typeof AppImportRoute
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/areas': typeof AppAreasRoute
   '/comercial': typeof AppComercialRoute
   '/executivo': typeof AppExecutivoRoute
+  '/fechamento': typeof AppFechamentoRoute
   '/import': typeof AppImportRoute
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/_app/areas': typeof AppAreasRoute
   '/_app/comercial': typeof AppComercialRoute
   '/_app/executivo': typeof AppExecutivoRoute
+  '/_app/fechamento': typeof AppFechamentoRoute
   '/_app/import': typeof AppImportRoute
   '/_app/produtividade': typeof AppProdutividadeRoute
   '/_app/ranking': typeof AppRankingRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
     | '/areas'
     | '/comercial'
     | '/executivo'
+    | '/fechamento'
     | '/import'
     | '/produtividade'
     | '/ranking'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/areas'
     | '/comercial'
     | '/executivo'
+    | '/fechamento'
     | '/import'
     | '/produtividade'
     | '/ranking'
@@ -146,6 +157,7 @@ export interface FileRouteTypes {
     | '/_app/areas'
     | '/_app/comercial'
     | '/_app/executivo'
+    | '/_app/fechamento'
     | '/_app/import'
     | '/_app/produtividade'
     | '/_app/ranking'
@@ -203,6 +215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppImportRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/fechamento': {
+      id: '/_app/fechamento'
+      path: '/fechamento'
+      fullPath: '/fechamento'
+      preLoaderRoute: typeof AppFechamentoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/executivo': {
       id: '/_app/executivo'
       path: '/executivo'
@@ -246,6 +265,7 @@ interface AppRouteChildren {
   AppAreasRoute: typeof AppAreasRoute
   AppComercialRoute: typeof AppComercialRoute
   AppExecutivoRoute: typeof AppExecutivoRoute
+  AppFechamentoRoute: typeof AppFechamentoRoute
   AppImportRoute: typeof AppImportRoute
   AppProdutividadeRoute: typeof AppProdutividadeRoute
   AppRankingRoute: typeof AppRankingRoute
@@ -258,6 +278,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAreasRoute: AppAreasRoute,
   AppComercialRoute: AppComercialRoute,
   AppExecutivoRoute: AppExecutivoRoute,
+  AppFechamentoRoute: AppFechamentoRoute,
   AppImportRoute: AppImportRoute,
   AppProdutividadeRoute: AppProdutividadeRoute,
   AppRankingRoute: AppRankingRoute,
