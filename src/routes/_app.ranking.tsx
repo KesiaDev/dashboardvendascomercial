@@ -211,10 +211,10 @@ function Podium({ top3, currency, hideRevenue }: { top3: SellerStats[]; currency
 const DESTAQUE_SPARKS = ["left-[15%]", "left-[55%]", "left-[80%]"];
 
 function DestaqueCard({
-  label, icon: Icon, seller, accentClass, isTop, currency, fadeClass,
+  label, icon: Icon, seller, accentClass, isTop, currency, fadeClass, hideRevenue,
 }: {
   label: string; icon: React.ElementType; seller: SellerStats | null;
-  accentClass: string; isTop?: boolean; currency: string; fadeClass: string;
+  accentClass: string; isTop?: boolean; currency: string; fadeClass: string; hideRevenue?: boolean;
 }) {
   if (!seller) {
     return (
