@@ -464,6 +464,51 @@ export type Database = {
         }
         Relationships: []
       }
+      manual_sales: {
+        Row: {
+          client_email: string | null
+          client_name: string | null
+          created_at: string
+          created_by: string
+          created_by_email: string
+          funnel: string
+          id: string
+          notes: string | null
+          product: string
+          sale_date: string
+          seller_name: string
+          value_eur: number
+        }
+        Insert: {
+          client_email?: string | null
+          client_name?: string | null
+          created_at?: string
+          created_by: string
+          created_by_email: string
+          funnel: string
+          id?: string
+          notes?: string | null
+          product: string
+          sale_date: string
+          seller_name: string
+          value_eur: number
+        }
+        Update: {
+          client_email?: string | null
+          client_name?: string | null
+          created_at?: string
+          created_by?: string
+          created_by_email?: string
+          funnel?: string
+          id?: string
+          notes?: string | null
+          product?: string
+          sale_date?: string
+          seller_name?: string
+          value_eur?: number
+        }
+        Relationships: []
+      }
       sales: {
         Row: {
           cidade: string | null
