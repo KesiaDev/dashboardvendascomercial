@@ -349,7 +349,7 @@ function RankingPage() {
           </div>
           {isCurrentMonth ? (
             <div className="grid gap-4 sm:grid-cols-3">
-              <DestaqueCard label="Destaque do dia anterior" icon={CalendarDays} seller={destaques.dia}    accentClass="text-blue-400"   currency={currency} fadeClass="rk-fadein-2" />
+              <DestaqueCard label="Vendas de hoje (parcial)" icon={CalendarDays} seller={destaques.dia}    accentClass="text-blue-400"   currency={currency} fadeClass="rk-fadein-2" />
               <DestaqueCard label="Destaque da semana"       icon={TrendingUp}   seller={destaques.semana} accentClass="text-violet-400" currency={currency} fadeClass="rk-fadein-3" />
               <DestaqueCard label="Campeão do mês"           icon={Crown}        seller={destaques.mes}    accentClass="text-amber-400"  currency={currency} fadeClass="rk-fadein-4" isTop />
             </div>
