@@ -347,20 +347,33 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
     // Whitelist de FUNIS que contam para o ranking comercial (decisão de negócio:
     // somente vendas de PIPELINE_COMERCIAL-V3, Sessão Estratégica, Renovações e FGRS).
     // Atribuição: por RESPONSÁVEL do negócio (d.user), pois nesses funis a Clint
-    // raramente preenche `won_by`. Esse é o número que a equipe acompanha
-    // (ex.: Gisele com ~24 em junho).
-    // IGT 22, WGT - Perpétuo e FOLLOW-UP MENTORIA ficam DE FORA porque não são
-    // vendas novas atribuídas ao vendedor.
+    // Whitelist de FUNIS PERPETUOS (vendas novas reais). Funis de teste e
+    // funis de prestação/recorrência ficam de fora pelo filtro de valor.
     const ORIGIN_PATTERNS = [
       /pipeline[_\s-]*comercial/i,
       /sess[aã]o\s*estrat[eé]gica/i,
+      /^\s*sessao\s*estrategica/i,
       /^\s*renova[cç][aã]o/i,
       /live\s*de\s*renova/i,
-      /renova[cç][aã]o\s*mentoria/i,
-      /renova[cç][aã]o\s*mgt/i,
+      /renova[cç][aã]o\s*mariana/i,
       /^\s*fgrs\s*\d+/i,
       /perpetuo\s*fgrs/i,
       /funil\s*-\s*fgrs/i,
+      /^\s*igt\s*\d+/i,
+      /wgt\s*-?\s*perp[eé]tuo/i,
+      /^\s*wgt\s*-?\s*\d+/i,
+      /retrabalho\s*leads/i,
+      /funil\s*de\s*indica/i,
+      /^\s*mgm\b(?!.*teste)/i,
+      /convidar\s*para\s*imersao/i,
+    ];
+    // Funis explicitamente excluídos (testes, follow-up, lançamentos sem venda direta)
+    const EXCLUDED_ORIGIN_PATTERNS = [
+      /teste/i,
+      /follow[-\s]*up/i,
+      /^\s*ldp/i,
+      /abandono\s*de\s*checkout/i,
+      /disparos\s*via\s*api/i,
     ];
     const _originNameMap = new Map<string, string>();
     const allowedOriginIds = new Set<string>();
@@ -369,8 +382,10 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       while (true) {
         const r = await clintFetch(`/v1/origins?limit=200&page=${p}`, token);
         for (const o of (r.data ?? [])) {
-          _originNameMap.set(o.id, o.name ?? "");
-          if (ORIGIN_PATTERNS.some((re) => re.test(o.name ?? ""))) {
+          const name = o.name ?? "";
+          _originNameMap.set(o.id, name);
+          if (EXCLUDED_ORIGIN_PATTERNS.some((re) => re.test(name))) continue;
+          if (ORIGIN_PATTERNS.some((re) => re.test(name))) {
             allowedOriginIds.add(o.id);
           }
         }
@@ -383,8 +398,10 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         .from("clint_origins")
         .select("id,name");
       for (const o of originsRows as any[]) {
-        _originNameMap.set(o.id, o.name ?? "");
-        if (ORIGIN_PATTERNS.some((re) => re.test(o.name ?? ""))) {
+        const name = o.name ?? "";
+        _originNameMap.set(o.id, name);
+        if (EXCLUDED_ORIGIN_PATTERNS.some((re) => re.test(name))) continue;
+        if (ORIGIN_PATTERNS.some((re) => re.test(name))) {
           allowedOriginIds.add(o.id);
         }
       }
@@ -417,20 +434,44 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       s.trim().toLowerCase().replace(/\s+/g, " ")
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-    function buildRanking(start: Date, end: Date | null) {
-      const map = new Map<string, { name: string; won: number; revenue: number }>();
-      for (const d of all) {
-        if (d.status !== "WON" || !d.won_at) continue;
-        const wonAt = new Date(d.won_at);
-        if (wonAt < start) continue;
-        if (end && wonAt >= end) continue;
-        const v = parseFloat(String(d.value ?? 0)) || 0;
-        // Não filtra v<=0: renovações são lançadas na Clint com valor 0
-        // e precisam entrar na contagem do vendedor (faturamento real vem do CSV Hotmart).
-        if (allowedOriginIds.size > 0 && !allowedOriginIds.has(d.origin_id)) continue;
+    // Valor mínimo de venda nova: €399. Abaixo disso são prestações
+    // (parcelas de vendas antigas) e não contam como nova venda.
+    const MIN_VALUE_EUR = 399;
 
-        // Crédito para o RESPONSÁVEL (d.user), com fallback para won_by quando
-        // o responsável não está preenchido.
+    function buildRanking(start: Date, end: Date | null) {
+      // 1) filtra WON do período, dentro dos funis perpétuos e valor >= 399
+      const eligible = all.filter((d) => {
+        if (d.status !== "WON" || !d.won_at) return false;
+        const wonAt = new Date(d.won_at);
+        if (wonAt < start) return false;
+        if (end && wonAt >= end) return false;
+        const v = parseFloat(String(d.value ?? 0)) || 0;
+        if (v < MIN_VALUE_EUR) return false;
+        if (allowedOriginIds.size > 0 && !allowedOriginIds.has(d.origin_id)) return false;
+        return true;
+      });
+
+      // 2) dedupe por contato — mesmo lead em vários funis conta UMA vez.
+      //    Mantém o WON mais recente (geralmente o de maior intenção comercial).
+      const byContact = new Map<string, any>();
+      for (const d of eligible) {
+        const contactId = d.contact_id ?? d.contact?.id;
+        const contactEmail = d.contact_email ?? d.contact?.email;
+        const key = contactId
+          ? `id:${contactId}`
+          : contactEmail
+          ? `eml:${String(contactEmail).toLowerCase()}`
+          : `deal:${d.id}`;
+        const cur = byContact.get(key);
+        if (!cur || new Date(d.won_at) > new Date(cur.won_at)) {
+          byContact.set(key, d);
+        }
+      }
+
+      // 3) agrupa por vendedor
+      const map = new Map<string, { name: string; won: number; revenue: number }>();
+      for (const d of byContact.values()) {
+        const v = parseFloat(String(d.value ?? 0)) || 0;
         const userId: string | undefined =
           (typeof d.user === "string" ? d.user : d.user?.id)
           || (typeof d.won_by === "string" ? d.won_by : d.won_by?.id);
@@ -452,22 +493,9 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         .map((s, i) => ({ user_id: `clint-${i}`, name: s.name, won: s.won, revenue: s.revenue, leads: 0, lost: 0, open: 0, email: "" }));
     }
 
-    let mes = buildRanking(monthStart, monthEnd);
+    const mes = buildRanking(monthStart, monthEnd);
 
-    // Ajuste manual junho/2026 — métricas oficiais combinadas com a equipe.
-    // A partir de julho/2026 isso sai e voltamos ao cálculo puro da API.
-    if (targetYear === 2026 && targetMonth === 6) {
-      const OVERRIDES: Record<string, number> = {
-        gisele: 24, joao: 20, "joão": 20, fabio: 8, "fábio": 8, rita: 7, luana: 3,
-      };
-      mes = mes.map((s) => {
-        const first = s.name.trim().split(/\s+/)[0].toLowerCase();
-        const target = OVERRIDES[first];
-        if (target == null || s.won === 0) return s;
-        const ticket = s.revenue / s.won;
-        return { ...s, won: target, revenue: Math.round(ticket * target) };
-      }).sort((a, b) => b.revenue - a.revenue);
-    }
+
 
     // "Hoje" / "Semana" usam horário de Brasília (UTC-3) como referência —
     // assim o time BR vê o que esperaria; vendedores em Portugal (UTC+1) vão
