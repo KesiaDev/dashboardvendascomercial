@@ -303,8 +303,7 @@ function RankingPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["clint-ranking", selected.year, selected.month],
     queryFn: () => fetchClintRankingFn({ data: { year: selected.year, month: selected.month } }),
-    staleTime: 0,
-    refetchOnMount: true,
+    staleTime: 5 * 60 * 1000,
   });
 
   const destaques = data?.destaques ?? { dia: null, semana: null, mes: null };
@@ -398,10 +397,6 @@ function RankingPage() {
           </CardContent>
         </Card>
 
-        {/* DEBUG TEMPORÁRIO */}
-        <pre className="rounded border border-yellow-500 bg-yellow-950/30 p-4 text-xs text-yellow-300 overflow-auto max-h-64">
-          {data ? JSON.stringify((data as any)._debug ?? "sem _debug", null, 2) : "carregando..."}
-        </pre>
       </div>
     </>
   );

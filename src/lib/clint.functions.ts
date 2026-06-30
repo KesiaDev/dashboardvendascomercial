@@ -369,7 +369,6 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
             (typeof o.group === "string" ? o.group : o.group?.name ?? o.group?.label ?? "")
             || o.group_name || o.category || o.segment || "";
           if (gRaw) _allGroupNames.push(`${o.name}||${gRaw}`);
-          console.error(`[RANKING] origin: ${o.name} | group raw: ${JSON.stringify(o.group)} | gRaw: ${gRaw}`);
           if (COMMERCIAL_GROUPS_NORM.has(normGroup(gRaw))) {
             commercialOriginIds.add(o.id);
           }
