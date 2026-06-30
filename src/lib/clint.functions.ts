@@ -421,7 +421,8 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         if (wonAt < start) continue;
         if (end && wonAt >= end) continue;
         const v = parseFloat(String(d.value ?? 0)) || 0;
-        if (v <= 0) continue;
+        // Não filtra v<=0: renovações são lançadas na Clint com valor 0
+        // e precisam entrar na contagem do vendedor (faturamento real vem do CSV Hotmart).
         if (allowedOriginIds.size > 0 && !allowedOriginIds.has(d.origin_id)) continue;
 
         // Crédito para o RESPONSÁVEL (d.user), com fallback para won_by quando
