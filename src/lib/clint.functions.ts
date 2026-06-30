@@ -452,7 +452,22 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         .map((s, i) => ({ user_id: `clint-${i}`, name: s.name, won: s.won, revenue: s.revenue, leads: 0, lost: 0, open: 0, email: "" }));
     }
 
-    const mes = buildRanking(monthStart, monthEnd);
+    let mes = buildRanking(monthStart, monthEnd);
+
+    // Ajuste manual junho/2026 — métricas oficiais combinadas com a equipe.
+    // A partir de julho/2026 isso sai e voltamos ao cálculo puro da API.
+    if (targetYear === 2026 && targetMonth === 6) {
+      const OVERRIDES: Record<string, number> = {
+        gisele: 24, joao: 20, "joão": 20, fabio: 8, "fábio": 8, rita: 7, luana: 2,
+      };
+      mes = mes.map((s) => {
+        const first = s.name.trim().split(/\s+/)[0].toLowerCase();
+        const target = OVERRIDES[first];
+        if (target == null || s.won === 0) return s;
+        const ticket = s.revenue / s.won;
+        return { ...s, won: target, revenue: Math.round(ticket * target) };
+      }).sort((a, b) => b.revenue - a.revenue);
+    }
 
     // "Hoje" / "Semana" usam horário de Brasília (UTC-3) como referência —
     // assim o time BR vê o que esperaria; vendedores em Portugal (UTC+1) vão
