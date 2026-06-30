@@ -558,3 +558,70 @@ export const setPipelineArea = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true };
   });
+
+// ── Ranking pelo fechamento manual (manual_sales) ──────────────────────────
+// A partir de Julho/2026 a equipe registra vendas em /fechamento. O ranking
+// vira agregação direta dessa tabela — sem Clint, sem dedupe, sem whitelist.
+async function buildManualRanking(
+  supabase: any,
+  year: number,
+  month: number,
+  isCurrentMonth: boolean,
+) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const monthStart = `${year}-${pad(month)}-01`;
+  const nextMonth = month === 12 ? `${year + 1}-01-01` : `${year}-${pad(month + 1)}-01`;
+
+  const { data: rows, error } = await supabase
+    .from("manual_sales")
+    .select("seller_name,value_eur,sale_date")
+    .gte("sale_date", monthStart)
+    .lt("sale_date", nextMonth);
+  if (error) throw new Error(error.message);
+
+  const aggregate = (filter: (saleDate: string) => boolean) => {
+    const map = new Map<string, { name: string; won: number; revenue: number }>();
+    for (const r of (rows ?? []) as any[]) {
+      if (!filter(r.sale_date)) continue;
+      const cur = map.get(r.seller_name) ?? { name: r.seller_name, won: 0, revenue: 0 };
+      cur.won += 1;
+      cur.revenue += Number(r.value_eur) || 0;
+      map.set(r.seller_name, cur);
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .map((s, i) => ({
+        user_id: `manual-${i}-${s.name}`,
+        name: s.name,
+        won: s.won,
+        revenue: s.revenue,
+        leads: 0, lost: 0, open: 0, email: "",
+      }));
+  };
+
+  const mes = aggregate(() => true);
+
+  // Hoje / Semana usam horário BR (UTC-3)
+  const BR_OFFSET_MS = -3 * 60 * 60 * 1000;
+  const nowBR = new Date(Date.now() + BR_OFFSET_MS);
+  const todayStr = `${nowBR.getUTCFullYear()}-${pad(nowBR.getUTCMonth() + 1)}-${pad(nowBR.getUTCDate())}`;
+  const dayOfWeekBR = nowBR.getUTCDay();
+  const daysSinceMonday = (dayOfWeekBR + 6) % 7;
+  const weekStartDate = new Date(Date.UTC(nowBR.getUTCFullYear(), nowBR.getUTCMonth(), nowBR.getUTCDate()) - daysSinceMonday * 86_400_000);
+  const weekStartStr = `${weekStartDate.getUTCFullYear()}-${pad(weekStartDate.getUTCMonth() + 1)}-${pad(weekStartDate.getUTCDate())}`;
+
+  const dia    = isCurrentMonth ? aggregate((d) => d === todayStr) : [];
+  const semana = isCurrentMonth ? aggregate((d) => d >= weekStartStr && d <= todayStr) : [];
+
+  return {
+    mes,
+    semana,
+    dia,
+    destaques: {
+      dia:    dia[0] ?? null,
+      semana: semana[0] ?? null,
+      mes:    mes[0] ?? null,
+    },
+    _debug: { source: "manual_sales", total: rows?.length ?? 0 },
+  };
+}
