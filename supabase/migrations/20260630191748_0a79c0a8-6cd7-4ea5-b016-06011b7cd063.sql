@@ -1,0 +1,2 @@
+CREATE POLICY "Users can update their own sales" ON public.manual_sales FOR UPDATE TO authenticated USING (auth.uid() = created_by) WITH CHECK (auth.uid() = created_by);
+CREATE POLICY "Users can delete their own sales" ON public.manual_sales FOR DELETE TO authenticated USING (auth.uid() = created_by);
