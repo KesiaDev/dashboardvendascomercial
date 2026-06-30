@@ -37,7 +37,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { CheckCircle2, LogIn, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, LogIn, LogOut, Pencil, Plus, Trash2, X } from "lucide-react";
 
 export const Route = createFileRoute("/_app/fechamento")({ component: FechamentoPage });
 
