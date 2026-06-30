@@ -254,9 +254,11 @@ function DestaqueCard({
             <p className="truncate text-base font-bold">{seller.name.split(" ")[0]}</p>
             {isTop && <Crown className="rk-crown-pulse h-4 w-4 flex-shrink-0 text-amber-400" />}
           </div>
-          <p className="tabular-nums text-2xl font-black text-foreground">
-            {formatCurrency(seller.revenue, currency)}
-          </p>
+          {!hideRevenue && (
+            <p className="tabular-nums text-2xl font-black text-foreground">
+              {formatCurrency(seller.revenue, currency)}
+            </p>
+          )}
           <p className="mt-0.5 text-xs text-muted-foreground">
             {seller.won} {seller.won === 1 ? "venda fechada" : "vendas fechadas"}
           </p>
