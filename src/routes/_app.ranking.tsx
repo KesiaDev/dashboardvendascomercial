@@ -371,9 +371,9 @@ function RankingPage() {
             {isCurrentMonth ? (
               <Tabs defaultValue="mes">
                 <TabsList>
-                  <TabsTrigger value="dia">Hoje</TabsTrigger>
-                  <TabsTrigger value="semana">7 dias</TabsTrigger>
-                  <TabsTrigger value="mes">Mês</TabsTrigger>
+              <TabsTrigger value="dia">Hoje</TabsTrigger>
+              <TabsTrigger value="semana">Semana</TabsTrigger>
+              <TabsTrigger value="mes">Mês</TabsTrigger>
                 </TabsList>
                 {(["dia", "semana", "mes"] as const).map((tab) => (
                   <TabsContent key={tab} value={tab} className="mt-4 space-y-2">

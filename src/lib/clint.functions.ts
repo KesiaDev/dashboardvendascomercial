@@ -452,7 +452,12 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
 
     const todayStart     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterdayStart = new Date(todayStart.getTime() - 86_400_000);
-    const weekStart      = new Date(todayStart.getTime() - 7 * 86_400_000);
+
+    // Semana comercial: segunda → domingo (preferência do usuário).
+    const dayOfWeek = todayStart.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
+    const daysSinceMonday = (dayOfWeek + 6) % 7;
+    const weekStart = new Date(todayStart.getTime() - daysSinceMonday * 86_400_000);
+
 
     return {
       mes,
