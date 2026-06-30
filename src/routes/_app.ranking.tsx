@@ -272,7 +272,7 @@ function DestaqueCard({
 const MEDALS = ["🥇", "🥈", "🥉"];
 const ROW_CLASSES = ["rk-row-0","rk-row-1","rk-row-2","rk-row-3","rk-row-4","rk-row-5"] as const;
 
-function RankRow({ rank, seller, currency }: { rank: number; seller: SellerStats; currency: string }) {
+function RankRow({ rank, seller, currency, hideRevenue }: { rank: number; seller: SellerStats; currency: string; hideRevenue?: boolean }) {
   const rowAnim = ROW_CLASSES[Math.min(rank, ROW_CLASSES.length - 1)];
   return (
     <div
@@ -292,14 +292,16 @@ function RankRow({ rank, seller, currency }: { rank: number; seller: SellerStats
           </div>
         </div>
       </div>
-      <div className="text-right">
-        <div className="tabular-nums text-sm font-bold">{formatCurrency(seller.revenue, currency)}</div>
-        <div className="text-xs text-muted-foreground">
-          {seller.won > 0
-            ? `${formatCurrency(Math.round(seller.revenue / seller.won), currency)} ticket`
-            : "—"}
+      {!hideRevenue && (
+        <div className="text-right">
+          <div className="tabular-nums text-sm font-bold">{formatCurrency(seller.revenue, currency)}</div>
+          <div className="text-xs text-muted-foreground">
+            {seller.won > 0
+              ? `${formatCurrency(Math.round(seller.revenue / seller.won), currency)} ticket`
+              : "—"}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
