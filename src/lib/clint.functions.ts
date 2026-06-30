@@ -420,6 +420,41 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       return buildManualRanking(supabaseAdmin, targetYear, targetMonth, isCurrentMonth);
     }
 
+    // Override fechamento Junho/2026 (valores oficiais do relatório semanal).
+    // Valores informados em BRL; convertemos pra EUR com 1€ = 6 R$ pra bater
+    // exatamente com o print quando o toggle está em reais.
+    if (targetYear === 2026 && targetMonth === 6) {
+      const BRL_TO_EUR = 1 / 6;
+      const fixed = [
+        { name: "Gisele Pimentel",  won: 28, brl: 9410 },
+        { name: "João Pessoa",      won: 19, brl: 7984 },
+        { name: "Rita Bandeira",    won: 7,  brl: 2495 },
+        { name: "Fabio Nadal",      won: 5,  brl: 2495 },
+        { name: "Luana Guimarães",  won: 2,  brl: 499  },
+      ];
+      const mes = fixed
+        .map((s, i) => ({
+          user_id: `fixed-jun-${i}`,
+          name: s.name,
+          won: s.won,
+          revenue: s.brl * BRL_TO_EUR,
+          leads: 0, lost: 0, open: 0, email: "",
+        }))
+        .sort((a, b) => b.revenue - a.revenue);
+      return {
+        mes,
+        semana: isCurrentMonth ? mes : [],
+        dia:    isCurrentMonth ? [] : [],
+        destaques: {
+          dia:    null,
+          semana: isCurrentMonth ? (mes[0] ?? null) : null,
+          mes:    mes[0] ?? null,
+        },
+        _debug: { source: "fixed-override-jun-2026" },
+      };
+    }
+
+
 
     const monthStart = new Date(targetYear, targetMonth - 1, 1);
     const monthEnd   = new Date(targetYear, targetMonth, 1);
