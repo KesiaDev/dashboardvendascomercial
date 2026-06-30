@@ -3,21 +3,52 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
-import { createManualSale, listManualSales, PRODUCTS, FUNNELS, SELLERS } from "@/lib/manual-sales.functions";
+import {
+  createManualSale,
+  listManualSales,
+  updateManualSale,
+  deleteManualSale,
+  PRODUCTS,
+  FUNNELS,
+  SELLERS,
+} from "@/lib/manual-sales.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { CheckCircle2, LogIn, LogOut, Plus } from "lucide-react";
+import { CheckCircle2, LogIn, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/fechamento")({ component: FechamentoPage });
 
 function todayBR() {
   const nowBR = new Date(Date.now() - 3 * 60 * 60 * 1000);
   return nowBR.toISOString().slice(0, 10);
+}
+
+function fmtDate(iso: string) {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y.slice(2)}`;
 }
 
 function FechamentoPage() {
@@ -70,8 +101,11 @@ function LoginCard() {
   );
 }
 
+type SaleRow = Awaited<ReturnType<typeof listManualSales>>[number];
+
 function FechamentoForm({ session }: { session: any }) {
   const email = session?.user?.email ?? "";
+  const userId = session?.user?.id ?? "";
   const qc = useQueryClient();
 
   const [seller, setSeller] = useState<string>("");
@@ -83,11 +117,15 @@ function FechamentoForm({ session }: { session: any }) {
   const [saleDate, setSaleDate] = useState(todayBR());
   const [notes, setNotes] = useState("");
 
+  const [editing, setEditing] = useState<SaleRow | null>(null);
+  const [deleting, setDeleting] = useState<SaleRow | null>(null);
+
   const today = todayBR();
+  const monthFrom = today.slice(0, 7) + "-01";
 
   const { data: sales = [] } = useQuery({
-    queryKey: ["manual-sales", today.slice(0, 7)],
-    queryFn: () => listManualSales({ data: { from: today.slice(0, 7) + "-01" } }),
+    queryKey: ["manual-sales", monthFrom],
+    queryFn: () => listManualSales({ data: { from: monthFrom } }),
   });
 
   const mutation = useMutation({
@@ -113,11 +151,24 @@ function FechamentoForm({ session }: { session: any }) {
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
 
+  const delMutation = useMutation({
+    mutationFn: (id: string) => deleteManualSale({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Venda apagada");
+      setDeleting(null);
+      qc.invalidateQueries({ queryKey: ["manual-sales"] });
+      qc.invalidateQueries({ queryKey: ["clint-ranking"] });
+    },
+    onError: (e: any) => toast.error(String(e?.message ?? e)),
+  });
+
   const todaySales = sales.filter((s) => s.sale_date === today);
   const todayTotal = todaySales.reduce((acc, s) => acc + Number(s.value_eur), 0);
+  const monthTotal = sales.reduce((acc, s) => acc + Number(s.value_eur), 0);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <>
+    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -200,32 +251,196 @@ function FechamentoForm({ session }: { session: any }) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Vendas de hoje</CardTitle>
-          <CardDescription>
-            {todaySales.length} venda(s) · €{todayTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {todaySales.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nenhuma venda registrada hoje ainda.</p>
-          )}
-          {todaySales.map((s) => (
-            <div key={s.id} className="flex items-start gap-2 rounded-lg border border-border/50 bg-card/50 p-3">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
-              <div className="min-w-0 flex-1 text-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold">{s.seller_name.split(" ")[0]}</span>
-                  <span className="tabular-nums font-bold">€{Number(s.value_eur).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Vendas de hoje</CardTitle>
+            <CardDescription>
+              {todaySales.length} venda(s) · €{todayTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {todaySales.length === 0 && (
+              <p className="text-sm text-muted-foreground">Nenhuma venda registrada hoje ainda.</p>
+            )}
+            {todaySales.map((s) => (
+              <div key={s.id} className="flex items-start gap-2 rounded-lg border border-border/50 bg-card/50 p-3">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
+                <div className="min-w-0 flex-1 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold">{s.seller_name.split(" ")[0]}</span>
+                    <span className="tabular-nums font-bold">€{Number(s.value_eur).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="truncate text-xs text-muted-foreground">{s.product}</div>
+                  <div className="truncate text-xs text-muted-foreground">{s.funnel}</div>
                 </div>
-                <div className="truncate text-xs text-muted-foreground">{s.product}</div>
-                <div className="truncate text-xs text-muted-foreground">{s.funnel}</div>
               </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Vendas do mês</CardTitle>
+            <CardDescription>
+              {sales.length} venda(s) · €{monthTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {sales.length === 0 && (
+              <p className="text-sm text-muted-foreground">Nenhuma venda registrada neste mês.</p>
+            )}
+            {sales.map((s) => {
+              const mine = s.created_by === userId;
+              return (
+                <div key={s.id} className="rounded-lg border border-border/50 bg-card/50 p-3 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold">{s.seller_name.split(" ")[0]}</span>
+                    <span className="tabular-nums font-bold">€{Number(s.value_eur).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="truncate text-xs text-muted-foreground">{fmtDate(s.sale_date)} · {s.product}</div>
+                  <div className="truncate text-xs text-muted-foreground">{s.funnel}</div>
+                  {mine && (
+                    <div className="mt-2 flex gap-1">
+                      <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setEditing(s)}>
+                        <Pencil className="mr-1 h-3 w-3" /> Editar
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => setDeleting(s)}>
+                        <Trash2 className="mr-1 h-3 w-3" /> Apagar
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      </div>
     </div>
+
+    <EditDialog sale={editing} onClose={() => setEditing(null)} />
+
+    <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Apagar venda?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {deleting && (
+              <>Esta ação não pode ser desfeita. Venda de <b>{deleting.seller_name}</b> de €{Number(deleting.value_eur).toFixed(2)} em {fmtDate(deleting.sale_date)}.</>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => deleting && delMutation.mutate(deleting.id)}
+          >
+            Apagar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
+  );
+}
+
+function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState<SaleRow | null>(sale);
+
+  useEffect(() => { setForm(sale); }, [sale]);
+
+  const mut = useMutation({
+    mutationFn: () => updateManualSale({
+      data: {
+        id: form!.id,
+        seller_name: form!.seller_name,
+        product: form!.product,
+        funnel: form!.funnel,
+        value_eur: Number(String(form!.value_eur).replace(",", ".")),
+        client_name: form!.client_name ?? undefined,
+        client_email: form!.client_email ?? undefined,
+        sale_date: form!.sale_date,
+        notes: form!.notes ?? undefined,
+      },
+    }),
+    onSuccess: () => {
+      toast.success("Venda atualizada");
+      qc.invalidateQueries({ queryKey: ["manual-sales"] });
+      qc.invalidateQueries({ queryKey: ["clint-ranking"] });
+      onClose();
+    },
+    onError: (e: any) => toast.error(String(e?.message ?? e)),
+  });
+
+  const today = todayBR();
+
+  return (
+    <Dialog open={!!sale} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Editar venda</DialogTitle>
+          <DialogDescription>Atualize os dados e salve.</DialogDescription>
+        </DialogHeader>
+        {form && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Vendedor</Label>
+              <Select value={form.seller_name} onValueChange={(v) => setForm({ ...form, seller_name: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SELLERS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Data</Label>
+              <Input type="date" max={today} value={form.sale_date} onChange={(e) => setForm({ ...form, sale_date: e.target.value })} />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Produto</Label>
+              <Select value={form.product} onValueChange={(v) => setForm({ ...form, product: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Funil</Label>
+              <Select value={form.funnel} onValueChange={(v) => setForm({ ...form, funnel: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {FUNNELS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Valor (EUR)</Label>
+              <Input value={String(form.value_eur)} onChange={(e) => setForm({ ...form, value_eur: e.target.value as any })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Cliente</Label>
+              <Input value={form.client_name ?? ""} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>E-mail do cliente</Label>
+              <Input type="email" value={form.client_email ?? ""} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Observação</Label>
+              <Textarea rows={2} value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button onClick={() => mut.mutate()} disabled={mut.isPending}>
+            {mut.isPending ? "Salvando..." : "Salvar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
