@@ -457,12 +457,18 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
 
     const mes = buildRanking(monthStart, monthEnd);
 
-    const todayStart     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // "Hoje" / "Semana" usam horário de Brasília (UTC-3) como referência —
+    // assim o time BR vê o que esperaria; vendedores em Portugal (UTC+1) vão
+    // ver o "hoje" começar às 04:00 PT, o que é aceitável pra um dashboard BR.
+    const BR_OFFSET_MS = -3 * 60 * 60 * 1000;
+    const nowBR = new Date(now.getTime() + BR_OFFSET_MS);
+    const todayStartBR = Date.UTC(nowBR.getUTCFullYear(), nowBR.getUTCMonth(), nowBR.getUTCDate());
+    const todayStart = new Date(todayStartBR - BR_OFFSET_MS); // 00:00 BR em UTC real
     const yesterdayStart = new Date(todayStart.getTime() - 86_400_000);
 
-    // Semana comercial: segunda → domingo (preferência do usuário).
-    const dayOfWeek = todayStart.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
-    const daysSinceMonday = (dayOfWeek + 6) % 7;
+    // Semana comercial: segunda → domingo (referência BR).
+    const dayOfWeekBR = nowBR.getUTCDay(); // 0 = domingo, 1 = segunda
+    const daysSinceMonday = (dayOfWeekBR + 6) % 7;
     const weekStart = new Date(todayStart.getTime() - daysSinceMonday * 86_400_000);
 
 
