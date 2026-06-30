@@ -344,6 +344,23 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       ]),
     );
 
+    // Filtra somente pipelines comerciais (mesma lógica do painel Visão Geral)
+    const { classifyByGroupName } = await import("@/lib/pipeline-areas");
+    const commercialOriginIds = new Set<string>();
+    {
+      let p = 1;
+      while (true) {
+        const r = await clintFetch(`/v1/origins?limit=200&page=${p}`, token);
+        for (const o of (r.data ?? [])) {
+          if (classifyByGroupName((o.group?.name ?? "").trim()) === "COMERCIAL") {
+            commercialOriginIds.add(o.id);
+          }
+        }
+        if (!r.hasNext) break;
+        if (++p > 10) break;
+      }
+    }
+
     const now = new Date();
     const targetYear  = data.year;
     const targetMonth = data.month; // 1-indexed
@@ -381,6 +398,7 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         if (end && wonAt >= end) continue; // end exclusivo
         const v = parseFloat(String(d.value ?? 0)) || 0;
         if (v <= 0) continue;
+        if (commercialOriginIds.size > 0 && !commercialOriginIds.has(d.origin_id)) continue;
         const uid = d.user?.id;
         if (!uid) continue;
         const name = d.user?.full_name?.trim() ?? d.user?.email ?? "—";
