@@ -396,6 +396,13 @@ function RankingPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* DEBUG TEMPORÁRIO — remover após diagnóstico */}
+        {(data as any)?._debug && (
+          <pre className="rounded border border-yellow-500 bg-yellow-950/30 p-4 text-xs text-yellow-300 overflow-auto max-h-64">
+            {JSON.stringify((data as any)._debug, null, 2)}
+          </pre>
+        )}
       </div>
     </>
   );

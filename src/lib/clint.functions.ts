@@ -355,13 +355,18 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       s.trim().normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
 
     const commercialOriginIds = new Set<string>();
+    const _allGroupNames: string[] = []; // debug: nomes reais de grupos da Clint API
+    const _originNameMap = new Map<string, string>(); // origin_id → origin_name
     // 1ª fonte: API da Clint (inclui group.name em tempo real)
     {
       let p = 1;
       while (true) {
         const r = await clintFetch(`/v1/origins?limit=200&page=${p}`, token);
         for (const o of (r.data ?? [])) {
-          if (COMMERCIAL_GROUPS_NORM.has(normGroup(o.group?.name ?? ""))) {
+          _originNameMap.set(o.id, o.name ?? "");
+          const gRaw = o.group?.name ?? o.group_name ?? "";
+          if (gRaw) _allGroupNames.push(`${o.name} → group: "${gRaw}"`);
+          if (COMMERCIAL_GROUPS_NORM.has(normGroup(gRaw))) {
             commercialOriginIds.add(o.id);
           }
         }
@@ -373,8 +378,10 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
     if (commercialOriginIds.size === 0) {
       const { data: originsRows = [] } = await supabaseAdmin
         .from("clint_origins")
-        .select("id,group_name");
+        .select("id,name,group_name");
       for (const o of originsRows as any[]) {
+        _originNameMap.set(o.id, o.name ?? "");
+        if (o.group_name) _allGroupNames.push(`[DB] ${o.name} → group: "${o.group_name}"`);
         if (COMMERCIAL_GROUPS_NORM.has(normGroup(o.group_name ?? ""))) {
           commercialOriginIds.add(o.id);
         }
@@ -448,6 +455,11 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         dia:    isCurrentMonth ? (buildRanking(yesterdayStart, todayStart)[0] ?? null) : null,
         semana: isCurrentMonth ? (buildRanking(weekStart, null)[0] ?? null) : null,
         mes:    mes[0] ?? null,
+      },
+      _debug: {
+        commercialOriginCount: commercialOriginIds.size,
+        totalDeals: all.length,
+        groupsSample: _allGroupNames.slice(0, 30),
       },
     };
   });
