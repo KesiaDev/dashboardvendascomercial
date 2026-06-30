@@ -145,7 +145,7 @@ const PODIUM: PodiumPos[] = [
   { pos: 3, delayClass: "rk-d3", badgeClass: "rk-badge-3", emoji: "🥉" },
 ];
 
-function Podium({ top3, currency }: { top3: SellerStats[]; currency: string }) {
+function Podium({ top3, currency, hideRevenue }: { top3: SellerStats[]; currency: string; hideRevenue?: boolean }) {
   const [show, setShow] = useState(false);
   useEffect(() => { const t = setTimeout(() => setShow(true), 150); return () => clearTimeout(t); }, []);
 
@@ -188,9 +188,11 @@ function Podium({ top3, currency }: { top3: SellerStats[]; currency: string }) {
 
               <div className="text-center">
                 <p className="text-sm font-bold text-white">{seller.name.split(" ")[0]}</p>
-                <p className={`text-xs font-semibold tabular-nums ${pos === 1 ? "text-amber-300" : pos === 2 ? "text-slate-300" : "text-orange-400"}`}>
-                  {formatCurrency(seller.revenue, currency)}
-                </p>
+                {!hideRevenue && (
+                  <p className={`text-xs font-semibold tabular-nums ${pos === 1 ? "text-amber-300" : pos === 2 ? "text-slate-300" : "text-orange-400"}`}>
+                    {formatCurrency(seller.revenue, currency)}
+                  </p>
+                )}
                 <p className="text-xs text-white/40">{seller.won} vendas</p>
               </div>
 
