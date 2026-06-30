@@ -316,6 +316,9 @@ function RankingPage() {
   const [selectedValue, setSelectedValue] = useState(monthOptions[0].value);
   const selected = monthOptions.find((o) => o.value === selectedValue) ?? monthOptions[0];
   const isCurrentMonth = selected.year === now.getFullYear() && selected.month === now.getMonth() + 1;
+  // Junho/2026 e anteriores: ranking só por quantidade (valor escondido).
+  // Julho/2026 em diante: ranking com valor + quantidade (fechamento manual).
+  const hideRevenue = selected.year < 2026 || (selected.year === 2026 && selected.month <= 6);
 
   const { data, isLoading } = useQuery({
     queryKey: ["clint-ranking", selected.year, selected.month],
