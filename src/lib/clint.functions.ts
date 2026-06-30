@@ -429,7 +429,17 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         if (end && wonAt >= end) continue; // end exclusivo
         const v = parseFloat(String(d.value ?? 0)) || 0;
         if (v <= 0) continue;
-        if (commercialOriginIds.size > 0 && !commercialOriginIds.has(d.origin_id)) continue;
+        if (commercialOriginIds.size > 0) {
+          // filtro por grupo (preferido)
+          if (!commercialOriginIds.has(d.origin_id)) continue;
+        } else {
+          // fallback: blacklist por nome de origin (exclui pipelines não-comerciais)
+          const oName = (_originNameMap.get(d.origin_id) ?? "")
+            .normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+          const NON_COM = ["IMPLANT", "SUCESSO", "COBRAN", "HOTMART", "INFOEDITOR",
+                           "ACELERATOR", "ACCELERAT", "SUPORTE", "TESTES"];
+          if (oName && NON_COM.some(k => oName.includes(k))) continue;
+        }
         const uid = d.user?.id;
         if (!uid) continue;
         const name = d.user?.full_name?.trim() ?? d.user?.email ?? "—";
