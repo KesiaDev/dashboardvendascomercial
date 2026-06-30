@@ -413,6 +413,14 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
     const isCurrentMonth =
       targetYear === now.getFullYear() && targetMonth === now.getMonth() + 1;
 
+    // A partir de Julho/2026 o ranking vem do fechamento manual (manual_sales).
+    // Junho/2026 e meses anteriores continuam vindo da Clint, sem mudança.
+    const useManual = targetYear > 2026 || (targetYear === 2026 && targetMonth >= 7);
+    if (useManual) {
+      return buildManualRanking(supabaseAdmin, targetYear, targetMonth, isCurrentMonth);
+    }
+
+
     const monthStart = new Date(targetYear, targetMonth - 1, 1);
     const monthEnd   = new Date(targetYear, targetMonth, 1);
 
