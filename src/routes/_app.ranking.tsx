@@ -17,7 +17,16 @@ const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
 
 function buildMonthOptions() {
   const now = new Date();
-  return Array.from({ length: 12 }, (_, i) => {
+  // Inclui o PRÓXIMO mês no topo para a equipe acompanhar o fechamento manual
+  // a partir de Julho/2026 antes mesmo da virada.
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const future = {
+    value: `${next.getFullYear()}-${next.getMonth() + 1}`,
+    label: `${MONTHS_PT[next.getMonth()]} ${next.getFullYear()} (próximo)`,
+    year: next.getFullYear(),
+    month: next.getMonth() + 1,
+  };
+  const past = Array.from({ length: 12 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     return {
       value: `${d.getFullYear()}-${d.getMonth() + 1}`,
@@ -26,7 +35,9 @@ function buildMonthOptions() {
       month: d.getMonth() + 1,
     };
   });
+  return [future, ...past];
 }
+
 
 export const Route = createFileRoute("/_app/ranking")({ component: RankingPage });
 
