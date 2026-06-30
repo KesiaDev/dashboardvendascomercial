@@ -439,15 +439,25 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
                            "ACELERATOR", "ACCELERAT", "SUPORTE", "TESTES"];
           if (oName && NON_COM.some(k => oName.includes(k))) continue;
         }
-        const uid = d.user?.id;
-        if (!uid) continue;
-        const name = d.user?.full_name?.trim() ?? d.user?.email ?? "—";
-        const clean = name.trim().replace(/\s+/g, " ");
+        // Crédito SÓ para quem marcou como ganho (won_by) — mesmo critério
+        // do relatório nativo "Vendas por Vendedor" da Clint. Sem fallback
+        // para o responsável (d.user), porque a default-assignee de vários
+        // pipelines (ex.: Gisele) aparecia com dezenas de vendas fechadas
+        // por outras pessoas, inflando o ranking.
+        const wonById: string | undefined =
+          typeof d.won_by === "string" ? d.won_by : d.won_by?.id;
+        if (!wonById) continue;
+        const wonByName: string =
+          (typeof d.won_by === "object" && (d.won_by?.full_name || d.won_by?.email))
+          || userMap.get(wonById)
+          || d.user?.full_name
+          || "—";
+        const clean = wonByName.trim().replace(/\s+/g, " ");
         if (EXCLUDED.has(normStr(clean))) continue;
-        const cur = map.get(uid) ?? { name: clean, won: 0, revenue: 0 };
+        const cur = map.get(wonById) ?? { name: clean, won: 0, revenue: 0 };
         cur.won += 1;
         cur.revenue += v;
-        map.set(uid, cur);
+        map.set(wonById, cur);
       }
       return Array.from(map.values())
         .sort((a, b) => b.revenue - a.revenue)
