@@ -273,7 +273,7 @@ function RankRow({ rank, seller, currency }: { rank: number; seller: SellerStats
         <div>
           <div className="text-sm font-semibold">{seller.name.split(" ")[0]}</div>
           <div className="text-xs text-muted-foreground">
-            {seller.won} fechadas · {seller.leads} leads
+            {seller.won} {seller.won === 1 ? "fechada" : "fechadas"}
           </div>
         </div>
       </div>
