@@ -357,6 +357,13 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       /renova[cç][aã]o\s*mentoria/i,
       /renova[cç][aã]o\s*mgt/i,
       /follow[-\s]*up\s*mentoria/i,
+      // FGRS e IGT (turmas ativas) — vendas do João etc.
+      /^\s*fgrs\s*\d+/i,
+      /perpetuo\s*fgrs/i,
+      /funil\s*-\s*fgrs/i,
+      /^\s*igt\s*\d+/i,
+      /^\s*igt\d+/i,
+      /funil\s*-\s*igt/i,
     ];
     const _originNameMap = new Map<string, string>();
     const allowedOriginIds = new Set<string>();
