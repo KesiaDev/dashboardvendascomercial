@@ -400,7 +400,7 @@ function RankingPage() {
                     {ranking[tab].length === 0 ? (
                       <p className="py-6 text-center text-sm text-muted-foreground">Sem vendas fechadas nesse período.</p>
                     ) : (
-                      ranking[tab].map((s, i) => <RankRow key={s.user_id} rank={i} seller={s} currency={currency} />)
+                      ranking[tab].map((s, i) => <RankRow key={s.user_id} rank={i} seller={s} currency={currency} hideRevenue={hideRevenue} />)
                     )}
                   </TabsContent>
                 ))}
