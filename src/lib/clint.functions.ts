@@ -364,8 +364,12 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         const r = await clintFetch(`/v1/origins?limit=200&page=${p}`, token);
         for (const o of (r.data ?? [])) {
           _originNameMap.set(o.id, o.name ?? "");
-          const gRaw = o.group?.name ?? o.group_name ?? "";
-          if (gRaw) _allGroupNames.push(`${o.name} → group: "${gRaw}"`);
+          // Clint pode retornar group como string OU como {name:string}
+          const gRaw: string =
+            (typeof o.group === "string" ? o.group : o.group?.name ?? o.group?.label ?? "")
+            || o.group_name || o.category || o.segment || "";
+          if (gRaw) _allGroupNames.push(`${o.name}||${gRaw}`);
+          console.error(`[RANKING] origin: ${o.name} | group raw: ${JSON.stringify(o.group)} | gRaw: ${gRaw}`);
           if (COMMERCIAL_GROUPS_NORM.has(normGroup(gRaw))) {
             commercialOriginIds.add(o.id);
           }
