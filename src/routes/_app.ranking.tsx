@@ -410,7 +410,7 @@ function RankingPage() {
                 {ranking.mes.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">Sem vendas nesse mês.</p>
                 ) : (
-                  ranking.mes.map((s, i) => <RankRow key={s.user_id} rank={i} seller={s} currency={currency} />)
+                  ranking.mes.map((s, i) => <RankRow key={s.user_id} rank={i} seller={s} currency={currency} hideRevenue={hideRevenue} />)
                 )}
               </div>
             )}
