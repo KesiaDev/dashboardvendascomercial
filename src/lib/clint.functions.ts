@@ -344,63 +344,57 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       ]),
     );
 
-    // Filtra somente pipelines comerciais (mesma lógica do painel Visão Geral da Clint)
-    // Normaliza case + acentos para não falhar se o Clint usar "Funis Perpétuos" vs "FUNIS PERPETUOS"
-    const COMMERCIAL_GROUPS_NORM = new Set(
-      ["FUNIS PERPETUOS", "FGRS", "IGT", "WGT", "MGT", "MASTER AND SCALE", "WEI"].map((g) =>
-        g.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase(),
-      ),
-    );
-    const normGroup = (s: string) =>
-      s.trim().normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
-
-    const commercialOriginIds = new Set<string>();
-    const _allGroupNames: string[] = []; // debug: nomes reais de grupos da Clint API
-    const _originNameMap = new Map<string, string>(); // origin_id → origin_name
-    // 1ª fonte: API da Clint (inclui group.name em tempo real)
+    // Whitelist de FUNIS que contam para o ranking comercial (decisão de negócio:
+    // somente vendas de PIPELINE_COMERCIAL-V3, Sessão Estratégica e Renovações).
+    // Atribuição: por RESPONSÁVEL do negócio (d.user), pois nesses funis a Clint
+    // raramente preenche `won_by`. Esse é o número que a equipe acompanha
+    // (ex.: Gisele com ~24 em junho).
+    const ORIGIN_PATTERNS = [
+      /pipeline[_\s-]*comercial/i,
+      /sess[aã]o\s*estrat[eé]gica/i,
+      /^\s*renova[cç][aã]o/i,
+      /live\s*de\s*renova/i,
+      /renova[cç][aã]o\s*mentoria/i,
+      /renova[cç][aã]o\s*mgt/i,
+      /follow[-\s]*up\s*mentoria/i,
+    ];
+    const _originNameMap = new Map<string, string>();
+    const allowedOriginIds = new Set<string>();
     {
       let p = 1;
       while (true) {
         const r = await clintFetch(`/v1/origins?limit=200&page=${p}`, token);
         for (const o of (r.data ?? [])) {
           _originNameMap.set(o.id, o.name ?? "");
-          // Clint pode retornar group como string OU como {name:string}
-          const gRaw: string =
-            (typeof o.group === "string" ? o.group : o.group?.name ?? o.group?.label ?? "")
-            || o.group_name || o.category || o.segment || "";
-          if (gRaw) _allGroupNames.push(`${o.name}||${gRaw}`);
-          if (COMMERCIAL_GROUPS_NORM.has(normGroup(gRaw))) {
-            commercialOriginIds.add(o.id);
+          if (ORIGIN_PATTERNS.some((re) => re.test(o.name ?? ""))) {
+            allowedOriginIds.add(o.id);
           }
         }
         if (!r.hasNext) break;
         if (++p > 10) break;
       }
     }
-    // 2ª fonte: tabela clint_origins do Supabase (fallback se a API não devolver group)
-    if (commercialOriginIds.size === 0) {
+    if (allowedOriginIds.size === 0) {
       const { data: originsRows = [] } = await supabaseAdmin
         .from("clint_origins")
-        .select("id,name,group_name");
+        .select("id,name");
       for (const o of originsRows as any[]) {
         _originNameMap.set(o.id, o.name ?? "");
-        if (o.group_name) _allGroupNames.push(`[DB] ${o.name} → group: "${o.group_name}"`);
-        if (COMMERCIAL_GROUPS_NORM.has(normGroup(o.group_name ?? ""))) {
-          commercialOriginIds.add(o.id);
+        if (ORIGIN_PATTERNS.some((re) => re.test(o.name ?? ""))) {
+          allowedOriginIds.add(o.id);
         }
       }
     }
 
     const now = new Date();
     const targetYear  = data.year;
-    const targetMonth = data.month; // 1-indexed
+    const targetMonth = data.month;
     const isCurrentMonth =
       targetYear === now.getFullYear() && targetMonth === now.getMonth() + 1;
 
     const monthStart = new Date(targetYear, targetMonth - 1, 1);
-    const monthEnd   = new Date(targetYear, targetMonth, 1); // 1º do mês seguinte (exclusive)
+    const monthEnd   = new Date(targetYear, targetMonth, 1);
 
-    // Busca desde 3 dias antes do início do mês alvo
     const since = new Date(monthStart.getTime() - 3 * 86_400_000).toISOString();
     const all: any[] = [];
     let page = 1;
@@ -417,7 +411,7 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
     const EXCLUDED = new Set(["camila faria", "aline goncalves", "kesia nandi"]);
     const normStr = (s: string) =>
       s.trim().toLowerCase().replace(/\s+/g, " ")
-        .normalize("NFD").replace(/[̀-ͯ]/g, "");
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
     function buildRanking(start: Date, end: Date | null) {
       const map = new Map<string, { name: string; won: number; revenue: number }>();
@@ -425,39 +419,28 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         if (d.status !== "WON" || !d.won_at) continue;
         const wonAt = new Date(d.won_at);
         if (wonAt < start) continue;
-        if (end && wonAt >= end) continue; // end exclusivo
+        if (end && wonAt >= end) continue;
         const v = parseFloat(String(d.value ?? 0)) || 0;
         if (v <= 0) continue;
-        if (commercialOriginIds.size > 0) {
-          // filtro por grupo (preferido)
-          if (!commercialOriginIds.has(d.origin_id)) continue;
-        } else {
-          // fallback: blacklist por nome de origin (exclui pipelines não-comerciais)
-          const oName = (_originNameMap.get(d.origin_id) ?? "")
-            .normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
-          const NON_COM = ["IMPLANT", "SUCESSO", "COBRAN", "HOTMART", "INFOEDITOR",
-                           "ACELERATOR", "ACCELERAT", "SUPORTE", "TESTES"];
-          if (oName && NON_COM.some(k => oName.includes(k))) continue;
-        }
-        // Crédito SÓ para quem marcou como ganho (won_by) — mesmo critério
-        // do relatório nativo "Vendas por Vendedor" da Clint. Sem fallback
-        // para o responsável (d.user), porque a default-assignee de vários
-        // pipelines (ex.: Gisele) aparecia com dezenas de vendas fechadas
-        // por outras pessoas, inflando o ranking.
-        const wonById: string | undefined =
-          typeof d.won_by === "string" ? d.won_by : d.won_by?.id;
-        if (!wonById) continue;
-        const wonByName: string =
-          (typeof d.won_by === "object" && (d.won_by?.full_name || d.won_by?.email))
-          || userMap.get(wonById)
-          || d.user?.full_name
+        if (allowedOriginIds.size > 0 && !allowedOriginIds.has(d.origin_id)) continue;
+
+        // Crédito para o RESPONSÁVEL (d.user), com fallback para won_by quando
+        // o responsável não está preenchido.
+        const userId: string | undefined =
+          (typeof d.user === "string" ? d.user : d.user?.id)
+          || (typeof d.won_by === "string" ? d.won_by : d.won_by?.id);
+        if (!userId) continue;
+        const userName: string =
+          (typeof d.user === "object" && (d.user?.full_name || d.user?.email))
+          || userMap.get(userId)
+          || (typeof d.won_by === "object" && (d.won_by?.full_name || d.won_by?.email))
           || "—";
-        const clean = wonByName.trim().replace(/\s+/g, " ");
+        const clean = userName.trim().replace(/\s+/g, " ");
         if (EXCLUDED.has(normStr(clean))) continue;
-        const cur = map.get(wonById) ?? { name: clean, won: 0, revenue: 0 };
+        const cur = map.get(userId) ?? { name: clean, won: 0, revenue: 0 };
         cur.won += 1;
         cur.revenue += v;
-        map.set(wonById, cur);
+        map.set(userId, cur);
       }
       return Array.from(map.values())
         .sort((a, b) => b.revenue - a.revenue)
@@ -480,9 +463,8 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         mes:    mes[0] ?? null,
       },
       _debug: {
-        commercialOriginCount: commercialOriginIds.size,
+        allowedOriginCount: allowedOriginIds.size,
         totalDeals: all.length,
-        groupsSample: _allGroupNames.slice(0, 30),
       },
     };
   });
