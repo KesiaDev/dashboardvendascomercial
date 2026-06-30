@@ -456,7 +456,7 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
 
     // Ajuste manual junho/2026 — métricas oficiais combinadas com a equipe.
     // A partir de julho/2026 isso sai e voltamos ao cálculo puro da API.
-    if (year === 2026 && month === 6) {
+    if (targetYear === 2026 && targetMonth === 6) {
       const OVERRIDES: Record<string, number> = {
         gisele: 24, joao: 20, "joão": 20, fabio: 8, "fábio": 8, rita: 7, luana: 2,
       };
