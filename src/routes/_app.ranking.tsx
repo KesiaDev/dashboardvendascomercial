@@ -360,7 +360,7 @@ function RankingPage() {
           </Select>
         </div>
 
-        <Podium top3={ranking.mes.slice(0, 3)} currency={currency} />
+        <Podium top3={ranking.mes.slice(0, 3)} currency={currency} hideRevenue={hideRevenue} />
 
         <section>
           <div className="rk-fadein-2 mb-4 flex items-center gap-2">
