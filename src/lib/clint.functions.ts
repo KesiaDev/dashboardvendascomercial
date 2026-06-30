@@ -357,6 +357,13 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       /renova[cç][aã]o\s*mentoria/i,
       /renova[cç][aã]o\s*mgt/i,
       /follow[-\s]*up\s*mentoria/i,
+      // FGRS e IGT (turmas ativas) — vendas do João etc.
+      /^\s*fgrs\s*\d+/i,
+      /perpetuo\s*fgrs/i,
+      /funil\s*-\s*fgrs/i,
+      /^\s*igt\s*\d+/i,
+      /^\s*igt\d+/i,
+      /funil\s*-\s*igt/i,
     ];
     const _originNameMap = new Map<string, string>();
     const allowedOriginIds = new Set<string>();
@@ -464,7 +471,7 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       semana: isCurrentMonth ? buildRanking(weekStart, null) : [],
       dia:    isCurrentMonth ? buildRanking(todayStart, null) : [],
       destaques: {
-        dia:    isCurrentMonth ? (buildRanking(yesterdayStart, todayStart)[0] ?? null) : null,
+        dia:    isCurrentMonth ? (buildRanking(todayStart, null)[0] ?? null) : null,
         semana: isCurrentMonth ? (buildRanking(weekStart, null)[0] ?? null) : null,
         mes:    mes[0] ?? null,
       },
