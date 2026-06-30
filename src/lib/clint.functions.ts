@@ -359,11 +359,9 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       /live\s*de\s*renova/i,
       /renova[cç][aã]o\s*mentoria/i,
       /renova[cç][aã]o\s*mgt/i,
-      /follow[-\s]*up\s*mentoria/i,
       /^\s*fgrs\s*\d+/i,
       /perpetuo\s*fgrs/i,
       /funil\s*-\s*fgrs/i,
-      /wgt\s*-?\s*perp[eé]tuo/i,
     ];
     const _originNameMap = new Map<string, string>();
     const allowedOriginIds = new Set<string>();
