@@ -349,6 +349,9 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
     // Atribuição: por RESPONSÁVEL do negócio (d.user), pois nesses funis a Clint
     // raramente preenche `won_by`. Esse é o número que a equipe acompanha
     // (ex.: Gisele com ~24 em junho).
+    // Funis que contam para o ranking comercial. IGT 22 fica DE FORA porque
+    // é funil de lançamento (cada comprador vira um deal) e infla a contagem
+    // em ~60 vendas/mês. WGT - Perpétuo entra porque o time fecha lá.
     const ORIGIN_PATTERNS = [
       /pipeline[_\s-]*comercial/i,
       /sess[aã]o\s*estrat[eé]gica/i,
@@ -357,13 +360,10 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       /renova[cç][aã]o\s*mentoria/i,
       /renova[cç][aã]o\s*mgt/i,
       /follow[-\s]*up\s*mentoria/i,
-      // FGRS e IGT (turmas ativas) — vendas do João etc.
       /^\s*fgrs\s*\d+/i,
       /perpetuo\s*fgrs/i,
       /funil\s*-\s*fgrs/i,
-      /^\s*igt\s*\d+/i,
-      /^\s*igt\d+/i,
-      /funil\s*-\s*igt/i,
+      /wgt\s*-?\s*perp[eé]tuo/i,
     ];
     const _originNameMap = new Map<string, string>();
     const allowedOriginIds = new Set<string>();
