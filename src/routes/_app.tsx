@@ -1,5 +1,5 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
-import { BarChart3, Bot, Upload, Users, LayoutGrid, Settings, ChartBar, Activity, Trophy } from "lucide-react";
+import { BarChart3, Bot, Upload, Users, LayoutGrid, Settings, ChartBar, Activity, Trophy, ClipboardCheck } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import logoIcon from "@/assets/logo-icon.png";
@@ -23,6 +23,7 @@ function AppLayout() {
               <NavLink to="/executivo" icon={<LayoutGrid className="h-4 w-4" />}>Executivo</NavLink>
               <NavLink to="/comercial" icon={<Users className="h-4 w-4" />}>Comercial</NavLink>
               <NavLink to="/ranking" icon={<Trophy className="h-4 w-4" />}>Ranking</NavLink>
+              <NavLink to="/fechamento" icon={<ClipboardCheck className="h-4 w-4" />}>Fechamento</NavLink>
               <NavLink to="/produtividade" icon={<Activity className="h-4 w-4" />}>Produtividade</NavLink>
               <NavLink to="/vendedor-produto" icon={<ChartBar className="h-4 w-4" />}>Vendedor x Produto</NavLink>
               <NavLink to="/agente" icon={<Bot className="h-4 w-4" />}>Agente IA</NavLink>
