@@ -345,13 +345,12 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
     );
 
     // Whitelist de FUNIS que contam para o ranking comercial (decisão de negócio:
-    // somente vendas de PIPELINE_COMERCIAL-V3, Sessão Estratégica e Renovações).
+    // somente vendas de PIPELINE_COMERCIAL-V3, Sessão Estratégica, Renovações e FGRS).
     // Atribuição: por RESPONSÁVEL do negócio (d.user), pois nesses funis a Clint
     // raramente preenche `won_by`. Esse é o número que a equipe acompanha
     // (ex.: Gisele com ~24 em junho).
-    // Funis que contam para o ranking comercial. IGT 22 fica DE FORA porque
-    // é funil de lançamento (cada comprador vira um deal) e infla a contagem
-    // em ~60 vendas/mês. WGT - Perpétuo entra porque o time fecha lá.
+    // IGT 22, WGT - Perpétuo e FOLLOW-UP MENTORIA ficam DE FORA porque não são
+    // vendas novas atribuídas ao vendedor.
     const ORIGIN_PATTERNS = [
       /pipeline[_\s-]*comercial/i,
       /sess[aã]o\s*estrat[eé]gica/i,
@@ -359,11 +358,9 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       /live\s*de\s*renova/i,
       /renova[cç][aã]o\s*mentoria/i,
       /renova[cç][aã]o\s*mgt/i,
-      /follow[-\s]*up\s*mentoria/i,
       /^\s*fgrs\s*\d+/i,
       /perpetuo\s*fgrs/i,
       /funil\s*-\s*fgrs/i,
-      /wgt\s*-?\s*perp[eé]tuo/i,
     ];
     const _originNameMap = new Map<string, string>();
     const allowedOriginIds = new Set<string>();
