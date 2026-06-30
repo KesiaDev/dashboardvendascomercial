@@ -37,7 +37,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { CheckCircle2, LogIn, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, LogIn, LogOut, Pencil, Plus, Trash2, X } from "lucide-react";
 
 export const Route = createFileRoute("/_app/fechamento")({ component: FechamentoPage });
 
@@ -109,13 +109,18 @@ function FechamentoForm({ session }: { session: any }) {
   const qc = useQueryClient();
 
   const [seller, setSeller] = useState<string>("");
-  const [product, setProduct] = useState<string>("");
   const [funnel, setFunnel] = useState<string>("");
-  const [value, setValue] = useState<string>("");
-  const [clientName, setClientName] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
   const [saleDate, setSaleDate] = useState(todayBR());
   const [notes, setNotes] = useState("");
+
+  type Item = { product: string; value: string; clientName: string; clientEmail: string };
+  const emptyItem = (): Item => ({ product: "", value: "", clientName: "", clientEmail: "" });
+  const [items, setItems] = useState<Item[]>([emptyItem()]);
+
+  const updateItem = (i: number, patch: Partial<Item>) =>
+    setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
+  const addItem = () => setItems((arr) => [...arr, emptyItem()]);
+  const removeItem = (i: number) => setItems((arr) => (arr.length === 1 ? arr : arr.filter((_, idx) => idx !== i)));
 
   const [editing, setEditing] = useState<SaleRow | null>(null);
   const [deleting, setDeleting] = useState<SaleRow | null>(null);
@@ -129,22 +134,30 @@ function FechamentoForm({ session }: { session: any }) {
   });
 
   const mutation = useMutation({
-    mutationFn: () =>
-      createManualSale({
-        data: {
-          seller_name: seller,
-          product,
-          funnel,
-          value_eur: Number(value.replace(",", ".")),
-          client_name: clientName || undefined,
-          client_email: clientEmail || undefined,
-          sale_date: saleDate,
-          notes: notes || undefined,
-        },
-      }),
-    onSuccess: () => {
-      toast.success("Venda registrada! 🎉");
-      setProduct(""); setFunnel(""); setValue(""); setClientName(""); setClientEmail(""); setNotes("");
+    mutationFn: async () => {
+      const results = await Promise.allSettled(
+        items.map((it) =>
+          createManualSale({
+            data: {
+              seller_name: seller,
+              product: it.product,
+              funnel,
+              value_eur: Number(it.value.replace(",", ".")),
+              client_name: it.clientName || undefined,
+              client_email: it.clientEmail || undefined,
+              sale_date: saleDate,
+              notes: notes || undefined,
+            },
+          })
+        )
+      );
+      const failed = results.filter((r) => r.status === "rejected");
+      if (failed.length) throw new Error(`${failed.length} venda(s) falharam`);
+      return { count: results.length };
+    },
+    onSuccess: ({ count }) => {
+      toast.success(`${count} venda(s) registrada(s)! 🎉`);
+      setItems([emptyItem()]); setNotes("");
       qc.invalidateQueries({ queryKey: ["manual-sales"] });
       qc.invalidateQueries({ queryKey: ["clint-ranking"] });
     },
@@ -166,6 +179,8 @@ function FechamentoForm({ session }: { session: any }) {
   const todayTotal = todaySales.reduce((acc, s) => acc + Number(s.value_eur), 0);
   const monthTotal = sales.reduce((acc, s) => acc + Number(s.value_eur), 0);
 
+  const formTotal = items.reduce((acc, it) => acc + (Number(it.value.replace(",", ".")) || 0), 0);
+
   return (
     <>
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
@@ -184,8 +199,13 @@ function FechamentoForm({ session }: { session: any }) {
             className="grid gap-4 sm:grid-cols-2"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!seller || !product || !funnel || !value) {
-                toast.error("Preencha vendedor, produto, funil e valor");
+              if (!seller || !funnel) {
+                toast.error("Selecione vendedor e funil");
+                return;
+              }
+              const invalid = items.some((it) => !it.product || !it.value);
+              if (invalid) {
+                toast.error("Cada produto precisa de produto e valor");
                 return;
               }
               mutation.mutate();
@@ -205,15 +225,6 @@ function FechamentoForm({ session }: { session: any }) {
               <Input type="date" value={saleDate} max={today} onChange={(e) => setSaleDate(e.target.value)} />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label>Produto *</Label>
-              <Select value={product} onValueChange={setProduct}>
-                <SelectTrigger><SelectValue placeholder="Selecione o produto" /></SelectTrigger>
-                <SelectContent>
-                  {PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
               <Label>Funil onde deu ganho *</Label>
               <Select value={funnel} onValueChange={setFunnel}>
                 <SelectTrigger><SelectValue placeholder="Selecione o funil" /></SelectTrigger>
@@ -222,18 +233,57 @@ function FechamentoForm({ session }: { session: any }) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label>Valor (EUR) *</Label>
-              <Input type="text" inputMode="decimal" placeholder="ex: 1497.00" value={value} onChange={(e) => setValue(e.target.value)} />
+
+            <div className="sm:col-span-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-semibold">Produtos vendidos ({items.length})</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                  <Plus className="mr-1 h-3 w-3" /> Adicionar produto
+                </Button>
+              </div>
+              {items.map((it, i) => (
+                <div key={i} className="rounded-lg border border-border/60 bg-card/40 p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground">Venda #{i + 1}</span>
+                    {items.length > 1 && (
+                      <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-destructive hover:text-destructive" onClick={() => removeItem(i)}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-xs">Produto *</Label>
+                      <Select value={it.product} onValueChange={(v) => updateItem(i, { product: v })}>
+                        <SelectTrigger><SelectValue placeholder="Selecione o produto" /></SelectTrigger>
+                        <SelectContent>
+                          {PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Valor (EUR) *</Label>
+                      <Input type="text" inputMode="decimal" placeholder="ex: 1497.00" value={it.value} onChange={(e) => updateItem(i, { value: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Nome do cliente</Label>
+                      <Input value={it.clientName} onChange={(e) => updateItem(i, { clientName: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-xs">E-mail do cliente</Label>
+                      <Input type="email" value={it.clientEmail} onChange={(e) => updateItem(i, { clientEmail: e.target.value })} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Total deste fechamento</span>
+                <span className="font-bold tabular-nums">
+                  {items.length} venda(s) · €{formTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Nome do cliente</Label>
-              <Input value={clientName} onChange={(e) => setClientName(e.target.value)} />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>E-mail do cliente</Label>
-              <Input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} />
-            </div>
+
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Observação</Label>
               <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -241,7 +291,7 @@ function FechamentoForm({ session }: { session: any }) {
             <div className="sm:col-span-2">
               <Button type="submit" disabled={mutation.isPending} className="w-full">
                 <Plus className="mr-2 h-4 w-4" />
-                {mutation.isPending ? "Salvando..." : "Registrar venda"}
+                {mutation.isPending ? "Salvando..." : `Registrar ${items.length} venda(s)`}
               </Button>
               <p className="mt-2 text-xs text-muted-foreground">
                 O fechamento do dia aceita registros até 23:59 (horário de Brasília).
@@ -250,6 +300,7 @@ function FechamentoForm({ session }: { session: any }) {
           </form>
         </CardContent>
       </Card>
+
 
       <div className="space-y-4">
         <Card>
