@@ -471,7 +471,7 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       semana: isCurrentMonth ? buildRanking(weekStart, null) : [],
       dia:    isCurrentMonth ? buildRanking(todayStart, null) : [],
       destaques: {
-        dia:    isCurrentMonth ? (buildRanking(yesterdayStart, todayStart)[0] ?? null) : null,
+        dia:    isCurrentMonth ? (buildRanking(todayStart, null)[0] ?? null) : null,
         semana: isCurrentMonth ? (buildRanking(weekStart, null)[0] ?? null) : null,
         mes:    mes[0] ?? null,
       },
