@@ -463,9 +463,8 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         mes:    mes[0] ?? null,
       },
       _debug: {
-        commercialOriginCount: commercialOriginIds.size,
+        allowedOriginCount: allowedOriginIds.size,
         totalDeals: all.length,
-        groupsSample: _allGroupNames.slice(0, 30),
       },
     };
   });
