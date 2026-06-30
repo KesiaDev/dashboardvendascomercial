@@ -344,20 +344,40 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       ]),
     );
 
-    // Filtra somente pipelines comerciais (mesma lógica do painel Visão Geral)
-    const { classifyByGroupName } = await import("@/lib/pipeline-areas");
+    // Filtra somente pipelines comerciais (mesma lógica do painel Visão Geral da Clint)
+    // Normaliza case + acentos para não falhar se o Clint usar "Funis Perpétuos" vs "FUNIS PERPETUOS"
+    const COMMERCIAL_GROUPS_NORM = new Set(
+      ["FUNIS PERPETUOS", "FGRS", "IGT", "WGT", "MGT", "MASTER AND SCALE", "WEI"].map((g) =>
+        g.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase(),
+      ),
+    );
+    const normGroup = (s: string) =>
+      s.trim().normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+
     const commercialOriginIds = new Set<string>();
+    // 1ª fonte: API da Clint (inclui group.name em tempo real)
     {
       let p = 1;
       while (true) {
         const r = await clintFetch(`/v1/origins?limit=200&page=${p}`, token);
         for (const o of (r.data ?? [])) {
-          if (classifyByGroupName((o.group?.name ?? "").trim()) === "COMERCIAL") {
+          if (COMMERCIAL_GROUPS_NORM.has(normGroup(o.group?.name ?? ""))) {
             commercialOriginIds.add(o.id);
           }
         }
         if (!r.hasNext) break;
         if (++p > 10) break;
+      }
+    }
+    // 2ª fonte: tabela clint_origins do Supabase (fallback se a API não devolver group)
+    if (commercialOriginIds.size === 0) {
+      const { data: originsRows = [] } = await supabaseAdmin
+        .from("clint_origins")
+        .select("id,group_name");
+      for (const o of originsRows as any[]) {
+        if (COMMERCIAL_GROUPS_NORM.has(normGroup(o.group_name ?? ""))) {
+          commercialOriginIds.add(o.id);
+        }
       }
     }
 
