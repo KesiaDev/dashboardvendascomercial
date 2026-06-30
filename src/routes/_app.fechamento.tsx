@@ -341,29 +341,32 @@ function FechamentoForm({ session }: { session: any }) {
             {sales.length === 0 && (
               <p className="text-sm text-muted-foreground">Nenhuma venda registrada neste mês.</p>
             )}
-            {sales.map((s) => {
-              const mine = s.created_by === userId;
-              return (
-                <div key={s.id} className="rounded-lg border border-border/50 bg-card/50 p-3 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold">{s.seller_name.split(" ")[0]}</span>
-                    <span className="tabular-nums font-bold">€{Number(s.value_eur).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="truncate text-xs text-muted-foreground">{fmtDate(s.sale_date)} · {s.product}</div>
-                  <div className="truncate text-xs text-muted-foreground">{s.funnel}</div>
-                  {mine && (
-                    <div className="mt-2 flex gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setEditing(s)}>
-                        <Pencil className="mr-1 h-3 w-3" /> Editar
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => setDeleting(s)}>
-                        <Trash2 className="mr-1 h-3 w-3" /> Apagar
-                      </Button>
-                    </div>
-                  )}
+            {sales.map((s) => (
+              <div key={s.id} className="rounded-lg border border-border/50 bg-card/50 p-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold">{s.seller_name.split(" ")[0]}</span>
+                  <span className="tabular-nums font-bold">€{Number(s.value_eur).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                 </div>
-              );
-            })}
+                <div className="truncate text-xs text-muted-foreground">{fmtDate(s.sale_date)} · {s.product}</div>
+                <div className="truncate text-xs text-muted-foreground">{s.funnel}</div>
+                {(s.client_name || s.client_email) && (
+                  <div className="mt-1 truncate text-xs">
+                    <span className="text-muted-foreground">Cliente: </span>
+                    <span className="font-medium">{s.client_name || "—"}</span>
+                    {s.client_email && <span className="text-muted-foreground"> · {s.client_email}</span>}
+                  </div>
+                )}
+                {s.notes && <div className="mt-1 text-xs italic text-muted-foreground">"{s.notes}"</div>}
+                <div className="mt-2 flex gap-1">
+                  <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setEditing(s)}>
+                    <Pencil className="mr-1 h-3 w-3" /> Editar
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => setDeleting(s)}>
+                    <Trash2 className="mr-1 h-3 w-3" /> Apagar
+                  </Button>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>
