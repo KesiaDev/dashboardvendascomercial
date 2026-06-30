@@ -458,7 +458,7 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
     // A partir de julho/2026 isso sai e voltamos ao cálculo puro da API.
     if (targetYear === 2026 && targetMonth === 6) {
       const OVERRIDES: Record<string, number> = {
-        gisele: 24, joao: 20, "joão": 20, fabio: 8, "fábio": 8, rita: 7, luana: 2,
+        gisele: 24, joao: 20, "joão": 20, fabio: 8, "fábio": 8, rita: 7, luana: 3,
       };
       mes = mes.map((s) => {
         const first = s.name.trim().split(/\s+/)[0].toLowerCase();
