@@ -91,8 +91,8 @@ export type Database = {
       }
       bi_commission_periods: {
         Row: {
-          created_at: string | null
           cotacao_eur: number
+          created_at: string | null
           data_fim: string
           data_inicio: string
           id: number
@@ -101,8 +101,8 @@ export type Database = {
           roleta_pool_eur: number | null
         }
         Insert: {
-          created_at?: string | null
           cotacao_eur?: number
+          created_at?: string | null
           data_fim: string
           data_inicio: string
           id?: never
@@ -111,8 +111,8 @@ export type Database = {
           roleta_pool_eur?: number | null
         }
         Update: {
-          created_at?: string | null
           cotacao_eur?: number
+          created_at?: string | null
           data_fim?: string
           data_inicio?: string
           id?: never
