@@ -154,7 +154,9 @@ export type Realized = {
   leads: number;
   vendasFE: number;
   vendasHT: number;
-  faturamentoBrl: number; // faturamento realizado total em BRL (FE+HT+MS)
+  faturamentoBrl: number; // total (FE+HT+outros)
+  faturamentoFEBrl: number;
+  faturamentoHTBrl: number;
 };
 
 // ── Utils ───────────────────────────────────────────────────────────────────
