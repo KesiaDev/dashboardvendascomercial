@@ -203,7 +203,7 @@ function Resultados() {
       if (!ch) continue;
       const d = sale.data_venda ? new Date(sale.data_venda) : null;
       if (!d) continue;
-      const month = d.getMonth();
+      const month = d.getUTCMonth();
       const bucket = result[ch][month] ?? { vendas: 0, faturamento: 0 };
       if (!isRenovacao(sale)) bucket.vendas++;
       bucket.faturamento += sale.faturamento_liquido_brl ?? 0;
@@ -226,9 +226,10 @@ function Resultados() {
       const chId = t.channel_id as ChannelId | null;
       if (!chId || !(chId in result)) continue;
       if (!t.periodo) continue;
-      const periodoYear = new Date(t.periodo).getFullYear();
+      const periodoDate = new Date(t.periodo + "T00:00:00Z");
+      const periodoYear = periodoDate.getUTCFullYear();
       if (periodoYear !== year) continue;
-      const month = new Date(t.periodo).getMonth();
+      const month = periodoDate.getUTCMonth();
       result[chId].push({ month, indicador: t.indicador, valor: t.valor });
     }
     return result;
