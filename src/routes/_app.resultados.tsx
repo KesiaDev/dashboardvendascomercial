@@ -880,13 +880,24 @@ function Resultados() {
       if (t.channel_id === "mas" && t.indicador === "vendas") masMetaVendas += t.valor;
     }
 
+    const ytdOv = overridesByBloco.ytd ?? {};
+    const funilOv = overridesByBloco.funil ?? {};
+
     return {
-      leadsReal: leadsData.total,
-      leadsMeta: leadsMeta || 150000,
-      feVendas, feMetaVendas, feFat,
-      htVendas, htMetaVendas, htFat,
-      masVendas, masMetaVendas: masMetaVendas || 500,
-      accVendas,
+      leadsReal: ytdOv.leads_real ?? leadsData.total,
+      leadsMeta: ytdOv.leads_meta ?? (leadsMeta || 150000),
+      feVendas: ytdOv.fe_vendas_real ?? feVendas,
+      feMetaVendas: ytdOv.fe_vendas_meta ?? feMetaVendas,
+      feFat,
+      htVendas: ytdOv.ht_vendas_real ?? htVendas,
+      htMetaVendas: ytdOv.ht_vendas_meta ?? htMetaVendas,
+      htFat,
+      masVendas: ytdOv.mas_vendas_real ?? masVendas,
+      masMetaVendas: ytdOv.mas_vendas_meta ?? (masMetaVendas || 500),
+      accVendas: ytdOv.acc_vendas_real ?? accVendas,
+      metaPctLeadFe: funilOv.lead_fe_pct ?? 2.12,
+      metaPctFeHt: funilOv.fe_ht_pct ?? 13.6,
+      metaPctHtAcc: funilOv.ht_acc_pct ?? 60,
     };
   }, [blocoMonthData, overridesByBloco, salesByProductWeek, targetsByBloco, targets, year, leadsData]);
 
