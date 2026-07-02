@@ -662,6 +662,10 @@ export type Database = {
         Row: {
           client_email: string | null
           client_name: string | null
+          confirmation_status: string
+          confirmed_hotmart_sale_id: string | null
+          confirmed_hotmart_valor_brl: number | null
+          confirmed_wise_id: number | null
           created_at: string
           created_by: string
           created_by_email: string
@@ -676,6 +680,10 @@ export type Database = {
         Insert: {
           client_email?: string | null
           client_name?: string | null
+          confirmation_status?: string
+          confirmed_hotmart_sale_id?: string | null
+          confirmed_hotmart_valor_brl?: number | null
+          confirmed_wise_id?: number | null
           created_at?: string
           created_by: string
           created_by_email: string
@@ -690,6 +698,10 @@ export type Database = {
         Update: {
           client_email?: string | null
           client_name?: string | null
+          confirmation_status?: string
+          confirmed_hotmart_sale_id?: string | null
+          confirmed_hotmart_valor_brl?: number | null
+          confirmed_wise_id?: number | null
           created_at?: string
           created_by?: string
           created_by_email?: string

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,9 +8,14 @@ import {
   listManualSales,
   updateManualSale,
   deleteManualSale,
+  lookupByEmailFn,
+  confirmManualSaleFn,
+  reconfirmAllPendingFn,
   PRODUCTS,
   FUNNELS,
   SELLERS,
+  type HotmartMatch,
+  type ManualSale,
 } from "@/lib/manual-sales.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,32 +23,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { CheckCircle2, LogIn, LogOut, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+  CheckCircle2, LogIn, LogOut, Pencil, Plus, Trash2, X,
+  Search, AlertCircle, RefreshCw, CheckCheck,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/fechamento")({ component: FechamentoPage });
 
 function todayBR() {
-  const nowBR = new Date(Date.now() - 3 * 60 * 60 * 1000);
-  return nowBR.toISOString().slice(0, 10);
+  return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
 function fmtDate(iso: string) {
@@ -51,15 +49,72 @@ function fmtDate(iso: string) {
   return `${d}/${m}/${y.slice(2)}`;
 }
 
+function moneyEur(v: number) {
+  return `€${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function moneyBrl(v: number) {
+  return `R$${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+// ── Badge de status de confirmação ──────────────────────────────────────────
+
+function ConfirmBadge({ status }: { status: string }) {
+  if (status === "confirmado_hotmart")
+    return <Badge className="bg-emerald-600/20 text-emerald-400 border-emerald-600/30 text-xs gap-1"><CheckCircle2 className="h-3 w-3" />Hotmart ✓</Badge>;
+  if (status === "confirmado_wise")
+    return <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-xs gap-1"><CheckCircle2 className="h-3 w-3" />Wise ✓</Badge>;
+  if (status === "nao_encontrado")
+    return <Badge className="bg-red-600/20 text-red-400 border-red-600/30 text-xs gap-1"><AlertCircle className="h-3 w-3" />Não encontrado</Badge>;
+  return <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-600/30 text-xs gap-1"><Search className="h-3 w-3" />Pendente</Badge>;
+}
+
+// ── Componente de lookup inline ──────────────────────────────────────────────
+
+function EmailLookup({ email, saleDate }: { email: string; saleDate: string }) {
+  const { data: matches, isFetching } = useQuery({
+    queryKey: ["hotmart-lookup", email, saleDate],
+    queryFn: () => lookupByEmailFn({ data: { email, sale_date: saleDate } }),
+    enabled: !!email && email.includes("@"),
+    staleTime: 30_000,
+  });
+
+  if (!email || !email.includes("@")) return null;
+  if (isFetching) return <p className="text-xs text-muted-foreground mt-1">Buscando no Hotmart...</p>;
+
+  if (!matches || matches.length === 0)
+    return (
+      <div className="mt-1 flex items-center gap-1.5 text-xs text-yellow-500">
+        <AlertCircle className="h-3.5 w-3.5" />
+        Não encontrado no Hotmart — verifique o email ou confirme pelo Wise
+      </div>
+    );
+
+  return (
+    <div className="mt-1 space-y-1">
+      {matches.map((m) => (
+        <div key={m.id} className="flex items-center gap-2 rounded-md bg-emerald-950/30 border border-emerald-800/40 px-2.5 py-1.5 text-xs">
+          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+          <span className="text-emerald-300 font-medium">{m.produto_original}</span>
+          <span className="text-muted-foreground">·</span>
+          <span className="tabular-nums">{moneyBrl(m.faturamento_liquido_brl ?? 0)}</span>
+          <span className="text-muted-foreground">·</span>
+          <span>{fmtDate(m.data_venda ?? "")}</span>
+          {m.nome_afiliado && <span className="text-muted-foreground">· {m.nome_afiliado}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Página principal ─────────────────────────────────────────────────────────
+
 function FechamentoPage() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setLoading(false); });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -79,20 +134,11 @@ function LoginCard() {
           <CardDescription>Entre com seu Gmail para registrar suas vendas do dia.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button
-            className="w-full"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              const res = await lovable.auth.signInWithOAuth("google", {
-                redirect_uri: `${window.location.origin}/fechamento`,
-              });
-              if ((res as any)?.error) {
-                toast.error("Falha no login: " + String((res as any).error?.message ?? (res as any).error));
-                setBusy(false);
-              }
-            }}
-          >
+          <Button className="w-full" disabled={busy} onClick={async () => {
+            setBusy(true);
+            const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/fechamento` });
+            if ((res as any)?.error) { toast.error("Falha no login: " + String((res as any).error?.message ?? (res as any).error)); setBusy(false); }
+          }}>
             <LogIn className="mr-2 h-4 w-4" /> Entrar com Google
           </Button>
         </CardContent>
@@ -105,7 +151,6 @@ type SaleRow = Awaited<ReturnType<typeof listManualSales>>[number];
 
 function FechamentoForm({ session }: { session: any }) {
   const email = session?.user?.email ?? "";
-  const userId = session?.user?.id ?? "";
   const qc = useQueryClient();
 
   const [seller, setSeller] = useState<string>("");
@@ -120,10 +165,11 @@ function FechamentoForm({ session }: { session: any }) {
   const updateItem = (i: number, patch: Partial<Item>) =>
     setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   const addItem = () => setItems((arr) => [...arr, emptyItem()]);
-  const removeItem = (i: number) => setItems((arr) => (arr.length === 1 ? arr : arr.filter((_, idx) => idx !== i)));
+  const removeItem = (i: number) => setItems((arr) => arr.length === 1 ? arr : arr.filter((_, idx) => idx !== i));
 
   const [editing, setEditing] = useState<SaleRow | null>(null);
   const [deleting, setDeleting] = useState<SaleRow | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   const today = todayBR();
   const monthFrom = today.slice(0, 7) + "-01";
@@ -144,7 +190,7 @@ function FechamentoForm({ session }: { session: any }) {
               funnel,
               value_eur: Number(it.value.replace(",", ".")),
               client_name: it.clientName || undefined,
-              client_email: it.clientEmail || undefined,
+              client_email: it.clientEmail,
               sale_date: saleDate,
               notes: notes || undefined,
             },
@@ -153,13 +199,20 @@ function FechamentoForm({ session }: { session: any }) {
       );
       const failed = results.filter((r) => r.status === "rejected");
       if (failed.length) throw new Error(`${failed.length} venda(s) falharam`);
-      return { count: results.length };
+
+      // Conta quantas foram confirmadas automaticamente
+      const confirmed = results.filter(
+        (r) => r.status === "fulfilled" && (r.value as any)?.confirmation === "confirmado_hotmart"
+      ).length;
+      return { count: results.length, confirmed };
     },
-    onSuccess: ({ count }) => {
-      toast.success(`${count} venda(s) registrada(s)! 🎉`);
+    onSuccess: ({ count, confirmed }) => {
+      if (confirmed > 0)
+        toast.success(`${count} venda(s) registrada(s)! ${confirmed} confirmada(s) automaticamente no Hotmart ✅`);
+      else
+        toast.success(`${count} venda(s) registrada(s)! Aguardando confirmação no Hotmart ⏳`);
       setItems([emptyItem()]); setNotes("");
       qc.invalidateQueries({ queryKey: ["manual-sales"] });
-      qc.invalidateQueries({ queryKey: ["clint-ranking"] });
     },
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
@@ -170,7 +223,26 @@ function FechamentoForm({ session }: { session: any }) {
       toast.success("Venda apagada");
       setDeleting(null);
       qc.invalidateQueries({ queryKey: ["manual-sales"] });
-      qc.invalidateQueries({ queryKey: ["clint-ranking"] });
+    },
+    onError: (e: any) => toast.error(String(e?.message ?? e)),
+  });
+
+  const confirmMut = useMutation({
+    mutationFn: (d: Parameters<typeof confirmManualSaleFn>[0]["data"]) =>
+      confirmManualSaleFn({ data: d }),
+    onSuccess: () => {
+      toast.success("Status atualizado");
+      setConfirmingId(null);
+      qc.invalidateQueries({ queryKey: ["manual-sales"] });
+    },
+    onError: (e: any) => toast.error(String(e?.message ?? e)),
+  });
+
+  const reconfirmMut = useMutation({
+    mutationFn: () => reconfirmAllPendingFn(),
+    onSuccess: (r: any) => {
+      toast.success(`Re-confirmação: ${r.confirmed}/${r.total} confirmadas no Hotmart`);
+      qc.invalidateQueries({ queryKey: ["manual-sales"] });
     },
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
@@ -178,226 +250,315 @@ function FechamentoForm({ session }: { session: any }) {
   const todaySales = sales.filter((s) => s.sale_date === today);
   const todayTotal = todaySales.reduce((acc, s) => acc + Number(s.value_eur), 0);
   const monthTotal = sales.reduce((acc, s) => acc + Number(s.value_eur), 0);
-
   const formTotal = items.reduce((acc, it) => acc + (Number(it.value.replace(",", ".")) || 0), 0);
+
+  const pendingCount = sales.filter((s) => s.confirmation_status === "pendente").length;
+  const confirmedCount = sales.filter((s) => s.confirmation_status === "confirmado_hotmart" || s.confirmation_status === "confirmado_wise").length;
 
   return (
     <>
-    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Registrar venda</CardTitle>
-            <CardDescription>Logado como {email}</CardDescription>
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => supabase.auth.signOut()}>
-            <LogOut className="mr-2 h-4 w-4" /> Sair
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <form
-            className="grid gap-4 sm:grid-cols-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!seller || !funnel) {
-                toast.error("Selecione vendedor e funil");
-                return;
-              }
-              const invalid = items.some((it) => !it.product || !it.value);
-              if (invalid) {
-                toast.error("Cada produto precisa de produto e valor");
-                return;
-              }
-              mutation.mutate();
-            }}
-          >
-            <div className="space-y-1.5">
-              <Label>Vendedor *</Label>
-              <Select value={seller} onValueChange={setSeller}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {SELLERS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
+      <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Registrar venda</CardTitle>
+              <CardDescription>Logado como {email}</CardDescription>
             </div>
-            <div className="space-y-1.5">
-              <Label>Data da venda *</Label>
-              <Input type="date" value={saleDate} max={today} onChange={(e) => setSaleDate(e.target.value)} />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>Funil onde deu ganho *</Label>
-              <Select value={funnel} onValueChange={setFunnel}>
-                <SelectTrigger><SelectValue placeholder="Selecione o funil" /></SelectTrigger>
-                <SelectContent>
-                  {FUNNELS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+            <Button variant="ghost" size="sm" onClick={() => supabase.auth.signOut()}>
+              <LogOut className="mr-2 h-4 w-4" /> Sair
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <form
+              className="grid gap-4 sm:grid-cols-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!seller || !funnel) { toast.error("Selecione vendedor e funil"); return; }
+                const invalid = items.some((it) => !it.product || !it.value || !it.clientEmail);
+                if (invalid) { toast.error("Produto, valor e e-mail do cliente são obrigatórios"); return; }
+                mutation.mutate();
+              }}
+            >
+              <div className="space-y-1.5">
+                <Label>Vendedor *</Label>
+                <Select value={seller} onValueChange={setSeller}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {SELLERS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Data da venda *</Label>
+                <Input type="date" value={saleDate} max={today} onChange={(e) => setSaleDate(e.target.value)} />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Funil onde deu ganho *</Label>
+                <Select value={funnel} onValueChange={setFunnel}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o funil" /></SelectTrigger>
+                  <SelectContent>
+                    {FUNNELS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="sm:col-span-2 space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">Produtos vendidos ({items.length})</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                  <Plus className="mr-1 h-3 w-3" /> Adicionar produto
+              <div className="sm:col-span-2 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold">Produtos vendidos ({items.length})</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                    <Plus className="mr-1 h-3 w-3" /> Adicionar produto
+                  </Button>
+                </div>
+
+                {items.map((it, i) => (
+                  <div key={i} className="rounded-lg border border-border/60 bg-card/40 p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-muted-foreground">Venda #{i + 1}</span>
+                      {items.length > 1 && (
+                        <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-destructive hover:text-destructive" onClick={() => removeItem(i)}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label className="text-xs">Produto *</Label>
+                        <Select value={it.product} onValueChange={(v) => updateItem(i, { product: v })}>
+                          <SelectTrigger><SelectValue placeholder="Selecione o produto" /></SelectTrigger>
+                          <SelectContent>
+                            {PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Valor (EUR) *</Label>
+                        <Input type="text" inputMode="decimal" placeholder="ex: 1497.00" value={it.value} onChange={(e) => updateItem(i, { value: e.target.value })} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Nome do cliente</Label>
+                        <Input value={it.clientName} onChange={(e) => updateItem(i, { clientName: e.target.value })} />
+                      </div>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label className="text-xs flex items-center gap-1">
+                          E-mail do cliente *
+                          <span className="text-muted-foreground font-normal">(usado para confirmar no Hotmart)</span>
+                        </Label>
+                        <Input
+                          type="email"
+                          required
+                          placeholder="cliente@email.com"
+                          value={it.clientEmail}
+                          onChange={(e) => updateItem(i, { clientEmail: e.target.value })}
+                        />
+                        {/* Lookup em tempo real */}
+                        <EmailLookup email={it.clientEmail} saleDate={saleDate} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">Total deste fechamento</span>
+                  <span className="font-bold tabular-nums">{items.length} venda(s) · {moneyEur(formTotal)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Observação</Label>
+                <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+              </div>
+
+              <div className="sm:col-span-2">
+                <Button type="submit" disabled={mutation.isPending} className="w-full">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {mutation.isPending ? "Salvando..." : `Registrar ${items.length} venda(s)`}
                 </Button>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  O e-mail do cliente é cruzado automaticamente com o Hotmart para confirmar a venda.
+                </p>
               </div>
-              {items.map((it, i) => (
-                <div key={i} className="rounded-lg border border-border/60 bg-card/40 p-3 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-muted-foreground">Venda #{i + 1}</span>
-                    {items.length > 1 && (
-                      <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-destructive hover:text-destructive" onClick={() => removeItem(i)}>
-                        <X className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <Label className="text-xs">Produto *</Label>
-                      <Select value={it.product} onValueChange={(v) => updateItem(i, { product: v })}>
-                        <SelectTrigger><SelectValue placeholder="Selecione o produto" /></SelectTrigger>
-                        <SelectContent>
-                          {PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Valor (EUR) *</Label>
-                      <Input type="text" inputMode="decimal" placeholder="ex: 1497.00" value={it.value} onChange={(e) => updateItem(i, { value: e.target.value })} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Nome do cliente</Label>
-                      <Input value={it.clientName} onChange={(e) => updateItem(i, { clientName: e.target.value })} />
-                    </div>
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <Label className="text-xs">E-mail do cliente</Label>
-                      <Input type="email" value={it.clientEmail} onChange={(e) => updateItem(i, { clientEmail: e.target.value })} />
-                    </div>
-                  </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Coluna lateral */}
+        <div className="space-y-4">
+          {/* Resumo do mês */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Status do mês</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg bg-emerald-950/30 p-2">
+                  <p className="text-lg font-bold text-emerald-400">{confirmedCount}</p>
+                  <p className="text-xs text-muted-foreground">Confirmadas</p>
                 </div>
+                <div className="rounded-lg bg-yellow-950/30 p-2">
+                  <p className="text-lg font-bold text-yellow-400">{pendingCount}</p>
+                  <p className="text-xs text-muted-foreground">Pendentes</p>
+                </div>
+                <div className="rounded-lg bg-secondary/50 p-2">
+                  <p className="text-lg font-bold">{sales.length}</p>
+                  <p className="text-xs text-muted-foreground">Total</p>
+                </div>
+              </div>
+              {pendingCount > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 w-full"
+                  onClick={() => reconfirmMut.mutate()}
+                  disabled={reconfirmMut.isPending}
+                >
+                  <RefreshCw className={cn("mr-2 h-3.5 w-3.5", reconfirmMut.isPending && "animate-spin")} />
+                  Re-verificar {pendingCount} pendente(s) no Hotmart
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Vendas de hoje */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Vendas de hoje</CardTitle>
+              <CardDescription>
+                {todaySales.length} venda(s) · {moneyEur(todayTotal)}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {todaySales.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nenhuma venda registrada hoje ainda.</p>
+              )}
+              {todaySales.map((s) => (
+                <SaleCard key={s.id} sale={s} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} />
               ))}
-              <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm">
-                <span className="text-muted-foreground">Total deste fechamento</span>
-                <span className="font-bold tabular-nums">
-                  {items.length} venda(s) · €{formTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>Observação</Label>
-              <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-            </div>
-            <div className="sm:col-span-2">
-              <Button type="submit" disabled={mutation.isPending} className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                {mutation.isPending ? "Salvando..." : `Registrar ${items.length} venda(s)`}
-              </Button>
-              <p className="mt-2 text-xs text-muted-foreground">
-                O fechamento do dia aceita registros até 23:59 (horário de Brasília).
-              </p>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Vendas de hoje</CardTitle>
-            <CardDescription>
-              {todaySales.length} venda(s) · €{todayTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {todaySales.length === 0 && (
-              <p className="text-sm text-muted-foreground">Nenhuma venda registrada hoje ainda.</p>
-            )}
-            {todaySales.map((s) => (
-              <div key={s.id} className="flex items-start gap-2 rounded-lg border border-border/50 bg-card/50 p-3">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
-                <div className="min-w-0 flex-1 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold">{s.seller_name.split(" ")[0]}</span>
-                    <span className="tabular-nums font-bold">€{Number(s.value_eur).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="truncate text-xs text-muted-foreground">{s.product}</div>
-                  <div className="truncate text-xs text-muted-foreground">{s.funnel}</div>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Vendas do mês</CardTitle>
-            <CardDescription>
-              {sales.length} venda(s) · €{monthTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {sales.length === 0 && (
-              <p className="text-sm text-muted-foreground">Nenhuma venda registrada neste mês.</p>
-            )}
-            {sales.map((s) => (
-              <div key={s.id} className="rounded-lg border border-border/50 bg-card/50 p-3 text-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold">{s.seller_name.split(" ")[0]}</span>
-                  <span className="tabular-nums font-bold">€{Number(s.value_eur).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="truncate text-xs text-muted-foreground">{fmtDate(s.sale_date)} · {s.product}</div>
-                <div className="truncate text-xs text-muted-foreground">{s.funnel}</div>
-                {(s.client_name || s.client_email) && (
-                  <div className="mt-1 truncate text-xs">
-                    <span className="text-muted-foreground">Cliente: </span>
-                    <span className="font-medium">{s.client_name || "—"}</span>
-                    {s.client_email && <span className="text-muted-foreground"> · {s.client_email}</span>}
-                  </div>
-                )}
-                {s.notes && <div className="mt-1 text-xs italic text-muted-foreground">"{s.notes}"</div>}
-                <div className="mt-2 flex gap-1">
-                  <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setEditing(s)}>
-                    <Pencil className="mr-1 h-3 w-3" /> Editar
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => setDeleting(s)}>
-                    <Trash2 className="mr-1 h-3 w-3" /> Apagar
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+          {/* Vendas do mês */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Vendas do mês</CardTitle>
+              <CardDescription>
+                {sales.length} venda(s) · {moneyEur(monthTotal)}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {sales.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nenhuma venda registrada neste mês.</p>
+              )}
+              {sales.map((s) => (
+                <SaleCard key={s.id} sale={s} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} />
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
 
-    <EditDialog sale={editing} onClose={() => setEditing(null)} />
+      <EditDialog sale={editing} onClose={() => setEditing(null)} />
 
-    <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Apagar venda?</AlertDialogTitle>
-          <AlertDialogDescription>
-            {deleting && (
-              <>Esta ação não pode ser desfeita. Venda de <b>{deleting.seller_name}</b> de €{Number(deleting.value_eur).toFixed(2)} em {fmtDate(deleting.sale_date)}.</>
-            )}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={() => deleting && delMutation.mutate(deleting.id)}
-          >
-            Apagar
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      {/* Dialog de confirmação manual */}
+      <Dialog open={!!confirmingId} onOpenChange={(o) => !o && setConfirmingId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Marcar status de confirmação</DialogTitle>
+            <DialogDescription>Escolha o status desta venda manualmente.</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            {(["confirmado_hotmart", "confirmado_wise", "nao_encontrado", "pendente"] as const).map((st) => (
+              <Button
+                key={st}
+                variant="outline"
+                className="justify-start"
+                onClick={() => confirmingId && confirmMut.mutate({ id: confirmingId, status: st })}
+              >
+                <ConfirmBadge status={st} />
+                <span className="ml-2 capitalize">{st.replace(/_/g, " ")}</span>
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar venda?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleting && (
+                <>Esta ação não pode ser desfeita. Venda de <b>{deleting.seller_name}</b> de {moneyEur(Number(deleting.value_eur))} em {fmtDate(deleting.sale_date)}.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleting && delMutation.mutate(deleting.id)}
+            >
+              Apagar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
+
+// ── Card de venda individual ─────────────────────────────────────────────────
+
+function SaleCard({ sale, onEdit, onDelete, onConfirm }: {
+  sale: SaleRow;
+  onEdit: () => void;
+  onDelete: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-border/50 bg-card/50 p-3 text-sm space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold">{sale.seller_name.split(" ")[0]}</span>
+            <span className="tabular-nums font-bold">{moneyEur(Number(sale.value_eur))}</span>
+            <ConfirmBadge status={sale.confirmation_status} />
+          </div>
+          <div className="text-xs text-muted-foreground truncate mt-0.5">{fmtDate(sale.sale_date)} · {sale.product}</div>
+          <div className="text-xs text-muted-foreground truncate">{sale.funnel}</div>
+          {(sale.client_name || sale.client_email) && (
+            <div className="mt-1 text-xs">
+              <span className="text-muted-foreground">Cliente: </span>
+              <span className="font-medium">{sale.client_name || "—"}</span>
+              {sale.client_email && <span className="text-muted-foreground"> · {sale.client_email}</span>}
+            </div>
+          )}
+          {/* Mostra o valor BRL confirmado no Hotmart */}
+          {sale.confirmation_status === "confirmado_hotmart" && sale.confirmed_hotmart_valor_brl && (
+            <div className="mt-1 flex items-center gap-1 text-xs text-emerald-400">
+              <CheckCheck className="h-3 w-3" />
+              Hotmart: {moneyBrl(sale.confirmed_hotmart_valor_brl)}
+            </div>
+          )}
+          {sale.notes && <div className="mt-1 text-xs italic text-muted-foreground">"{sale.notes}"</div>}
+        </div>
+      </div>
+      <div className="flex gap-1 flex-wrap">
+        <Button variant="ghost" size="sm" className="h-7 px-2" onClick={onEdit}>
+          <Pencil className="mr-1 h-3 w-3" /> Editar
+        </Button>
+        <Button variant="ghost" size="sm" className="h-7 px-2" onClick={onConfirm}>
+          <CheckCircle2 className="mr-1 h-3 w-3" /> Status
+        </Button>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-destructive hover:text-destructive" onClick={onDelete}>
+          <Trash2 className="mr-1 h-3 w-3" /> Apagar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Dialog de edição ─────────────────────────────────────────────────────────
 
 function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => void }) {
   const qc = useQueryClient();
@@ -414,7 +575,7 @@ function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => vo
         funnel: form!.funnel,
         value_eur: Number(String(form!.value_eur).replace(",", ".")),
         client_name: form!.client_name ?? undefined,
-        client_email: form!.client_email ?? undefined,
+        client_email: form!.client_email ?? "",
         sale_date: form!.sale_date,
         notes: form!.notes ?? undefined,
       },
@@ -422,7 +583,6 @@ function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => vo
     onSuccess: () => {
       toast.success("Venda atualizada");
       qc.invalidateQueries({ queryKey: ["manual-sales"] });
-      qc.invalidateQueries({ queryKey: ["clint-ranking"] });
       onClose();
     },
     onError: (e: any) => toast.error(String(e?.message ?? e)),
@@ -443,9 +603,7 @@ function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => vo
               <Label>Vendedor</Label>
               <Select value={form.seller_name} onValueChange={(v) => setForm({ ...form, seller_name: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {SELLERS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{SELLERS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
@@ -456,18 +614,14 @@ function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => vo
               <Label>Produto</Label>
               <Select value={form.product} onValueChange={(v) => setForm({ ...form, product: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Funil</Label>
               <Select value={form.funnel} onValueChange={(v) => setForm({ ...form, funnel: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {FUNNELS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{FUNNELS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
@@ -479,8 +633,9 @@ function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => vo
               <Input value={form.client_name ?? ""} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label>E-mail do cliente</Label>
-              <Input type="email" value={form.client_email ?? ""} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
+              <Label>E-mail do cliente *</Label>
+              <Input type="email" required value={form.client_email ?? ""} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
+              <EmailLookup email={form.client_email ?? ""} saleDate={form.sale_date} />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Observação</Label>
@@ -491,7 +646,7 @@ function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => vo
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button onClick={() => mut.mutate()} disabled={mut.isPending}>
-            {mut.isPending ? "Salvando..." : "Salvar"}
+            {mut.isPending ? "Salvando..." : "Salvar e re-verificar"}
           </Button>
         </DialogFooter>
       </DialogContent>
