@@ -298,18 +298,18 @@ function DestaqueCard({
 const MEDALS = ["🥇", "🥈", "🥉"];
 const ROW_CLASSES = ["rk-row-0","rk-row-1","rk-row-2","rk-row-3","rk-row-4","rk-row-5"] as const;
 
-function RankRow({ rank, seller, currency, hideRevenue }: { rank: number; seller: SellerStats; currency: string; hideRevenue?: boolean }) {
+function RankRow({ rank, displayRank, seller, currency, hideRevenue }: { rank: number; displayRank: number; seller: SellerStats; currency: string; hideRevenue?: boolean }) {
   const rowAnim = ROW_CLASSES[Math.min(rank, ROW_CLASSES.length - 1)];
   return (
     <div
       className={`${rowAnim} flex items-center justify-between rounded-xl border px-4 py-3 transition-all ${
-        rank === 0 ? "border-amber-400/25 bg-gradient-to-r from-amber-400/10 to-transparent"
-        : rank === 1 ? "border-slate-400/20 bg-gradient-to-r from-slate-400/5 to-transparent"
+        displayRank === 0 ? "border-amber-400/25 bg-gradient-to-r from-amber-400/10 to-transparent"
+        : displayRank === 1 ? "border-slate-400/20 bg-gradient-to-r from-slate-400/5 to-transparent"
         : "border-border/50 bg-card/50"
       }`}
     >
       <div className="flex items-center gap-3">
-        <div className="w-8 text-center text-xl">{MEDALS[rank] ?? `#${rank + 1}`}</div>
+        <div className="w-8 text-center text-xl">{MEDALS[displayRank] ?? `#${displayRank + 1}`}</div>
         <SellerAvatar name={seller.name} size="sm" />
         <div>
           <div className="text-sm font-semibold">{seller.name.split(" ")[0]}</div>
