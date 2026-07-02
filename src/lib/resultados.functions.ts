@@ -168,19 +168,18 @@ export const fetchMonthlyOverridesFn = createServerFn({ method: "GET" })
   });
 
 export const saveMonthlyOverrideFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d: { bloco: string; periodo: string; indicador: string; valor_brl: number }) => {
     if (!d.bloco || !d.periodo || !d.indicador) throw new Error("Campos obrigatórios");
     return d;
   })
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("bi_monthly_overrides").upsert(
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { error } = await db.from("bi_monthly_overrides").upsert(
       {
         bloco: data.bloco,
         periodo: data.periodo,
         indicador: data.indicador,
         valor_brl: data.valor_brl,
-        updated_by: context.userId,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "bloco,periodo,indicador" },
@@ -191,7 +190,6 @@ export const saveMonthlyOverrideFn = createServerFn({ method: "POST" })
 
 // ── Save target (meta or distribuicao_pct) ─────────────────────────────────
 export const saveTargetFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d: {
     periodo: string;
     channel_id: string | null;
@@ -202,9 +200,8 @@ export const saveTargetFn = createServerFn({ method: "POST" })
     if (!d.periodo || !d.indicador) throw new Error("Campos obrigatórios");
     return d;
   })
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
     const db = await admin();
-    // Delete existing (single row per key) then insert. Simpler than upsert with COALESCE.
     let q = db.from("bi_targets").delete()
       .eq("granularidade", data.granularidade ?? "mensal")
       .eq("periodo", data.periodo)
@@ -213,7 +210,7 @@ export const saveTargetFn = createServerFn({ method: "POST" })
     else q = q.eq("channel_id", data.channel_id);
     await q.is("product_id", null);
 
-    const { error } = await context.supabase.from("bi_targets").insert({
+    const { error } = await db.from("bi_targets").insert({
       granularidade: data.granularidade ?? "mensal",
       periodo: data.periodo,
       channel_id: data.channel_id,
