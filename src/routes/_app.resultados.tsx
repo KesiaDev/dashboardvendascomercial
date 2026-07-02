@@ -854,6 +854,10 @@ function Resultados() {
     let masVendas = 0;
     for (const w of Object.values(salesByProductWeek.accelerator)) masVendas += w.vendas;
 
+    // ACC = Accelerator (produto 'ldp')
+    let accVendas = 0;
+    for (const w of Object.values(salesByProductWeek.ldp)) accVendas += w.vendas;
+
     const feMetaVendas = targetsByBloco.front_end.filter((t) => t.indicador === "vendas").reduce((s, t) => s + t.valor, 0);
     const htMetaVendas = targetsByBloco.high_ticket.filter((t) => t.indicador === "vendas").reduce((s, t) => s + t.valor, 0);
 
@@ -878,6 +882,7 @@ function Resultados() {
       feVendas, feMetaVendas, feFat,
       htVendas, htMetaVendas, htFat,
       masVendas, masMetaVendas: masMetaVendas || 500,
+      accVendas,
     };
   }, [blocoMonthData, overridesByBloco, salesByProductWeek, targetsByBloco, targets, year, leadsData]);
 
@@ -996,6 +1001,18 @@ function Resultados() {
                     value={ytd.htVendas}
                     color="#a16207"
                     widthPct={ytd.feVendas > 0 ? Math.max(15, (ytd.htVendas / ytd.feVendas) * 100 * 3) : 20}
+                  />
+                  <ConversionArrow
+                    label="High Ticket → ACC"
+                    from={ytd.htVendas}
+                    to={ytd.accVendas}
+                    metaPct={60}
+                  />
+                  <FunnelStep
+                    label="ACC (Accelerator)"
+                    value={ytd.accVendas}
+                    color="#06b6d4"
+                    widthPct={ytd.htVendas > 0 ? Math.max(10, (ytd.accVendas / ytd.htVendas) * 100) : 15}
                   />
                 </div>
               </CardContent>
