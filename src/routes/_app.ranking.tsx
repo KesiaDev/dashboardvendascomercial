@@ -186,37 +186,48 @@ function Podium({ top3, currency, hideRevenue }: { top3: SellerStats[]; currency
       </div>
 
       <div className="flex items-end justify-center gap-3">
-        {PODIUM.map(({ pos, delayClass, badgeClass, emoji }) => {
-          const seller = top3[pos - 1];
-          if (!seller) return null;
-          return (
-            <div
-              key={pos}
-              className={`rk-podium-item rk-podium-order-${pos} ${delayClass} ${show ? "rk-show" : ""} flex flex-col items-center gap-3`}
-            >
-              <div className="relative flex flex-col items-center gap-1">
-                {pos === 1 && <span className="rk-crown-pulse text-3xl">👑</span>}
-                <div className={pos === 1 ? "rk-avatar-glow" : ""}>
-                  <SellerAvatar name={seller.name} size={pos === 1 ? "xl" : "lg"} />
+        {(() => {
+          const podiumRanks = computeRanks(top3);
+          const crownedIdx = podiumRanks.reduce<number[]>((acc, r, i) => (r === 0 ? [...acc, i] : acc), []);
+          return PODIUM.map(({ pos, delayClass }) => {
+            const idx = pos - 1;
+            const seller = top3[idx];
+            if (!seller) return null;
+            const displayRank = podiumRanks[idx];
+            const isChampion = displayRank === 0;
+            const emoji = PODIUM_EMOJI[displayRank] ?? "🏅";
+            const badgeClass = PODIUM_BADGE[displayRank] ?? "rk-badge-3";
+            return (
+              <div
+                key={pos}
+                className={`rk-podium-item rk-podium-order-${pos} ${delayClass} ${show ? "rk-show" : ""} flex flex-col items-center gap-3`}
+              >
+                <div className="relative flex flex-col items-center gap-1">
+                  {isChampion && <span className="rk-crown-pulse text-3xl">👑</span>}
+                  <div className={isChampion ? "rk-avatar-glow" : ""}>
+                    <SellerAvatar name={seller.name} size={isChampion ? "xl" : "lg"} />
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-sm font-bold text-white">{seller.name.split(" ")[0]}</p>
+                  {!hideRevenue && (
+                    <p className={`text-xs font-semibold tabular-nums ${displayRank === 0 ? "text-amber-300" : displayRank === 1 ? "text-slate-300" : "text-orange-400"}`}>
+                      {formatCurrency(seller.revenue, currency)}
+                    </p>
+                  )}
+                  <p className="text-xs text-white/40">
+                    {seller.won} vendas{crownedIdx.length > 1 && isChampion ? " · empate" : ""}
+                  </p>
+                </div>
+
+                <div className={`rk-pedestal-${pos} w-24 rounded-t-2xl flex items-center justify-center text-3xl font-black`}>
+                  <span className={badgeClass}>{emoji}</span>
                 </div>
               </div>
-
-              <div className="text-center">
-                <p className="text-sm font-bold text-white">{seller.name.split(" ")[0]}</p>
-                {!hideRevenue && (
-                  <p className={`text-xs font-semibold tabular-nums ${pos === 1 ? "text-amber-300" : pos === 2 ? "text-slate-300" : "text-orange-400"}`}>
-                    {formatCurrency(seller.revenue, currency)}
-                  </p>
-                )}
-                <p className="text-xs text-white/40">{seller.won} vendas</p>
-              </div>
-
-              <div className={`rk-pedestal-${pos} w-24 rounded-t-2xl flex items-center justify-center text-3xl font-black`}>
-                <span className={badgeClass}>{emoji}</span>
-              </div>
-            </div>
-          );
-        })}
+            );
+          });
+        })()}
       </div>
     </div>
   );
