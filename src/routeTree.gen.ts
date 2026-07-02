@@ -17,8 +17,8 @@ import { Route as AppProdutividadeRouteImport } from './routes/_app.produtividad
 import { Route as AppImportRouteImport } from './routes/_app.import'
 import { Route as AppFechamentoRouteImport } from './routes/_app.fechamento'
 import { Route as AppExecutivoRouteImport } from './routes/_app.executivo'
-import { Route as AppComercialRouteImport } from './routes/_app.comercial'
 import { Route as AppComissionamentoRouteImport } from './routes/_app.comissionamento'
+import { Route as AppComercialRouteImport } from './routes/_app.comercial'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
@@ -62,14 +62,14 @@ const AppExecutivoRoute = AppExecutivoRouteImport.update({
   path: '/executivo',
   getParentRoute: () => AppRoute,
 } as any)
-const AppComercialRoute = AppComercialRouteImport.update({
-  id: '/comercial',
-  path: '/comercial',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppComissionamentoRoute = AppComissionamentoRouteImport.update({
   id: '/comissionamento',
   path: '/comissionamento',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppComercialRoute = AppComercialRouteImport.update({
+  id: '/comercial',
+  path: '/comercial',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAreasRoute = AppAreasRouteImport.update({
@@ -241,18 +241,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppExecutivoRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/comercial': {
-      id: '/_app/comercial'
-      path: '/comercial'
-      fullPath: '/comercial'
-      preLoaderRoute: typeof AppComercialRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/comissionamento': {
       id: '/_app/comissionamento'
       path: '/comissionamento'
       fullPath: '/comissionamento'
       preLoaderRoute: typeof AppComissionamentoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/comercial': {
+      id: '/_app/comercial'
+      path: '/comercial'
+      fullPath: '/comercial'
+      preLoaderRoute: typeof AppComercialRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/areas': {
