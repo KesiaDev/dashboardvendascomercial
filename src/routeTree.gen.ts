@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppVendedorProdutoRouteImport } from './routes/_app.vendedor-produto'
+import { Route as AppResultadosRouteImport } from './routes/_app.resultados'
 import { Route as AppRankingRouteImport } from './routes/_app.ranking'
 import { Route as AppProdutividadeRouteImport } from './routes/_app.produtividade'
 import { Route as AppImportRouteImport } from './routes/_app.import'
@@ -19,7 +20,6 @@ import { Route as AppFechamentoRouteImport } from './routes/_app.fechamento'
 import { Route as AppExecutivoRouteImport } from './routes/_app.executivo'
 import { Route as AppComissionamentoRouteImport } from './routes/_app.comissionamento'
 import { Route as AppComercialRouteImport } from './routes/_app.comercial'
-import { Route as AppResultadosRouteImport } from './routes/_app.resultados'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
@@ -36,6 +36,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppVendedorProdutoRoute = AppVendedorProdutoRouteImport.update({
   id: '/vendedor-produto',
   path: '/vendedor-produto',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppResultadosRoute = AppResultadosRouteImport.update({
+  id: '/resultados',
+  path: '/resultados',
   getParentRoute: () => AppRoute,
 } as any)
 const AppRankingRoute = AppRankingRouteImport.update({
@@ -71,11 +76,6 @@ const AppComissionamentoRoute = AppComissionamentoRouteImport.update({
 const AppComercialRoute = AppComercialRouteImport.update({
   id: '/comercial',
   path: '/comercial',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppResultadosRoute = AppResultadosRouteImport.update({
-  id: '/resultados',
-  path: '/resultados',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAreasRoute = AppAreasRouteImport.update({
@@ -218,18 +218,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppVendedorProdutoRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/ranking': {
-      id: '/_app/ranking'
-      path: '/ranking'
-      fullPath: '/ranking'
-      preLoaderRoute: typeof AppRankingRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/resultados': {
       id: '/_app/resultados'
       path: '/resultados'
       fullPath: '/resultados'
       preLoaderRoute: typeof AppResultadosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ranking': {
+      id: '/_app/ranking'
+      path: '/ranking'
+      fullPath: '/ranking'
+      preLoaderRoute: typeof AppRankingRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/produtividade': {
