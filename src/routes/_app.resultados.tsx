@@ -226,10 +226,13 @@ function EditableCell({
         setDraft(String(value));
         setEditing(true);
       }}
-      className={`group inline-flex items-center gap-1 hover:text-primary transition-colors ${className ?? ""}`}
+      title="Clique para editar"
+      className={`group inline-flex items-center gap-1 rounded px-1 -mx-1 border-b border-dashed border-muted-foreground/30 hover:border-primary hover:bg-primary/5 hover:text-primary transition-colors ${className ?? ""}`}
     >
-      <span>{value > 0 ? format(value) : "—"}{suffix}</span>
-      <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60" />
+      <span className={value > 0 ? "" : "text-muted-foreground/60 italic"}>
+        {value > 0 ? format(value) : "editar"}{value > 0 ? suffix : ""}
+      </span>
+      <Pencil className="h-3 w-3 opacity-40 group-hover:opacity-90" />
     </button>
   );
 }
