@@ -14,7 +14,7 @@ import {
   type SaleResultado,
 } from "@/lib/resultados.functions";
 import { useCurrency } from "@/lib/currency-context";
-import { StrategicView } from "@/components/resultados/strategic-view";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -932,18 +932,6 @@ function Resultados() {
         <div className="flex items-center justify-center py-20 text-muted-foreground">Carregando dados…</div>
       ) : (
         <>
-          {/* ── Bloco 0: Visão Estratégica Anual (Planilha Metas 2026) ─── */}
-          <StrategicView
-            brlPerEur={brlPerEur}
-            realized={{
-              leads: ytd.leadsReal,
-              vendasFE: ytd.feVendas,
-              vendasHT: ytd.htVendas,
-              faturamentoBrl: ytd.feFat + ytd.htFat,
-              faturamentoFEBrl: ytd.feFat,
-              faturamentoHTBrl: ytd.htFat,
-            }}
-          />
 
           {/* ── Bloco 1: Dashboard YTD ────────────────────────────── */}
           <div>
