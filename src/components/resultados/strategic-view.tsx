@@ -318,20 +318,26 @@ export function StrategicView({
             label="Ticket Médio FE"
             realizado={
               realized.vendasFE > 0
-                ? format((realized.faturamentoBrl * 0) + (s.ticketFE * brlPerEur * 0)) || "—"
+                ? format(realized.faturamentoFEBrl / realized.vendasFE)
                 : "—"
             }
             meta={format(s.ticketFE * brlPerEur)}
-            attained={true}
-            note="ver /agente para calc real"
+            attained={
+              realized.vendasFE > 0 && realized.faturamentoFEBrl / realized.vendasFE >= s.ticketFE * brlPerEur
+            }
           />
           <PremissaCard
             icon={Wallet}
             label="Ticket Médio HT"
-            realizado="—"
+            realizado={
+              realized.vendasHT > 0
+                ? format(realized.faturamentoHTBrl / realized.vendasHT)
+                : "—"
+            }
             meta={format(s.ticketHT * brlPerEur)}
-            attained={true}
-            note="ver /agente para calc real"
+            attained={
+              realized.vendasHT > 0 && realized.faturamentoHTBrl / realized.vendasHT >= s.ticketHT * brlPerEur
+            }
           />
         </div>
       </div>
