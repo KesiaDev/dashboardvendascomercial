@@ -972,24 +972,32 @@ function Resultados() {
                 label="Leads captados"
                 realized={ytd.leadsReal}
                 meta={ytd.leadsMeta}
+                onEditMeta={(v) => handleSaveAnnual("ytd", "leads_meta", v)}
+                onEditRealized={(v) => handleSaveAnnual("ytd", "leads_real", v)}
               />
               <YtdKpiCard
                 icon={Target}
                 label="Front End (novas)"
                 realized={ytd.feVendas}
                 meta={ytd.feMetaVendas}
+                onEditMeta={(v) => handleSaveAnnual("ytd", "fe_vendas_meta", v)}
+                onEditRealized={(v) => handleSaveAnnual("ytd", "fe_vendas_real", v)}
               />
               <YtdKpiCard
                 icon={TrendingUp}
                 label="High Ticket (novas + renov.)"
                 realized={ytd.htVendas}
                 meta={ytd.htMetaVendas}
+                onEditMeta={(v) => handleSaveAnnual("ytd", "ht_vendas_meta", v)}
+                onEditRealized={(v) => handleSaveAnnual("ytd", "ht_vendas_real", v)}
               />
               <YtdKpiCard
                 icon={Sparkles}
                 label="Bilhetes M&S"
                 realized={ytd.masVendas}
                 meta={ytd.masMetaVendas}
+                onEditMeta={(v) => handleSaveAnnual("ytd", "mas_vendas_meta", v)}
+                onEditRealized={(v) => handleSaveAnnual("ytd", "mas_vendas_real", v)}
               />
             </div>
 
