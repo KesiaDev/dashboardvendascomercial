@@ -404,6 +404,10 @@ function MonthlyBlock({
         </div>
       </CardHeader>
       <CardContent className="p-0">
+        <div className="px-4 py-2 text-[11px] text-muted-foreground bg-muted/20 border-t border-border flex items-center gap-1.5">
+          <Pencil className="h-3 w-3" />
+          Clique em qualquer valor (Distribuição %, Meta, Realizado) para editar. Os <strong className="text-foreground">% de atingimento</strong> recalculam automaticamente.
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
