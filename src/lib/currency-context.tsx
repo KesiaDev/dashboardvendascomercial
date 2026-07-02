@@ -4,7 +4,7 @@ export type DisplayCurrency = "BRL" | "EUR";
 
 const RATE_KEY = "brl_per_eur_rate";
 const CUR_KEY = "display_currency";
-const DEFAULT_RATE = 6.32; // 1 EUR = X BRL (Planilha Metas 2026 — cotação 01/06/2026)
+const DEFAULT_RATE = 6.00; // 1 EUR = X BRL
 
 type Ctx = {
   currency: DisplayCurrency;
