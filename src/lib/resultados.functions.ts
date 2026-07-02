@@ -118,7 +118,6 @@ export const fetchWeeklyResultsFn = createServerFn({ method: "GET" })
   });
 
 export const saveWeeklyResultFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d: {
     product_id: string;
     week_start: string;
@@ -129,14 +128,14 @@ export const saveWeeklyResultFn = createServerFn({ method: "POST" })
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d.week_start)) throw new Error("Data inválida");
     return d;
   })
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("bi_weekly_results").upsert(
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { error } = await db.from("bi_weekly_results").upsert(
       {
         product_id: data.product_id,
         week_start: data.week_start,
         indicador: data.indicador,
         valor_brl: data.valor_brl,
-        updated_by: context.userId,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "product_id,week_start,indicador" },
