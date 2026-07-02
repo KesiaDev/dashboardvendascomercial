@@ -720,7 +720,7 @@ function WeeklyProductGrid({
 // ── Main component ──────────────────────────────────────────────────────────
 function Resultados() {
   const [year, setYear] = useState(new Date().getFullYear());
-  const { format } = useCurrency();
+  const { format, brlPerEur } = useCurrency();
   const qc = useQueryClient();
 
   const saveWeekly = useServerFn(saveWeeklyResultFn);
