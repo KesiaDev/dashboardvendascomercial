@@ -296,7 +296,7 @@ function FechamentoForm({ session }: { session: any }) {
                 <Label>Funil onde deu ganho *</Label>
                 <Select value={funnel} onValueChange={setFunnel}>
                   <SelectTrigger><SelectValue placeholder="Selecione o funil" /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-72">
                     {FUNNELS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                   </SelectContent>
                 </Select>
