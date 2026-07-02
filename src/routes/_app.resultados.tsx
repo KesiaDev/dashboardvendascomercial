@@ -932,10 +932,23 @@ function Resultados() {
         <div className="flex items-center justify-center py-20 text-muted-foreground">Carregando dados…</div>
       ) : (
         <>
+          {/* ── Bloco 0: Visão Estratégica Anual (Planilha Metas 2026) ─── */}
+          <StrategicView
+            brlPerEur={brlPerEur}
+            realized={{
+              leads: ytd.leadsReal,
+              vendasFE: ytd.feVendas,
+              vendasHT: ytd.htVendas,
+              faturamentoBrl: ytd.feFat + ytd.htFat,
+              faturamentoFEBrl: ytd.feFat,
+              faturamentoHTBrl: ytd.htFat,
+            }}
+          />
+
           {/* ── Bloco 1: Dashboard YTD ────────────────────────────── */}
           <div>
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-              Realizado YTD vs Meta anual
+              Realizado YTD vs Meta anual (detalhamento mensal editável)
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
               <YtdKpiCard
