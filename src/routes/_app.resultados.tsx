@@ -813,17 +813,21 @@ function Resultados() {
     return result;
   }, [targets, year]);
 
-  // ── Overrides por bloco
+  // ── Overrides por bloco (front_end / high_ticket / ytd / funil)
   const overridesByBloco = useMemo(() => {
     const result: Record<Bloco, Record<string, number>> = { front_end: {}, high_ticket: {} };
+    const ytdOv: Record<string, number> = {};
+    const funilOv: Record<string, number> = {};
     for (const o of overrides) {
       const d = new Date(o.periodo + "T00:00:00Z");
       if (d.getUTCFullYear() !== year) continue;
       const m = d.getUTCMonth();
       if (o.bloco === "front_end") result.front_end[`${o.indicador}:${m}`] = o.valor_brl;
       else if (o.bloco === "high_ticket") result.high_ticket[`${o.indicador}:${m}`] = o.valor_brl;
+      else if (o.bloco === "ytd") ytdOv[o.indicador] = o.valor_brl;
+      else if (o.bloco === "funil") funilOv[o.indicador] = o.valor_brl;
     }
-    return result;
+    return { ...result, ytd: ytdOv, funil: funilOv };
   }, [overrides, year]);
 
   // ── Weekly manual map
