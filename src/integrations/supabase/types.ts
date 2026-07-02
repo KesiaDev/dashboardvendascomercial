@@ -184,6 +184,36 @@ export type Database = {
         }
         Relationships: []
       }
+      bi_monthly_overrides: {
+        Row: {
+          bloco: string
+          id: number
+          indicador: string
+          periodo: string
+          updated_at: string
+          updated_by: string | null
+          valor_brl: number
+        }
+        Insert: {
+          bloco: string
+          id?: never
+          indicador: string
+          periodo: string
+          updated_at?: string
+          updated_by?: string | null
+          valor_brl?: number
+        }
+        Update: {
+          bloco?: string
+          id?: never
+          indicador?: string
+          periodo?: string
+          updated_at?: string
+          updated_by?: string | null
+          valor_brl?: number
+        }
+        Relationships: []
+      }
       bi_pipeline_areas: {
         Row: {
           area: string
@@ -365,6 +395,36 @@ export type Database = {
           tarefas?: number
           user_name?: string
           whatsapp?: number
+        }
+        Relationships: []
+      }
+      bi_weekly_results: {
+        Row: {
+          id: number
+          indicador: string
+          product_id: string
+          updated_at: string
+          updated_by: string | null
+          valor_brl: number
+          week_start: string
+        }
+        Insert: {
+          id?: never
+          indicador: string
+          product_id: string
+          updated_at?: string
+          updated_by?: string | null
+          valor_brl?: number
+          week_start: string
+        }
+        Update: {
+          id?: never
+          indicador?: string
+          product_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          valor_brl?: number
+          week_start?: string
         }
         Relationships: []
       }
