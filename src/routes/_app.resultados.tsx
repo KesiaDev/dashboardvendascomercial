@@ -854,6 +854,10 @@ function Resultados() {
     let masVendas = 0;
     for (const w of Object.values(salesByProductWeek.accelerator)) masVendas += w.vendas;
 
+    // ACC = Accelerator (produto 'ldp')
+    let accVendas = 0;
+    for (const w of Object.values(salesByProductWeek.ldp)) accVendas += w.vendas;
+
     const feMetaVendas = targetsByBloco.front_end.filter((t) => t.indicador === "vendas").reduce((s, t) => s + t.valor, 0);
     const htMetaVendas = targetsByBloco.high_ticket.filter((t) => t.indicador === "vendas").reduce((s, t) => s + t.valor, 0);
 
@@ -878,6 +882,7 @@ function Resultados() {
       feVendas, feMetaVendas, feFat,
       htVendas, htMetaVendas, htFat,
       masVendas, masMetaVendas: masMetaVendas || 500,
+      accVendas,
     };
   }, [blocoMonthData, overridesByBloco, salesByProductWeek, targetsByBloco, targets, year, leadsData]);
 
