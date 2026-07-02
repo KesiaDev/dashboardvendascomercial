@@ -19,6 +19,7 @@ import { Route as AppFechamentoRouteImport } from './routes/_app.fechamento'
 import { Route as AppExecutivoRouteImport } from './routes/_app.executivo'
 import { Route as AppComissionamentoRouteImport } from './routes/_app.comissionamento'
 import { Route as AppComercialRouteImport } from './routes/_app.comercial'
+import { Route as AppResultadosRouteImport } from './routes/_app.resultados'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
@@ -72,6 +73,11 @@ const AppComercialRoute = AppComercialRouteImport.update({
   path: '/comercial',
   getParentRoute: () => AppRoute,
 } as any)
+const AppResultadosRoute = AppResultadosRouteImport.update({
+  id: '/resultados',
+  path: '/resultados',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAreasRoute = AppAreasRouteImport.update({
   id: '/areas',
   path: '/areas',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/import': typeof AppImportRoute
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
+  '/resultados': typeof AppResultadosRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/import': typeof AppImportRoute
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
+  '/resultados': typeof AppResultadosRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/': typeof AppIndexRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/_app/import': typeof AppImportRoute
   '/_app/produtividade': typeof AppProdutividadeRoute
   '/_app/ranking': typeof AppRankingRoute
+  '/_app/resultados': typeof AppResultadosRoute
   '/_app/vendedor-produto': typeof AppVendedorProdutoRoute
   '/_app/': typeof AppIndexRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/import'
     | '/produtividade'
     | '/ranking'
+    | '/resultados'
     | '/vendedor-produto'
     | '/api/public/sync/trigger'
   fileRoutesByTo: FileRoutesByTo
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/import'
     | '/produtividade'
     | '/ranking'
+    | '/resultados'
     | '/vendedor-produto'
     | '/'
     | '/api/public/sync/trigger'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/_app/import'
     | '/_app/produtividade'
     | '/_app/ranking'
+    | '/_app/resultados'
     | '/_app/vendedor-produto'
     | '/_app/'
     | '/api/public/sync/trigger'
@@ -211,6 +223,13 @@ declare module '@tanstack/react-router' {
       path: '/ranking'
       fullPath: '/ranking'
       preLoaderRoute: typeof AppRankingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/resultados': {
+      id: '/_app/resultados'
+      path: '/resultados'
+      fullPath: '/resultados'
+      preLoaderRoute: typeof AppResultadosRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/produtividade': {
@@ -289,6 +308,7 @@ interface AppRouteChildren {
   AppImportRoute: typeof AppImportRoute
   AppProdutividadeRoute: typeof AppProdutividadeRoute
   AppRankingRoute: typeof AppRankingRoute
+  AppResultadosRoute: typeof AppResultadosRoute
   AppVendedorProdutoRoute: typeof AppVendedorProdutoRoute
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -303,6 +323,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppImportRoute: AppImportRoute,
   AppProdutividadeRoute: AppProdutividadeRoute,
   AppRankingRoute: AppRankingRoute,
+  AppResultadosRoute: AppResultadosRoute,
   AppVendedorProdutoRoute: AppVendedorProdutoRoute,
   AppIndexRoute: AppIndexRoute,
 }
