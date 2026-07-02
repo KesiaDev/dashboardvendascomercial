@@ -1013,7 +1013,8 @@ function Resultados() {
                     label={`Lead → Front End`}
                     from={ytd.leadsReal}
                     to={ytd.feVendas}
-                    metaPct={2.12}
+                    metaPct={ytd.metaPctLeadFe}
+                    onEditMeta={(v) => handleSaveAnnual("funil", "lead_fe_pct", v)}
                   />
                   <FunnelStep
                     label="Front End (novas vendas)"
@@ -1025,7 +1026,8 @@ function Resultados() {
                     label={`Front End → High Ticket`}
                     from={ytd.feVendas}
                     to={ytd.htVendas}
-                    metaPct={13.6}
+                    metaPct={ytd.metaPctFeHt}
+                    onEditMeta={(v) => handleSaveAnnual("funil", "fe_ht_pct", v)}
                   />
                   <FunnelStep
                     label="High Ticket (novas + renovações)"
@@ -1037,7 +1039,8 @@ function Resultados() {
                     label="High Ticket → ACC"
                     from={ytd.htVendas}
                     to={ytd.accVendas}
-                    metaPct={60}
+                    metaPct={ytd.metaPctHtAcc}
+                    onEditMeta={(v) => handleSaveAnnual("funil", "ht_acc_pct", v)}
                   />
                   <FunnelStep
                     label="ACC (Accelerator)"
