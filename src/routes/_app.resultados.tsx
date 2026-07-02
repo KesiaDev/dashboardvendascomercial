@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { fetchTargets } from "@/lib/bi";
 import { fetchSalesResultadosFn, type SaleResultado } from "@/lib/resultados.functions";
+import { useCurrency } from "@/lib/currency-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp } from "lucide-react";
@@ -57,10 +58,6 @@ type MonthData = {
   faturamento: number;
 };
 
-function fmtBrl(v: number): string {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-}
-
 function pct(real: number, meta: number): number {
   if (meta === 0) return real > 0 ? 100 : 0;
   return Math.round((real / meta) * 100);
@@ -77,11 +74,13 @@ function ChannelCard({
   monthData,
   targets,
   year,
+  format,
 }: {
   channel: (typeof CHANNELS)[0];
   monthData: Record<number, MonthData>;
   targets: { month: number; indicador: string; valor: number }[];
   year: number;
+  format: (v: number | null | undefined) => string;
 }) {
   const currentMonth = new Date().getFullYear() === year ? new Date().getMonth() : 11;
 
@@ -107,7 +106,7 @@ function ChannelCard({
           </div>
           <div className="text-right text-sm">
             <div className="font-semibold">{totalVendasReal} vendas</div>
-            <div className="text-muted-foreground">{fmtBrl(totalFatReal)}</div>
+            <div className="text-muted-foreground">{format(totalFatReal)}</div>
           </div>
         </div>
       </CardHeader>
@@ -144,8 +143,8 @@ function ChannelCard({
                     <td className="px-3 py-2 text-center">
                       {!isFuture && vMeta > 0 ? <PctBadge p={vPct} /> : <span className="text-muted-foreground text-xs">—</span>}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{data.faturamento > 0 ? fmtBrl(data.faturamento) : "—"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fMeta > 0 ? fmtBrl(fMeta) : "—"}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{data.faturamento > 0 ? format(data.faturamento) : "—"}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fMeta > 0 ? format(fMeta) : "—"}</td>
                     <td className="px-3 py-2 text-center">
                       {!isFuture && fMeta > 0 ? <PctBadge p={fPct} /> : <span className="text-muted-foreground text-xs">—</span>}
                     </td>
@@ -161,8 +160,8 @@ function ChannelCard({
                 <td className="px-3 py-2 text-center">
                   {totalVendasMeta > 0 ? <PctBadge p={pct(totalVendasReal, totalVendasMeta)} /> : <span className="text-muted-foreground text-xs">—</span>}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums">{totalFatReal > 0 ? fmtBrl(totalFatReal) : "—"}</td>
-                <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{totalFatMeta > 0 ? fmtBrl(totalFatMeta) : "—"}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{totalFatReal > 0 ? format(totalFatReal) : "—"}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{totalFatMeta > 0 ? format(totalFatMeta) : "—"}</td>
                 <td className="px-3 py-2 text-center">
                   {totalFatMeta > 0 ? <PctBadge p={pct(totalFatReal, totalFatMeta)} /> : <span className="text-muted-foreground text-xs">—</span>}
                 </td>
@@ -177,6 +176,7 @@ function ChannelCard({
 
 function Resultados() {
   const [year, setYear] = useState(new Date().getFullYear());
+  const { format } = useCurrency();
 
   const { data: rawSales = [], isLoading: loadingSales } = useQuery({
     queryKey: ["resultados_sales", year],
@@ -273,6 +273,7 @@ function Resultados() {
               monthData={channelMonthData[ch.id]}
               targets={channelTargets[ch.id]}
               year={year}
+              format={format}
             />
           ))}
         </div>
