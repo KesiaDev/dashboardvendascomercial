@@ -57,15 +57,25 @@ const RENOVACAO_GROUPS = new Set(["renov_mentoria", "renov_acc", "renov_tm"]);
 
 type ProductId = "fgrs" | "igt" | "mse" | "wgt" | "wfgrs" | "ldp" | "accelerator";
 
-const PRODUCTS: { id: ProductId; label: string; sublabel: string }[] = [
-  { id: "fgrs", label: "Formação (FGRS)", sublabel: "Formação Gestor Redes Sociais" },
-  { id: "igt", label: "Mentoria via Imersão (IGT)", sublabel: "MGT via IGT — SCK: igt*" },
-  { id: "mse", label: "Mentoria via Perpétuos (MSE)", sublabel: "E-book, Mini-curso, Sessão" },
-  { id: "wgt", label: "Mentoria via Webinar (WGT)", sublabel: "MGT residual" },
-  { id: "wfgrs", label: "Formação via Webinar (WFGRS)", sublabel: "Manual" },
-  { id: "ldp", label: "Accelerator via Live (LDP)", sublabel: "Programa Accelerator" },
-  { id: "accelerator", label: "Master and Scale", sublabel: "Bilhetes M&S" },
+const PRODUCTS: { id: ProductId; label: string; sublabel: string; accent: string; headerBg: string; rowBg: string; text: string }[] = [
+  { id: "fgrs", label: "Formação (FGRS)", sublabel: "Formação Gestor Redes Sociais", accent: "bg-blue-500", headerBg: "bg-blue-50/80 dark:bg-blue-900/25", rowBg: "bg-blue-50/50 dark:bg-blue-900/12", text: "text-blue-600" },
+  { id: "igt", label: "Mentoria via Imersão (IGT)", sublabel: "MGT via IGT — SCK: igt*", accent: "bg-violet-500", headerBg: "bg-violet-50/80 dark:bg-violet-900/25", rowBg: "bg-violet-50/50 dark:bg-violet-900/12", text: "text-violet-600" },
+  { id: "mse", label: "Mentoria via Perpétuos (MSE)", sublabel: "E-book, Mini-curso, Sessão", accent: "bg-emerald-500", headerBg: "bg-emerald-50/80 dark:bg-emerald-900/25", rowBg: "bg-emerald-50/50 dark:bg-emerald-900/12", text: "text-emerald-600" },
+  { id: "wgt", label: "Mentoria via Webinar (WGT)", sublabel: "MGT residual", accent: "bg-amber-500", headerBg: "bg-amber-50/80 dark:bg-amber-900/25", rowBg: "bg-amber-50/50 dark:bg-amber-900/12", text: "text-amber-600" },
+  { id: "wfgrs", label: "Formação via Webinar (WFGRS)", sublabel: "Manual", accent: "bg-pink-500", headerBg: "bg-pink-50/80 dark:bg-pink-900/25", rowBg: "bg-pink-50/50 dark:bg-pink-900/12", text: "text-pink-600" },
+  { id: "ldp", label: "Accelerator via Live (LDP)", sublabel: "Programa Accelerator", accent: "bg-cyan-500", headerBg: "bg-cyan-50/80 dark:bg-cyan-900/25", rowBg: "bg-cyan-50/50 dark:bg-cyan-900/12", text: "text-cyan-600" },
+  { id: "accelerator", label: "Master and Scale", sublabel: "Bilhetes M&S", accent: "bg-orange-500", headerBg: "bg-orange-50/80 dark:bg-orange-900/25", rowBg: "bg-orange-50/50 dark:bg-orange-900/12", text: "text-orange-600" },
 ];
+
+const PRODUCT_HEX: Record<ProductId, string> = {
+  fgrs: "#3b82f6",
+  igt: "#8b5cf6",
+  mse: "#10b981",
+  wgt: "#f59e0b",
+  wfgrs: "#ec4899",
+  ldp: "#06b6d4",
+  accelerator: "#f97316",
+};
 
 function isApproved(status: string) {
   const s = (status ?? "").toLowerCase();
@@ -589,113 +599,120 @@ function WeeklyProductGrid({
   const today = new Date();
   const todayMonday = mondayOf(today);
   const currentWeekIdx = weeks.findIndex((w) => w >= todayMonday);
-  const visibleWeeks = weeks; // show all
+  const rowsForProduct = [
+    { key: "faturamento_total", label: "Faturamento Total", manual: true, fmt: format },
+    { key: "faturamento_comercial", label: "Faturamento Comercial", manual: false, fmt: format },
+    { key: "vendas_total", label: "Vendas Total", manual: true, fmt: (v: number) => v.toLocaleString("pt-BR") },
+    { key: "vendas_comercial", label: "Vendas Comercial", manual: false, fmt: (v: number) => v.toLocaleString("pt-BR") },
+  ];
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Resultado semanal por produto ({year})
-            </CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Faturamento/Vendas <strong>Total</strong> = manual (você digita) · <strong>Comercial</strong> = automático do Clint (afiliado ou origem)
-            </p>
-          </div>
+    <div className="space-y-8">
+      <div className="flex items-start gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+          <Package className="h-5 w-5" />
         </div>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-t border-border bg-muted/40 sticky top-0">
-                <th className="px-3 py-2 text-left font-medium text-muted-foreground min-w-[200px] sticky left-0 bg-muted/40 z-10">
-                  Produto / Indicador
-                </th>
-                {visibleWeeks.map((w, i) => (
-                  <th
-                    key={w}
-                    className={`px-2 py-2 text-right font-medium text-muted-foreground min-w-[80px] ${
-                      currentWeekIdx === i ? "bg-primary/10 text-primary" : ""
-                    }`}
-                  >
-                    {formatWeekLabel(w)}
-                  </th>
-                ))}
-                <th className="px-3 py-2 text-right font-medium text-muted-foreground bg-muted/60 min-w-[100px]">
-                  Total
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {PRODUCTS.map((prod) => {
-                const rowsForProduct = [
-                  { key: "faturamento_total", label: "Faturamento Total", manual: true, fmt: format },
-                  { key: "faturamento_comercial", label: "Faturamento Comercial", manual: false, fmt: format },
-                  { key: "vendas_total", label: "Vendas Total", manual: true, fmt: (v: number) => v.toLocaleString("pt-BR") },
-                  { key: "vendas_comercial", label: "Vendas Comercial", manual: false, fmt: (v: number) => v.toLocaleString("pt-BR") },
-                ];
-                return (
-                  <>
-                    <tr key={`${prod.id}-header`} className="border-t-2 border-border bg-muted/30">
-                      <td className="px-3 py-2 font-semibold text-sm sticky left-0 bg-muted/30" colSpan={visibleWeeks.length + 2}>
-                        {prod.label} <span className="text-muted-foreground font-normal text-xs">· {prod.sublabel}</span>
-                      </td>
-                    </tr>
-                    {rowsForProduct.map((row) => {
-                      let rowTotal = 0;
-                      return (
-                        <tr key={`${prod.id}-${row.key}`} className="border-t border-border/40 hover:bg-muted/20">
-                          <td className={`px-3 py-1.5 sticky left-0 bg-background text-xs ${row.manual ? "font-medium" : "text-muted-foreground"}`}>
-                            {row.label}
-                            {row.manual && <Pencil className="inline h-2.5 w-2.5 ml-1 opacity-40" />}
-                          </td>
-                          {visibleWeeks.map((w, i) => {
-                            let value = 0;
-                            if (row.manual) {
-                              value = weeklyManual[`${prod.id}:${w}:${row.key}`] ?? 0;
-                            } else if (row.key === "faturamento_comercial") {
-                              value = salesByProductWeek[prod.id]?.[w]?.faturamento ?? 0;
-                            } else if (row.key === "vendas_comercial") {
-                              value = salesByProductWeek[prod.id]?.[w]?.vendas ?? 0;
-                            }
-                            rowTotal += value;
-                            const isCurrent = currentWeekIdx === i;
-                            return (
-                              <td
-                                key={w}
-                                className={`px-2 py-1 text-right tabular-nums ${isCurrent ? "bg-primary/5" : ""}`}
-                              >
-                                {row.manual ? (
-                                  <EditableCell
-                                    value={value}
-                                    onSave={(v) => onSaveWeekly(prod.id, w, row.key, v)}
-                                    format={row.fmt}
-                                  />
-                                ) : value > 0 ? (
-                                  row.fmt(value)
-                                ) : (
-                                  <span className="text-muted-foreground/40">—</span>
-                                )}
-                              </td>
-                            );
-                          })}
-                          <td className="px-3 py-1 text-right font-semibold bg-muted/40 tabular-nums">
-                            {rowTotal > 0 ? row.fmt(rowTotal) : "—"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </>
-                );
-              })}
-            </tbody>
-          </table>
+        <div>
+          <h3 className="text-lg font-semibold">Resultado semanal por produto ({year})</h3>
+          <p className="text-sm text-muted-foreground max-w-3xl">
+            Faturamento/Vendas <strong>Total</strong> = manual (você digita) ·{" "}
+            <strong>Comercial</strong> = automático do Clint (afiliado ou origem)
+          </p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {PRODUCTS.map((prod) => (
+        <Card key={prod.id} className="overflow-hidden shadow-sm" style={{ borderTop: `4px solid ${PRODUCT_HEX[prod.id]}` }}>
+          <CardHeader className={`pb-3 ${prod.headerBg}`}>
+            <div className="flex items-center gap-3">
+              <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm ${prod.accent}`}>
+                <Package className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <CardTitle className={`text-base truncate ${prod.text}`}>{prod.label}</CardTitle>
+                <p className="text-xs text-muted-foreground truncate">{prod.sublabel}</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground min-w-[200px] sticky left-0 bg-muted/30 z-10">
+                      Indicador
+                    </th>
+                    {weeks.map((w, i) => (
+                      <th
+                        key={w}
+                        className={`px-3 py-3 text-right font-medium text-muted-foreground min-w-[90px] ${
+                          currentWeekIdx === i ? `${prod.rowBg} text-foreground` : ""
+                        }`}
+                      >
+                        {formatWeekLabel(w)}
+                      </th>
+                    ))}
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground bg-muted/50 min-w-[110px] sticky right-0 z-10">
+                      Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rowsForProduct.map((row) => {
+                    let rowTotal = 0;
+                    return (
+                      <tr key={row.key} className={`border-b border-border/40 last:border-b-0 ${row.manual ? prod.rowBg : "hover:bg-muted/20"}`}>
+                        <td
+                          className={`px-4 py-2.5 sticky left-0 z-10 text-xs font-medium ${
+                            row.manual ? `text-foreground ${prod.rowBg}` : "text-muted-foreground bg-background"
+                          }`}
+                        >
+                          {row.label}
+                          {row.manual && <Pencil className="inline h-3 w-3 ml-1.5 opacity-50" />}
+                        </td>
+                        {weeks.map((w, i) => {
+                          let value = 0;
+                          if (row.manual) {
+                            value = weeklyManual[`${prod.id}:${w}:${row.key}`] ?? 0;
+                          } else if (row.key === "faturamento_comercial") {
+                            value = salesByProductWeek[prod.id]?.[w]?.faturamento ?? 0;
+                          } else if (row.key === "vendas_comercial") {
+                            value = salesByProductWeek[prod.id]?.[w]?.vendas ?? 0;
+                          }
+                          rowTotal += value;
+                          const isCurrent = currentWeekIdx === i;
+                          return (
+                            <td
+                              key={w}
+                              className={`px-3 py-2.5 text-right tabular-nums ${isCurrent ? prod.rowBg : ""}`}
+                            >
+                              {row.manual ? (
+                                <EditableCell
+                                  value={value}
+                                  onSave={(v) => onSaveWeekly(prod.id, w, row.key, v)}
+                                  format={row.fmt}
+                                />
+                              ) : value > 0 ? (
+                                row.fmt(value)
+                              ) : (
+                                <span className="text-muted-foreground/40">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="px-4 py-2.5 text-right font-semibold bg-muted/40 tabular-nums sticky right-0 z-10 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">
+                          {rowTotal > 0 ? row.fmt(rowTotal) : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }
 
@@ -889,7 +906,7 @@ function Resultados() {
   const isLoading = salesQ.isLoading || targetsQ.isLoading || weeklyQ.isLoading || overridesQ.isLoading;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
@@ -919,7 +936,7 @@ function Resultados() {
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
               Realizado YTD vs Meta anual
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
               <YtdKpiCard
                 icon={Users}
                 label="Leads captados"
