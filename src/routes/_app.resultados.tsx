@@ -652,7 +652,7 @@ function WeeklyProductGrid({
                         {formatWeekLabel(w)}
                       </th>
                     ))}
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground bg-muted/50 min-w-[110px] sticky right-0 z-10">
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground bg-muted min-w-[110px] sticky right-0 z-10 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">
                       Total
                     </th>
                   </tr>
@@ -700,7 +700,7 @@ function WeeklyProductGrid({
                             </td>
                           );
                         })}
-                        <td className="px-4 py-2.5 text-right font-semibold bg-muted/40 tabular-nums sticky right-0 z-10 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">
+                        <td className="px-4 py-2.5 text-right font-semibold bg-muted tabular-nums sticky right-0 z-10 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">
                           {rowTotal > 0 ? row.fmt(rowTotal) : "—"}
                         </td>
                       </tr>
