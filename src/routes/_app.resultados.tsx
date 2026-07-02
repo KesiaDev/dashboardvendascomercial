@@ -226,10 +226,13 @@ function EditableCell({
         setDraft(String(value));
         setEditing(true);
       }}
-      className={`group inline-flex items-center gap-1 hover:text-primary transition-colors ${className ?? ""}`}
+      title="Clique para editar"
+      className={`group inline-flex items-center gap-1 rounded px-1 -mx-1 border-b border-dashed border-muted-foreground/30 hover:border-primary hover:bg-primary/5 hover:text-primary transition-colors ${className ?? ""}`}
     >
-      <span>{value > 0 ? format(value) : "—"}{suffix}</span>
-      <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60" />
+      <span className={value > 0 ? "" : "text-muted-foreground/60 italic"}>
+        {value > 0 ? format(value) : "editar"}{value > 0 ? suffix : ""}
+      </span>
+      <Pencil className="h-3 w-3 opacity-40 group-hover:opacity-90" />
     </button>
   );
 }
@@ -401,6 +404,10 @@ function MonthlyBlock({
         </div>
       </CardHeader>
       <CardContent className="p-0">
+        <div className="px-4 py-2 text-[11px] text-muted-foreground bg-muted/20 border-t border-border flex items-center gap-1.5">
+          <Pencil className="h-3 w-3" />
+          Clique em qualquer valor (Distribuição %, Meta, Realizado) para editar. Os <strong className="text-foreground">% de atingimento</strong> recalculam automaticamente.
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
