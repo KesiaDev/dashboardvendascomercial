@@ -14,6 +14,7 @@ import {
   type SaleResultado,
 } from "@/lib/resultados.functions";
 import { useCurrency } from "@/lib/currency-context";
+import { StrategicView } from "@/components/resultados/strategic-view";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
