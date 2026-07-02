@@ -18,6 +18,7 @@ import { Route as AppImportRouteImport } from './routes/_app.import'
 import { Route as AppFechamentoRouteImport } from './routes/_app.fechamento'
 import { Route as AppExecutivoRouteImport } from './routes/_app.executivo'
 import { Route as AppComercialRouteImport } from './routes/_app.comercial'
+import { Route as AppComissionamentoRouteImport } from './routes/_app.comissionamento'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
@@ -66,6 +67,11 @@ const AppComercialRoute = AppComercialRouteImport.update({
   path: '/comercial',
   getParentRoute: () => AppRoute,
 } as any)
+const AppComissionamentoRoute = AppComissionamentoRouteImport.update({
+  id: '/comissionamento',
+  path: '/comissionamento',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAreasRoute = AppAreasRouteImport.update({
   id: '/areas',
   path: '/areas',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/agente': typeof AppAgenteRoute
   '/areas': typeof AppAreasRoute
   '/comercial': typeof AppComercialRoute
+  '/comissionamento': typeof AppComissionamentoRoute
   '/executivo': typeof AppExecutivoRoute
   '/fechamento': typeof AppFechamentoRoute
   '/import': typeof AppImportRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/agente': typeof AppAgenteRoute
   '/areas': typeof AppAreasRoute
   '/comercial': typeof AppComercialRoute
+  '/comissionamento': typeof AppComissionamentoRoute
   '/executivo': typeof AppExecutivoRoute
   '/fechamento': typeof AppFechamentoRoute
   '/import': typeof AppImportRoute
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/_app/agente': typeof AppAgenteRoute
   '/_app/areas': typeof AppAreasRoute
   '/_app/comercial': typeof AppComercialRoute
+  '/_app/comissionamento': typeof AppComissionamentoRoute
   '/_app/executivo': typeof AppExecutivoRoute
   '/_app/fechamento': typeof AppFechamentoRoute
   '/_app/import': typeof AppImportRoute
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
     | '/agente'
     | '/areas'
     | '/comercial'
+    | '/comissionamento'
     | '/executivo'
     | '/fechamento'
     | '/import'
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/agente'
     | '/areas'
     | '/comercial'
+    | '/comissionamento'
     | '/executivo'
     | '/fechamento'
     | '/import'
@@ -156,6 +167,7 @@ export interface FileRouteTypes {
     | '/_app/agente'
     | '/_app/areas'
     | '/_app/comercial'
+    | '/_app/comissionamento'
     | '/_app/executivo'
     | '/_app/fechamento'
     | '/_app/import'
@@ -236,6 +248,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppComercialRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/comissionamento': {
+      id: '/_app/comissionamento'
+      path: '/comissionamento'
+      fullPath: '/comissionamento'
+      preLoaderRoute: typeof AppComissionamentoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/areas': {
       id: '/_app/areas'
       path: '/areas'
@@ -264,6 +283,7 @@ interface AppRouteChildren {
   AppAgenteRoute: typeof AppAgenteRoute
   AppAreasRoute: typeof AppAreasRoute
   AppComercialRoute: typeof AppComercialRoute
+  AppComissionamentoRoute: typeof AppComissionamentoRoute
   AppExecutivoRoute: typeof AppExecutivoRoute
   AppFechamentoRoute: typeof AppFechamentoRoute
   AppImportRoute: typeof AppImportRoute
@@ -277,6 +297,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAgenteRoute: AppAgenteRoute,
   AppAreasRoute: AppAreasRoute,
   AppComercialRoute: AppComercialRoute,
+  AppComissionamentoRoute: AppComissionamentoRoute,
   AppExecutivoRoute: AppExecutivoRoute,
   AppFechamentoRoute: AppFechamentoRoute,
   AppImportRoute: AppImportRoute,

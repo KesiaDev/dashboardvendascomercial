@@ -1,5 +1,5 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
-import { BarChart3, Bot, Upload, Users, LayoutGrid, Settings, ChartBar, Activity, Trophy, ClipboardCheck } from "lucide-react";
+import { BarChart3, Bot, Upload, Users, LayoutGrid, Settings, ChartBar, Activity, Trophy, ClipboardCheck, DollarSign } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import logoIcon from "@/assets/logo-icon.png";
@@ -27,6 +27,7 @@ function AppLayout() {
               <NavLink to="/produtividade" icon={<Activity className="h-4 w-4" />}>Produtividade</NavLink>
               <NavLink to="/vendedor-produto" icon={<ChartBar className="h-4 w-4" />}>Vendedor x Produto</NavLink>
               <NavLink to="/agente" icon={<Bot className="h-4 w-4" />}>Agente IA</NavLink>
+              <NavLink to="/comissionamento" icon={<DollarSign className="h-4 w-4" />} iconOnly />
               <NavLink to="/import" icon={<Upload className="h-4 w-4" />} iconOnly />
               <NavLink to="/areas" icon={<Settings className="h-4 w-4" />}>Áreas</NavLink>
             </nav>

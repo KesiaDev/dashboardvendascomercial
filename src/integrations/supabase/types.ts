@@ -599,6 +599,162 @@ export type Database = {
         }
         Relationships: []
       }
+      bi_commission_periods: {
+        Row: {
+          id: number
+          nome: string
+          data_inicio: string
+          data_fim: string
+          roleta_pool_brl: number
+          roleta_pool_eur: number
+          created_at: string
+        }
+        Insert: {
+          id?: never
+          nome: string
+          data_inicio: string
+          data_fim: string
+          roleta_pool_brl?: number
+          roleta_pool_eur?: number
+          created_at?: string
+        }
+        Update: {
+          id?: never
+          nome?: string
+          data_inicio?: string
+          data_fim?: string
+          roleta_pool_brl?: number
+          roleta_pool_eur?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      bi_seller_config: {
+        Row: {
+          seller_name: string
+          hotmart_affiliate_name: string | null
+          clint_user_name: string | null
+          moeda_padrao: string
+          is_active: boolean
+        }
+        Insert: {
+          seller_name: string
+          hotmart_affiliate_name?: string | null
+          clint_user_name?: string | null
+          moeda_padrao?: string
+          is_active?: boolean
+        }
+        Update: {
+          seller_name?: string
+          hotmart_affiliate_name?: string | null
+          clint_user_name?: string | null
+          moeda_padrao?: string
+          is_active?: boolean
+        }
+        Relationships: []
+      }
+      bi_commission_rates: {
+        Row: {
+          id: number
+          seller_name: string
+          produto_grupo: string
+          rate_pct: number
+          manager_rate_pct: number
+          effective_from: string
+        }
+        Insert: {
+          id?: never
+          seller_name: string
+          produto_grupo: string
+          rate_pct?: number
+          manager_rate_pct?: number
+          effective_from?: string
+        }
+        Update: {
+          id?: never
+          seller_name?: string
+          produto_grupo?: string
+          rate_pct?: number
+          manager_rate_pct?: number
+          effective_from?: string
+        }
+        Relationships: []
+      }
+      bi_wise_payments: {
+        Row: {
+          id: number
+          data_pagamento: string
+          cliente: string
+          valor_eur: number
+          cotacao_eur: number
+          valor_brl: number | null
+          descricao: string | null
+          seller_name: string | null
+          produto_grupo: string | null
+          period_id: number | null
+          importado_em: string
+        }
+        Insert: {
+          id?: never
+          data_pagamento: string
+          cliente: string
+          valor_eur: number
+          cotacao_eur?: number
+          valor_brl?: number | null
+          descricao?: string | null
+          seller_name?: string | null
+          produto_grupo?: string | null
+          period_id?: number | null
+          importado_em?: string
+        }
+        Update: {
+          id?: never
+          data_pagamento?: string
+          cliente?: string
+          valor_eur?: number
+          cotacao_eur?: number
+          valor_brl?: number | null
+          descricao?: string | null
+          seller_name?: string | null
+          produto_grupo?: string | null
+          period_id?: number | null
+          importado_em?: string
+        }
+        Relationships: []
+      }
+      bi_commission_bonuses: {
+        Row: {
+          id: number
+          period_id: number
+          seller_name: string
+          tipo: string
+          valor: number
+          moeda: string
+          notas: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: never
+          period_id: number
+          seller_name: string
+          tipo?: string
+          valor: number
+          moeda?: string
+          notas?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: never
+          period_id?: number
+          seller_name?: string
+          tipo?: string
+          valor?: number
+          moeda?: string
+          notas?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       weekly_imports: {
         Row: {
           created_at: string
