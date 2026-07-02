@@ -41,6 +41,119 @@ export type Database = {
         }
         Relationships: []
       }
+      bi_commission_bonuses: {
+        Row: {
+          created_at: string | null
+          id: number
+          moeda: string
+          notas: string | null
+          period_id: number
+          seller_name: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: never
+          moeda?: string
+          notas?: string | null
+          period_id: number
+          seller_name: string
+          tipo?: string
+          valor: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: never
+          moeda?: string
+          notas?: string | null
+          period_id?: number
+          seller_name?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bi_commission_bonuses_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "bi_commission_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bi_commission_bonuses_seller_name_fkey"
+            columns: ["seller_name"]
+            isOneToOne: false
+            referencedRelation: "bi_seller_config"
+            referencedColumns: ["seller_name"]
+          },
+        ]
+      }
+      bi_commission_periods: {
+        Row: {
+          created_at: string | null
+          data_fim: string
+          data_inicio: string
+          id: number
+          nome: string
+          roleta_pool_brl: number | null
+          roleta_pool_eur: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_fim: string
+          data_inicio: string
+          id?: never
+          nome: string
+          roleta_pool_brl?: number | null
+          roleta_pool_eur?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          data_fim?: string
+          data_inicio?: string
+          id?: never
+          nome?: string
+          roleta_pool_brl?: number | null
+          roleta_pool_eur?: number | null
+        }
+        Relationships: []
+      }
+      bi_commission_rates: {
+        Row: {
+          effective_from: string
+          id: number
+          manager_rate_pct: number
+          produto_grupo: string
+          rate_pct: number
+          seller_name: string
+        }
+        Insert: {
+          effective_from?: string
+          id?: never
+          manager_rate_pct?: number
+          produto_grupo: string
+          rate_pct?: number
+          seller_name: string
+        }
+        Update: {
+          effective_from?: string
+          id?: never
+          manager_rate_pct?: number
+          produto_grupo?: string
+          rate_pct?: number
+          seller_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bi_commission_rates_seller_name_fkey"
+            columns: ["seller_name"]
+            isOneToOne: false
+            referencedRelation: "bi_seller_config"
+            referencedColumns: ["seller_name"]
+          },
+        ]
+      }
       bi_followup_activities: {
         Row: {
           id: number
@@ -135,6 +248,30 @@ export type Database = {
           },
         ]
       }
+      bi_seller_config: {
+        Row: {
+          clint_user_name: string | null
+          hotmart_affiliate_name: string | null
+          is_active: boolean | null
+          moeda_padrao: string
+          seller_name: string
+        }
+        Insert: {
+          clint_user_name?: string | null
+          hotmart_affiliate_name?: string | null
+          is_active?: boolean | null
+          moeda_padrao?: string
+          seller_name: string
+        }
+        Update: {
+          clint_user_name?: string | null
+          hotmart_affiliate_name?: string | null
+          is_active?: boolean | null
+          moeda_padrao?: string
+          seller_name?: string
+        }
+        Relationships: []
+      }
       bi_targets: {
         Row: {
           channel_id: string | null
@@ -227,6 +364,63 @@ export type Database = {
           whatsapp?: number
         }
         Relationships: []
+      }
+      bi_wise_payments: {
+        Row: {
+          cliente: string
+          cotacao_eur: number
+          data_pagamento: string
+          descricao: string | null
+          id: number
+          importado_em: string | null
+          period_id: number | null
+          produto_grupo: string | null
+          seller_name: string | null
+          valor_brl: number | null
+          valor_eur: number
+        }
+        Insert: {
+          cliente: string
+          cotacao_eur?: number
+          data_pagamento: string
+          descricao?: string | null
+          id?: never
+          importado_em?: string | null
+          period_id?: number | null
+          produto_grupo?: string | null
+          seller_name?: string | null
+          valor_brl?: number | null
+          valor_eur: number
+        }
+        Update: {
+          cliente?: string
+          cotacao_eur?: number
+          data_pagamento?: string
+          descricao?: string | null
+          id?: never
+          importado_em?: string | null
+          period_id?: number | null
+          produto_grupo?: string | null
+          seller_name?: string | null
+          valor_brl?: number | null
+          valor_eur?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bi_wise_payments_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "bi_commission_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bi_wise_payments_seller_name_fkey"
+            columns: ["seller_name"]
+            isOneToOne: false
+            referencedRelation: "bi_seller_config"
+            referencedColumns: ["seller_name"]
+          },
+        ]
       }
       clint_deals: {
         Row: {
@@ -596,162 +790,6 @@ export type Database = {
           transacao?: string
           updated_at?: string
           valor_recebido_convertido?: number | null
-        }
-        Relationships: []
-      }
-      bi_commission_periods: {
-        Row: {
-          id: number
-          nome: string
-          data_inicio: string
-          data_fim: string
-          roleta_pool_brl: number
-          roleta_pool_eur: number
-          created_at: string
-        }
-        Insert: {
-          id?: never
-          nome: string
-          data_inicio: string
-          data_fim: string
-          roleta_pool_brl?: number
-          roleta_pool_eur?: number
-          created_at?: string
-        }
-        Update: {
-          id?: never
-          nome?: string
-          data_inicio?: string
-          data_fim?: string
-          roleta_pool_brl?: number
-          roleta_pool_eur?: number
-          created_at?: string
-        }
-        Relationships: []
-      }
-      bi_seller_config: {
-        Row: {
-          seller_name: string
-          hotmart_affiliate_name: string | null
-          clint_user_name: string | null
-          moeda_padrao: string
-          is_active: boolean
-        }
-        Insert: {
-          seller_name: string
-          hotmart_affiliate_name?: string | null
-          clint_user_name?: string | null
-          moeda_padrao?: string
-          is_active?: boolean
-        }
-        Update: {
-          seller_name?: string
-          hotmart_affiliate_name?: string | null
-          clint_user_name?: string | null
-          moeda_padrao?: string
-          is_active?: boolean
-        }
-        Relationships: []
-      }
-      bi_commission_rates: {
-        Row: {
-          id: number
-          seller_name: string
-          produto_grupo: string
-          rate_pct: number
-          manager_rate_pct: number
-          effective_from: string
-        }
-        Insert: {
-          id?: never
-          seller_name: string
-          produto_grupo: string
-          rate_pct?: number
-          manager_rate_pct?: number
-          effective_from?: string
-        }
-        Update: {
-          id?: never
-          seller_name?: string
-          produto_grupo?: string
-          rate_pct?: number
-          manager_rate_pct?: number
-          effective_from?: string
-        }
-        Relationships: []
-      }
-      bi_wise_payments: {
-        Row: {
-          id: number
-          data_pagamento: string
-          cliente: string
-          valor_eur: number
-          cotacao_eur: number
-          valor_brl: number | null
-          descricao: string | null
-          seller_name: string | null
-          produto_grupo: string | null
-          period_id: number | null
-          importado_em: string
-        }
-        Insert: {
-          id?: never
-          data_pagamento: string
-          cliente: string
-          valor_eur: number
-          cotacao_eur?: number
-          valor_brl?: number | null
-          descricao?: string | null
-          seller_name?: string | null
-          produto_grupo?: string | null
-          period_id?: number | null
-          importado_em?: string
-        }
-        Update: {
-          id?: never
-          data_pagamento?: string
-          cliente?: string
-          valor_eur?: number
-          cotacao_eur?: number
-          valor_brl?: number | null
-          descricao?: string | null
-          seller_name?: string | null
-          produto_grupo?: string | null
-          period_id?: number | null
-          importado_em?: string
-        }
-        Relationships: []
-      }
-      bi_commission_bonuses: {
-        Row: {
-          id: number
-          period_id: number
-          seller_name: string
-          tipo: string
-          valor: number
-          moeda: string
-          notas: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: never
-          period_id: number
-          seller_name: string
-          tipo?: string
-          valor: number
-          moeda?: string
-          notas?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: never
-          period_id?: number
-          seller_name?: string
-          tipo?: string
-          valor?: number
-          moeda?: string
-          notas?: string | null
-          created_at?: string
         }
         Relationships: []
       }
