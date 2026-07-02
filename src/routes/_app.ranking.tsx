@@ -421,22 +421,28 @@ function RankingPage() {
               <TabsTrigger value="semana">Semana</TabsTrigger>
               <TabsTrigger value="mes">Mês</TabsTrigger>
                 </TabsList>
-                {(["dia", "semana", "mes"] as const).map((tab) => (
-                  <TabsContent key={tab} value={tab} className="mt-4 space-y-2">
-                    {ranking[tab].length === 0 ? (
-                      <p className="py-6 text-center text-sm text-muted-foreground">Sem vendas fechadas nesse período.</p>
-                    ) : (
-                      ranking[tab].map((s, i) => <RankRow key={s.user_id} rank={i} seller={s} currency={currency} hideRevenue={hideRevenue} />)
-                    )}
-                  </TabsContent>
-                ))}
+                {(["dia", "semana", "mes"] as const).map((tab) => {
+                  const ranks = computeRanks(ranking[tab]);
+                  return (
+                    <TabsContent key={tab} value={tab} className="mt-4 space-y-2">
+                      {ranking[tab].length === 0 ? (
+                        <p className="py-6 text-center text-sm text-muted-foreground">Sem vendas fechadas nesse período.</p>
+                      ) : (
+                        ranking[tab].map((s, i) => <RankRow key={s.user_id} rank={i} displayRank={ranks[i]} seller={s} currency={currency} hideRevenue={hideRevenue} />)
+                      )}
+                    </TabsContent>
+                  );
+                })}
               </Tabs>
             ) : (
               <div className="mt-2 space-y-2">
                 {ranking.mes.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">Sem vendas nesse mês.</p>
                 ) : (
-                  ranking.mes.map((s, i) => <RankRow key={s.user_id} rank={i} seller={s} currency={currency} hideRevenue={hideRevenue} />)
+                  (() => {
+                    const ranks = computeRanks(ranking.mes);
+                    return ranking.mes.map((s, i) => <RankRow key={s.user_id} rank={i} displayRank={ranks[i]} seller={s} currency={currency} hideRevenue={hideRevenue} />);
+                  })()
                 )}
               </div>
             )}
