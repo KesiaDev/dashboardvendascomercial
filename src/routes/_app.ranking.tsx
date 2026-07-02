@@ -137,13 +137,28 @@ function SellerAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" 
   );
 }
 
+// ── Ranks com empate (mesmo valor e quantidade compartilham posição) ────────
+function computeRanks(list: SellerStats[]): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < list.length; i++) {
+    if (i === 0) { out.push(0); continue; }
+    const prev = list[i - 1];
+    const cur = list[i];
+    const tied = prev.won === cur.won && prev.revenue === cur.revenue;
+    out.push(tied ? out[i - 1] : i);
+  }
+  return out;
+}
+
 // ── Pódio (top 3 do mês) ────────────────────────────────────────────────────
-type PodiumPos = { pos: 1 | 2 | 3; delayClass: "rk-d1" | "rk-d2" | "rk-d3"; badgeClass: "rk-badge-1" | "rk-badge-2" | "rk-badge-3"; emoji: string };
+type PodiumPos = { pos: 1 | 2 | 3; delayClass: "rk-d1" | "rk-d2" | "rk-d3" };
 const PODIUM: PodiumPos[] = [
-  { pos: 1, delayClass: "rk-d1", badgeClass: "rk-badge-1", emoji: "🥇" },
-  { pos: 2, delayClass: "rk-d2", badgeClass: "rk-badge-2", emoji: "🥈" },
-  { pos: 3, delayClass: "rk-d3", badgeClass: "rk-badge-3", emoji: "🥉" },
+  { pos: 1, delayClass: "rk-d1" },
+  { pos: 2, delayClass: "rk-d2" },
+  { pos: 3, delayClass: "rk-d3" },
 ];
+const PODIUM_EMOJI = ["🥇", "🥈", "🥉"] as const;
+const PODIUM_BADGE = ["rk-badge-1", "rk-badge-2", "rk-badge-3"] as const;
 
 function Podium({ top3, currency, hideRevenue }: { top3: SellerStats[]; currency: string; hideRevenue?: boolean }) {
   const [show, setShow] = useState(false);
@@ -171,37 +186,48 @@ function Podium({ top3, currency, hideRevenue }: { top3: SellerStats[]; currency
       </div>
 
       <div className="flex items-end justify-center gap-3">
-        {PODIUM.map(({ pos, delayClass, badgeClass, emoji }) => {
-          const seller = top3[pos - 1];
-          if (!seller) return null;
-          return (
-            <div
-              key={pos}
-              className={`rk-podium-item rk-podium-order-${pos} ${delayClass} ${show ? "rk-show" : ""} flex flex-col items-center gap-3`}
-            >
-              <div className="relative flex flex-col items-center gap-1">
-                {pos === 1 && <span className="rk-crown-pulse text-3xl">👑</span>}
-                <div className={pos === 1 ? "rk-avatar-glow" : ""}>
-                  <SellerAvatar name={seller.name} size={pos === 1 ? "xl" : "lg"} />
+        {(() => {
+          const podiumRanks = computeRanks(top3);
+          const crownedIdx = podiumRanks.reduce<number[]>((acc, r, i) => (r === 0 ? [...acc, i] : acc), []);
+          return PODIUM.map(({ pos, delayClass }) => {
+            const idx = pos - 1;
+            const seller = top3[idx];
+            if (!seller) return null;
+            const displayRank = podiumRanks[idx];
+            const isChampion = displayRank === 0;
+            const emoji = PODIUM_EMOJI[displayRank] ?? "🏅";
+            const badgeClass = PODIUM_BADGE[displayRank] ?? "rk-badge-3";
+            return (
+              <div
+                key={pos}
+                className={`rk-podium-item rk-podium-order-${pos} ${delayClass} ${show ? "rk-show" : ""} flex flex-col items-center gap-3`}
+              >
+                <div className="relative flex flex-col items-center gap-1">
+                  {isChampion && <span className="rk-crown-pulse text-3xl">👑</span>}
+                  <div className={isChampion ? "rk-avatar-glow" : ""}>
+                    <SellerAvatar name={seller.name} size={isChampion ? "xl" : "lg"} />
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-sm font-bold text-white">{seller.name.split(" ")[0]}</p>
+                  {!hideRevenue && (
+                    <p className={`text-xs font-semibold tabular-nums ${displayRank === 0 ? "text-amber-300" : displayRank === 1 ? "text-slate-300" : "text-orange-400"}`}>
+                      {formatCurrency(seller.revenue, currency)}
+                    </p>
+                  )}
+                  <p className="text-xs text-white/40">
+                    {seller.won} vendas{crownedIdx.length > 1 && isChampion ? " · empate" : ""}
+                  </p>
+                </div>
+
+                <div className={`rk-pedestal-${pos} w-24 rounded-t-2xl flex items-center justify-center text-3xl font-black`}>
+                  <span className={badgeClass}>{emoji}</span>
                 </div>
               </div>
-
-              <div className="text-center">
-                <p className="text-sm font-bold text-white">{seller.name.split(" ")[0]}</p>
-                {!hideRevenue && (
-                  <p className={`text-xs font-semibold tabular-nums ${pos === 1 ? "text-amber-300" : pos === 2 ? "text-slate-300" : "text-orange-400"}`}>
-                    {formatCurrency(seller.revenue, currency)}
-                  </p>
-                )}
-                <p className="text-xs text-white/40">{seller.won} vendas</p>
-              </div>
-
-              <div className={`rk-pedestal-${pos} w-24 rounded-t-2xl flex items-center justify-center text-3xl font-black`}>
-                <span className={badgeClass}>{emoji}</span>
-              </div>
-            </div>
-          );
-        })}
+            );
+          });
+        })()}
       </div>
     </div>
   );
@@ -272,18 +298,18 @@ function DestaqueCard({
 const MEDALS = ["🥇", "🥈", "🥉"];
 const ROW_CLASSES = ["rk-row-0","rk-row-1","rk-row-2","rk-row-3","rk-row-4","rk-row-5"] as const;
 
-function RankRow({ rank, seller, currency, hideRevenue }: { rank: number; seller: SellerStats; currency: string; hideRevenue?: boolean }) {
+function RankRow({ rank, displayRank, seller, currency, hideRevenue }: { rank: number; displayRank: number; seller: SellerStats; currency: string; hideRevenue?: boolean }) {
   const rowAnim = ROW_CLASSES[Math.min(rank, ROW_CLASSES.length - 1)];
   return (
     <div
       className={`${rowAnim} flex items-center justify-between rounded-xl border px-4 py-3 transition-all ${
-        rank === 0 ? "border-amber-400/25 bg-gradient-to-r from-amber-400/10 to-transparent"
-        : rank === 1 ? "border-slate-400/20 bg-gradient-to-r from-slate-400/5 to-transparent"
+        displayRank === 0 ? "border-amber-400/25 bg-gradient-to-r from-amber-400/10 to-transparent"
+        : displayRank === 1 ? "border-slate-400/20 bg-gradient-to-r from-slate-400/5 to-transparent"
         : "border-border/50 bg-card/50"
       }`}
     >
       <div className="flex items-center gap-3">
-        <div className="w-8 text-center text-xl">{MEDALS[rank] ?? `#${rank + 1}`}</div>
+        <div className="w-8 text-center text-xl">{MEDALS[displayRank] ?? `#${displayRank + 1}`}</div>
         <SellerAvatar name={seller.name} size="sm" />
         <div>
           <div className="text-sm font-semibold">{seller.name.split(" ")[0]}</div>
@@ -395,22 +421,28 @@ function RankingPage() {
               <TabsTrigger value="semana">Semana</TabsTrigger>
               <TabsTrigger value="mes">Mês</TabsTrigger>
                 </TabsList>
-                {(["dia", "semana", "mes"] as const).map((tab) => (
-                  <TabsContent key={tab} value={tab} className="mt-4 space-y-2">
-                    {ranking[tab].length === 0 ? (
-                      <p className="py-6 text-center text-sm text-muted-foreground">Sem vendas fechadas nesse período.</p>
-                    ) : (
-                      ranking[tab].map((s, i) => <RankRow key={s.user_id} rank={i} seller={s} currency={currency} hideRevenue={hideRevenue} />)
-                    )}
-                  </TabsContent>
-                ))}
+                {(["dia", "semana", "mes"] as const).map((tab) => {
+                  const ranks = computeRanks(ranking[tab]);
+                  return (
+                    <TabsContent key={tab} value={tab} className="mt-4 space-y-2">
+                      {ranking[tab].length === 0 ? (
+                        <p className="py-6 text-center text-sm text-muted-foreground">Sem vendas fechadas nesse período.</p>
+                      ) : (
+                        ranking[tab].map((s, i) => <RankRow key={s.user_id} rank={i} displayRank={ranks[i]} seller={s} currency={currency} hideRevenue={hideRevenue} />)
+                      )}
+                    </TabsContent>
+                  );
+                })}
               </Tabs>
             ) : (
               <div className="mt-2 space-y-2">
                 {ranking.mes.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">Sem vendas nesse mês.</p>
                 ) : (
-                  ranking.mes.map((s, i) => <RankRow key={s.user_id} rank={i} seller={s} currency={currency} hideRevenue={hideRevenue} />)
+                  (() => {
+                    const ranks = computeRanks(ranking.mes);
+                    return ranking.mes.map((s, i) => <RankRow key={s.user_id} rank={i} displayRank={ranks[i]} seller={s} currency={currency} hideRevenue={hideRevenue} />);
+                  })()
                 )}
               </div>
             )}
