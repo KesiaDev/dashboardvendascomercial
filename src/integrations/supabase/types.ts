@@ -92,6 +92,7 @@ export type Database = {
       bi_commission_periods: {
         Row: {
           created_at: string | null
+          cotacao_eur: number
           data_fim: string
           data_inicio: string
           id: number
@@ -101,6 +102,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          cotacao_eur?: number
           data_fim: string
           data_inicio: string
           id?: never
@@ -110,6 +112,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          cotacao_eur?: number
           data_fim?: string
           data_inicio?: string
           id?: never

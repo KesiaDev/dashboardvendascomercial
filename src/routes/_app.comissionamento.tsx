@@ -7,6 +7,7 @@ import {
   fetchCommissionRatesFn,
   fetchWisePaymentsFn,
   fetchCommissionBonusesFn,
+  fetchManualSalesForCommissionFn,
   addCommissionBonusFn,
   deleteCommissionBonusFn,
   upsertCommissionRateFn,
@@ -18,7 +19,7 @@ import {
   countSalesBySellerWeek,
   periodWeeks,
   type CommissionPeriod,
-  type CommissionBonus,
+  type ManualSaleRow,
 } from "@/lib/commission";
 import { PRODUCT_GROUPS } from "@/lib/product-groups";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -157,16 +158,36 @@ function Dashboard() {
     queryFn: async () => (await fetchAllSalesFn()) as any[],
   });
 
-  const activePeriod = useMemo(() => {
+  const activePeriod = useMemo((): CommissionPeriod | null => {
     if (periods.length === 0) return null;
     if (periodId) return periods.find((p) => p.id === periodId) ?? periods[0];
     return periods[0];
   }, [periods, periodId]);
 
+  // Busca Fechamento (manual_sales) para o período ativo
+  const { data: manualSales = [] } = useQuery({
+    queryKey: ["comm_manual_sales", activePeriod?.id],
+    enabled: !!activePeriod,
+    queryFn: async () => {
+      if (!activePeriod) return [];
+      return (await fetchManualSalesForCommissionFn({
+        data: { from: activePeriod.data_inicio, to: activePeriod.data_fim },
+      })) as ManualSaleRow[];
+    },
+  });
+
   const summary = useMemo(() => {
     if (!activePeriod || sellers.length === 0) return null;
-    return calculateCommissions(activePeriod, sellers, rates, sales, wisePayments, bonuses);
-  }, [activePeriod, sellers, rates, sales, wisePayments, bonuses]);
+    return calculateCommissions(
+      activePeriod,
+      sellers,
+      rates,
+      sales,
+      wisePayments,
+      bonuses,
+      manualSales,
+    );
+  }, [activePeriod, sellers, rates, sales, wisePayments, bonuses, manualSales]);
 
   const weekSales = useMemo(() => {
     if (!activePeriod || sellers.length === 0) return [];
@@ -293,28 +314,63 @@ function Dashboard() {
               </div>
             </div>
 
+            {/* Cotação EUR do período (editável) */}
+            {activePeriod && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Cotação EUR do período:</span>
+                <span
+                  className="font-medium text-foreground cursor-pointer hover:text-primary underline"
+                  onClick={() => {
+                    const val = prompt("Cotação EUR→BRL:", String(activePeriod.cotacao_eur ?? 5.85));
+                    if (val !== null && !isNaN(Number(val))) {
+                      upsertPeriodMut.mutate({ ...activePeriod, cotacao_eur: Number(val) });
+                    }
+                  }}
+                >
+                  R$ {(activePeriod.cotacao_eur ?? 5.85).toFixed(2)}
+                </span>
+                <span className="text-muted-foreground/70">(usado para converter Fechamento EUR não confirmado)</span>
+              </div>
+            )}
+
             {/* De onde vem minha comissão */}
             <div className="overflow-x-auto rounded border border-border/50">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
                     <th className="px-3 py-2">Vendedor</th>
-                    <th className="px-3 py-2 text-right">Faturamento</th>
+                    <th className="px-3 py-2 text-right">Hotmart</th>
+                    <th className="px-3 py-2 text-right">Fechamento</th>
+                    <th className="px-3 py-2 text-right">Faturamento total</th>
                     <th className="px-3 py-2 text-right">Minha % adicional</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {summary.sellers.map((s) => (
-                    <tr key={s.sellerName} className="border-b border-border/40 last:border-0">
-                      <td className="px-3 py-1.5 font-medium">{s.sellerName}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums">
-                        {money(s.faturamento_total_brl)}
-                      </td>
-                      <td className="px-3 py-1.5 text-right tabular-nums font-semibold text-primary">
-                        {money(s.comissao_manager_total)}
-                      </td>
-                    </tr>
-                  ))}
+                  {summary.sellers.map((s) => {
+                    const fat_hotmart = s.byProduct.reduce((acc, p) => acc + p.faturamento_hotmart, 0);
+                    const fat_fechamento = s.byProduct.reduce((acc, p) => acc + p.faturamento_fechamento, 0);
+                    return (
+                      <tr key={s.sellerName} className="border-b border-border/40 last:border-0">
+                        <td className="px-3 py-1.5 font-medium">{s.sellerName}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
+                          {fat_hotmart > 0 ? money(fat_hotmart) : "—"}
+                        </td>
+                        <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
+                          {fat_fechamento > 0 ? (
+                            <span title={`${s.fechamento_eur.toFixed(2)} EUR`}>
+                              {money(fat_fechamento)}
+                            </span>
+                          ) : "—"}
+                        </td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">
+                          {money(s.faturamento_total_brl)}
+                        </td>
+                        <td className="px-3 py-1.5 text-right tabular-nums font-semibold text-primary">
+                          {money(s.comissao_manager_total)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -330,12 +386,12 @@ function Dashboard() {
               <CardTitle className="text-base">Roleta — vendas por semana</CardTitle>
               {activePeriod && (
                 <div className="text-right text-xs text-muted-foreground">
-                  <span>Pool: {money(activePeriod.roleta_pool_brl)} · {money(activePeriod.roleta_pool_eur, "EUR")}</span>
+                  <span>Pool: {money(activePeriod.roleta_pool_brl ?? 0)} · {money(activePeriod.roleta_pool_eur ?? 0, "EUR")}</span>
                   <button
                     className="ml-2 text-primary underline"
                     onClick={() => {
-                      const brl = prompt("Pool BRL:", String(activePeriod.roleta_pool_brl));
-                      const eur = prompt("Pool EUR:", String(activePeriod.roleta_pool_eur));
+                      const brl = prompt("Pool BRL:", String(activePeriod.roleta_pool_brl ?? 0));
+                      const eur = prompt("Pool EUR:", String(activePeriod.roleta_pool_eur ?? 0));
                       if (brl !== null && eur !== null) {
                         upsertPeriodMut.mutate({
                           ...activePeriod,
@@ -403,6 +459,11 @@ function Dashboard() {
                     <span className="text-xs text-muted-foreground">
                       Fat. {money(s.faturamento_total_brl)}
                     </span>
+                    {s.fechamento_eur > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        · Fechamento {s.fechamento_eur.toFixed(2)} EUR
+                      </span>
+                    )}
                     {s.wise_eur > 0 && (
                       <span className="text-xs text-muted-foreground">
                         · Wise {money(s.wise_eur, "EUR")}
@@ -439,6 +500,7 @@ function Dashboard() {
                           <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
                             <th className="px-3 py-2">Produto</th>
                             <th className="px-3 py-2 text-right">Hotmart</th>
+                            <th className="px-3 py-2 text-right">Fechamento</th>
                             <th className="px-3 py-2 text-right">Wise</th>
                             <th className="px-3 py-2 text-right">% seller</th>
                             <th className="px-3 py-2 text-right">Comissão</th>
@@ -452,9 +514,22 @@ function Dashboard() {
                               key={p.produto_grupo}
                               className="border-b border-border/40 last:border-0"
                             >
-                              <td className="px-3 py-1.5 max-w-[160px] truncate">{p.label}</td>
+                              <td className="px-3 py-1.5 max-w-[140px] truncate">{p.label}</td>
                               <td className="px-3 py-1.5 text-right tabular-nums">
-                                {money(p.faturamento)}
+                                {p.faturamento_hotmart > 0 ? money(p.faturamento_hotmart) : "—"}
+                              </td>
+                              <td className="px-3 py-1.5 text-right tabular-nums">
+                                {p.faturamento_fechamento > 0 ? (
+                                  <span
+                                    className="cursor-help"
+                                    title={`${p.faturamento_fechamento_eur.toFixed(2)} EUR · ${p.faturamento_fechamento_confirmado} confirmada(s) via Hotmart`}
+                                  >
+                                    {money(p.faturamento_fechamento)}
+                                    {p.faturamento_fechamento_confirmado > 0 && (
+                                      <span className="ml-1 text-emerald-600 text-[10px]">✓</span>
+                                    )}
+                                  </span>
+                                ) : "—"}
                               </td>
                               <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
                                 {p.faturamento_wise > 0 ? money(p.faturamento_wise) : "—"}
@@ -470,7 +545,7 @@ function Dashboard() {
                             </tr>
                           ))}
                           <tr className="bg-muted/20 font-semibold">
-                            <td className="px-3 py-2" colSpan={4}>
+                            <td className="px-3 py-2" colSpan={5}>
                               Total
                             </td>
                             <td className="px-3 py-2 text-right tabular-nums">
@@ -488,7 +563,7 @@ function Dashboard() {
 
                   {s.byProduct.length === 0 && (
                     <p className="text-sm text-muted-foreground">
-                      Nenhuma venda Hotmart/Wise encontrada neste período para este vendedor.
+                      Nenhuma venda encontrada neste período para este vendedor.
                     </p>
                   )}
 
@@ -745,12 +820,21 @@ function NewPeriodForm({ onSave }: { onSave: (d: any) => void }) {
   const [nome, setNome] = useState("");
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState("");
+  const [cotacao, setCotacao] = useState("5.85");
 
   const handleCreate = () => {
-    onSave({ nome, data_inicio: inicio, data_fim: fim, roleta_pool_brl: 0, roleta_pool_eur: 0 });
+    onSave({
+      nome,
+      data_inicio: inicio,
+      data_fim: fim,
+      roleta_pool_brl: 0,
+      roleta_pool_eur: 0,
+      cotacao_eur: Number(cotacao) || 5.85,
+    });
     setNome("");
     setInicio("");
     setFim("");
+    setCotacao("5.85");
   };
 
   return (
@@ -780,6 +864,15 @@ function NewPeriodForm({ onSave }: { onSave: (d: any) => void }) {
           className="w-[150px]"
           value={fim}
           onChange={(e) => setFim(e.target.value)}
+        />
+      </div>
+      <div className="space-y-1">
+        <p className="text-xs text-muted-foreground">Cotação EUR (R$)</p>
+        <Input
+          className="w-[90px]"
+          placeholder="5.85"
+          value={cotacao}
+          onChange={(e) => setCotacao(e.target.value)}
         />
       </div>
       <Button disabled={!nome || !inicio || !fim} onClick={handleCreate}>

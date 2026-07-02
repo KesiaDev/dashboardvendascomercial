@@ -9,7 +9,7 @@ export const fetchCommissionPeriodsFn = createServerFn({ method: "GET" }).handle
   const db = await admin();
   const { data, error } = await db
     .from("bi_commission_periods")
-    .select("id,nome,data_inicio,data_fim,roleta_pool_brl,roleta_pool_eur")
+    .select("id,nome,data_inicio,data_fim,roleta_pool_brl,roleta_pool_eur,cotacao_eur")
     .order("data_inicio", { ascending: false });
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -80,6 +80,7 @@ type UpsertPeriodInput = {
   data_fim: string;
   roleta_pool_brl: number;
   roleta_pool_eur: number;
+  cotacao_eur?: number;
 };
 
 export const upsertCommissionPeriodFn = createServerFn({ method: "POST" })
@@ -139,6 +140,25 @@ type ImportWiseInput = {
     produto_grupo: string | null;
   }[];
 };
+
+// Busca manual_sales (Fechamento) para uso no cálculo de comissão
+// Retorna apenas os campos necessários para o engine de comissão
+export const fetchManualSalesForCommissionFn = createServerFn({ method: "GET" })
+  .inputValidator((d: { from: string; to: string }) => {
+    if (!d.from || !d.to) throw new Error("Datas obrigatórias");
+    return d;
+  })
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: rows, error } = await db
+      .from("manual_sales")
+      .select("id,seller_name,product,value_eur,sale_date,confirmation_status,confirmed_hotmart_valor_brl")
+      .gte("sale_date", data.from)
+      .lte("sale_date", data.to)
+      .order("sale_date", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
 
 export const importWisePaymentsFn = createServerFn({ method: "POST" })
   .inputValidator((d: ImportWiseInput) => d)
