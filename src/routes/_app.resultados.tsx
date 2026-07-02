@@ -813,17 +813,21 @@ function Resultados() {
     return result;
   }, [targets, year]);
 
-  // ── Overrides por bloco
+  // ── Overrides por bloco (front_end / high_ticket / ytd / funil)
   const overridesByBloco = useMemo(() => {
     const result: Record<Bloco, Record<string, number>> = { front_end: {}, high_ticket: {} };
+    const ytdOv: Record<string, number> = {};
+    const funilOv: Record<string, number> = {};
     for (const o of overrides) {
       const d = new Date(o.periodo + "T00:00:00Z");
       if (d.getUTCFullYear() !== year) continue;
       const m = d.getUTCMonth();
       if (o.bloco === "front_end") result.front_end[`${o.indicador}:${m}`] = o.valor_brl;
       else if (o.bloco === "high_ticket") result.high_ticket[`${o.indicador}:${m}`] = o.valor_brl;
+      else if (o.bloco === "ytd") ytdOv[o.indicador] = o.valor_brl;
+      else if (o.bloco === "funil") funilOv[o.indicador] = o.valor_brl;
     }
-    return result;
+    return { ...result, ytd: ytdOv, funil: funilOv };
   }, [overrides, year]);
 
   // ── Weekly manual map
@@ -876,13 +880,24 @@ function Resultados() {
       if (t.channel_id === "mas" && t.indicador === "vendas") masMetaVendas += t.valor;
     }
 
+    const ytdOv = overridesByBloco.ytd ?? {};
+    const funilOv = overridesByBloco.funil ?? {};
+
     return {
-      leadsReal: leadsData.total,
-      leadsMeta: leadsMeta || 150000,
-      feVendas, feMetaVendas, feFat,
-      htVendas, htMetaVendas, htFat,
-      masVendas, masMetaVendas: masMetaVendas || 500,
-      accVendas,
+      leadsReal: ytdOv.leads_real ?? leadsData.total,
+      leadsMeta: ytdOv.leads_meta ?? (leadsMeta || 150000),
+      feVendas: ytdOv.fe_vendas_real ?? feVendas,
+      feMetaVendas: ytdOv.fe_vendas_meta ?? feMetaVendas,
+      feFat,
+      htVendas: ytdOv.ht_vendas_real ?? htVendas,
+      htMetaVendas: ytdOv.ht_vendas_meta ?? htMetaVendas,
+      htFat,
+      masVendas: ytdOv.mas_vendas_real ?? masVendas,
+      masMetaVendas: ytdOv.mas_vendas_meta ?? (masMetaVendas || 500),
+      accVendas: ytdOv.acc_vendas_real ?? accVendas,
+      metaPctLeadFe: funilOv.lead_fe_pct ?? 2.12,
+      metaPctFeHt: funilOv.fe_ht_pct ?? 13.6,
+      metaPctHtAcc: funilOv.ht_acc_pct ?? 60,
     };
   }, [blocoMonthData, overridesByBloco, salesByProductWeek, targetsByBloco, targets, year, leadsData]);
 
@@ -907,6 +922,14 @@ function Resultados() {
     await saveWeekly({ data: { product_id: product, week_start: week, indicador, valor_brl: valor } });
     invalidate();
     toast.success("Salvo");
+  }
+
+  // Salva um valor "solto" para o ano (KPI YTD ou meta de funil).
+  async function handleSaveAnnual(bloco: "ytd" | "funil", indicador: string, valor: number) {
+    const periodo = `${year}-01-01`;
+    await saveOverride({ data: { bloco, periodo, indicador, valor_brl: valor } });
+    invalidate();
+    toast.success("Atualizado");
   }
 
   const isLoading = salesQ.isLoading || targetsQ.isLoading || weeklyQ.isLoading || overridesQ.isLoading;
@@ -949,24 +972,32 @@ function Resultados() {
                 label="Leads captados"
                 realized={ytd.leadsReal}
                 meta={ytd.leadsMeta}
+                onEditMeta={(v) => handleSaveAnnual("ytd", "leads_meta", v)}
+                onEditRealized={(v) => handleSaveAnnual("ytd", "leads_real", v)}
               />
               <YtdKpiCard
                 icon={Target}
                 label="Front End (novas)"
                 realized={ytd.feVendas}
                 meta={ytd.feMetaVendas}
+                onEditMeta={(v) => handleSaveAnnual("ytd", "fe_vendas_meta", v)}
+                onEditRealized={(v) => handleSaveAnnual("ytd", "fe_vendas_real", v)}
               />
               <YtdKpiCard
                 icon={TrendingUp}
                 label="High Ticket (novas + renov.)"
                 realized={ytd.htVendas}
                 meta={ytd.htMetaVendas}
+                onEditMeta={(v) => handleSaveAnnual("ytd", "ht_vendas_meta", v)}
+                onEditRealized={(v) => handleSaveAnnual("ytd", "ht_vendas_real", v)}
               />
               <YtdKpiCard
                 icon={Sparkles}
                 label="Bilhetes M&S"
                 realized={ytd.masVendas}
                 meta={ytd.masMetaVendas}
+                onEditMeta={(v) => handleSaveAnnual("ytd", "mas_vendas_meta", v)}
+                onEditRealized={(v) => handleSaveAnnual("ytd", "mas_vendas_real", v)}
               />
             </div>
 
@@ -982,7 +1013,8 @@ function Resultados() {
                     label={`Lead → Front End`}
                     from={ytd.leadsReal}
                     to={ytd.feVendas}
-                    metaPct={2.12}
+                    metaPct={ytd.metaPctLeadFe}
+                    onEditMeta={(v) => handleSaveAnnual("funil", "lead_fe_pct", v)}
                   />
                   <FunnelStep
                     label="Front End (novas vendas)"
@@ -994,7 +1026,8 @@ function Resultados() {
                     label={`Front End → High Ticket`}
                     from={ytd.feVendas}
                     to={ytd.htVendas}
-                    metaPct={13.6}
+                    metaPct={ytd.metaPctFeHt}
+                    onEditMeta={(v) => handleSaveAnnual("funil", "fe_ht_pct", v)}
                   />
                   <FunnelStep
                     label="High Ticket (novas + renovações)"
@@ -1006,7 +1039,8 @@ function Resultados() {
                     label="High Ticket → ACC"
                     from={ytd.htVendas}
                     to={ytd.accVendas}
-                    metaPct={60}
+                    metaPct={ytd.metaPctHtAcc}
+                    onEditMeta={(v) => handleSaveAnnual("funil", "ht_acc_pct", v)}
                   />
                   <FunnelStep
                     label="ACC (Accelerator)"
@@ -1080,17 +1114,22 @@ function FunnelStep({ label, value, color, widthPct }: { label: string; value: n
   );
 }
 
-function ConversionArrow({ label, from, to, metaPct }: { label: string; from: number; to: number; metaPct: number }) {
+function ConversionArrow({ label, from, to, metaPct, onEditMeta }: { label: string; from: number; to: number; metaPct: number; onEditMeta?: (v: number) => Promise<void> }) {
   const realPct = from > 0 ? (to / from) * 100 : 0;
   const meetsMeta = realPct >= metaPct;
   return (
     <div className="flex items-center gap-3 pl-6 text-xs text-muted-foreground">
       <div className="min-w-[200px]">↓ {label}</div>
-      <div>
+      <div className="flex items-center gap-1.5 flex-wrap">
         <span className={meetsMeta ? "text-emerald-600 font-semibold" : "text-amber-600 font-semibold"}>
           {realPct.toFixed(2)}%
         </span>{" "}
-        realizado · meta {metaPct}%
+        realizado · meta{" "}
+        {onEditMeta ? (
+          <EditableCell value={metaPct} onSave={onEditMeta} format={(v) => `${v}%`} />
+        ) : (
+          <span>{metaPct}%</span>
+        )}
       </div>
     </div>
   );
