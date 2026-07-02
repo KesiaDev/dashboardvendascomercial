@@ -924,6 +924,14 @@ function Resultados() {
     toast.success("Salvo");
   }
 
+  // Salva um valor "solto" para o ano (KPI YTD ou meta de funil).
+  async function handleSaveAnnual(bloco: "ytd" | "funil", indicador: string, valor: number) {
+    const periodo = `${year}-01-01`;
+    await saveOverride({ data: { bloco, periodo, indicador, valor_brl: valor } });
+    invalidate();
+    toast.success("Atualizado");
+  }
+
   const isLoading = salesQ.isLoading || targetsQ.isLoading || weeklyQ.isLoading || overridesQ.isLoading;
 
   return (
