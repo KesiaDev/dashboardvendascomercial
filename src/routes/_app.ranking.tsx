@@ -137,13 +137,28 @@ function SellerAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" 
   );
 }
 
+// ── Ranks com empate (mesmo valor e quantidade compartilham posição) ────────
+function computeRanks(list: SellerStats[]): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < list.length; i++) {
+    if (i === 0) { out.push(0); continue; }
+    const prev = list[i - 1];
+    const cur = list[i];
+    const tied = prev.won === cur.won && prev.revenue === cur.revenue;
+    out.push(tied ? out[i - 1] : i);
+  }
+  return out;
+}
+
 // ── Pódio (top 3 do mês) ────────────────────────────────────────────────────
-type PodiumPos = { pos: 1 | 2 | 3; delayClass: "rk-d1" | "rk-d2" | "rk-d3"; badgeClass: "rk-badge-1" | "rk-badge-2" | "rk-badge-3"; emoji: string };
+type PodiumPos = { pos: 1 | 2 | 3; delayClass: "rk-d1" | "rk-d2" | "rk-d3" };
 const PODIUM: PodiumPos[] = [
-  { pos: 1, delayClass: "rk-d1", badgeClass: "rk-badge-1", emoji: "🥇" },
-  { pos: 2, delayClass: "rk-d2", badgeClass: "rk-badge-2", emoji: "🥈" },
-  { pos: 3, delayClass: "rk-d3", badgeClass: "rk-badge-3", emoji: "🥉" },
+  { pos: 1, delayClass: "rk-d1" },
+  { pos: 2, delayClass: "rk-d2" },
+  { pos: 3, delayClass: "rk-d3" },
 ];
+const PODIUM_EMOJI = ["🥇", "🥈", "🥉"] as const;
+const PODIUM_BADGE = ["rk-badge-1", "rk-badge-2", "rk-badge-3"] as const;
 
 function Podium({ top3, currency, hideRevenue }: { top3: SellerStats[]; currency: string; hideRevenue?: boolean }) {
   const [show, setShow] = useState(false);
