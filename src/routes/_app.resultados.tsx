@@ -1114,17 +1114,22 @@ function FunnelStep({ label, value, color, widthPct }: { label: string; value: n
   );
 }
 
-function ConversionArrow({ label, from, to, metaPct }: { label: string; from: number; to: number; metaPct: number }) {
+function ConversionArrow({ label, from, to, metaPct, onEditMeta }: { label: string; from: number; to: number; metaPct: number; onEditMeta?: (v: number) => Promise<void> }) {
   const realPct = from > 0 ? (to / from) * 100 : 0;
   const meetsMeta = realPct >= metaPct;
   return (
     <div className="flex items-center gap-3 pl-6 text-xs text-muted-foreground">
       <div className="min-w-[200px]">↓ {label}</div>
-      <div>
+      <div className="flex items-center gap-1.5 flex-wrap">
         <span className={meetsMeta ? "text-emerald-600 font-semibold" : "text-amber-600 font-semibold"}>
           {realPct.toFixed(2)}%
         </span>{" "}
-        realizado · meta {metaPct}%
+        realizado · meta{" "}
+        {onEditMeta ? (
+          <EditableCell value={metaPct} onSave={onEditMeta} format={(v) => `${v}%`} />
+        ) : (
+          <span>{metaPct}%</span>
+        )}
       </div>
     </div>
   );
