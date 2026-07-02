@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+// requireSupabaseAuth not required — internal dashboard uses admin client
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
