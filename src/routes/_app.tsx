@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { to: "/comercial", label: "Comercial", icon: Users },
   { to: "/ranking", label: "Ranking", icon: Trophy },
   { to: "/fechamento", label: "Fechamento", icon: ClipboardCheck },
+  { to: "/fechamento-semanal", label: "Fechamento Semanal", icon: Calendar },
   { to: "/produtividade", label: "Produtividade", icon: Activity },
   { to: "/resultados", label: "Resultados", icon: TrendingUp },
   { to: "/vendedor-produto", label: "Vendedor x Produto", icon: ChartBar },
