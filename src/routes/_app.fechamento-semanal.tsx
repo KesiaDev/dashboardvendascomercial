@@ -54,38 +54,22 @@ function FechamentoSemanal() {
     queryFn: () => listManualSalesAdmin({ data: { from: toISO(weekStart), to: toISO(weekEnd) } }),
   });
 
-  type ProductRow = { product: string; qtd: number; total: number; days: string[]; clients: string[] };
+  type Row = { key: string; date: string; product: string; seller: string; qtd: number; total: number };
 
-  const bySeller = useMemo(() => {
-    const map = new Map<string, ManualSale[]>();
+  const rows = useMemo(() => {
+    const map = new Map<string, Row>();
     for (const s of sales) {
-      if (!map.has(s.seller_name)) map.set(s.seller_name, []);
-      map.get(s.seller_name)!.push(s);
+      const key = `${s.sale_date}|${s.product}|${s.seller_name}`;
+      const cur = map.get(key) ?? { key, date: s.sale_date, product: s.product, seller: s.seller_name, qtd: 0, total: 0 };
+      cur.qtd += 1;
+      cur.total += Number(s.value_eur || 0);
+      map.set(key, cur);
     }
-    return Array.from(map.entries())
-      .map(([seller, rows]) => {
-        // Agrupar por produto
-        const prodMap = new Map<string, ProductRow>();
-        for (const r of rows) {
-          const cur = prodMap.get(r.product) ?? { product: r.product, qtd: 0, total: 0, days: [], clients: [] };
-          cur.qtd += 1;
-          cur.total += Number(r.value_eur || 0);
-          cur.days.push(r.sale_date);
-          if (r.client_name) cur.clients.push(r.client_name);
-          prodMap.set(r.product, cur);
-        }
-        const products = Array.from(prodMap.values())
-          .map((p) => ({ ...p, days: p.days.sort() }))
-          .sort((a, b) => b.total - a.total);
-        return {
-          seller,
-          products,
-          qtd: rows.length,
-          total: rows.reduce((s, r) => s + Number(r.value_eur || 0), 0),
-        };
-      })
-      .sort((a, b) => b.total - a.total);
+    return Array.from(map.values()).sort(
+      (a, b) => a.date.localeCompare(b.date) || a.product.localeCompare(b.product),
+    );
   }, [sales]);
+
 
 
   const weekTotal = bySeller.reduce((s, x) => s + x.total, 0);
