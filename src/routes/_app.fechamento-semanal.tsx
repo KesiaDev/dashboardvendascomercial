@@ -1,10 +1,9 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { listManualSalesAdmin, type ManualSale } from "@/lib/manual-sales.functions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { listManualSalesAdmin } from "@/lib/manual-sales.functions";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 
