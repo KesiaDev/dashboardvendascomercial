@@ -1,5 +1,5 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
-import { BarChart3, Upload, Users, LayoutGrid, Settings, ChartBar, Activity, Trophy, ClipboardCheck, DollarSign, TrendingUp, Menu } from "lucide-react";
+import { BarChart3, Upload, Users, LayoutGrid, Settings, ChartBar, Activity, Trophy, ClipboardCheck, DollarSign, TrendingUp, Menu, Calendar } from "lucide-react";
 import { useState } from "react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { to: "/comercial", label: "Comercial", icon: Users },
   { to: "/ranking", label: "Ranking", icon: Trophy },
   { to: "/fechamento", label: "Fechamento", icon: ClipboardCheck },
+  { to: "/fechamento-semanal", label: "Fechamento Semanal", icon: Calendar },
   { to: "/produtividade", label: "Produtividade", icon: Activity },
   { to: "/resultados", label: "Resultados", icon: TrendingUp },
   { to: "/vendedor-produto", label: "Vendedor x Produto", icon: ChartBar },

@@ -16,6 +16,7 @@ import { Route as AppResultadosRouteImport } from './routes/_app.resultados'
 import { Route as AppRankingRouteImport } from './routes/_app.ranking'
 import { Route as AppProdutividadeRouteImport } from './routes/_app.produtividade'
 import { Route as AppImportRouteImport } from './routes/_app.import'
+import { Route as AppFechamentoSemanalRouteImport } from './routes/_app.fechamento-semanal'
 import { Route as AppFechamentoRouteImport } from './routes/_app.fechamento'
 import { Route as AppExecutivoRouteImport } from './routes/_app.executivo'
 import { Route as AppComissionamentoRouteImport } from './routes/_app.comissionamento'
@@ -56,6 +57,11 @@ const AppProdutividadeRoute = AppProdutividadeRouteImport.update({
 const AppImportRoute = AppImportRouteImport.update({
   id: '/import',
   path: '/import',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFechamentoSemanalRoute = AppFechamentoSemanalRouteImport.update({
+  id: '/fechamento-semanal',
+  path: '/fechamento-semanal',
   getParentRoute: () => AppRoute,
 } as any)
 const AppFechamentoRoute = AppFechamentoRouteImport.update({
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/comissionamento': typeof AppComissionamentoRoute
   '/executivo': typeof AppExecutivoRoute
   '/fechamento': typeof AppFechamentoRoute
+  '/fechamento-semanal': typeof AppFechamentoSemanalRoute
   '/import': typeof AppImportRoute
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/comissionamento': typeof AppComissionamentoRoute
   '/executivo': typeof AppExecutivoRoute
   '/fechamento': typeof AppFechamentoRoute
+  '/fechamento-semanal': typeof AppFechamentoSemanalRoute
   '/import': typeof AppImportRoute
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/_app/comissionamento': typeof AppComissionamentoRoute
   '/_app/executivo': typeof AppExecutivoRoute
   '/_app/fechamento': typeof AppFechamentoRoute
+  '/_app/fechamento-semanal': typeof AppFechamentoSemanalRoute
   '/_app/import': typeof AppImportRoute
   '/_app/produtividade': typeof AppProdutividadeRoute
   '/_app/ranking': typeof AppRankingRoute
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/comissionamento'
     | '/executivo'
     | '/fechamento'
+    | '/fechamento-semanal'
     | '/import'
     | '/produtividade'
     | '/ranking'
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/comissionamento'
     | '/executivo'
     | '/fechamento'
+    | '/fechamento-semanal'
     | '/import'
     | '/produtividade'
     | '/ranking'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/_app/comissionamento'
     | '/_app/executivo'
     | '/_app/fechamento'
+    | '/_app/fechamento-semanal'
     | '/_app/import'
     | '/_app/produtividade'
     | '/_app/ranking'
@@ -246,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppImportRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/fechamento-semanal': {
+      id: '/_app/fechamento-semanal'
+      path: '/fechamento-semanal'
+      fullPath: '/fechamento-semanal'
+      preLoaderRoute: typeof AppFechamentoSemanalRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/fechamento': {
       id: '/_app/fechamento'
       path: '/fechamento'
@@ -305,6 +324,7 @@ interface AppRouteChildren {
   AppComissionamentoRoute: typeof AppComissionamentoRoute
   AppExecutivoRoute: typeof AppExecutivoRoute
   AppFechamentoRoute: typeof AppFechamentoRoute
+  AppFechamentoSemanalRoute: typeof AppFechamentoSemanalRoute
   AppImportRoute: typeof AppImportRoute
   AppProdutividadeRoute: typeof AppProdutividadeRoute
   AppRankingRoute: typeof AppRankingRoute
@@ -320,6 +340,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppComissionamentoRoute: AppComissionamentoRoute,
   AppExecutivoRoute: AppExecutivoRoute,
   AppFechamentoRoute: AppFechamentoRoute,
+  AppFechamentoSemanalRoute: AppFechamentoSemanalRoute,
   AppImportRoute: AppImportRoute,
   AppProdutividadeRoute: AppProdutividadeRoute,
   AppRankingRoute: AppRankingRoute,
