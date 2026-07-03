@@ -72,8 +72,8 @@ function FechamentoSemanal() {
 
 
 
-  const weekTotal = bySeller.reduce((s, x) => s + x.total, 0);
-  const weekQtd = bySeller.reduce((s, x) => s + x.qtd, 0);
+  const weekTotal = rows.reduce((s, x) => s + x.total, 0);
+  const weekQtd = rows.reduce((s, x) => s + x.qtd, 0);
 
   // Número da semana desde PERIOD_START
   const weekNumber = Math.floor((weekStart.getTime() - minStart.getTime()) / (7 * 24 * 3600 * 1000)) + 1;
@@ -84,17 +84,11 @@ function FechamentoSemanal() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Fechamento Semanal</h2>
           <p className="text-sm text-muted-foreground">
-            Vendas por vendedor, dia e produto — semanas desde 01/06/2026.
+            Produto, quantidade, vendedor e data — semanas desde 01/06/2026.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setWeekStart(addDays(weekStart, -7))}
-            disabled={!canPrev}
-            aria-label="Semana anterior"
-          >
+          <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, -7))} disabled={!canPrev} aria-label="Semana anterior">
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm">
@@ -104,84 +98,55 @@ function FechamentoSemanal() {
               {fmtDay(toISO(weekStart))} – {fmtDay(toISO(weekEnd))}
             </span>
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setWeekStart(addDays(weekStart, 7))}
-            disabled={!canNext}
-            aria-label="Próxima semana"
-          >
+          <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, 7))} disabled={!canNext} aria-label="Próxima semana">
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-6 py-4 text-sm">
-          <div>
-            <span className="text-muted-foreground">Total da semana: </span>
-            <span className="font-semibold">{fmtEur(weekTotal)}</span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Quantidade: </span>
-            <span className="font-semibold">{weekQtd} venda{weekQtd === 1 ? "" : "s"}</span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Vendedores ativos: </span>
-            <span className="font-semibold">{bySeller.length}</span>
-          </div>
-        </CardContent>
-      </Card>
-
       {isLoading ? (
         <div className="text-muted-foreground">Carregando…</div>
-      ) : bySeller.length === 0 ? (
+      ) : rows.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Nenhuma venda registrada nesta semana.
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {bySeller.map((s) => (
-            <Card key={s.seller}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">{s.seller}</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{s.qtd} venda{s.qtd === 1 ? "" : "s"}</Badge>
-                    <Badge>{fmtEur(s.total)}</Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Produto</TableHead>
-                      <TableHead className="w-16 text-center">Qtd</TableHead>
-                      <TableHead>Dias</TableHead>
-                      <TableHead className="w-32 text-right">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {s.products.map((p) => (
-                      <TableRow key={p.product}>
-                        <TableCell className="font-medium">{p.product}</TableCell>
-                        <TableCell className="text-center tabular-nums">{p.qtd}</TableCell>
-                        <TableCell className="text-muted-foreground tabular-nums">
-                          {p.days.map(fmtDay).join(", ")}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">{fmtEur(p.total)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-24">Data</TableHead>
+                  <TableHead>Produto</TableHead>
+                  <TableHead className="w-20 text-center">Qtd</TableHead>
+                  <TableHead>Vendedor</TableHead>
+                  <TableHead className="w-32 text-right">Valor</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.key}>
+                    <TableCell className="tabular-nums">{fmtDay(r.date)}</TableCell>
+                    <TableCell className="font-medium">{r.product}</TableCell>
+                    <TableCell className="text-center tabular-nums">{r.qtd}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.seller}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmtEur(r.total)}</TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="bg-secondary/50 font-semibold">
+                  <TableCell colSpan={2}>Total da semana</TableCell>
+                  <TableCell className="text-center tabular-nums">{weekQtd}</TableCell>
+                  <TableCell />
+                  <TableCell className="text-right tabular-nums">{fmtEur(weekTotal)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
+
 }
