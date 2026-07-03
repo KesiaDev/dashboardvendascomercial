@@ -223,6 +223,23 @@ export const listManualSales = createServerFn({ method: "GET" })
     return (rows ?? []) as (ManualSale & { created_by: string })[];
   });
 
+export const listManualSalesAdmin = createServerFn({ method: "GET" })
+  .inputValidator((d: { from?: string; to?: string }) => d ?? {})
+  .handler(async ({ data }) => {
+    const db = await adminDb();
+    let q = db
+      .from("manual_sales")
+      .select("id,seller_name,product,funnel,value_eur,client_name,client_email,sale_date,notes,created_at,created_by_email,confirmation_status,confirmed_hotmart_sale_id,confirmed_hotmart_valor_brl,confirmed_wise_id")
+      .order("sale_date", { ascending: false })
+      .order("created_at", { ascending: false });
+    if (data.from) q = q.gte("sale_date", data.from);
+    if (data.to) q = q.lte("sale_date", data.to);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as ManualSale[];
+  });
+
+
 // ── Atualizar venda ───────────────────────────────────────────────────────────
 
 export const updateManualSale = createServerFn({ method: "POST" })
