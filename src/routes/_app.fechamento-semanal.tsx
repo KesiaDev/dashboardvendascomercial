@@ -174,19 +174,21 @@ function FechamentoSemanal() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-24">Dia</TableHead>
                       <TableHead>Produto</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead className="w-28 text-right">Valor</TableHead>
+                      <TableHead className="w-16 text-center">Qtd</TableHead>
+                      <TableHead>Dias</TableHead>
+                      <TableHead className="w-32 text-right">Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {s.rows.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell className="tabular-nums">{fmtDay(r.sale_date)}</TableCell>
-                        <TableCell className="font-medium">{r.product}</TableCell>
-                        <TableCell className="text-muted-foreground">{r.client_name ?? "—"}</TableCell>
-                        <TableCell className="text-right tabular-nums">{fmtEur(Number(r.value_eur || 0))}</TableCell>
+                    {s.products.map((p) => (
+                      <TableRow key={p.product}>
+                        <TableCell className="font-medium">{p.product}</TableCell>
+                        <TableCell className="text-center tabular-nums">{p.qtd}</TableCell>
+                        <TableCell className="text-muted-foreground tabular-nums">
+                          {p.days.map(fmtDay).join(", ")}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">{fmtEur(p.total)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
