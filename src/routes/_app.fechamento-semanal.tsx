@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { listManualSales, type ManualSale } from "@/lib/manual-sales.functions";
+import { listManualSalesAdmin, type ManualSale } from "@/lib/manual-sales.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,8 +51,10 @@ function FechamentoSemanal() {
 
   const { data: sales = [], isLoading } = useQuery({
     queryKey: ["manual_sales_week", toISO(weekStart), toISO(weekEnd)],
-    queryFn: () => listManualSales({ data: { from: toISO(weekStart), to: toISO(weekEnd) } }),
+    queryFn: () => listManualSalesAdmin({ data: { from: toISO(weekStart), to: toISO(weekEnd) } }),
   });
+
+  type ProductRow = { product: string; qtd: number; total: number; days: string[]; clients: string[] };
 
   const bySeller = useMemo(() => {
     const map = new Map<string, ManualSale[]>();
@@ -61,14 +63,30 @@ function FechamentoSemanal() {
       map.get(s.seller_name)!.push(s);
     }
     return Array.from(map.entries())
-      .map(([seller, rows]) => ({
-        seller,
-        rows: rows.sort((a, b) => a.sale_date.localeCompare(b.sale_date)),
-        qtd: rows.length,
-        total: rows.reduce((s, r) => s + Number(r.value_eur || 0), 0),
-      }))
+      .map(([seller, rows]) => {
+        // Agrupar por produto
+        const prodMap = new Map<string, ProductRow>();
+        for (const r of rows) {
+          const cur = prodMap.get(r.product) ?? { product: r.product, qtd: 0, total: 0, days: [], clients: [] };
+          cur.qtd += 1;
+          cur.total += Number(r.value_eur || 0);
+          cur.days.push(r.sale_date);
+          if (r.client_name) cur.clients.push(r.client_name);
+          prodMap.set(r.product, cur);
+        }
+        const products = Array.from(prodMap.values())
+          .map((p) => ({ ...p, days: p.days.sort() }))
+          .sort((a, b) => b.total - a.total);
+        return {
+          seller,
+          products,
+          qtd: rows.length,
+          total: rows.reduce((s, r) => s + Number(r.value_eur || 0), 0),
+        };
+      })
       .sort((a, b) => b.total - a.total);
   }, [sales]);
+
 
   const weekTotal = bySeller.reduce((s, x) => s + x.total, 0);
   const weekQtd = bySeller.reduce((s, x) => s + x.qtd, 0);
@@ -156,19 +174,21 @@ function FechamentoSemanal() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-24">Dia</TableHead>
                       <TableHead>Produto</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead className="w-28 text-right">Valor</TableHead>
+                      <TableHead className="w-16 text-center">Qtd</TableHead>
+                      <TableHead>Dias</TableHead>
+                      <TableHead className="w-32 text-right">Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {s.rows.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell className="tabular-nums">{fmtDay(r.sale_date)}</TableCell>
-                        <TableCell className="font-medium">{r.product}</TableCell>
-                        <TableCell className="text-muted-foreground">{r.client_name ?? "—"}</TableCell>
-                        <TableCell className="text-right tabular-nums">{fmtEur(Number(r.value_eur || 0))}</TableCell>
+                    {s.products.map((p) => (
+                      <TableRow key={p.product}>
+                        <TableCell className="font-medium">{p.product}</TableCell>
+                        <TableCell className="text-center tabular-nums">{p.qtd}</TableCell>
+                        <TableCell className="text-muted-foreground tabular-nums">
+                          {p.days.map(fmtDay).join(", ")}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">{fmtEur(p.total)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
