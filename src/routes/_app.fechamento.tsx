@@ -462,8 +462,17 @@ function FechamentoForm({ session }: { session: any }) {
                   Re-verificar {pendingCount} pendente(s) no Hotmart
                 </Button>
               )}
+              {mismatchCount > 0 && (
+                <div className="mt-3 flex items-start gap-2 rounded-md border border-orange-800/40 bg-orange-950/30 px-3 py-2 text-xs text-orange-300">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    <b>{mismatchCount}</b> venda(s) com afiliado Hotmart diferente do vendedor lançado — revise abaixo (venda por link SCK ou lançamento no vendedor errado).
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
+
 
           {/* Vendas de hoje */}
           <Card>
