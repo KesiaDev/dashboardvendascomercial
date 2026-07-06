@@ -369,9 +369,40 @@ function FechamentoForm({ session }: { session: any }) {
                         {/* Lookup em tempo real */}
                         <EmailLookup email={it.clientEmail} saleDate={saleDate} />
                       </div>
+
+                      {/* Roleta e bônus semanal — capturados na origem para não reconstruir no fim do mês */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Giro de roleta?</Label>
+                        <Select
+                          value={it.roleta || "none"}
+                          onValueChange={(v) => updateItem(i, { roleta: v === "none" ? "" : (v as "mentoria" | "accelerator") })}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Não dá roleta</SelectItem>
+                            <SelectItem value="mentoria">Roleta Mentoria</SelectItem>
+                            <SelectItem value="accelerator">Roleta Accelerator</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Conta p/ bônus semanal?</Label>
+                        <Select
+                          value={it.bonus || "none"}
+                          onValueChange={(v) => updateItem(i, { bonus: v === "none" ? "" : (v as "30" | "60") })}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Não conta</SelectItem>
+                            <SelectItem value="30">Sim · €30</SelectItem>
+                            <SelectItem value="60">Sim · €60</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 ))}
+
 
                 <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm">
                   <span className="text-muted-foreground">Total deste fechamento</span>
