@@ -593,12 +593,12 @@ function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm }: {
                 <AlertTriangle className="h-3 w-3" />Afiliado ≠
               </Badge>
             )}
-            {sale.roleta_type && (
+            {isAdmin && sale.roleta_type && (
               <Badge variant="outline" className="text-xs">
                 🎯 Roleta {sale.roleta_type === "mentoria" ? "Mentoria" : "Accelerator"}
               </Badge>
             )}
-            {sale.bonus_semanal_eur && (
+            {isAdmin && sale.bonus_semanal_eur && (
               <Badge variant="outline" className="text-xs">
                 Bônus €{sale.bonus_semanal_eur}
               </Badge>
