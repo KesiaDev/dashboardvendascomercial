@@ -43,6 +43,9 @@ export const SELLERS = [
   "Luana Guimarães",
 ] as const;
 
+export type RoletaType = "mentoria" | "accelerator";
+export type BonusSemanalEur = 30 | 60;
+
 export type ManualSale = {
   id: string;
   seller_name: string;
@@ -60,11 +63,43 @@ export type ManualSale = {
   confirmed_hotmart_sale_id: string | null;
   confirmed_hotmart_valor_brl: number | null;
   confirmed_wise_id: number | null;
+  // Novos (fase 1)
+  roleta_type: RoletaType | null;
+  bonus_semanal_eur: BonusSemanalEur | null;
+  affiliate_mismatch: boolean;
+  hotmart_nome_afiliado: string | null;
 };
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+// Normaliza email para comparação (trim + lowercase). Não altera acentos porque
+// e-mails são ASCII por definição prática aqui.
+function normEmail(e: string | null | undefined) {
+  return (e ?? "").trim().toLowerCase();
+}
+
+// Extrai o primeiro nome normalizado (sem acento, minúsculo) — usado para
+// comparar `nome_afiliado` (Hotmart) com `seller_name` (dashboard). Ex.:
+// "Gisele Gagliano Pimentel" vs "Gisele Pimentel" → ambos "gisele".
+function firstNameNorm(name: string | null | undefined) {
+  return (name ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)[0] ?? "";
+}
+
+// Verdadeiro quando a Hotmart tem um afiliado que NÃO bate com o vendedor
+// lançado no fechamento. Vendas com nome_afiliado vazio (link SCK sem afiliado
+// direto) NÃO contam como divergência — é o caso comum.
+function isAffiliateMismatch(sellerName: string, nomeAfiliado: string | null | undefined) {
+  const afiliado = firstNameNorm(nomeAfiliado);
+  if (!afiliado) return false;
+  return firstNameNorm(sellerName) !== afiliado;
+}
+
 // ── Lookup por email ──────────────────────────────────────────────────────────
-// Busca na tabela sales (Hotmart) pelo email do cliente
-// Retorna as vendas aprovadas mais próximas da data informada
 
 export type HotmartMatch = {
   id: string;
@@ -82,21 +117,22 @@ export type HotmartMatch = {
 export const lookupByEmailFn = createServerFn({ method: "GET" })
   .inputValidator((d: { email: string; sale_date?: string }) => {
     if (!d.email || !d.email.includes("@")) throw new Error("Email inválido");
-    return d;
+    return { email: normEmail(d.email), sale_date: d.sale_date };
   })
   .handler(async ({ data }) => {
     const db = await adminDb();
     // Janela de ±7 dias ao redor da data informada
     let q = db
       .from("sales")
-      .select("id,email_cliente,nome_cliente,produto_original,produto_grupo,faturamento_liquido_brl,data_venda,nome_afiliado,status,moeda_original")
-      .or(`email_cliente.eq.${data.email},contact_email.eq.${data.email}`)
+      .select(
+        "id,email_cliente,nome_cliente,produto_original,produto_grupo,faturamento_liquido_brl,data_venda,nome_afiliado,status,moeda_original",
+      )
+      .eq("email_cliente", data.email)
       .in("status", ["Aprovado", "Completo", "APPROVED"])
       .order("data_venda", { ascending: false })
       .limit(10);
 
     if (data.sale_date) {
-      // Janela de 7 dias antes e 7 dias depois
       const d = new Date(data.sale_date);
       const from = new Date(d); from.setDate(d.getDate() - 7);
       const to = new Date(d); to.setDate(d.getDate() + 7);
@@ -110,8 +146,28 @@ export const lookupByEmailFn = createServerFn({ method: "GET" })
     return (rows ?? []) as HotmartMatch[];
   });
 
+// Busca match único (o mais recente na janela) para gravar na manual_sale.
+async function findHotmartMatch(email: string, saleDate: string) {
+  const db = await adminDb();
+  const em = normEmail(email);
+  if (!em) return null;
+  const d = new Date(saleDate);
+  const from = new Date(d); from.setDate(d.getDate() - 7);
+  const to = new Date(d); to.setDate(d.getDate() + 7);
+  const { data, error } = await db
+    .from("sales")
+    .select("id,faturamento_liquido_brl,nome_afiliado")
+    .eq("email_cliente", em)
+    .in("status", ["Aprovado", "Completo", "APPROVED"])
+    .gte("data_venda", from.toISOString().slice(0, 10))
+    .lte("data_venda", to.toISOString().slice(0, 10))
+    .order("data_venda", { ascending: false })
+    .limit(1);
+  if (error) return null;
+  return data?.[0] ?? null;
+}
+
 // ── Confirmar manualmente ─────────────────────────────────────────────────────
-// Admin pode marcar como confirmado / não encontrado
 
 export const confirmManualSaleFn = createServerFn({ method: "POST" })
   .inputValidator((d: {
@@ -149,39 +205,32 @@ export const createManualSale = createServerFn({ method: "POST" })
     funnel: string;
     value_eur: number;
     client_name?: string;
-    client_email: string; // obrigatório
+    client_email: string;
     sale_date: string;
     notes?: string;
+    roleta_type?: RoletaType | null;
+    bonus_semanal_eur?: BonusSemanalEur | null;
   }) => {
     if (!d.seller_name || !d.product || !d.funnel) throw new Error("Campos obrigatórios faltando");
     if (!d.client_email || !d.client_email.includes("@")) throw new Error("E-mail do cliente obrigatório");
     if (!(d.value_eur >= 0)) throw new Error("Valor inválido");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d.sale_date)) throw new Error("Data inválida");
-    return d;
+    if (d.roleta_type && d.roleta_type !== "mentoria" && d.roleta_type !== "accelerator")
+      throw new Error("roleta_type inválido");
+    if (d.bonus_semanal_eur != null && d.bonus_semanal_eur !== 30 && d.bonus_semanal_eur !== 60)
+      throw new Error("bonus_semanal_eur deve ser 30 ou 60");
+    return { ...d, client_email: normEmail(d.client_email) };
   })
   .handler(async ({ data, context }) => {
     const { supabase, userId, claims } = context;
     const today = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
     if (data.sale_date > today) throw new Error("Data não pode ser no futuro");
 
-    // Tenta confirmar automaticamente buscando na Hotmart pelo email
-    const db = await adminDb();
-    const windowFrom = new Date(data.sale_date);
-    const windowTo = new Date(data.sale_date);
-    windowFrom.setDate(windowFrom.getDate() - 7);
-    windowTo.setDate(windowTo.getDate() + 7);
-
-    const { data: hotmartMatches } = await db
-      .from("sales")
-      .select("id,faturamento_liquido_brl,data_venda,produto_grupo,nome_afiliado,status")
-      .or(`email_cliente.eq.${data.client_email},contact_email.eq.${data.client_email}`)
-      .in("status", ["Aprovado", "Completo", "APPROVED"])
-      .gte("data_venda", windowFrom.toISOString().slice(0, 10))
-      .lte("data_venda", windowTo.toISOString().slice(0, 10))
-      .limit(1);
-
-    const hotmartMatch = hotmartMatches?.[0] ?? null;
+    const hotmartMatch = await findHotmartMatch(data.client_email, data.sale_date);
     const confirmationStatus = hotmartMatch ? "confirmado_hotmart" : "pendente";
+    const affiliateMismatch = hotmartMatch
+      ? isAffiliateMismatch(data.seller_name, hotmartMatch.nome_afiliado)
+      : false;
 
     const { data: row, error } = await supabase
       .from("manual_sales")
@@ -199,14 +248,24 @@ export const createManualSale = createServerFn({ method: "POST" })
         confirmation_status: confirmationStatus,
         confirmed_hotmart_sale_id: hotmartMatch?.id ?? null,
         confirmed_hotmart_valor_brl: hotmartMatch?.faturamento_liquido_brl ?? null,
+        roleta_type: data.roleta_type ?? null,
+        bonus_semanal_eur: data.bonus_semanal_eur ?? null,
+        affiliate_mismatch: affiliateMismatch,
+        hotmart_nome_afiliado: hotmartMatch?.nome_afiliado ?? null,
       })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
-    return { ok: true, id: row!.id, confirmation: confirmationStatus, hotmartMatch };
+    return { ok: true, id: row!.id, confirmation: confirmationStatus, hotmartMatch, affiliateMismatch };
   });
 
 // ── Listar vendas ─────────────────────────────────────────────────────────────
+
+const SALE_COLS =
+  "id,seller_name,product,funnel,value_eur,client_name,client_email,sale_date,notes,created_at,created_by,created_by_email,confirmation_status,confirmed_hotmart_sale_id,confirmed_hotmart_valor_brl,confirmed_wise_id,roleta_type,bonus_semanal_eur,affiliate_mismatch,hotmart_nome_afiliado";
+
+const SALE_COLS_ADMIN =
+  "id,seller_name,product,funnel,value_eur,client_name,client_email,sale_date,notes,created_at,created_by_email,confirmation_status,confirmed_hotmart_sale_id,confirmed_hotmart_valor_brl,confirmed_wise_id,roleta_type,bonus_semanal_eur,affiliate_mismatch,hotmart_nome_afiliado";
 
 export const listManualSales = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -214,7 +273,7 @@ export const listManualSales = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("manual_sales")
-      .select("id,seller_name,product,funnel,value_eur,client_name,client_email,sale_date,notes,created_at,created_by,created_by_email,confirmation_status,confirmed_hotmart_sale_id,confirmed_hotmart_valor_brl,confirmed_wise_id")
+      .select(SALE_COLS)
       .order("sale_date", { ascending: false })
       .order("created_at", { ascending: false });
     if (data.from) q = q.gte("sale_date", data.from);
@@ -230,7 +289,7 @@ export const listManualSalesAdmin = createServerFn({ method: "GET" })
     const db = await adminDb();
     let q = db
       .from("manual_sales")
-      .select("id,seller_name,product,funnel,value_eur,client_name,client_email,sale_date,notes,created_at,created_by_email,confirmation_status,confirmed_hotmart_sale_id,confirmed_hotmart_valor_brl,confirmed_wise_id")
+      .select(SALE_COLS_ADMIN)
       .order("sale_date", { ascending: false })
       .order("created_at", { ascending: false });
     if (data.from) q = q.gte("sale_date", data.from);
@@ -255,32 +314,25 @@ export const updateManualSale = createServerFn({ method: "POST" })
     client_email: string;
     sale_date: string;
     notes?: string;
+    roleta_type?: RoletaType | null;
+    bonus_semanal_eur?: BonusSemanalEur | null;
   }) => {
     if (!d.id) throw new Error("ID obrigatório");
     if (!d.seller_name || !d.product || !d.funnel) throw new Error("Campos obrigatórios faltando");
     if (!d.client_email || !d.client_email.includes("@")) throw new Error("E-mail do cliente obrigatório");
     if (!(d.value_eur >= 0)) throw new Error("Valor inválido");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d.sale_date)) throw new Error("Data inválida");
-    return d;
+    if (d.roleta_type && d.roleta_type !== "mentoria" && d.roleta_type !== "accelerator")
+      throw new Error("roleta_type inválido");
+    if (d.bonus_semanal_eur != null && d.bonus_semanal_eur !== 30 && d.bonus_semanal_eur !== 60)
+      throw new Error("bonus_semanal_eur deve ser 30 ou 60");
+    return { ...d, client_email: normEmail(d.client_email) };
   })
   .handler(async ({ data, context }) => {
-    // Re-tenta confirmação automática se email mudou
-    const db = await adminDb();
-    const windowFrom = new Date(data.sale_date);
-    const windowTo = new Date(data.sale_date);
-    windowFrom.setDate(windowFrom.getDate() - 7);
-    windowTo.setDate(windowTo.getDate() + 7);
-
-    const { data: hotmartMatches } = await db
-      .from("sales")
-      .select("id,faturamento_liquido_brl")
-      .or(`email_cliente.eq.${data.client_email},contact_email.eq.${data.client_email}`)
-      .in("status", ["Aprovado", "Completo", "APPROVED"])
-      .gte("data_venda", windowFrom.toISOString().slice(0, 10))
-      .lte("data_venda", windowTo.toISOString().slice(0, 10))
-      .limit(1);
-
-    const hotmartMatch = hotmartMatches?.[0] ?? null;
+    const hotmartMatch = await findHotmartMatch(data.client_email, data.sale_date);
+    const affiliateMismatch = hotmartMatch
+      ? isAffiliateMismatch(data.seller_name, hotmartMatch.nome_afiliado)
+      : false;
 
     const { error } = await context.supabase
       .from("manual_sales")
@@ -296,6 +348,10 @@ export const updateManualSale = createServerFn({ method: "POST" })
         confirmation_status: hotmartMatch ? "confirmado_hotmart" : "pendente",
         confirmed_hotmart_sale_id: hotmartMatch?.id ?? null,
         confirmed_hotmart_valor_brl: hotmartMatch?.faturamento_liquido_brl ?? null,
+        roleta_type: data.roleta_type ?? null,
+        bonus_semanal_eur: data.bonus_semanal_eur ?? null,
+        affiliate_mismatch: affiliateMismatch,
+        hotmart_nome_afiliado: hotmartMatch?.nome_afiliado ?? null,
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -317,47 +373,37 @@ export const deleteManualSale = createServerFn({ method: "POST" })
   });
 
 // ── Re-confirmar todas as pendentes (admin) ───────────────────────────────────
-// Roda em batch: busca todas as manual_sales pendentes e tenta confirmar no Hotmart
 
 export const reconfirmAllPendingFn = createServerFn({ method: "POST" })
   .handler(async () => {
     const db = await adminDb();
     const { data: pending, error: pendingError } = await db
       .from("manual_sales")
-      .select("id,client_email,sale_date")
+      .select("id,client_email,sale_date,seller_name")
       .eq("confirmation_status", "pendente")
       .not("client_email", "is", null);
     if (pendingError) throw new Error(pendingError.message);
 
     let confirmed = 0;
+    let mismatches = 0;
     for (const row of pending ?? []) {
       if (!row.client_email) continue;
-      const windowFrom = new Date(row.sale_date);
-      const windowTo = new Date(row.sale_date);
-      windowFrom.setDate(windowFrom.getDate() - 7);
-      windowTo.setDate(windowTo.getDate() + 7);
-
-      const { data: matches } = await db
-        .from("sales")
-        .select("id,faturamento_liquido_brl")
-        .or(`email_cliente.eq.${row.client_email},contact_email.eq.${row.client_email}`)
-        .in("status", ["Aprovado", "Completo", "APPROVED"])
-        .gte("data_venda", windowFrom.toISOString().slice(0, 10))
-        .lte("data_venda", windowTo.toISOString().slice(0, 10))
-        .limit(1);
-
-      const match = matches?.[0];
+      const match = await findHotmartMatch(row.client_email, row.sale_date);
       if (match) {
+        const mismatch = isAffiliateMismatch(row.seller_name, match.nome_afiliado);
+        if (mismatch) mismatches++;
         await db
           .from("manual_sales")
           .update({
             confirmation_status: "confirmado_hotmart",
             confirmed_hotmart_sale_id: match.id,
             confirmed_hotmart_valor_brl: match.faturamento_liquido_brl,
+            affiliate_mismatch: mismatch,
+            hotmart_nome_afiliado: match.nome_afiliado,
           })
           .eq("id", row.id);
         confirmed++;
       }
     }
-    return { total: (pending ?? []).length, confirmed };
+    return { total: (pending ?? []).length, confirmed, mismatches };
   });

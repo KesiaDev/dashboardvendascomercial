@@ -34,9 +34,10 @@ import {
 import { toast } from "sonner";
 import {
   CheckCircle2, LogIn, LogOut, Pencil, Plus, Trash2, X,
-  Search, AlertCircle, RefreshCw, CheckCheck,
+  Search, AlertCircle, RefreshCw, CheckCheck, AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
 
 export const Route = createFileRoute("/_app/fechamento")({ component: FechamentoPage });
 
@@ -158,14 +159,22 @@ function FechamentoForm({ session }: { session: any }) {
   const [saleDate, setSaleDate] = useState(todayBR());
   const [notes, setNotes] = useState("");
 
-  type Item = { product: string; value: string; clientName: string; clientEmail: string };
-  const emptyItem = (): Item => ({ product: "", value: "", clientName: "", clientEmail: "" });
+  type Item = {
+    product: string;
+    value: string;
+    clientName: string;
+    clientEmail: string;
+    roleta: "" | "mentoria" | "accelerator";
+    bonus: "" | "30" | "60";
+  };
+  const emptyItem = (): Item => ({ product: "", value: "", clientName: "", clientEmail: "", roleta: "", bonus: "" });
   const [items, setItems] = useState<Item[]>([emptyItem()]);
 
   const updateItem = (i: number, patch: Partial<Item>) =>
     setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   const addItem = () => setItems((arr) => [...arr, emptyItem()]);
   const removeItem = (i: number) => setItems((arr) => arr.length === 1 ? arr : arr.filter((_, idx) => idx !== i));
+
 
   const [editing, setEditing] = useState<SaleRow | null>(null);
   const [deleting, setDeleting] = useState<SaleRow | null>(null);
@@ -193,6 +202,8 @@ function FechamentoForm({ session }: { session: any }) {
               client_email: it.clientEmail,
               sale_date: saleDate,
               notes: notes || undefined,
+              roleta_type: it.roleta || null,
+              bonus_semanal_eur: it.bonus ? (Number(it.bonus) as 30 | 60) : null,
             },
           })
         )
@@ -205,6 +216,7 @@ function FechamentoForm({ session }: { session: any }) {
         (r) => r.status === "fulfilled" && (r.value as any)?.confirmation === "confirmado_hotmart"
       ).length;
       return { count: results.length, confirmed };
+
     },
     onSuccess: ({ count, confirmed }) => {
       if (confirmed > 0)
@@ -241,7 +253,8 @@ function FechamentoForm({ session }: { session: any }) {
   const reconfirmMut = useMutation({
     mutationFn: () => reconfirmAllPendingFn(),
     onSuccess: (r: any) => {
-      toast.success(`Re-confirmação: ${r.confirmed}/${r.total} confirmadas no Hotmart`);
+      const extra = r.mismatches ? ` · ${r.mismatches} com afiliado divergente` : "";
+      toast.success(`Re-confirmação: ${r.confirmed}/${r.total} confirmadas no Hotmart${extra}`);
       qc.invalidateQueries({ queryKey: ["manual-sales"] });
     },
     onError: (e: any) => toast.error(String(e?.message ?? e)),
@@ -254,6 +267,8 @@ function FechamentoForm({ session }: { session: any }) {
 
   const pendingCount = sales.filter((s) => s.confirmation_status === "pendente").length;
   const confirmedCount = sales.filter((s) => s.confirmation_status === "confirmado_hotmart" || s.confirmation_status === "confirmado_wise").length;
+  const mismatchCount = sales.filter((s) => s.affiliate_mismatch).length;
+
 
   return (
     <>
@@ -354,9 +369,40 @@ function FechamentoForm({ session }: { session: any }) {
                         {/* Lookup em tempo real */}
                         <EmailLookup email={it.clientEmail} saleDate={saleDate} />
                       </div>
+
+                      {/* Roleta e bônus semanal — capturados na origem para não reconstruir no fim do mês */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Giro de roleta?</Label>
+                        <Select
+                          value={it.roleta || "none"}
+                          onValueChange={(v) => updateItem(i, { roleta: v === "none" ? "" : (v as "mentoria" | "accelerator") })}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Não dá roleta</SelectItem>
+                            <SelectItem value="mentoria">Roleta Mentoria</SelectItem>
+                            <SelectItem value="accelerator">Roleta Accelerator</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Conta p/ bônus semanal?</Label>
+                        <Select
+                          value={it.bonus || "none"}
+                          onValueChange={(v) => updateItem(i, { bonus: v === "none" ? "" : (v as "30" | "60") })}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Não conta</SelectItem>
+                            <SelectItem value="30">Sim · €30</SelectItem>
+                            <SelectItem value="60">Sim · €60</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 ))}
+
 
                 <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm">
                   <span className="text-muted-foreground">Total deste fechamento</span>
@@ -416,8 +462,17 @@ function FechamentoForm({ session }: { session: any }) {
                   Re-verificar {pendingCount} pendente(s) no Hotmart
                 </Button>
               )}
+              {mismatchCount > 0 && (
+                <div className="mt-3 flex items-start gap-2 rounded-md border border-orange-800/40 bg-orange-950/30 px-3 py-2 text-xs text-orange-300">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    <b>{mismatchCount}</b> venda(s) com afiliado Hotmart diferente do vendedor lançado — revise abaixo (venda por link SCK ou lançamento no vendedor errado).
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
+
 
           {/* Vendas de hoje */}
           <Card>
@@ -523,6 +578,21 @@ function SaleCard({ sale, onEdit, onDelete, onConfirm }: {
             <span className="font-semibold">{sale.seller_name.split(" ")[0]}</span>
             <span className="tabular-nums font-bold">{moneyEur(Number(sale.value_eur))}</span>
             <ConfirmBadge status={sale.confirmation_status} />
+            {sale.affiliate_mismatch && (
+              <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30 text-xs gap-1">
+                <AlertTriangle className="h-3 w-3" />Afiliado ≠
+              </Badge>
+            )}
+            {sale.roleta_type && (
+              <Badge variant="outline" className="text-xs">
+                🎯 Roleta {sale.roleta_type === "mentoria" ? "Mentoria" : "Accelerator"}
+              </Badge>
+            )}
+            {sale.bonus_semanal_eur && (
+              <Badge variant="outline" className="text-xs">
+                Bônus €{sale.bonus_semanal_eur}
+              </Badge>
+            )}
           </div>
           <div className="text-xs text-muted-foreground truncate mt-0.5">{fmtDate(sale.sale_date)} · {sale.product}</div>
           <div className="text-xs text-muted-foreground truncate">{sale.funnel}</div>
@@ -540,7 +610,14 @@ function SaleCard({ sale, onEdit, onDelete, onConfirm }: {
               Hotmart: {moneyBrl(sale.confirmed_hotmart_valor_brl)}
             </div>
           )}
+          {sale.affiliate_mismatch && sale.hotmart_nome_afiliado && (
+            <div className="mt-1 flex items-center gap-1 text-xs text-orange-400">
+              <AlertTriangle className="h-3 w-3" />
+              Afiliado Hotmart: <b>{sale.hotmart_nome_afiliado}</b> — vendedor lançado: <b>{sale.seller_name}</b>
+            </div>
+          )}
           {sale.notes && <div className="mt-1 text-xs italic text-muted-foreground">"{sale.notes}"</div>}
+
         </div>
       </div>
       <div className="flex gap-1 flex-wrap">
@@ -578,8 +655,11 @@ function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => vo
         client_email: form!.client_email ?? "",
         sale_date: form!.sale_date,
         notes: form!.notes ?? undefined,
+        roleta_type: form!.roleta_type ?? null,
+        bonus_semanal_eur: form!.bonus_semanal_eur ?? null,
       },
     }),
+
     onSuccess: () => {
       toast.success("Venda atualizada");
       qc.invalidateQueries({ queryKey: ["manual-sales"] });
@@ -637,12 +717,41 @@ function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => vo
               <Input type="email" required value={form.client_email ?? ""} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
               <EmailLookup email={form.client_email ?? ""} saleDate={form.sale_date} />
             </div>
+            <div className="space-y-1.5">
+              <Label>Giro de roleta?</Label>
+              <Select
+                value={form.roleta_type ?? "none"}
+                onValueChange={(v) => setForm({ ...form, roleta_type: v === "none" ? null : (v as "mentoria" | "accelerator") })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não dá roleta</SelectItem>
+                  <SelectItem value="mentoria">Roleta Mentoria</SelectItem>
+                  <SelectItem value="accelerator">Roleta Accelerator</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Bônus semanal</Label>
+              <Select
+                value={form.bonus_semanal_eur ? String(form.bonus_semanal_eur) : "none"}
+                onValueChange={(v) => setForm({ ...form, bonus_semanal_eur: v === "none" ? null : (Number(v) as 30 | 60) })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não conta</SelectItem>
+                  <SelectItem value="30">Sim · €30</SelectItem>
+                  <SelectItem value="60">Sim · €60</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Observação</Label>
               <Textarea rows={2} value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
           </div>
         )}
+
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button onClick={() => mut.mutate()} disabled={mut.isPending}>
