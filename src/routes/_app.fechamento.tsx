@@ -647,7 +647,7 @@ function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm }: {
 
 // ── Dialog de edição ─────────────────────────────────────────────────────────
 
-function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => void }) {
+function EditDialog({ sale, isAdmin, onClose }: { sale: SaleRow | null; isAdmin: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const [form, setForm] = useState<SaleRow | null>(sale);
 
