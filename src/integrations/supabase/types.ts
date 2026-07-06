@@ -723,6 +723,8 @@ export type Database = {
       }
       manual_sales: {
         Row: {
+          affiliate_mismatch: boolean
+          bonus_semanal_eur: number | null
           client_email: string | null
           client_name: string | null
           confirmation_status: string
@@ -733,14 +735,18 @@ export type Database = {
           created_by: string
           created_by_email: string
           funnel: string
+          hotmart_nome_afiliado: string | null
           id: string
           notes: string | null
           product: string
+          roleta_type: string | null
           sale_date: string
           seller_name: string
           value_eur: number
         }
         Insert: {
+          affiliate_mismatch?: boolean
+          bonus_semanal_eur?: number | null
           client_email?: string | null
           client_name?: string | null
           confirmation_status?: string
@@ -751,14 +757,18 @@ export type Database = {
           created_by: string
           created_by_email: string
           funnel: string
+          hotmart_nome_afiliado?: string | null
           id?: string
           notes?: string | null
           product: string
+          roleta_type?: string | null
           sale_date: string
           seller_name: string
           value_eur: number
         }
         Update: {
+          affiliate_mismatch?: boolean
+          bonus_semanal_eur?: number | null
           client_email?: string | null
           client_name?: string | null
           confirmation_status?: string
@@ -769,9 +779,11 @@ export type Database = {
           created_by?: string
           created_by_email?: string
           funnel?: string
+          hotmart_nome_afiliado?: string | null
           id?: string
           notes?: string | null
           product?: string
+          roleta_type?: string | null
           sale_date?: string
           seller_name?: string
           value_eur?: number
