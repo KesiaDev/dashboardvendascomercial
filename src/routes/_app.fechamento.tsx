@@ -150,8 +150,12 @@ function LoginCard() {
 
 type SaleRow = Awaited<ReturnType<typeof listManualSales>>[number];
 
+const ADMIN_EMAILS = ["kesia@llmidia.com"];
+function isAdminEmail(e: string) { return ADMIN_EMAILS.includes((e ?? "").trim().toLowerCase()); }
+
 function FechamentoForm({ session }: { session: any }) {
   const email = session?.user?.email ?? "";
+  const isAdmin = isAdminEmail(email);
   const qc = useQueryClient();
 
   const [seller, setSeller] = useState<string>("");
