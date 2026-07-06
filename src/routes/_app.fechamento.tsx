@@ -202,6 +202,8 @@ function FechamentoForm({ session }: { session: any }) {
               client_email: it.clientEmail,
               sale_date: saleDate,
               notes: notes || undefined,
+              roleta_type: it.roleta || null,
+              bonus_semanal_eur: it.bonus ? (Number(it.bonus) as 30 | 60) : null,
             },
           })
         )
@@ -214,6 +216,7 @@ function FechamentoForm({ session }: { session: any }) {
         (r) => r.status === "fulfilled" && (r.value as any)?.confirmation === "confirmado_hotmart"
       ).length;
       return { count: results.length, confirmed };
+
     },
     onSuccess: ({ count, confirmed }) => {
       if (confirmed > 0)
