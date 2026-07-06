@@ -655,8 +655,11 @@ function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => vo
         client_email: form!.client_email ?? "",
         sale_date: form!.sale_date,
         notes: form!.notes ?? undefined,
+        roleta_type: form!.roleta_type ?? null,
+        bonus_semanal_eur: form!.bonus_semanal_eur ?? null,
       },
     }),
+
     onSuccess: () => {
       toast.success("Venda atualizada");
       qc.invalidateQueries({ queryKey: ["manual-sales"] });
