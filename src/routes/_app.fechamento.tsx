@@ -253,7 +253,8 @@ function FechamentoForm({ session }: { session: any }) {
   const reconfirmMut = useMutation({
     mutationFn: () => reconfirmAllPendingFn(),
     onSuccess: (r: any) => {
-      toast.success(`Re-confirmação: ${r.confirmed}/${r.total} confirmadas no Hotmart`);
+      const extra = r.mismatches ? ` · ${r.mismatches} com afiliado divergente` : "";
+      toast.success(`Re-confirmação: ${r.confirmed}/${r.total} confirmadas no Hotmart${extra}`);
       qc.invalidateQueries({ queryKey: ["manual-sales"] });
     },
     onError: (e: any) => toast.error(String(e?.message ?? e)),
@@ -266,6 +267,8 @@ function FechamentoForm({ session }: { session: any }) {
 
   const pendingCount = sales.filter((s) => s.confirmation_status === "pendente").length;
   const confirmedCount = sales.filter((s) => s.confirmation_status === "confirmado_hotmart" || s.confirmation_status === "confirmado_wise").length;
+  const mismatchCount = sales.filter((s) => s.affiliate_mismatch).length;
+
 
   return (
     <>
