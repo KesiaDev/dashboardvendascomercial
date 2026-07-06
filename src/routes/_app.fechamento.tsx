@@ -495,7 +495,8 @@ function FechamentoForm({ session }: { session: any }) {
                 <p className="text-sm text-muted-foreground">Nenhuma venda registrada hoje ainda.</p>
               )}
               {todaySales.map((s) => (
-                <SaleCard key={s.id} sale={s} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} />
+                <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} />
+
               ))}
             </CardContent>
           </Card>
