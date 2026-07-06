@@ -521,7 +521,7 @@ function FechamentoForm({ session }: { session: any }) {
         </div>
       </div>
 
-      <EditDialog sale={editing} onClose={() => setEditing(null)} />
+      <EditDialog sale={editing} isAdmin={isAdmin} onClose={() => setEditing(null)} />
 
       {/* Dialog de confirmação manual */}
       <Dialog open={!!confirmingId} onOpenChange={(o) => !o && setConfirmingId(null)}>
