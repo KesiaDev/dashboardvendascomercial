@@ -578,6 +578,21 @@ function SaleCard({ sale, onEdit, onDelete, onConfirm }: {
             <span className="font-semibold">{sale.seller_name.split(" ")[0]}</span>
             <span className="tabular-nums font-bold">{moneyEur(Number(sale.value_eur))}</span>
             <ConfirmBadge status={sale.confirmation_status} />
+            {sale.affiliate_mismatch && (
+              <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30 text-xs gap-1">
+                <AlertTriangle className="h-3 w-3" />Afiliado ≠
+              </Badge>
+            )}
+            {sale.roleta_type && (
+              <Badge variant="outline" className="text-xs">
+                🎯 Roleta {sale.roleta_type === "mentoria" ? "Mentoria" : "Accelerator"}
+              </Badge>
+            )}
+            {sale.bonus_semanal_eur && (
+              <Badge variant="outline" className="text-xs">
+                Bônus €{sale.bonus_semanal_eur}
+              </Badge>
+            )}
           </div>
           <div className="text-xs text-muted-foreground truncate mt-0.5">{fmtDate(sale.sale_date)} · {sale.product}</div>
           <div className="text-xs text-muted-foreground truncate">{sale.funnel}</div>
@@ -595,7 +610,14 @@ function SaleCard({ sale, onEdit, onDelete, onConfirm }: {
               Hotmart: {moneyBrl(sale.confirmed_hotmart_valor_brl)}
             </div>
           )}
+          {sale.affiliate_mismatch && sale.hotmart_nome_afiliado && (
+            <div className="mt-1 flex items-center gap-1 text-xs text-orange-400">
+              <AlertTriangle className="h-3 w-3" />
+              Afiliado Hotmart: <b>{sale.hotmart_nome_afiliado}</b> — vendedor lançado: <b>{sale.seller_name}</b>
+            </div>
+          )}
           {sale.notes && <div className="mt-1 text-xs italic text-muted-foreground">"{sale.notes}"</div>}
+
         </div>
       </div>
       <div className="flex gap-1 flex-wrap">
