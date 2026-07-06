@@ -34,9 +34,10 @@ import {
 import { toast } from "sonner";
 import {
   CheckCircle2, LogIn, LogOut, Pencil, Plus, Trash2, X,
-  Search, AlertCircle, RefreshCw, CheckCheck,
+  Search, AlertCircle, RefreshCw, CheckCheck, AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
 
 export const Route = createFileRoute("/_app/fechamento")({ component: FechamentoPage });
 
