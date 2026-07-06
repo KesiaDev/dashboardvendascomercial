@@ -159,14 +159,22 @@ function FechamentoForm({ session }: { session: any }) {
   const [saleDate, setSaleDate] = useState(todayBR());
   const [notes, setNotes] = useState("");
 
-  type Item = { product: string; value: string; clientName: string; clientEmail: string };
-  const emptyItem = (): Item => ({ product: "", value: "", clientName: "", clientEmail: "" });
+  type Item = {
+    product: string;
+    value: string;
+    clientName: string;
+    clientEmail: string;
+    roleta: "" | "mentoria" | "accelerator";
+    bonus: "" | "30" | "60";
+  };
+  const emptyItem = (): Item => ({ product: "", value: "", clientName: "", clientEmail: "", roleta: "", bonus: "" });
   const [items, setItems] = useState<Item[]>([emptyItem()]);
 
   const updateItem = (i: number, patch: Partial<Item>) =>
     setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   const addItem = () => setItems((arr) => [...arr, emptyItem()]);
   const removeItem = (i: number) => setItems((arr) => arr.length === 1 ? arr : arr.filter((_, idx) => idx !== i));
+
 
   const [editing, setEditing] = useState<SaleRow | null>(null);
   const [deleting, setDeleting] = useState<SaleRow | null>(null);
