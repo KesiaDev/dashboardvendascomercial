@@ -717,12 +717,41 @@ function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => vo
               <Input type="email" required value={form.client_email ?? ""} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
               <EmailLookup email={form.client_email ?? ""} saleDate={form.sale_date} />
             </div>
+            <div className="space-y-1.5">
+              <Label>Giro de roleta?</Label>
+              <Select
+                value={form.roleta_type ?? "none"}
+                onValueChange={(v) => setForm({ ...form, roleta_type: v === "none" ? null : (v as "mentoria" | "accelerator") })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não dá roleta</SelectItem>
+                  <SelectItem value="mentoria">Roleta Mentoria</SelectItem>
+                  <SelectItem value="accelerator">Roleta Accelerator</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Bônus semanal</Label>
+              <Select
+                value={form.bonus_semanal_eur ? String(form.bonus_semanal_eur) : "none"}
+                onValueChange={(v) => setForm({ ...form, bonus_semanal_eur: v === "none" ? null : (Number(v) as 30 | 60) })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não conta</SelectItem>
+                  <SelectItem value="30">Sim · €30</SelectItem>
+                  <SelectItem value="60">Sim · €60</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Observação</Label>
               <Textarea rows={2} value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
           </div>
         )}
+
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button onClick={() => mut.mutate()} disabled={mut.isPending}>
