@@ -374,35 +374,39 @@ function FechamentoForm({ session }: { session: any }) {
                         <EmailLookup email={it.clientEmail} saleDate={saleDate} />
                       </div>
 
-                      {/* Roleta e bônus semanal — capturados na origem para não reconstruir no fim do mês */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Giro de roleta?</Label>
-                        <Select
-                          value={it.roleta || "none"}
-                          onValueChange={(v) => updateItem(i, { roleta: v === "none" ? "" : (v as "mentoria" | "accelerator") })}
-                        >
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Não dá roleta</SelectItem>
-                            <SelectItem value="mentoria">Roleta Mentoria</SelectItem>
-                            <SelectItem value="accelerator">Roleta Accelerator</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Conta p/ bônus semanal?</Label>
-                        <Select
-                          value={it.bonus || "none"}
-                          onValueChange={(v) => updateItem(i, { bonus: v === "none" ? "" : (v as "30" | "60") })}
-                        >
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Não conta</SelectItem>
-                            <SelectItem value="30">Sim · €30</SelectItem>
-                            <SelectItem value="60">Sim · €60</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {/* Roleta e bônus semanal — visíveis só para admin (cálculo definido depois) */}
+                      {isAdmin && (
+                        <>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Giro de roleta? <span className="text-muted-foreground">(admin)</span></Label>
+                            <Select
+                              value={it.roleta || "none"}
+                              onValueChange={(v) => updateItem(i, { roleta: v === "none" ? "" : (v as "mentoria" | "accelerator") })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Não dá roleta</SelectItem>
+                                <SelectItem value="mentoria">Roleta Mentoria</SelectItem>
+                                <SelectItem value="accelerator">Roleta Accelerator</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Conta p/ bônus semanal? <span className="text-muted-foreground">(admin)</span></Label>
+                            <Select
+                              value={it.bonus || "none"}
+                              onValueChange={(v) => updateItem(i, { bonus: v === "none" ? "" : (v as "30" | "60") })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Não conta</SelectItem>
+                                <SelectItem value="30">Sim · €30</SelectItem>
+                                <SelectItem value="60">Sim · €60</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
