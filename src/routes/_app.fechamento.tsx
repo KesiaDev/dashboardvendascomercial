@@ -150,8 +150,12 @@ function LoginCard() {
 
 type SaleRow = Awaited<ReturnType<typeof listManualSales>>[number];
 
+const ADMIN_EMAILS = ["kesia@llmidia.com"];
+function isAdminEmail(e: string) { return ADMIN_EMAILS.includes((e ?? "").trim().toLowerCase()); }
+
 function FechamentoForm({ session }: { session: any }) {
   const email = session?.user?.email ?? "";
+  const isAdmin = isAdminEmail(email);
   const qc = useQueryClient();
 
   const [seller, setSeller] = useState<string>("");
@@ -370,35 +374,39 @@ function FechamentoForm({ session }: { session: any }) {
                         <EmailLookup email={it.clientEmail} saleDate={saleDate} />
                       </div>
 
-                      {/* Roleta e bônus semanal — capturados na origem para não reconstruir no fim do mês */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Giro de roleta?</Label>
-                        <Select
-                          value={it.roleta || "none"}
-                          onValueChange={(v) => updateItem(i, { roleta: v === "none" ? "" : (v as "mentoria" | "accelerator") })}
-                        >
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Não dá roleta</SelectItem>
-                            <SelectItem value="mentoria">Roleta Mentoria</SelectItem>
-                            <SelectItem value="accelerator">Roleta Accelerator</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Conta p/ bônus semanal?</Label>
-                        <Select
-                          value={it.bonus || "none"}
-                          onValueChange={(v) => updateItem(i, { bonus: v === "none" ? "" : (v as "30" | "60") })}
-                        >
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Não conta</SelectItem>
-                            <SelectItem value="30">Sim · €30</SelectItem>
-                            <SelectItem value="60">Sim · €60</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {/* Roleta e bônus semanal — visíveis só para admin (cálculo definido depois) */}
+                      {isAdmin && (
+                        <>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Giro de roleta? <span className="text-muted-foreground">(admin)</span></Label>
+                            <Select
+                              value={it.roleta || "none"}
+                              onValueChange={(v) => updateItem(i, { roleta: v === "none" ? "" : (v as "mentoria" | "accelerator") })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Não dá roleta</SelectItem>
+                                <SelectItem value="mentoria">Roleta Mentoria</SelectItem>
+                                <SelectItem value="accelerator">Roleta Accelerator</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Conta p/ bônus semanal? <span className="text-muted-foreground">(admin)</span></Label>
+                            <Select
+                              value={it.bonus || "none"}
+                              onValueChange={(v) => updateItem(i, { bonus: v === "none" ? "" : (v as "30" | "60") })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Não conta</SelectItem>
+                                <SelectItem value="30">Sim · €30</SelectItem>
+                                <SelectItem value="60">Sim · €60</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -487,7 +495,8 @@ function FechamentoForm({ session }: { session: any }) {
                 <p className="text-sm text-muted-foreground">Nenhuma venda registrada hoje ainda.</p>
               )}
               {todaySales.map((s) => (
-                <SaleCard key={s.id} sale={s} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} />
+                <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} />
+
               ))}
             </CardContent>
           </Card>
@@ -505,14 +514,14 @@ function FechamentoForm({ session }: { session: any }) {
                 <p className="text-sm text-muted-foreground">Nenhuma venda registrada neste mês.</p>
               )}
               {sales.map((s) => (
-                <SaleCard key={s.id} sale={s} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} />
+                <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} />
               ))}
             </CardContent>
           </Card>
         </div>
       </div>
 
-      <EditDialog sale={editing} onClose={() => setEditing(null)} />
+      <EditDialog sale={editing} isAdmin={isAdmin} onClose={() => setEditing(null)} />
 
       {/* Dialog de confirmação manual */}
       <Dialog open={!!confirmingId} onOpenChange={(o) => !o && setConfirmingId(null)}>
@@ -564,8 +573,9 @@ function FechamentoForm({ session }: { session: any }) {
 
 // ── Card de venda individual ─────────────────────────────────────────────────
 
-function SaleCard({ sale, onEdit, onDelete, onConfirm }: {
+function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm }: {
   sale: SaleRow;
+  isAdmin: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onConfirm: () => void;
@@ -583,12 +593,12 @@ function SaleCard({ sale, onEdit, onDelete, onConfirm }: {
                 <AlertTriangle className="h-3 w-3" />Afiliado ≠
               </Badge>
             )}
-            {sale.roleta_type && (
+            {isAdmin && sale.roleta_type && (
               <Badge variant="outline" className="text-xs">
                 🎯 Roleta {sale.roleta_type === "mentoria" ? "Mentoria" : "Accelerator"}
               </Badge>
             )}
-            {sale.bonus_semanal_eur && (
+            {isAdmin && sale.bonus_semanal_eur && (
               <Badge variant="outline" className="text-xs">
                 Bônus €{sale.bonus_semanal_eur}
               </Badge>
@@ -637,7 +647,7 @@ function SaleCard({ sale, onEdit, onDelete, onConfirm }: {
 
 // ── Dialog de edição ─────────────────────────────────────────────────────────
 
-function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => void }) {
+function EditDialog({ sale, isAdmin, onClose }: { sale: SaleRow | null; isAdmin: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const [form, setForm] = useState<SaleRow | null>(sale);
 
@@ -717,34 +727,38 @@ function EditDialog({ sale, onClose }: { sale: SaleRow | null; onClose: () => vo
               <Input type="email" required value={form.client_email ?? ""} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
               <EmailLookup email={form.client_email ?? ""} saleDate={form.sale_date} />
             </div>
-            <div className="space-y-1.5">
-              <Label>Giro de roleta?</Label>
-              <Select
-                value={form.roleta_type ?? "none"}
-                onValueChange={(v) => setForm({ ...form, roleta_type: v === "none" ? null : (v as "mentoria" | "accelerator") })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Não dá roleta</SelectItem>
-                  <SelectItem value="mentoria">Roleta Mentoria</SelectItem>
-                  <SelectItem value="accelerator">Roleta Accelerator</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Bônus semanal</Label>
-              <Select
-                value={form.bonus_semanal_eur ? String(form.bonus_semanal_eur) : "none"}
-                onValueChange={(v) => setForm({ ...form, bonus_semanal_eur: v === "none" ? null : (Number(v) as 30 | 60) })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Não conta</SelectItem>
-                  <SelectItem value="30">Sim · €30</SelectItem>
-                  <SelectItem value="60">Sim · €60</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {isAdmin && (
+              <>
+                <div className="space-y-1.5">
+                  <Label>Giro de roleta? <span className="text-muted-foreground text-xs">(admin)</span></Label>
+                  <Select
+                    value={form.roleta_type ?? "none"}
+                    onValueChange={(v) => setForm({ ...form, roleta_type: v === "none" ? null : (v as "mentoria" | "accelerator") })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Não dá roleta</SelectItem>
+                      <SelectItem value="mentoria">Roleta Mentoria</SelectItem>
+                      <SelectItem value="accelerator">Roleta Accelerator</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Bônus semanal <span className="text-muted-foreground text-xs">(admin)</span></Label>
+                  <Select
+                    value={form.bonus_semanal_eur ? String(form.bonus_semanal_eur) : "none"}
+                    onValueChange={(v) => setForm({ ...form, bonus_semanal_eur: v === "none" ? null : (Number(v) as 30 | 60) })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Não conta</SelectItem>
+                      <SelectItem value="30">Sim · €30</SelectItem>
+                      <SelectItem value="60">Sim · €60</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Observação</Label>
               <Textarea rows={2} value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
