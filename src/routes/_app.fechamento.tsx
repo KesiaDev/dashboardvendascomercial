@@ -573,8 +573,9 @@ function FechamentoForm({ session }: { session: any }) {
 
 // ── Card de venda individual ─────────────────────────────────────────────────
 
-function SaleCard({ sale, onEdit, onDelete, onConfirm }: {
+function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm }: {
   sale: SaleRow;
+  isAdmin: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onConfirm: () => void;
