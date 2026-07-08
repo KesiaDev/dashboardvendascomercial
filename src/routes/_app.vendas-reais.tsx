@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   getFaturamentoPorProdutoFn,
@@ -42,30 +42,22 @@ function VendasReaisPage() {
   const fetchCancel = useServerFn(getCancelamentosFn);
   const fetchVend = useServerFn(getVendasPorVendedorFn);
 
-  const produtosQ = useSuspenseQuery(
-    queryOptions({
-      queryKey: ["vendas-reais", "produtos", month],
-      queryFn: () => fetchProdutos({ data: { month } }),
-    }),
-  );
-  const renovQ = useSuspenseQuery(
-    queryOptions({
-      queryKey: ["vendas-reais", "renov", month],
-      queryFn: () => fetchRenov({ data: { month } }),
-    }),
-  );
-  const cancelQ = useSuspenseQuery(
-    queryOptions({
-      queryKey: ["vendas-reais", "cancel", month],
-      queryFn: () => fetchCancel({ data: { month } }),
-    }),
-  );
-  const vendQ = useSuspenseQuery(
-    queryOptions({
-      queryKey: ["vendas-reais", "vend", month],
-      queryFn: () => fetchVend({ data: { month } }),
-    }),
-  );
+  const produtosQ = useQuery({
+    queryKey: ["vendas-reais", "produtos", month],
+    queryFn: () => fetchProdutos({ data: { month } }),
+  });
+  const renovQ = useQuery({
+    queryKey: ["vendas-reais", "renov", month],
+    queryFn: () => fetchRenov({ data: { month } }),
+  });
+  const cancelQ = useQuery({
+    queryKey: ["vendas-reais", "cancel", month],
+    queryFn: () => fetchCancel({ data: { month } }),
+  });
+  const vendQ = useQuery({
+    queryKey: ["vendas-reais", "vend", month],
+    queryFn: () => fetchVend({ data: { month } }),
+  });
 
   return (
     <div className="space-y-6">
