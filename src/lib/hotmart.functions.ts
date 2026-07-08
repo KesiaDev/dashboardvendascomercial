@@ -162,13 +162,11 @@ async function fetchAllSales(startEpochMs: number, endEpochMs: number) {
   const all: any[] = [];
   let pageToken: string | null = null;
   let pages = 0;
-  // Hotmart /sales/history espera start_date/end_date no formato YYYY-MM-DD.
-  const startDate = new Date(startEpochMs).toISOString().slice(0, 10);
-  const endDate = new Date(endEpochMs).toISOString().slice(0, 10);
+  // Hotmart /sales/history: start_date e end_date são timestamps em ms (epoch).
   do {
     const params = new URLSearchParams();
-    params.set("start_date", startDate);
-    params.set("end_date", endDate);
+    params.set("start_date", String(startEpochMs));
+    params.set("end_date", String(endEpochMs));
     params.set("max_results", "50");
     if (pageToken) params.set("page_token", pageToken);
     const url = `${API_BASE}/sales/history?${params.toString()}`;
