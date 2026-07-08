@@ -23,6 +23,7 @@ import { Route as AppComissionamentoRouteImport } from './routes/_app.comissiona
 import { Route as AppComercialRouteImport } from './routes/_app.comercial'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
+import { Route as ApiPublicHotmartRawRouteImport } from './routes/api/public/hotmart-raw'
 import { Route as ApiPublicHotmartDebugRouteImport } from './routes/api/public/hotmart-debug'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
 import { Route as ApiPublicSyncHotmartRouteImport } from './routes/api/public/sync.hotmart'
@@ -96,6 +97,11 @@ const AppAgenteRoute = AppAgenteRouteImport.update({
   path: '/agente',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicHotmartRawRoute = ApiPublicHotmartRawRouteImport.update({
+  id: '/api/public/hotmart-raw',
+  path: '/api/public/hotmart-raw',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHotmartDebugRoute = ApiPublicHotmartDebugRouteImport.update({
   id: '/api/public/hotmart-debug',
   path: '/api/public/hotmart-debug',
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/resultados': typeof AppResultadosRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
+  '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -145,6 +152,7 @@ export interface FileRoutesByTo {
   '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/': typeof AppIndexRoute
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
+  '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/_app/vendedor-produto': typeof AppVendedorProdutoRoute
   '/_app/': typeof AppIndexRoute
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
+  '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/resultados'
     | '/vendedor-produto'
     | '/api/public/hotmart-debug'
+    | '/api/public/hotmart-raw'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   fileRoutesByTo: FileRoutesByTo
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/vendedor-produto'
     | '/'
     | '/api/public/hotmart-debug'
+    | '/api/public/hotmart-raw'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   id:
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/_app/vendedor-produto'
     | '/_app/'
     | '/api/public/hotmart-debug'
+    | '/api/public/hotmart-raw'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   fileRoutesById: FileRoutesById
@@ -229,6 +241,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   ApiPublicHotmartDebugRoute: typeof ApiPublicHotmartDebugRoute
+  ApiPublicHotmartRawRoute: typeof ApiPublicHotmartRawRoute
   ApiPublicSyncHotmartRoute: typeof ApiPublicSyncHotmartRoute
   ApiPublicSyncTriggerRoute: typeof ApiPublicSyncTriggerRoute
 }
@@ -333,6 +346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgenteRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/hotmart-raw': {
+      id: '/api/public/hotmart-raw'
+      path: '/api/public/hotmart-raw'
+      fullPath: '/api/public/hotmart-raw'
+      preLoaderRoute: typeof ApiPublicHotmartRawRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hotmart-debug': {
       id: '/api/public/hotmart-debug'
       path: '/api/public/hotmart-debug'
@@ -394,19 +414,10 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   ApiPublicHotmartDebugRoute: ApiPublicHotmartDebugRoute,
+  ApiPublicHotmartRawRoute: ApiPublicHotmartRawRoute,
   ApiPublicSyncHotmartRoute: ApiPublicSyncHotmartRoute,
   ApiPublicSyncTriggerRoute: ApiPublicSyncTriggerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
