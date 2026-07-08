@@ -163,7 +163,7 @@ async function fetchAllSales(startEpochMs: number, endEpochMs: number) {
     const params = new URLSearchParams();
     params.set("start_date", String(startEpochMs));
     params.set("end_date", String(endEpochMs));
-    params.set("max_results", "500");
+    params.set("max_results", "50");
     if (pageToken) params.set("page_token", pageToken);
     const url = `${API_BASE}/sales/history?${params.toString()}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
@@ -175,7 +175,7 @@ async function fetchAllSales(startEpochMs: number, endEpochMs: number) {
     if (json.items?.length) all.push(...json.items);
     pageToken = json.page_info?.next_page_token ?? null;
     pages++;
-    if (pages > 60) break; // guarda-corpo: até ~30k vendas por sync
+    if (pages > 600) break; // guarda-corpo: até 30k vendas por sync
   } while (pageToken);
   return all;
 }
