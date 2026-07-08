@@ -33,7 +33,10 @@ async function getAccessToken(): Promise<string> {
     const body = await res.text();
     throw new Error(`Hotmart auth ${res.status}: ${body}`);
   }
-  const json = (await res.json()) as { access_token: string; expires_in: number };
+  const json = (await res.json()) as { access_token?: string; expires_in?: number; error?: string; error_description?: string };
+  if (!json.access_token) {
+    throw new Error(`Hotmart auth OK but no access_token. Body: ${JSON.stringify(json)}`);
+  }
   return json.access_token;
 }
 
