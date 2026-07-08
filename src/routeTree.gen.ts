@@ -23,6 +23,7 @@ import { Route as AppComissionamentoRouteImport } from './routes/_app.comissiona
 import { Route as AppComercialRouteImport } from './routes/_app.comercial'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
+import { Route as ApiPublicHotmartDebugRouteImport } from './routes/api/public/hotmart-debug'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
 import { Route as ApiPublicSyncHotmartRouteImport } from './routes/api/public/sync.hotmart'
 
@@ -95,6 +96,11 @@ const AppAgenteRoute = AppAgenteRouteImport.update({
   path: '/agente',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicHotmartDebugRoute = ApiPublicHotmartDebugRouteImport.update({
+  id: '/api/public/hotmart-debug',
+  path: '/api/public/hotmart-debug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicSyncTriggerRoute = ApiPublicSyncTriggerRouteImport.update({
   id: '/api/public/sync/trigger',
   path: '/api/public/sync/trigger',
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/ranking': typeof AppRankingRoute
   '/resultados': typeof AppResultadosRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
+  '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/resultados': typeof AppResultadosRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/': typeof AppIndexRoute
+  '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   '/_app/resultados': typeof AppResultadosRoute
   '/_app/vendedor-produto': typeof AppVendedorProdutoRoute
   '/_app/': typeof AppIndexRoute
+  '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
     | '/ranking'
     | '/resultados'
     | '/vendedor-produto'
+    | '/api/public/hotmart-debug'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   fileRoutesByTo: FileRoutesByTo
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/resultados'
     | '/vendedor-produto'
     | '/'
+    | '/api/public/hotmart-debug'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   id:
@@ -210,12 +221,14 @@ export interface FileRouteTypes {
     | '/_app/resultados'
     | '/_app/vendedor-produto'
     | '/_app/'
+    | '/api/public/hotmart-debug'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  ApiPublicHotmartDebugRoute: typeof ApiPublicHotmartDebugRoute
   ApiPublicSyncHotmartRoute: typeof ApiPublicSyncHotmartRoute
   ApiPublicSyncTriggerRoute: typeof ApiPublicSyncTriggerRoute
 }
@@ -320,6 +333,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgenteRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/hotmart-debug': {
+      id: '/api/public/hotmart-debug'
+      path: '/api/public/hotmart-debug'
+      fullPath: '/api/public/hotmart-debug'
+      preLoaderRoute: typeof ApiPublicHotmartDebugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/sync/trigger': {
       id: '/api/public/sync/trigger'
       path: '/api/public/sync/trigger'
@@ -373,6 +393,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  ApiPublicHotmartDebugRoute: ApiPublicHotmartDebugRoute,
   ApiPublicSyncHotmartRoute: ApiPublicSyncHotmartRoute,
   ApiPublicSyncTriggerRoute: ApiPublicSyncTriggerRoute,
 }
