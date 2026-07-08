@@ -24,6 +24,7 @@ import { Route as AppComercialRouteImport } from './routes/_app.comercial'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
+import { Route as ApiPublicSyncHotmartRouteImport } from './routes/api/public/sync.hotmart'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -99,6 +100,11 @@ const ApiPublicSyncTriggerRoute = ApiPublicSyncTriggerRouteImport.update({
   path: '/api/public/sync/trigger',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSyncHotmartRoute = ApiPublicSyncHotmartRouteImport.update({
+  id: '/api/public/sync/hotmart',
+  path: '/api/public/sync/hotmart',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/ranking': typeof AppRankingRoute
   '/resultados': typeof AppResultadosRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
+  '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
 export interface FileRoutesByTo {
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/resultados': typeof AppResultadosRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/': typeof AppIndexRoute
+  '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
 export interface FileRoutesById {
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/_app/resultados': typeof AppResultadosRoute
   '/_app/vendedor-produto': typeof AppVendedorProdutoRoute
   '/_app/': typeof AppIndexRoute
+  '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
 export interface FileRouteTypes {
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
     | '/ranking'
     | '/resultados'
     | '/vendedor-produto'
+    | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
     | '/resultados'
     | '/vendedor-produto'
     | '/'
+    | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   id:
     | '__root__'
@@ -199,11 +210,13 @@ export interface FileRouteTypes {
     | '/_app/resultados'
     | '/_app/vendedor-produto'
     | '/_app/'
+    | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  ApiPublicSyncHotmartRoute: typeof ApiPublicSyncHotmartRoute
   ApiPublicSyncTriggerRoute: typeof ApiPublicSyncTriggerRoute
 }
 
@@ -314,6 +327,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSyncTriggerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/sync/hotmart': {
+      id: '/api/public/sync/hotmart'
+      path: '/api/public/sync/hotmart'
+      fullPath: '/api/public/sync/hotmart'
+      preLoaderRoute: typeof ApiPublicSyncHotmartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -353,6 +373,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  ApiPublicSyncHotmartRoute: ApiPublicSyncHotmartRoute,
   ApiPublicSyncTriggerRoute: ApiPublicSyncTriggerRoute,
 }
 export const routeTree = rootRouteImport
