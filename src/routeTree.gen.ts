@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppVendedorProdutoRouteImport } from './routes/_app.vendedor-produto'
+import { Route as AppVendasReaisRouteImport } from './routes/_app.vendas-reais'
 import { Route as AppResultadosRouteImport } from './routes/_app.resultados'
 import { Route as AppRankingRouteImport } from './routes/_app.ranking'
 import { Route as AppProdutividadeRouteImport } from './routes/_app.produtividade'
@@ -40,6 +41,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppVendedorProdutoRoute = AppVendedorProdutoRouteImport.update({
   id: '/vendedor-produto',
   path: '/vendedor-produto',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppVendasReaisRoute = AppVendasReaisRouteImport.update({
+  id: '/vendas-reais',
+  path: '/vendas-reais',
   getParentRoute: () => AppRoute,
 } as any)
 const AppResultadosRoute = AppResultadosRouteImport.update({
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
   '/resultados': typeof AppResultadosRoute
+  '/vendas-reais': typeof AppVendasReaisRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
   '/resultados': typeof AppResultadosRoute
+  '/vendas-reais': typeof AppVendasReaisRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/': typeof AppIndexRoute
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/_app/produtividade': typeof AppProdutividadeRoute
   '/_app/ranking': typeof AppRankingRoute
   '/_app/resultados': typeof AppResultadosRoute
+  '/_app/vendas-reais': typeof AppVendasReaisRoute
   '/_app/vendedor-produto': typeof AppVendedorProdutoRoute
   '/_app/': typeof AppIndexRoute
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/produtividade'
     | '/ranking'
     | '/resultados'
+    | '/vendas-reais'
     | '/vendedor-produto'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/produtividade'
     | '/ranking'
     | '/resultados'
+    | '/vendas-reais'
     | '/vendedor-produto'
     | '/'
     | '/api/public/hotmart-debug'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/_app/produtividade'
     | '/_app/ranking'
     | '/_app/resultados'
+    | '/_app/vendas-reais'
     | '/_app/vendedor-produto'
     | '/_app/'
     | '/api/public/hotmart-debug'
@@ -267,6 +279,13 @@ declare module '@tanstack/react-router' {
       path: '/vendedor-produto'
       fullPath: '/vendedor-produto'
       preLoaderRoute: typeof AppVendedorProdutoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/vendas-reais': {
+      id: '/_app/vendas-reais'
+      path: '/vendas-reais'
+      fullPath: '/vendas-reais'
+      preLoaderRoute: typeof AppVendasReaisRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/resultados': {
@@ -389,6 +408,7 @@ interface AppRouteChildren {
   AppProdutividadeRoute: typeof AppProdutividadeRoute
   AppRankingRoute: typeof AppRankingRoute
   AppResultadosRoute: typeof AppResultadosRoute
+  AppVendasReaisRoute: typeof AppVendasReaisRoute
   AppVendedorProdutoRoute: typeof AppVendedorProdutoRoute
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -405,6 +425,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppProdutividadeRoute: AppProdutividadeRoute,
   AppRankingRoute: AppRankingRoute,
   AppResultadosRoute: AppResultadosRoute,
+  AppVendasReaisRoute: AppVendasReaisRoute,
   AppVendedorProdutoRoute: AppVendedorProdutoRoute,
   AppIndexRoute: AppIndexRoute,
 }
@@ -421,13 +442,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

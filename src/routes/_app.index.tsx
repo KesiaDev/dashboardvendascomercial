@@ -497,9 +497,10 @@ function computeTotals(sales: Sale[]): Totals {
 
   for (const s of sales) {
     const cat = categorizeStatus(s.status);
-    // Receita real em BRL = valor que efetivamente caiu na conta (já convertido).
-    // Fallback p/ faturamento_liquido_brl se valor_recebido vier nulo.
-    const brl = s.valor_recebido_convertido ?? s.faturamento_liquido_brl ?? 0;
+    // Receita real em BRL = comissão do produtor em BRL (faturamento_liquido_brl).
+    // valor_recebido_convertido vem da Hotmart em USD (moeda de payout do produtor),
+    // então NÃO pode ser somado como se fosse BRL — inflaria ~5x.
+    const brl = s.faturamento_liquido_brl ?? 0;
     byStatus[cat].count += 1;
     byStatus[cat].brl += brl;
     if (cat === "aprovado") {

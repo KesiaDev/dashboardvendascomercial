@@ -725,12 +725,14 @@ export type Database = {
         Row: {
           affiliate_mismatch: boolean
           bonus_semanal_eur: number | null
+          categoria_produto: string | null
           client_email: string | null
           client_name: string | null
           confirmation_status: string
           confirmed_hotmart_sale_id: string | null
           confirmed_hotmart_valor_brl: number | null
           confirmed_wise_id: number | null
+          conta_meta: boolean
           created_at: string
           created_by: string
           created_by_email: string
@@ -747,12 +749,14 @@ export type Database = {
         Insert: {
           affiliate_mismatch?: boolean
           bonus_semanal_eur?: number | null
+          categoria_produto?: string | null
           client_email?: string | null
           client_name?: string | null
           confirmation_status?: string
           confirmed_hotmart_sale_id?: string | null
           confirmed_hotmart_valor_brl?: number | null
           confirmed_wise_id?: number | null
+          conta_meta?: boolean
           created_at?: string
           created_by: string
           created_by_email: string
@@ -769,12 +773,14 @@ export type Database = {
         Update: {
           affiliate_mismatch?: boolean
           bonus_semanal_eur?: number | null
+          categoria_produto?: string | null
           client_email?: string | null
           client_name?: string | null
           confirmation_status?: string
           confirmed_hotmart_sale_id?: string | null
           confirmed_hotmart_valor_brl?: number | null
           confirmed_wise_id?: number | null
+          conta_meta?: boolean
           created_at?: string
           created_by?: string
           created_by_email?: string
@@ -792,7 +798,9 @@ export type Database = {
       }
       sales: {
         Row: {
+          categoria_produto: string | null
           cidade: string | null
+          conta_meta: boolean
           cupom: string | null
           data_confirmacao: string | null
           data_venda: string | null
@@ -821,7 +829,9 @@ export type Database = {
           valor_recebido_convertido: number | null
         }
         Insert: {
+          categoria_produto?: string | null
           cidade?: string | null
+          conta_meta?: boolean
           cupom?: string | null
           data_confirmacao?: string | null
           data_venda?: string | null
@@ -850,7 +860,9 @@ export type Database = {
           valor_recebido_convertido?: number | null
         }
         Update: {
+          categoria_produto?: string | null
           cidade?: string | null
+          conta_meta?: boolean
           cupom?: string | null
           data_confirmacao?: string | null
           data_venda?: string | null
@@ -936,6 +948,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      categoria_produto: { Args: { nome: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -943,6 +956,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      produto_conta_meta: { Args: { cat: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "manager" | "user"
