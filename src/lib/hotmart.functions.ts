@@ -169,7 +169,8 @@ async function fetchAllSales(startEpochMs: number, endEpochMs: number) {
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`Hotmart /sales/history ${res.status}: ${body}`);
+      console.error("Hotmart fail url:", url, "status:", res.status, "body:", body);
+      throw new Error(`Hotmart /sales/history ${res.status} url=${url}: ${body}`);
     }
     const json = (await res.json()) as { items?: any[]; page_info?: { next_page_token?: string } };
     if (json.items?.length) all.push(...json.items);
