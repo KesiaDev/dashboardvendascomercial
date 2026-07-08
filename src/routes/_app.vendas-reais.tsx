@@ -91,20 +91,24 @@ function VendasReaisPage() {
         </TabsList>
 
         <TabsContent value="vendedores" className="space-y-4">
-          <VendedoresTab data={vendQ.data} />
+          {vendQ.data ? <VendedoresTab data={vendQ.data} /> : <LoadingBlock />}
         </TabsContent>
         <TabsContent value="produtos" className="space-y-4">
-          <ProdutosTab data={produtosQ.data} />
+          {produtosQ.data ? <ProdutosTab data={produtosQ.data} /> : <LoadingBlock />}
         </TabsContent>
         <TabsContent value="renovacoes" className="space-y-4">
-          <RenovacoesTab data={renovQ.data} />
+          {renovQ.data ? <RenovacoesTab data={renovQ.data} /> : <LoadingBlock />}
         </TabsContent>
         <TabsContent value="cancelamentos" className="space-y-4">
-          <CancelamentosTab data={cancelQ.data} />
+          {cancelQ.data ? <CancelamentosTab data={cancelQ.data} /> : <LoadingBlock />}
         </TabsContent>
       </Tabs>
     </div>
   );
+}
+
+function LoadingBlock() {
+  return <div className="py-12 text-center text-sm text-muted-foreground">Carregando…</div>;
 }
 
 // ─── Por Vendedor ────────────────────────────────────────────────────────────
