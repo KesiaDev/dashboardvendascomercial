@@ -106,6 +106,12 @@ function WeekTooltip({ active, payload }: any) {
 
 // ─── Podium ───────────────────────────────────────────────────────────────────
 
+const PODIUM_STYLES = [
+  { card: "bg-slate-400/10 border border-slate-400/30",   ring: "ring-2 ring-slate-400/50",  size: "h-9 w-9"  }, // silver (left)
+  { card: "bg-yellow-400/15 border border-yellow-400/40", ring: "ring-2 ring-yellow-400/70", size: "h-11 w-11" }, // gold (center)
+  { card: "bg-orange-600/10 border border-orange-600/30", ring: "ring-1 ring-orange-600/50", size: "h-8 w-8"  }, // bronze (right)
+];
+
 function Podium({ top }: { top: SellerStat[] }) {
   if (!top.length) return <p className="text-sm text-muted-foreground text-center py-4">Nenhuma venda</p>;
   const [gold, silver, bronze] = top;
@@ -114,18 +120,21 @@ function Podium({ top }: { top: SellerStat[] }) {
   const medals = ["🥈","🥇","🥉"];
   return (
     <div className="flex items-end justify-center gap-2 py-3">
-      {order.map((s,i) => (
-        <div key={s.name} className={`flex flex-col items-center gap-1 flex-1 min-w-0 ${heights[i]}`}>
-          <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-            style={{background:sellerColor(s.name)}}>{s.name.charAt(0)}</div>
-          <div className={`w-full rounded-lg px-2 py-2 text-center ${i===1?"bg-primary/10 border border-primary/30":"bg-muted/50"}`}>
-            <div className="text-xl leading-none">{medals[i]}</div>
-            <div className="text-xs font-semibold mt-1 truncate">{s.name.split(" ")[0]}</div>
-            <div className="text-xs font-bold tabular-nums mt-0.5">{fmtEur(s.total)}</div>
-            <div className="text-xs text-muted-foreground">{s.count}v</div>
+      {order.map((s,i) => {
+        const st = PODIUM_STYLES[i];
+        return (
+          <div key={s.name} className={`flex flex-col items-center gap-1.5 flex-1 min-w-0 ${heights[i]}`}>
+            <div className={`${st.size} rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 ${st.ring}`}
+              style={{background:sellerColor(s.name)}}>{s.name.charAt(0)}</div>
+            <div className={`w-full rounded-lg px-2 py-2 text-center ${st.card}`}>
+              <div className="text-xl leading-none">{medals[i]}</div>
+              <div className="text-xs font-semibold mt-1 truncate">{s.name.split(" ")[0]}</div>
+              <div className="text-xs font-bold tabular-nums mt-0.5">{fmtEur(s.total)}</div>
+              <div className="text-xs text-muted-foreground">{s.count}v</div>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -206,36 +215,36 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
 
       {/* KPIs */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card><CardContent className="pt-5 pb-4">
+        <Card className="border-l-4 border-violet-500"><CardContent className="pt-5 pb-4">
           <p className="text-xs text-muted-foreground">Total da semana</p>
-          <p className="text-2xl font-bold tabular-nums mt-1">{fmtEur(weekTotal)}</p>
+          <p className="text-2xl font-bold tabular-nums mt-1 text-violet-500">{fmtEur(weekTotal)}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{weekSales.length} venda{weekSales.length!==1?"s":""}</p>
         </CardContent></Card>
 
-        <Card><CardContent className="pt-5 pb-4">
+        <Card style={{borderLeftWidth:4,borderLeftStyle:"solid",borderLeftColor:pctVsPrev===null?"#64748b":pctVsPrev>=0?"#10b981":"#ef4444"}}><CardContent className="pt-5 pb-4">
           <p className="text-xs text-muted-foreground">vs. Semana anterior</p>
           {pctVsPrev!==null?(
             <div className="flex items-center gap-2 mt-1">
-              <p className={`text-2xl font-bold ${pctVsPrev>=0?"text-emerald-400":"text-red-400"}`}>{pctVsPrev>=0?"+":""}{pctVsPrev}%</p>
-              {pctVsPrev>=0?<TrendingUp className="h-5 w-5 text-emerald-400"/>:<TrendingDown className="h-5 w-5 text-red-400"/>}
+              <p className={`text-2xl font-bold ${pctVsPrev>=0?"text-emerald-500":"text-red-500"}`}>{pctVsPrev>=0?"+":""}{pctVsPrev}%</p>
+              {pctVsPrev>=0?<TrendingUp className="h-5 w-5 text-emerald-500"/>:<TrendingDown className="h-5 w-5 text-red-500"/>}
             </div>
           ):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
           <p className="text-xs text-muted-foreground mt-0.5">anterior: {fmtEur(prevTotal)}</p>
         </CardContent></Card>
 
-        <Card><CardContent className="pt-5 pb-4">
+        <Card className="border-l-4 border-emerald-500"><CardContent className="pt-5 pb-4">
           <p className="text-xs text-muted-foreground">Melhor dia</p>
           {bestDay&&bestDay.total>0?(<>
-            <p className="text-2xl font-bold mt-1">{bestDay.label}</p>
+            <p className="text-xl font-bold mt-1 text-emerald-500">{bestDay.label}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{fmtEur(bestDay.total)} · {bestDay.count} vendas</p>
           </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
         </CardContent></Card>
 
-        <Card><CardContent className="pt-5 pb-4">
+        <Card className="border-l-4 border-amber-500"><CardContent className="pt-5 pb-4">
           <p className="text-xs text-muted-foreground">Produto top</p>
           {topProduct?(<>
             <p className="text-base font-bold mt-1 leading-tight line-clamp-2">{topProduct.name}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{topProduct.count}x · {fmtEur(topProduct.total)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5"><span className="text-amber-500 font-semibold">{topProduct.count}x</span> · {fmtEur(topProduct.total)}</p>
           </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
         </CardContent></Card>
       </div>
@@ -335,12 +344,16 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
                     const isCurrent=w.idx===weekIdx;
                     const isBest=w.idx===bestWeek?.idx;
                     return (
-                      <tr key={w.idx} onClick={()=>setWeekIdx(w.idx)} className={`border-t border-border/50 cursor-pointer hover:bg-muted/30 transition-colors ${isCurrent?"bg-primary/5":""}`}>
-                        <td className="px-4 py-2 font-medium"><span className="flex items-center gap-1.5">S{w.idx+1}{isBest&&<Flame className="h-3.5 w-3.5 text-orange-400"/>}{isCurrent&&<Badge className="text-[10px] h-4 px-1 bg-primary/20 text-primary border-primary/30">atual</Badge>}</span></td>
+                      <tr key={w.idx} onClick={()=>setWeekIdx(w.idx)}
+                        className={`border-t cursor-pointer transition-colors hover:bg-muted/30
+                          ${isBest?"border-l-2 border-l-orange-500 border-border/50 bg-orange-500/5":
+                            isCurrent?"border-l-2 border-l-violet-500 border-border/50 bg-violet-500/5":
+                            "border-border/40"}`}>
+                        <td className="px-4 py-2 font-medium"><span className="flex items-center gap-1.5">S{w.idx+1}{isBest&&<Flame className="h-3.5 w-3.5 text-orange-500"/>}{isCurrent&&<Badge className="text-[10px] h-4 px-1 bg-violet-500/20 text-violet-500 border-violet-500/30">atual</Badge>}</span></td>
                         <td className="px-3 py-2 text-muted-foreground tabular-nums">{fmtDate(w.start)} – {fmtDate(w.end)}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{w.count}</td>
-                        <td className="px-3 py-2 text-right tabular-nums font-medium">{fmtEur(w.total)}</td>
-                        <td className="px-3 py-2">{w.topSeller?(<span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full shrink-0" style={{background:sellerColor(w.topSeller)}}/>{w.topSeller.split(" ")[0]}</span>):(<span className="text-muted-foreground">—</span>)}</td>
+                        <td className={`px-3 py-2 text-right tabular-nums font-medium ${isBest?"text-orange-500":""}`}>{fmtEur(w.total)}</td>
+                        <td className="px-3 py-2">{w.topSeller?(<span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full shrink-0" style={{background:sellerColor(w.topSeller)}}/>{w.topSeller.split(" ")[0]}</span>):(<span className="text-muted-foreground">—</span>)}</td>
                       </tr>
                     );
                   })}
@@ -352,9 +365,9 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
 
         <div className="space-y-4">
           {bestWeek&&(
-            <Card><CardContent className="pt-4 pb-4">
-              <p className="text-xs font-semibold text-orange-300 flex items-center gap-1 mb-2"><Flame className="h-3.5 w-3.5"/>Semana recorde</p>
-              <p className="text-xl font-bold tabular-nums">{fmtEur(bestWeek.total)}</p>
+            <Card className="border-l-4 border-orange-500 bg-orange-500/5"><CardContent className="pt-4 pb-4">
+              <p className="text-xs font-semibold text-orange-500 flex items-center gap-1 mb-2"><Flame className="h-3.5 w-3.5"/>Semana recorde</p>
+              <p className="text-xl font-bold tabular-nums text-orange-500">{fmtEur(bestWeek.total)}</p>
               <p className="text-xs text-muted-foreground mt-0.5">S{bestWeek.idx+1} · {fmtDate(bestWeek.start)}–{fmtDate(bestWeek.end)}</p>
             </CardContent></Card>
           )}
@@ -455,36 +468,36 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
 
       {/* KPIs do mês */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card><CardContent className="pt-5 pb-4">
+        <Card className="border-l-4 border-violet-500"><CardContent className="pt-5 pb-4">
           <p className="text-xs text-muted-foreground">Total do mês</p>
-          <p className="text-2xl font-bold tabular-nums mt-1">{fmtEur(monthTotal)}</p>
+          <p className="text-2xl font-bold tabular-nums mt-1 text-violet-500">{fmtEur(monthTotal)}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{monthSales.length} vendas</p>
         </CardContent></Card>
 
-        <Card><CardContent className="pt-5 pb-4">
+        <Card className="border-l-4 border-orange-500"><CardContent className="pt-5 pb-4">
           <p className="text-xs text-muted-foreground">Melhor semana</p>
           {bestWeek&&bestWeek.total>0?(<>
-            <p className="text-2xl font-bold mt-1">S{bestWeek.idx+1}</p>
+            <p className="text-2xl font-bold mt-1 text-orange-500">S{bestWeek.idx+1}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{fmtEur(bestWeek.total)} · {bestWeek.count} vendas</p>
           </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
         </CardContent></Card>
 
-        <Card><CardContent className="pt-5 pb-4">
+        <Card style={{borderLeftWidth:4,borderLeftStyle:"solid",borderLeftColor:sellerRanking[0]?sellerColor(sellerRanking[0].name):"#64748b"}}><CardContent className="pt-5 pb-4">
           <p className="text-xs text-muted-foreground">Líder do mês</p>
           {sellerRanking[0]?(<>
             <div className="flex items-center gap-2 mt-1">
-              <span className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{background:sellerColor(sellerRanking[0].name)}}>{sellerRanking[0].name.charAt(0)}</span>
-              <p className="text-lg font-bold truncate">{sellerRanking[0].name.split(" ")[0]}</p>
+              <span className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ring-2" style={{background:sellerColor(sellerRanking[0].name),ringColor:sellerColor(sellerRanking[0].name)}}>{sellerRanking[0].name.charAt(0)}</span>
+              <p className="text-lg font-bold truncate" style={{color:sellerColor(sellerRanking[0].name)}}>{sellerRanking[0].name.split(" ")[0]}</p>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">{fmtEur(sellerRanking[0].total)} · {sellerRanking[0].count} vendas</p>
           </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
         </CardContent></Card>
 
-        <Card><CardContent className="pt-5 pb-4">
+        <Card className="border-l-4 border-amber-500"><CardContent className="pt-5 pb-4">
           <p className="text-xs text-muted-foreground">Produto top</p>
           {topProduct?(<>
             <p className="text-base font-bold mt-1 leading-tight line-clamp-2">{topProduct.name}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{topProduct.count}x · {fmtEur(topProduct.total)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5"><span className="text-amber-500 font-semibold">{topProduct.count}x</span> · {fmtEur(topProduct.total)}</p>
           </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
         </CardContent></Card>
       </div>
@@ -502,16 +515,18 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
                   <YAxis tickFormatter={v=>`€${(v/1000).toFixed(0)}k`} tick={{fontSize:11,fill:"hsl(var(--muted-foreground))"}} axisLine={false} tickLine={false} width={44}/>
                   <RTooltip content={<WeekTooltip/>} cursor={{fill:"hsl(var(--muted))",opacity:0.4}}/>
                   <Bar dataKey="total" radius={[6,6,0,0]} maxBarSize={80}>
-                    {weekData.map((w,i)=>(
-                      <Cell key={i} fill={w.idx===bestWeek?.idx?"#10b981":w.end>=today?"#6366f1":"#6366f170"}/>
-                    ))}
+                    {weekData.map((w,i)=>{
+                      if (w.idx===bestWeek?.idx) return <Cell key={i} fill="#10b981"/>;
+                      const c = w.topSeller ? sellerColor(w.topSeller) : "#6366f1";
+                      return <Cell key={i} fill={c} fillOpacity={w.end>=today?0.9:0.55}/>;
+                    })}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             )}
             <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mt-2">
               <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-emerald-500"/>Melhor semana</span>
-              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-indigo-500"/>Semana atual/futura</span>
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-muted-foreground/40"/>Cor = vendedor líder da semana</span>
             </div>
           </CardContent>
         </Card>
@@ -547,15 +562,19 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">Líder</th>
                 </tr></thead>
                 <tbody>
-                  {weekData.map(w=>(
-                    <tr key={w.idx} className={`border-t border-border/50 ${w.idx===bestWeek?.idx?"bg-emerald-950/20":""}`}>
-                      <td className="px-4 py-2 font-medium"><span className="flex items-center gap-1.5">S{w.idx+1}{w.idx===bestWeek?.idx&&<Flame className="h-3.5 w-3.5 text-orange-400"/>}</span></td>
-                      <td className="px-3 py-2 text-muted-foreground tabular-nums">{fmtDate(w.start)} – {fmtDate(w.end)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{w.count}</td>
-                      <td className="px-3 py-2 text-right tabular-nums font-medium">{fmtEur(w.total)}</td>
-                      <td className="px-3 py-2">{w.topSeller?(<span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full shrink-0" style={{background:sellerColor(w.topSeller)}}/>{w.topSeller.split(" ")[0]}</span>):(<span className="text-muted-foreground">—</span>)}</td>
-                    </tr>
-                  ))}
+                  {weekData.map(w=>{
+                    const isBest=w.idx===bestWeek?.idx;
+                    return (
+                      <tr key={w.idx} className={`border-t transition-colors
+                        ${isBest?"border-l-2 border-l-orange-500 border-border/50 bg-orange-500/5":"border-border/40"}`}>
+                        <td className="px-4 py-2 font-medium"><span className="flex items-center gap-1.5">S{w.idx+1}{isBest&&<Flame className="h-3.5 w-3.5 text-orange-500"/>}</span></td>
+                        <td className="px-3 py-2 text-muted-foreground tabular-nums">{fmtDate(w.start)} – {fmtDate(w.end)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{w.count}</td>
+                        <td className={`px-3 py-2 text-right tabular-nums font-medium ${isBest?"text-orange-500":""}`}>{fmtEur(w.total)}</td>
+                        <td className="px-3 py-2">{w.topSeller?(<span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full shrink-0" style={{background:sellerColor(w.topSeller)}}/>{w.topSeller.split(" ")[0]}</span>):(<span className="text-muted-foreground">—</span>)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 <tfoot><tr className="border-t-2 border-border bg-muted/40 font-semibold">
                   <td className="px-4 py-2" colSpan={2}>Total do mês</td>
@@ -591,7 +610,7 @@ function FechamentoSemanal() {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-2">
-        <CalendarDays className="h-5 w-5 text-muted-foreground"/>
+        <CalendarDays className="h-5 w-5 text-violet-500"/>
         <div>
           <h2 className="text-xl font-semibold leading-none">Fechamento Semanal</h2>
           <p className="text-xs text-muted-foreground mt-0.5">Temporada desde {fmtDate(SEASON_START)}</p>
