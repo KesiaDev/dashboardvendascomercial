@@ -330,9 +330,23 @@ export const syncPipelineAreas = createServerFn({ method: "POST" }).handler(asyn
 export const fetchClintRankingFn = createServerFn({ method: "GET" })
   .inputValidator((d: { year: number; month: number }) => d)
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const now = new Date();
+    const targetYear  = data.year;
+    const targetMonth = data.month;
+    const isCurrentMonth =
+      targetYear === now.getFullYear() && targetMonth === now.getMonth() + 1;
+
+    // A partir de Julho/2026 o ranking vem do fechamento manual (manual_sales).
+    // Não depende da API da Clint — evita quebrar quando o token está expirado.
+    const useManual = targetYear > 2026 || (targetYear === 2026 && targetMonth >= 7);
+    if (useManual) {
+      return buildManualRanking(supabaseAdmin, targetYear, targetMonth, isCurrentMonth);
+    }
+
     const token = process.env.CLINT_API_TOKEN;
     if (!token) throw new Error("CLINT_API_TOKEN not configured");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: usersRows = [] } = await supabaseAdmin
       .from("clint_users")
@@ -343,6 +357,7 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || (u.email as string) || "—",
       ]),
     );
+
 
     // Whitelist de FUNIS que contam para o ranking comercial (decisão de negócio:
     // somente vendas de PIPELINE_COMERCIAL-V3, Sessão Estratégica, Renovações e FGRS).
@@ -407,18 +422,8 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       }
     }
 
-    const now = new Date();
-    const targetYear  = data.year;
-    const targetMonth = data.month;
-    const isCurrentMonth =
-      targetYear === now.getFullYear() && targetMonth === now.getMonth() + 1;
 
-    // A partir de Julho/2026 o ranking vem do fechamento manual (manual_sales).
-    // Junho/2026 e meses anteriores continuam vindo da Clint, sem mudança.
-    const useManual = targetYear > 2026 || (targetYear === 2026 && targetMonth >= 7);
-    if (useManual) {
-      return buildManualRanking(supabaseAdmin, targetYear, targetMonth, isCurrentMonth);
-    }
+
 
     // Override fechamento Junho/2026 (valores oficiais do relatório semanal).
     // Valores informados em BRL; convertemos pra EUR com 1€ = 6 R$ pra bater
