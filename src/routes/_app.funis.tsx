@@ -10,7 +10,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   Tooltip as RTooltip, Cell, PieChart, Pie, Legend,
 } from "recharts";
-import { TrendingUp, Users, CheckCircle, XCircle, Clock, Trophy } from "lucide-react";
+import { TrendingUp, Users, CheckCircle, XCircle, Clock, Trophy, CalendarDays } from "lucide-react";
 
 export const Route = createFileRoute("/_app/funis")({
   component: FunisPage,
@@ -125,6 +125,7 @@ function FunnelPanel({
   origins: FunilOrigin[];
 }) {
   const [period, setPeriod] = useState<Period>("30d");
+  const [timeGrain, setTimeGrain] = useState<"day" | "week" | "month">("week");
   const cfg = TARGET_FUNNELS.find((f) => f.key === funilKey)!;
 
   // Encontra o origin em clint_origins (para stages)
@@ -152,6 +153,36 @@ function FunnelPanel({
     () => computeMetrics(funilDeals, stages, lostStatuses, origin?.id ?? null),
     [funilDeals, stages, lostStatuses, origin],
   );
+
+  const leadsOverTime = useMemo(() => {
+    function weekStartStr(dateStr: string): string {
+      const d = new Date(dateStr + "T12:00:00Z");
+      const dow = d.getUTCDay();
+      const diff = dow === 0 ? -6 : 1 - dow;
+      return new Date(d.getTime() + diff * 86_400_000).toISOString().slice(0, 10);
+    }
+    const buckets: Record<string, number> = {};
+    for (const d of funilDeals) {
+      if (!d.created_at) continue;
+      const date = d.created_at.slice(0, 10);
+      const key = timeGrain === "day" ? date : timeGrain === "week" ? weekStartStr(date) : date.slice(0, 7);
+      buckets[key] = (buckets[key] ?? 0) + 1;
+    }
+    const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+    return Object.entries(buckets)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, count]) => {
+        let label: string;
+        if (timeGrain === "month") {
+          const [y, mo] = key.split("-");
+          label = `${MONTHS[+mo - 1]}/${y.slice(2)}`;
+        } else {
+          const [, mo, dy] = key.split("-");
+          label = `${dy}/${mo}`;
+        }
+        return { key, label, count };
+      });
+  }, [funilDeals, timeGrain]);
 
   const pieData = [
     { name: "Ganhos",  value: m.won,  color: "#10b981" },
@@ -213,6 +244,51 @@ function FunnelPanel({
           <p className="text-xs text-muted-foreground">ticket: {fmtEur(m.avgTicket)}</p>
         </CardContent></Card>
       </div>
+
+      {/* Leads ao longo do tempo */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+              <CalendarDays className="h-4 w-4 text-muted-foreground"/> Leads novos ao longo do tempo
+            </CardTitle>
+            <div className="flex gap-1">
+              {(["day","week","month"] as const).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setTimeGrain(g)}
+                  className={`text-xs px-2.5 py-1 rounded-md border transition-colors ${
+                    timeGrain === g
+                      ? "bg-secondary text-foreground border-border"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {g === "day" ? "Dia" : g === "week" ? "Semana" : "Mês"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {leadsOverTime.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">Sem leads no período selecionado.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={leadsOverTime} margin={{ top:4, right:8, bottom:0, left:-20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false}/>
+                <XAxis dataKey="label" tick={{ fontSize:11, fill:"hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} interval="preserveStartEnd"/>
+                <YAxis tick={{ fontSize:11, fill:"hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false}/>
+                <RTooltip
+                  formatter={(v: number) => [v, "leads"]}
+                  labelFormatter={(l) => timeGrain === "week" ? `Semana de ${l}` : l}
+                  contentStyle={{ background:"hsl(var(--card))", border:"1px solid hsl(var(--border))", borderRadius:8, fontSize:12 }}
+                />
+                <Bar dataKey="count" fill={cfg.color} radius={[4,4,0,0]} maxBarSize={40}/>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Estágios + Distribuição */}
       <div className="grid gap-5 lg:grid-cols-[1fr_240px]">
