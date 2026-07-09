@@ -58,8 +58,8 @@ function AppLayout() {
                 </nav>
               </SheetContent>
             </Sheet>
-            <img src={logoIcon} alt="Dashcomercial LLMídia" className="h-10 w-10 object-contain" />
-            <h1 className="text-sm font-semibold leading-tight">Dashcomercial LLMídia</h1>
+            <img src={logoIcon} alt="LLMídia" className="h-10 w-10 object-contain" />
+
           </div>
           <div className="flex items-center gap-2">
             <CurrencyToggle />
