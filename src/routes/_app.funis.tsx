@@ -21,8 +21,8 @@ export const Route = createFileRoute("/_app/funis")({
 type FunilKey = "retomada" | "pipeline_v3" | "sessao" | "palestras";
 
 const TARGET_FUNNELS: { key: FunilKey; label: string; color: string; pattern: RegExp }[] = [
-  { key: "retomada",    label: "Retomada Leads Perdidos",  color: "#f59e0b", pattern: /retomada.*leads|leads.*perdidos/i },
-  { key: "pipeline_v3", label: "PIPELINE_COMERCIAL-V3",    color: "#6366f1", pattern: /pipeline[_\s-]*comercial/i },
+  { key: "retomada",    label: "Retomada Leads Perdidos",  color: "#f59e0b", pattern: /retomada/i },
+  { key: "pipeline_v3", label: "PIPELINE_COMERCIAL-V3",    color: "#6366f1", pattern: /pipeline[_\s-]*comercial|pipeline.*v3/i },
   { key: "sessao",      label: "Funil - Sessão Estratégica", color: "#10b981", pattern: /sess[aã]o\s*estrat[eé]gica/i },
   { key: "palestras",   label: "Funil de Palestras (M&S)",  color: "#ec4899", pattern: /palestra/i },
 ];
@@ -127,22 +127,26 @@ function FunnelPanel({
   const [period, setPeriod] = useState<Period>("30d");
   const cfg = TARGET_FUNNELS.find((f) => f.key === funilKey)!;
 
-  // Encontra o origin_id correspondente ao funil
+  // Encontra o origin em clint_origins (para stages)
   const origin = useMemo(
     () => origins.find((o) => cfg.pattern.test(o.name)) ?? null,
     [origins, cfg.pattern],
   );
 
-  // Filtra deals deste funil
+  // Filtra deals deste funil por origin_name regex (não por origin_id, que pode divergir)
   const funilDeals = useMemo(() => {
     const since = periodStart(period);
     return deals.filter((d) => {
-      if (!origin) return false;
-      if (d.origin_id !== origin.id) return false;
+      const matchesName = cfg.pattern.test(d.origin_name ?? "");
+      const matchesId = origin && d.origin_id === origin.id;
+      if (!matchesName && !matchesId) return false;
       if (since && d.created_at && d.created_at.slice(0, 10) < since) return false;
       return true;
     });
-  }, [deals, origin, period]);
+  }, [deals, origin, period, cfg.pattern]);
+
+  // Nome exibido: preferência pelo origin da tabela, senão pega do primeiro deal
+  const displayName = origin?.name ?? funilDeals[0]?.origin_name ?? cfg.label;
 
   const m = useMemo(
     () => computeMetrics(funilDeals, stages, lostStatuses, origin?.id ?? null),
@@ -155,10 +159,10 @@ function FunnelPanel({
     { name: "Ativos",  value: m.open, color: "#6366f1" },
   ].filter((d) => d.value > 0);
 
-  if (!origin) {
+  if (!origin && funilDeals.length === 0) {
     return (
       <div className="py-12 text-center text-muted-foreground text-sm">
-        Funil não encontrado na base de dados. Verifique se o sync da Clint está atualizado.
+        Funil não encontrado. Verifique se o nome na Clint contém "{cfg.label}" ou se o sync está atualizado.
       </div>
     );
   }
@@ -167,7 +171,7 @@ function FunnelPanel({
     <div className="space-y-5">
       {/* Período */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <p className="text-xs text-muted-foreground">Funil: <span className="font-medium text-foreground">{origin.name}</span></p>
+        <p className="text-xs text-muted-foreground">Funil: <span className="font-medium text-foreground">{displayName}</span></p>
         <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
           <SelectTrigger className="w-36 h-8 text-xs">
             <SelectValue />
