@@ -12,19 +12,13 @@ export const Route = createFileRoute("/_app")({
 });
 
 const NAV_ITEMS = [
-  { to: "/", label: "Dashboard", icon: BarChart3 },
-  { to: "/executivo", label: "Executivo", icon: LayoutGrid },
-  { to: "/comercial", label: "Comercial", icon: Users },
-  { to: "/ranking", label: "Ranking", icon: Trophy },
+  { to: "/", label: "Visão Geral", icon: BarChart3 },
   { to: "/fechamento", label: "Fechamento", icon: ClipboardCheck },
   { to: "/fechamento-semanal", label: "Fechamento Semanal", icon: Calendar },
-  { to: "/produtividade", label: "Produtividade", icon: Activity },
+  { to: "/ranking", label: "Ranking", icon: Trophy },
   { to: "/resultados", label: "Resultados", icon: TrendingUp },
   { to: "/vendas-reais", label: "Vendas Reais", icon: Coins },
-  { to: "/vendedor-produto", label: "Vendedor x Produto", icon: ChartBar },
   { to: "/comissionamento", label: "Comissionamento", icon: DollarSign },
-  { to: "/import", label: "Importar", icon: Upload },
-  { to: "/areas", label: "Áreas", icon: Settings },
 ] as const;
 
 function AppLayout() {
