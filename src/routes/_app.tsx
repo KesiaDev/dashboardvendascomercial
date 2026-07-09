@@ -1,5 +1,5 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
-import { BarChart3, Upload, Users, LayoutGrid, Settings, ChartBar, Activity, Trophy, ClipboardCheck, DollarSign, TrendingUp, Menu, Calendar, Coins } from "lucide-react";
+import { BarChart3, Trophy, ClipboardCheck, DollarSign, TrendingUp, Menu, Calendar, Coins } from "lucide-react";
 import { useState } from "react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
