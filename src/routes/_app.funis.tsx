@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { fetchFunisDataFn, type FunilDeal, type FunilStage, type FunilOrigin, type FunilLostStatus } from "@/lib/funis.functions";
-import { fetchManualSalesForCommissionFn } from "@/lib/commission.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -11,7 +10,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   Tooltip as RTooltip, Cell, PieChart, Pie, Legend,
 } from "recharts";
-import { TrendingUp, Users, CheckCircle, XCircle, Clock, Trophy, CalendarDays, ShoppingBag, AlertCircle } from "lucide-react";
+import { TrendingUp, Users, CheckCircle, XCircle, Clock, Trophy, CalendarDays } from "lucide-react";
 
 export const Route = createFileRoute("/_app/funis")({
   component: FunisPage,
@@ -433,130 +432,6 @@ function FunnelPanel({
   );
 }
 
-// ─── Vendas registradas pela equipe ──────────────────────────────────────────
-
-function todayBR(): string {
-  return new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
-}
-function fmtDate(iso: string) { const [,m,d] = iso.split("-"); return `${d}/${m}`; }
-
-function TeamSalesSection() {
-  const today = todayBR();
-  const from = "2026-07-01";
-  const { data: sales = [], isLoading } = useQuery({
-    queryKey: ["manual-sales-july", from, today],
-    queryFn: () => fetchManualSalesForCommissionFn({ data: { from, to: today } }),
-    staleTime: 5 * 60_000,
-  });
-
-  const sorted = useMemo(
-    () => [...sales].sort((a, b) => b.sale_date.localeCompare(a.sale_date)),
-    [sales],
-  );
-
-  const bySellerMap = useMemo(() => {
-    const m: Record<string, { count: number; total: number }> = {};
-    for (const s of sales) {
-      if (!m[s.seller_name]) m[s.seller_name] = { count: 0, total: 0 };
-      m[s.seller_name].count++;
-      m[s.seller_name].total += Number(s.value_eur);
-    }
-    return Object.entries(m).sort((a, b) => b[1].total - a[1].total);
-  }, [sales]);
-
-  const totalRevenue = sales.reduce((s, x) => s + Number(x.value_eur), 0);
-
-  if (isLoading) return <div className="text-sm text-muted-foreground py-4">Carregando vendas da equipe…</div>;
-
-  return (
-    <Card className="border-l-4 border-emerald-500">
-      <CardHeader className="pb-3">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-              <CheckCircle className="h-4 w-4 text-emerald-500"/>
-              Vendas registradas pela equipe — 01/07 a {fmtDate(today)}
-            </CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-              <AlertCircle className="h-3 w-3 text-amber-500"/>
-              Fonte: fechamento manual. Os funis acima mostram dados do CRM Clint (podem estar desatualizados).
-            </p>
-          </div>
-          <div className="flex items-center gap-4 text-right">
-            <div>
-              <p className="text-xs text-muted-foreground">Total</p>
-              <p className="text-lg font-bold text-emerald-500">€{totalRevenue.toLocaleString("pt-BR",{minimumFractionDigits:2})}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Vendas</p>
-              <p className="text-lg font-bold">{sales.length}</p>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-
-      {sales.length === 0 ? (
-        <CardContent><p className="text-sm text-muted-foreground">Nenhuma venda registrada de 01/07 até hoje.</p></CardContent>
-      ) : (
-        <CardContent className="space-y-4 pt-0">
-          {/* Ranking por vendedor */}
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            {bySellerMap.map(([name, s], i) => (
-              <div key={name} className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
-                <span className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: sellerColor(name) }}>{name.charAt(0)}</span>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold truncate">{name.split(" ")[0]}</p>
-                  <p className="text-xs text-muted-foreground">{s.count}v · €{s.total.toLocaleString("pt-BR",{minimumFractionDigits:2})}</p>
-                </div>
-                {i === 0 && <span className="ml-auto text-base">🥇</span>}
-              </div>
-            ))}
-          </div>
-
-          {/* Tabela de vendas */}
-          <div className="overflow-x-auto rounded-lg border border-border/50">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Data</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Produto</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Vendedor</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((s) => (
-                  <tr key={s.id} className="border-t border-border/40 hover:bg-muted/20 transition-colors">
-                    <td className="px-3 py-2 text-muted-foreground tabular-nums text-xs">{fmtDate(s.sale_date)}</td>
-                    <td className="px-3 py-2 font-medium max-w-[240px] truncate">{s.product}</td>
-                    <td className="px-3 py-2">
-                      <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full shrink-0" style={{ background: sellerColor(s.seller_name) }}/>
-                        {s.seller_name.split(" ")[0]}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums font-medium text-emerald-600 dark:text-emerald-400">
-                      €{Number(s.value_eur).toLocaleString("pt-BR",{minimumFractionDigits:2})}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-border bg-muted/40 font-semibold">
-                  <td className="px-3 py-2" colSpan={3}>{sales.length} vendas</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
-                    €{totalRevenue.toLocaleString("pt-BR",{minimumFractionDigits:2})}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </CardContent>
-      )}
-    </Card>
-  );
-}
-
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 function FunisPage() {
@@ -576,14 +451,11 @@ function FunisPage() {
     <div className="space-y-5">
       <div>
         <h2 className="text-xl font-semibold flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-emerald-500"/>
+          <TrendingUp className="h-5 w-5 text-muted-foreground"/>
           Performance dos Funis
         </h2>
         <p className="text-xs text-muted-foreground mt-0.5">Leads, conversão e performance por vendedor em cada pipeline da Clint</p>
       </div>
-
-      {/* Vendas reais da equipe (fonte: manual_sales / fechamento) */}
-      <TeamSalesSection/>
 
       <Tabs defaultValue="retomada">
         <TabsList className="flex-wrap h-auto gap-1 mb-4">
