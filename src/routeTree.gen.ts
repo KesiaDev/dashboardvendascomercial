@@ -17,6 +17,7 @@ import { Route as AppResultadosRouteImport } from './routes/_app.resultados'
 import { Route as AppRankingRouteImport } from './routes/_app.ranking'
 import { Route as AppProdutividadeRouteImport } from './routes/_app.produtividade'
 import { Route as AppImportRouteImport } from './routes/_app.import'
+import { Route as AppFunisRouteImport } from './routes/_app.funis'
 import { Route as AppFechamentoSemanalRouteImport } from './routes/_app.fechamento-semanal'
 import { Route as AppFechamentoRouteImport } from './routes/_app.fechamento'
 import { Route as AppExecutivoRouteImport } from './routes/_app.executivo'
@@ -66,6 +67,11 @@ const AppProdutividadeRoute = AppProdutividadeRouteImport.update({
 const AppImportRoute = AppImportRouteImport.update({
   id: '/import',
   path: '/import',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFunisRoute = AppFunisRouteImport.update({
+  id: '/funis',
+  path: '/funis',
   getParentRoute: () => AppRoute,
 } as any)
 const AppFechamentoSemanalRoute = AppFechamentoSemanalRouteImport.update({
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/executivo': typeof AppExecutivoRoute
   '/fechamento': typeof AppFechamentoRoute
   '/fechamento-semanal': typeof AppFechamentoSemanalRoute
+  '/funis': typeof AppFunisRoute
   '/import': typeof AppImportRoute
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/executivo': typeof AppExecutivoRoute
   '/fechamento': typeof AppFechamentoRoute
   '/fechamento-semanal': typeof AppFechamentoSemanalRoute
+  '/funis': typeof AppFunisRoute
   '/import': typeof AppImportRoute
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/_app/executivo': typeof AppExecutivoRoute
   '/_app/fechamento': typeof AppFechamentoRoute
   '/_app/fechamento-semanal': typeof AppFechamentoSemanalRoute
+  '/_app/funis': typeof AppFunisRoute
   '/_app/import': typeof AppImportRoute
   '/_app/produtividade': typeof AppProdutividadeRoute
   '/_app/ranking': typeof AppRankingRoute
@@ -197,6 +206,7 @@ export interface FileRouteTypes {
     | '/executivo'
     | '/fechamento'
     | '/fechamento-semanal'
+    | '/funis'
     | '/import'
     | '/produtividade'
     | '/ranking'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/executivo'
     | '/fechamento'
     | '/fechamento-semanal'
+    | '/funis'
     | '/import'
     | '/produtividade'
     | '/ranking'
@@ -237,6 +248,7 @@ export interface FileRouteTypes {
     | '/_app/executivo'
     | '/_app/fechamento'
     | '/_app/fechamento-semanal'
+    | '/_app/funis'
     | '/_app/import'
     | '/_app/produtividade'
     | '/_app/ranking'
@@ -323,6 +335,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFechamentoSemanalRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/funis': {
+      id: '/_app/funis'
+      path: '/funis'
+      fullPath: '/funis'
+      preLoaderRoute: typeof AppFunisRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/fechamento': {
       id: '/_app/fechamento'
       path: '/fechamento'
@@ -404,6 +423,7 @@ interface AppRouteChildren {
   AppExecutivoRoute: typeof AppExecutivoRoute
   AppFechamentoRoute: typeof AppFechamentoRoute
   AppFechamentoSemanalRoute: typeof AppFechamentoSemanalRoute
+  AppFunisRoute: typeof AppFunisRoute
   AppImportRoute: typeof AppImportRoute
   AppProdutividadeRoute: typeof AppProdutividadeRoute
   AppRankingRoute: typeof AppRankingRoute
@@ -421,6 +441,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppExecutivoRoute: AppExecutivoRoute,
   AppFechamentoRoute: AppFechamentoRoute,
   AppFechamentoSemanalRoute: AppFechamentoSemanalRoute,
+  AppFunisRoute: AppFunisRoute,
   AppImportRoute: AppImportRoute,
   AppProdutividadeRoute: AppProdutividadeRoute,
   AppRankingRoute: AppRankingRoute,
