@@ -35,7 +35,16 @@ type Sale = {
   faturamento_liquido_brl: number | null;
   valor_recebido_convertido: number | null;
   moeda_recebimento: string | null;
+  nome_afiliado: string | null;
+  origem_checkout: string | null;
 };
+
+const SELLER_CODES = ["gisele", "nadal", "joao", "rita", "luana"];
+function isTeamSale(s: Sale) {
+  const af  = (s.nome_afiliado  ?? "").toLowerCase();
+  const sck = (s.origem_checkout ?? "").toLowerCase();
+  return SELLER_CODES.some((c) => af.includes(c) || sck.includes(c));
+}
 
 type Period = "week" | "month" | "quarter" | "semester" | "year" | "all";
 
@@ -85,6 +94,7 @@ function Dashboard() {
       if (start && d < start) return false;
       if (end && d > end) return false;
       if (groupFilter !== "all" && s.produto_grupo !== groupFilter) return false;
+      if (!isTeamSale(s)) return false;
       return true;
     });
   }, [sales, period, groupFilter, dateRange]);

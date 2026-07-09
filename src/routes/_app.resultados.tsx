@@ -83,8 +83,11 @@ function isApproved(status: string) {
   return s === "aprovado" || s === "completo" || s === "approved" || s === "completed";
 }
 
+const SELLER_CODES = ["gisele", "nadal", "joao", "rita", "luana"];
 function isCommercial(sale: SaleResultado) {
-  return sale.nome_afiliado != null || sale.origem_checkout != null;
+  const af  = (sale.nome_afiliado  ?? "").toLowerCase();
+  const sck = (sale.origem_checkout ?? "").toLowerCase();
+  return SELLER_CODES.some((c) => af.includes(c) || sck.includes(c));
 }
 
 function isRenovacao(sale: SaleResultado): boolean {

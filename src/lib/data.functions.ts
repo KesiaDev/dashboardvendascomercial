@@ -71,7 +71,7 @@ export const fetchSalesDashboardFn = createServerFn({ method: "GET" }).handler(a
   return fetchAllPaged<any>(
     supabase,
     "sales",
-    "transacao,produto_grupo,produto_original,status,data_venda,moeda_original,preco_oferta,faturamento_liquido_brl,valor_recebido_convertido,moeda_recebimento",
+    "transacao,produto_grupo,produto_original,status,data_venda,moeda_original,preco_oferta,faturamento_liquido_brl,valor_recebido_convertido,moeda_recebimento,nome_afiliado,origem_checkout",
     "data_venda",
   );
 });
