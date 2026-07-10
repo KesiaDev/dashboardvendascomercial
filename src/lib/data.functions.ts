@@ -116,6 +116,117 @@ export const fetchLastSyncFn = createServerFn({ method: "GET" }).handler(async (
   return data ?? null;
 });
 
+// ───── campanha: leads novos + retomada cadência ─────
+export const fetchCampanhaDataFn = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = await admin();
+
+  const { data: origins } = await supabase
+    .from("clint_origins")
+    .select("id,name")
+    .eq("group_name", "FUNIS PERPETUOS");
+
+  const perpetuosIds: string[] = (origins ?? []).map((o: any) => o.id);
+
+  const now = new Date();
+  const dow = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+  monday.setHours(0, 0, 0, 0);
+
+  const PALESTRAS_ID = "7c07456e-d803-497d-8595-c0e181f7d4db";
+  const RETOMADA_ID  = "af41b952-e69a-4a9b-a39b-6b40f0334a08";
+
+  const { data: leadsNovos, error: e1 } = await supabase
+    .from("clint_deals")
+    .select("id,origin_id,origin_name,user_id,user_name,stage,stage_id,created_at,contact_name,status")
+    .gte("created_at", monday.toISOString())
+    .in("origin_id", [...perpetuosIds, PALESTRAS_ID])
+    .order("created_at", { ascending: false })
+    .limit(1000);
+
+  if (e1) throw new Error(e1.message);
+
+  const { data: retomadaDeals, error: e2 } = await supabase
+    .from("clint_deals")
+    .select("id,user_id,user_name,stage,updated_stage_at,contact_name,contact_phone,status")
+    .eq("origin_id", RETOMADA_ID)
+    .eq("status", "OPEN")
+    .in("stage", ["Base", "Mensagem 1"])
+    .not("updated_stage_at", "is", null)
+    .order("updated_stage_at", { ascending: false })
+    .limit(2000);
+
+  if (e2) throw new Error(e2.message);
+
+  return {
+    leadsNovos: leadsNovos ?? [],
+    retomadaDeals: retomadaDeals ?? [],
+    perpetuosIds,
+    PALESTRAS_ID,
+    weekStart: monday.toISOString(),
+  };
+});
+
+// ───── pipeline metrics (PIPELINE_COMERCIAL-V3 + Sessão Estratégica) ─────
+const pipelineMetricsInput = z.object({ month: z.string() }); // "YYYY-MM"
+
+export const fetchPipelineMetricsFn = createServerFn({ method: "GET" })
+  .inputValidator((data: unknown) => pipelineMetricsInput.parse(data))
+  .handler(async ({ data }) => {
+    const supabase = await admin();
+    const { month } = data;
+    const monthStart = `${month}-01`;
+    const nextM = new Date(`${month}-01T12:00:00Z`);
+    nextM.setUTCMonth(nextM.getUTCMonth() + 1);
+    const monthEnd = nextM.toISOString().slice(0, 10);
+
+    const PIPELINE_ORIGINS = [
+      "8c159581-ba93-4fad-a909-f4e204d6faaf", // PIPELINE_COMERCIAL-V3
+      "07fc7c4b-82d2-427d-b09e-04a7f90f16f1", // PIPELINE_COMERCIAL-V3 (v2)
+      "f8b0fa1a-5f7b-4402-bb47-b0c4cbdf9090", // Sessão Estratégica (Funil)
+      "dfbc12ac-9f79-404a-82d5-83cd579e683b", // Sessão Estratégica
+    ];
+
+    // Leads recebidos no mês nesses funis
+    const { data: recebidos, error: e1 } = await supabase
+      .from("clint_deals")
+      .select("id,status,created_at,won_at")
+      .in("origin_id", PIPELINE_ORIGINS)
+      .gte("created_at", monthStart)
+      .lt("created_at", monthEnd);
+    if (e1) throw new Error(e1.message);
+
+    // Deals fechados (won_at) no mês nesses funis (independente de quando entraram)
+    const { data: fechados, error: e2 } = await supabase
+      .from("clint_deals")
+      .select("id,created_at,won_at")
+      .in("origin_id", PIPELINE_ORIGINS)
+      .eq("status", "WON")
+      .gte("won_at", monthStart)
+      .lt("won_at", monthEnd);
+    if (e2) throw new Error(e2.message);
+
+    const allRecebidos = recebidos ?? [];
+    const allFechados = fechados ?? [];
+
+    const cicloMedioDias =
+      allFechados.length > 0
+        ? allFechados.reduce((sum, d) => {
+            if (!d.won_at || !d.created_at) return sum;
+            return sum + (new Date(d.won_at).getTime() - new Date(d.created_at).getTime()) / 86_400_000;
+          }, 0) / allFechados.length
+        : null;
+
+    return {
+      recebidos: allRecebidos.length,
+      emAberto: allRecebidos.filter((d) => d.status === "OPEN").length,
+      perdidos: allRecebidos.filter((d) => d.status === "LOST").length,
+      fechados: allFechados.length,
+      cicloMedioDias,
+      conversao: allRecebidos.length > 0 ? (allFechados.length / allRecebidos.length) * 100 : 0,
+    };
+  });
+
 // ───── bi_pipeline_areas ─────
 export const fetchPipelineAreasFn = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = await admin();
