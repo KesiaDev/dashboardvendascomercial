@@ -166,6 +166,7 @@ function FunnelPanel({
   lostStatuses: FunilLostStatus[];
   origins: FunilOrigin[];
 }) {
+  const [timeGrain, setTimeGrain] = useState<"day" | "week" | "month">("week");
   const presets = useMemo(() => buildPresets(), []);
   const [presetValue, setPresetValue] = useState<string>("30d");
   const [customRange, setCustomRange] = useState<RDPRange | undefined>(undefined);
