@@ -166,33 +166,44 @@ function FunnelPanel({
   lostStatuses: FunilLostStatus[];
   origins: FunilOrigin[];
 }) {
-  const [period, setPeriod] = useState<Period>("30d");
-  const [timeGrain, setTimeGrain] = useState<"day" | "week" | "month">("week");
+  const presets = useMemo(() => buildPresets(), []);
+  const [presetValue, setPresetValue] = useState<string>("30d");
+  const [customRange, setCustomRange] = useState<RDPRange | undefined>(undefined);
+  const [rangeOpen, setRangeOpen] = useState(false);
+
+  // Range ativo: custom (se definido) tem prioridade sobre preset
+  const range: DateRange = useMemo(() => {
+    if (customRange?.from && customRange?.to) {
+      return {
+        from: isoDay(customRange.from),
+        to: isoDay(customRange.to),
+        label: "Personalizado",
+      };
+    }
+    return presets.find((p) => p.value === presetValue)?.range ?? presets[1].range;
+  }, [customRange, presetValue, presets]);
+
   const cfg = TARGET_FUNNELS.find((f) => f.key === funilKey)!;
 
-  // Encontra o origin em clint_origins (para stages)
   const origin = useMemo(
     () => origins.find((o) => cfg.pattern.test(o.name)) ?? null,
     [origins, cfg.pattern],
   );
 
-  // Filtra deals deste funil por origin_name regex (não por origin_id, que pode divergir)
   const funilDeals = useMemo(() => {
-    const since = periodStart(period);
+    const { from, to } = range;
     return deals.filter((d) => {
       const matchesName = cfg.pattern.test(d.origin_name ?? "");
       const matchesId = origin && d.origin_id === origin.id;
       if (!matchesName && !matchesId) return false;
-      // Deals OPEN: sempre incluídos (mostra estado atual do pipeline, independente de quando criados)
       if (d.status === "OPEN") return true;
-      // Deals WON/LOST: filtra pela data de fechamento, não de criação
-      if (since) {
-        const closeDate = d.status === "WON" ? d.won_at : d.lost_at;
-        if (!closeDate || closeDate.slice(0, 10) < since) return false;
-      }
+      const closeDate = (d.status === "WON" ? d.won_at : d.lost_at)?.slice(0, 10);
+      if (!closeDate) return false;
+      if (from && closeDate < from) return false;
+      if (to   && closeDate > to)   return false;
       return true;
     });
-  }, [deals, origin, period, cfg.pattern]);
+  }, [deals, origin, range, cfg.pattern]);
 
   // Nome exibido: preferência pelo origin da tabela, senão pega do primeiro deal
   const displayName = origin?.name ?? funilDeals[0]?.origin_name ?? cfg.label;
