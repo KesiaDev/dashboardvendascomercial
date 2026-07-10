@@ -6,12 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import type { DateRange as RDPRange } from "react-day-picker";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   Tooltip as RTooltip, Cell, PieChart, Pie, Legend,
 } from "recharts";
-import { TrendingUp, Users, CheckCircle, XCircle, Clock, Trophy, CalendarDays, RefreshCw } from "lucide-react";
+import { TrendingUp, Users, CheckCircle, XCircle, Clock, Trophy, CalendarDays, RefreshCw, CalendarRange } from "lucide-react";
 
 export const Route = createFileRoute("/_app/funis")({
   component: FunisPage,
