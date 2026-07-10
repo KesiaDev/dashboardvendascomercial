@@ -1,16 +1,17 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { fetchFunisDataFn, type FunilDeal, type FunilStage, type FunilOrigin, type FunilLostStatus } from "@/lib/funis.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   Tooltip as RTooltip, Cell, PieChart, Pie, Legend,
 } from "recharts";
-import { TrendingUp, Users, CheckCircle, XCircle, Clock, Trophy, CalendarDays } from "lucide-react";
+import { TrendingUp, Users, CheckCircle, XCircle, Clock, Trophy, CalendarDays, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/_app/funis")({
   component: FunisPage,
@@ -440,12 +441,43 @@ function FunnelPanel({
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 
+const CLINT_TOKEN = "U2FsdGVkX1/+cRRyndTOhUIUwrP9MLbU/pM4+wyGr6pd68sPVDQFME2bhHkzBOhNMyoyNjzI8YycBlOq2I98PA==";
+
 function FunisPage() {
-  const { data, isLoading } = useQuery({
+  const [syncState, setSyncState] = useState<"idle" | "running" | "done" | "error">("idle");
+  const [syncMsg, setSyncMsg] = useState("");
+
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["funis-data"],
     queryFn: () => fetchFunisDataFn(),
     staleTime: 5 * 60_000,
   });
+
+  const triggerSync = useCallback(async (full: boolean) => {
+    setSyncState("running");
+    setSyncMsg(full ? "Sincronizando histórico completo… pode levar alguns minutos." : "Sincronizando últimos 90 dias…");
+    try {
+      const url = `/api/public/sync/trigger${full ? "?full=true" : ""}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "x-clint-token": CLINT_TOKEN, "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const json = await res.json();
+      if (json.ok) {
+        const count = json.results?.deals?.count ?? "?";
+        setSyncMsg(`✓ Sync concluído — ${count} deals sincronizados.`);
+        setSyncState("done");
+        refetch();
+      } else {
+        setSyncMsg(`Erro: ${json.error ?? "desconhecido"}`);
+        setSyncState("error");
+      }
+    } catch (e: any) {
+      setSyncMsg(`Erro: ${e?.message ?? e}`);
+      setSyncState("error");
+    }
+  }, [refetch]);
 
   if (isLoading || !data) {
     return <div className="flex items-center justify-center py-24 text-muted-foreground">Carregando dados da Clint…</div>;
@@ -455,13 +487,42 @@ function FunisPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-muted-foreground"/>
-          Performance dos Funis
-        </h2>
-        <p className="text-xs text-muted-foreground mt-0.5">Leads, conversão e performance por vendedor em cada pipeline da Clint</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-muted-foreground"/>
+            Performance dos Funis
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Leads, conversão e performance por vendedor em cada pipeline da Clint</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline" size="sm"
+            className="text-xs gap-1.5"
+            disabled={syncState === "running"}
+            onClick={() => triggerSync(false)}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${syncState === "running" ? "animate-spin" : ""}`}/>
+            Sync 90d
+          </Button>
+          <Button
+            variant="outline" size="sm"
+            className="text-xs gap-1.5 border-violet-500/50 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10"
+            disabled={syncState === "running"}
+            onClick={() => triggerSync(true)}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${syncState === "running" ? "animate-spin" : ""}`}/>
+            Sync Completo
+          </Button>
+        </div>
       </div>
+      {syncMsg && (
+        <div className={`text-xs px-3 py-2 rounded-lg border ${
+          syncState === "error" ? "bg-red-500/10 border-red-500/30 text-red-500" :
+          syncState === "done"  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400" :
+          "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400"
+        }`}>{syncMsg}</div>
+      )}
 
       <Tabs defaultValue="retomada">
         <TabsList className="flex-wrap h-auto gap-1 mb-4">
