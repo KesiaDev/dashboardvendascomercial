@@ -141,7 +141,13 @@ function FunnelPanel({
       const matchesName = cfg.pattern.test(d.origin_name ?? "");
       const matchesId = origin && d.origin_id === origin.id;
       if (!matchesName && !matchesId) return false;
-      if (since && d.created_at && d.created_at.slice(0, 10) < since) return false;
+      // Deals OPEN: sempre incluídos (mostra estado atual do pipeline, independente de quando criados)
+      if (d.status === "OPEN") return true;
+      // Deals WON/LOST: filtra pela data de fechamento, não de criação
+      if (since) {
+        const closeDate = d.status === "WON" ? d.won_at : d.lost_at;
+        if (!closeDate || closeDate.slice(0, 10) < since) return false;
+      }
       return true;
     });
   }, [deals, origin, period, cfg.pattern]);

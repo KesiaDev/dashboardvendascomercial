@@ -2,11 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { runFullClintSync } from "@/lib/clint.functions";
 
 async function handleSync(request: Request) {
-  // Permite override do token via header (útil quando a env var do Railway está desatualizada)
   const headerToken = request.headers.get("x-clint-token");
   if (headerToken) process.env.CLINT_API_TOKEN = headerToken;
+  const url = new URL(request.url);
+  const full = url.searchParams.get("full") === "true";
   try {
-    const result = await runFullClintSync();
+    const result = await runFullClintSync({ full });
     return Response.json(result);
   } catch (e: any) {
     return Response.json({ ok: false, error: String(e?.message ?? e) }, { status: 500 });
