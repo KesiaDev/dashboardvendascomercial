@@ -43,17 +43,55 @@ function sellerColor(name: string) {
   return k ? SELLER_COLORS[k] : "#64748b";
 }
 
-// ─── Período ─────────────────────────────────────────────────────────────────
+// ─── Período (presets + range personalizado) ─────────────────────────────────
 
-type Period = "7d" | "30d" | "90d" | "all";
-function periodLabel(p: Period) {
-  return { "7d": "7 dias", "30d": "30 dias", "90d": "90 dias", all: "Tudo" }[p];
+const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const MONTHS_ABBR = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+type DateRange = { from: string | null; to: string | null; label: string };
+
+function isoDay(d: Date) { return d.toISOString().slice(0, 10); }
+
+function rangeLastDays(days: number, label: string): DateRange {
+  const to = new Date();
+  const from = new Date(Date.now() - days * 86_400_000);
+  return { from: isoDay(from), to: isoDay(to), label };
 }
-function periodStart(p: Period): string | null {
-  if (p === "all") return null;
-  const days = { "7d": 7, "30d": 30, "90d": 90 }[p];
-  const d = new Date(Date.now() - days * 86_400_000);
-  return d.toISOString().slice(0, 10);
+function rangeMonth(year: number, month0: number): DateRange {
+  const from = new Date(Date.UTC(year, month0, 1));
+  const to = new Date(Date.UTC(year, month0 + 1, 0));
+  return {
+    from: isoDay(from),
+    to: isoDay(to),
+    label: `${MONTHS_PT[month0]}/${year}`,
+  };
+}
+
+// Presets: últimos N dias + últimos 12 meses + tudo
+function buildPresets(): { value: string; group: "quick" | "month" | "all"; range: DateRange }[] {
+  const out: { value: string; group: "quick" | "month" | "all"; range: DateRange }[] = [
+    { value: "7d",  group: "quick", range: rangeLastDays(7,  "Últimos 7 dias") },
+    { value: "30d", group: "quick", range: rangeLastDays(30, "Últimos 30 dias") },
+    { value: "90d", group: "quick", range: rangeLastDays(90, "Últimos 90 dias") },
+  ];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    out.push({
+      value: `m-${d.getFullYear()}-${d.getMonth()}`,
+      group: "month",
+      range: rangeMonth(d.getFullYear(), d.getMonth()),
+    });
+  }
+  out.push({ value: "all", group: "all", range: { from: null, to: null, label: "Tudo" } });
+  return out;
+}
+
+function fmtRangeLabel(r: DateRange): string {
+  if (!r.from && !r.to) return r.label || "Tudo";
+  const f = r.from ? r.from.split("-").reverse().join("/") : "";
+  const t = r.to   ? r.to.split("-").reverse().join("/")   : "";
+  return `${f} → ${t}`;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
