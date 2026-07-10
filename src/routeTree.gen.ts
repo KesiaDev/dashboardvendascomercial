@@ -328,18 +328,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppImportRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/fechamento-semanal': {
-      id: '/_app/fechamento-semanal'
-      path: '/fechamento-semanal'
-      fullPath: '/fechamento-semanal'
-      preLoaderRoute: typeof AppFechamentoSemanalRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/funis': {
       id: '/_app/funis'
       path: '/funis'
       fullPath: '/funis'
       preLoaderRoute: typeof AppFunisRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/fechamento-semanal': {
+      id: '/_app/fechamento-semanal'
+      path: '/fechamento-semanal'
+      fullPath: '/fechamento-semanal'
+      preLoaderRoute: typeof AppFechamentoSemanalRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/fechamento': {
@@ -463,3 +463,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
