@@ -6,12 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import type { DateRange as RDPRange } from "react-day-picker";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   Tooltip as RTooltip, Cell, PieChart, Pie, Legend,
 } from "recharts";
-import { TrendingUp, Users, CheckCircle, XCircle, Clock, Trophy, CalendarDays, RefreshCw } from "lucide-react";
+import { TrendingUp, Users, CheckCircle, XCircle, Clock, Trophy, CalendarDays, RefreshCw, CalendarRange } from "lucide-react";
 
 export const Route = createFileRoute("/_app/funis")({
   component: FunisPage,
@@ -40,17 +43,55 @@ function sellerColor(name: string) {
   return k ? SELLER_COLORS[k] : "#64748b";
 }
 
-// ─── Período ─────────────────────────────────────────────────────────────────
+// ─── Período (presets + range personalizado) ─────────────────────────────────
 
-type Period = "7d" | "30d" | "90d" | "all";
-function periodLabel(p: Period) {
-  return { "7d": "7 dias", "30d": "30 dias", "90d": "90 dias", all: "Tudo" }[p];
+const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const MONTHS_ABBR = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+type DateRange = { from: string | null; to: string | null; label: string };
+
+function isoDay(d: Date) { return d.toISOString().slice(0, 10); }
+
+function rangeLastDays(days: number, label: string): DateRange {
+  const to = new Date();
+  const from = new Date(Date.now() - days * 86_400_000);
+  return { from: isoDay(from), to: isoDay(to), label };
 }
-function periodStart(p: Period): string | null {
-  if (p === "all") return null;
-  const days = { "7d": 7, "30d": 30, "90d": 90 }[p];
-  const d = new Date(Date.now() - days * 86_400_000);
-  return d.toISOString().slice(0, 10);
+function rangeMonth(year: number, month0: number): DateRange {
+  const from = new Date(Date.UTC(year, month0, 1));
+  const to = new Date(Date.UTC(year, month0 + 1, 0));
+  return {
+    from: isoDay(from),
+    to: isoDay(to),
+    label: `${MONTHS_PT[month0]}/${year}`,
+  };
+}
+
+// Presets: últimos N dias + últimos 12 meses + tudo
+function buildPresets(): { value: string; group: "quick" | "month" | "all"; range: DateRange }[] {
+  const out: { value: string; group: "quick" | "month" | "all"; range: DateRange }[] = [
+    { value: "7d",  group: "quick", range: rangeLastDays(7,  "Últimos 7 dias") },
+    { value: "30d", group: "quick", range: rangeLastDays(30, "Últimos 30 dias") },
+    { value: "90d", group: "quick", range: rangeLastDays(90, "Últimos 90 dias") },
+  ];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    out.push({
+      value: `m-${d.getFullYear()}-${d.getMonth()}`,
+      group: "month",
+      range: rangeMonth(d.getFullYear(), d.getMonth()),
+    });
+  }
+  out.push({ value: "all", group: "all", range: { from: null, to: null, label: "Tudo" } });
+  return out;
+}
+
+function fmtRangeLabel(r: DateRange): string {
+  if (!r.from && !r.to) return r.label || "Tudo";
+  const f = r.from ? r.from.split("-").reverse().join("/") : "";
+  const t = r.to   ? r.to.split("-").reverse().join("/")   : "";
+  return `${f} → ${t}`;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -125,33 +166,45 @@ function FunnelPanel({
   lostStatuses: FunilLostStatus[];
   origins: FunilOrigin[];
 }) {
-  const [period, setPeriod] = useState<Period>("30d");
   const [timeGrain, setTimeGrain] = useState<"day" | "week" | "month">("week");
+  const presets = useMemo(() => buildPresets(), []);
+  const [presetValue, setPresetValue] = useState<string>("30d");
+  const [customRange, setCustomRange] = useState<RDPRange | undefined>(undefined);
+  const [rangeOpen, setRangeOpen] = useState(false);
+
+  // Range ativo: custom (se definido) tem prioridade sobre preset
+  const range: DateRange = useMemo(() => {
+    if (customRange?.from && customRange?.to) {
+      return {
+        from: isoDay(customRange.from),
+        to: isoDay(customRange.to),
+        label: "Personalizado",
+      };
+    }
+    return presets.find((p) => p.value === presetValue)?.range ?? presets[1].range;
+  }, [customRange, presetValue, presets]);
+
   const cfg = TARGET_FUNNELS.find((f) => f.key === funilKey)!;
 
-  // Encontra o origin em clint_origins (para stages)
   const origin = useMemo(
     () => origins.find((o) => cfg.pattern.test(o.name)) ?? null,
     [origins, cfg.pattern],
   );
 
-  // Filtra deals deste funil por origin_name regex (não por origin_id, que pode divergir)
   const funilDeals = useMemo(() => {
-    const since = periodStart(period);
+    const { from, to } = range;
     return deals.filter((d) => {
       const matchesName = cfg.pattern.test(d.origin_name ?? "");
       const matchesId = origin && d.origin_id === origin.id;
       if (!matchesName && !matchesId) return false;
-      // Deals OPEN: sempre incluídos (mostra estado atual do pipeline, independente de quando criados)
       if (d.status === "OPEN") return true;
-      // Deals WON/LOST: filtra pela data de fechamento, não de criação
-      if (since) {
-        const closeDate = d.status === "WON" ? d.won_at : d.lost_at;
-        if (!closeDate || closeDate.slice(0, 10) < since) return false;
-      }
+      const closeDate = (d.status === "WON" ? d.won_at : d.lost_at)?.slice(0, 10);
+      if (!closeDate) return false;
+      if (from && closeDate < from) return false;
+      if (to   && closeDate > to)   return false;
       return true;
     });
-  }, [deals, origin, period, cfg.pattern]);
+  }, [deals, origin, range, cfg.pattern]);
 
   // Nome exibido: preferência pelo origin da tabela, senão pega do primeiro deal
   const displayName = origin?.name ?? funilDeals[0]?.origin_name ?? cfg.label;
@@ -209,17 +262,80 @@ function FunnelPanel({
     <div className="space-y-5">
       {/* Período */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <p className="text-xs text-muted-foreground">Funil: <span className="font-medium text-foreground">{displayName}</span></p>
-        <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <SelectTrigger className="w-36 h-8 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(["7d","30d","90d","all"] as Period[]).map((p) => (
-              <SelectItem key={p} value={p} className="text-xs">{periodLabel(p)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <p className="text-xs text-muted-foreground">
+          Funil: <span className="font-medium text-foreground">{displayName}</span>
+          <span className="mx-2 text-muted-foreground/50">·</span>
+          Período: <span className="font-medium text-foreground">{fmtRangeLabel(range)}</span>
+        </p>
+        <div className="flex items-center gap-2">
+          <Select
+            value={customRange?.from && customRange?.to ? "__custom__" : presetValue}
+            onValueChange={(v) => {
+              if (v === "__custom__") return;
+              setCustomRange(undefined);
+              setPresetValue(v);
+            }}
+          >
+            <SelectTrigger className="w-52 h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="max-h-80">
+              <SelectGroup>
+                <SelectLabel className="text-[10px] uppercase tracking-wider">Rápido</SelectLabel>
+                {presets.filter((p) => p.group === "quick").map((p) => (
+                  <SelectItem key={p.value} value={p.value} className="text-xs">{p.range.label}</SelectItem>
+                ))}
+              </SelectGroup>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel className="text-[10px] uppercase tracking-wider">Por mês</SelectLabel>
+                {presets.filter((p) => p.group === "month").map((p) => (
+                  <SelectItem key={p.value} value={p.value} className="text-xs">{p.range.label}</SelectItem>
+                ))}
+              </SelectGroup>
+              <SelectSeparator />
+              <SelectItem value="all" className="text-xs">Tudo</SelectItem>
+              {customRange?.from && customRange?.to && (
+                <>
+                  <SelectSeparator />
+                  <SelectItem value="__custom__" className="text-xs">Personalizado ativo</SelectItem>
+                </>
+              )}
+            </SelectContent>
+          </Select>
+
+          <Popover open={rangeOpen} onOpenChange={setRangeOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+                <CalendarRange className="h-3.5 w-3.5" />
+                Personalizar
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-auto p-0">
+              <Calendar
+                mode="range"
+                numberOfMonths={2}
+                selected={customRange}
+                onSelect={(r) => {
+                  setCustomRange(r);
+                  if (r?.from && r?.to) setRangeOpen(false);
+                }}
+                initialFocus
+              />
+              <div className="flex items-center justify-between border-t border-border p-2">
+                <span className="text-xs text-muted-foreground">
+                  {customRange?.from ? isoDay(customRange.from) : "—"} → {customRange?.to ? isoDay(customRange.to) : "—"}
+                </span>
+                <Button
+                  variant="ghost" size="sm" className="h-7 text-xs"
+                  onClick={() => { setCustomRange(undefined); setRangeOpen(false); }}
+                >
+                  Limpar
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       {/* KPIs */}
