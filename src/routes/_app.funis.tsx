@@ -262,17 +262,80 @@ function FunnelPanel({
     <div className="space-y-5">
       {/* Período */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <p className="text-xs text-muted-foreground">Funil: <span className="font-medium text-foreground">{displayName}</span></p>
-        <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <SelectTrigger className="w-36 h-8 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(["7d","30d","90d","all"] as Period[]).map((p) => (
-              <SelectItem key={p} value={p} className="text-xs">{periodLabel(p)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <p className="text-xs text-muted-foreground">
+          Funil: <span className="font-medium text-foreground">{displayName}</span>
+          <span className="mx-2 text-muted-foreground/50">·</span>
+          Período: <span className="font-medium text-foreground">{fmtRangeLabel(range)}</span>
+        </p>
+        <div className="flex items-center gap-2">
+          <Select
+            value={customRange?.from && customRange?.to ? "__custom__" : presetValue}
+            onValueChange={(v) => {
+              if (v === "__custom__") return;
+              setCustomRange(undefined);
+              setPresetValue(v);
+            }}
+          >
+            <SelectTrigger className="w-52 h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="max-h-80">
+              <SelectGroup>
+                <SelectLabel className="text-[10px] uppercase tracking-wider">Rápido</SelectLabel>
+                {presets.filter((p) => p.group === "quick").map((p) => (
+                  <SelectItem key={p.value} value={p.value} className="text-xs">{p.range.label}</SelectItem>
+                ))}
+              </SelectGroup>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel className="text-[10px] uppercase tracking-wider">Por mês</SelectLabel>
+                {presets.filter((p) => p.group === "month").map((p) => (
+                  <SelectItem key={p.value} value={p.value} className="text-xs">{p.range.label}</SelectItem>
+                ))}
+              </SelectGroup>
+              <SelectSeparator />
+              <SelectItem value="all" className="text-xs">Tudo</SelectItem>
+              {customRange?.from && customRange?.to && (
+                <>
+                  <SelectSeparator />
+                  <SelectItem value="__custom__" className="text-xs">Personalizado ativo</SelectItem>
+                </>
+              )}
+            </SelectContent>
+          </Select>
+
+          <Popover open={rangeOpen} onOpenChange={setRangeOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+                <CalendarRange className="h-3.5 w-3.5" />
+                Personalizar
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-auto p-0">
+              <Calendar
+                mode="range"
+                numberOfMonths={2}
+                selected={customRange}
+                onSelect={(r) => {
+                  setCustomRange(r);
+                  if (r?.from && r?.to) setRangeOpen(false);
+                }}
+                initialFocus
+              />
+              <div className="flex items-center justify-between border-t border-border p-2">
+                <span className="text-xs text-muted-foreground">
+                  {customRange?.from ? isoDay(customRange.from) : "—"} → {customRange?.to ? isoDay(customRange.to) : "—"}
+                </span>
+                <Button
+                  variant="ghost" size="sm" className="h-7 text-xs"
+                  onClick={() => { setCustomRange(undefined); setRangeOpen(false); }}
+                >
+                  Limpar
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       {/* KPIs */}
