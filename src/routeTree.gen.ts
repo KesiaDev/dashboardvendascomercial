@@ -23,6 +23,7 @@ import { Route as AppFechamentoRouteImport } from './routes/_app.fechamento'
 import { Route as AppExecutivoRouteImport } from './routes/_app.executivo'
 import { Route as AppComissionamentoRouteImport } from './routes/_app.comissionamento'
 import { Route as AppComercialRouteImport } from './routes/_app.comercial'
+import { Route as AppCampanhaRouteImport } from './routes/_app.campanha'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
 import { Route as ApiPublicHotmartRawRouteImport } from './routes/api/public/hotmart-raw'
@@ -99,6 +100,11 @@ const AppComercialRoute = AppComercialRouteImport.update({
   path: '/comercial',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCampanhaRoute = AppCampanhaRouteImport.update({
+  id: '/campanha',
+  path: '/campanha',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAreasRoute = AppAreasRouteImport.update({
   id: '/areas',
   path: '/areas',
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/agente': typeof AppAgenteRoute
   '/areas': typeof AppAreasRoute
+  '/campanha': typeof AppCampanhaRoute
   '/comercial': typeof AppComercialRoute
   '/comissionamento': typeof AppComissionamentoRoute
   '/executivo': typeof AppExecutivoRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/agente': typeof AppAgenteRoute
   '/areas': typeof AppAreasRoute
+  '/campanha': typeof AppCampanhaRoute
   '/comercial': typeof AppComercialRoute
   '/comissionamento': typeof AppComissionamentoRoute
   '/executivo': typeof AppExecutivoRoute
@@ -177,6 +185,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/_app/agente': typeof AppAgenteRoute
   '/_app/areas': typeof AppAreasRoute
+  '/_app/campanha': typeof AppCampanhaRoute
   '/_app/comercial': typeof AppComercialRoute
   '/_app/comissionamento': typeof AppComissionamentoRoute
   '/_app/executivo': typeof AppExecutivoRoute
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agente'
     | '/areas'
+    | '/campanha'
     | '/comercial'
     | '/comissionamento'
     | '/executivo'
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
   to:
     | '/agente'
     | '/areas'
+    | '/campanha'
     | '/comercial'
     | '/comissionamento'
     | '/executivo'
@@ -243,6 +254,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/_app/agente'
     | '/_app/areas'
+    | '/_app/campanha'
     | '/_app/comercial'
     | '/_app/comissionamento'
     | '/_app/executivo'
@@ -370,6 +382,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppComercialRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/campanha': {
+      id: '/_app/campanha'
+      path: '/campanha'
+      fullPath: '/campanha'
+      preLoaderRoute: typeof AppCampanhaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/areas': {
       id: '/_app/areas'
       path: '/areas'
@@ -418,6 +437,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppAgenteRoute: typeof AppAgenteRoute
   AppAreasRoute: typeof AppAreasRoute
+  AppCampanhaRoute: typeof AppCampanhaRoute
   AppComercialRoute: typeof AppComercialRoute
   AppComissionamentoRoute: typeof AppComissionamentoRoute
   AppExecutivoRoute: typeof AppExecutivoRoute
@@ -436,6 +456,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAgenteRoute: AppAgenteRoute,
   AppAreasRoute: AppAreasRoute,
+  AppCampanhaRoute: AppCampanhaRoute,
   AppComercialRoute: AppComercialRoute,
   AppComissionamentoRoute: AppComissionamentoRoute,
   AppExecutivoRoute: AppExecutivoRoute,
@@ -463,3 +484,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
