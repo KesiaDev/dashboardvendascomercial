@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { to: "/vendas-reais",        label: "Vendas Reais",       icon: TrendingUpIcon },
   { to: "/comissionamento",     label: "Comissionamento",    icon: DollarSign },
   { to: "/funis",               label: "Funis",              icon: GitMerge },
+  { to: "/coach",               label: "Coach IA",           icon: Sparkles },
 ] as const;
 
 function AppLayout() {
