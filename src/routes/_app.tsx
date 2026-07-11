@@ -1,6 +1,6 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { BarChart3, ClipboardCheck, CalendarDays, Trophy, TrendingUp, DollarSign, Menu, TrendingUpIcon, GitMerge } from "lucide-react";
+import { BarChart3, ClipboardCheck, CalendarDays, Trophy, TrendingUp, DollarSign, Menu, TrendingUpIcon, GitMerge, Sparkles } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { to: "/vendas-reais",        label: "Vendas Reais",       icon: TrendingUpIcon },
   { to: "/comissionamento",     label: "Comissionamento",    icon: DollarSign },
   { to: "/funis",               label: "Funis",              icon: GitMerge },
+  { to: "/coach",               label: "Coach IA",           icon: Sparkles },
 ] as const;
 
 function AppLayout() {

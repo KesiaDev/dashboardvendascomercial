@@ -23,11 +23,13 @@ import { Route as AppFechamentoRouteImport } from './routes/_app.fechamento'
 import { Route as AppExecutivoRouteImport } from './routes/_app.executivo'
 import { Route as AppComissionamentoRouteImport } from './routes/_app.comissionamento'
 import { Route as AppComercialRouteImport } from './routes/_app.comercial'
+import { Route as AppCoachRouteImport } from './routes/_app.coach'
 import { Route as AppCampanhaRouteImport } from './routes/_app.campanha'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
 import { Route as ApiPublicHotmartRawRouteImport } from './routes/api/public/hotmart-raw'
 import { Route as ApiPublicHotmartDebugRouteImport } from './routes/api/public/hotmart-debug'
+import { Route as AppCoachIdRouteImport } from './routes/_app.coach.$id'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
 import { Route as ApiPublicSyncHotmartRouteImport } from './routes/api/public/sync.hotmart'
 
@@ -100,6 +102,11 @@ const AppComercialRoute = AppComercialRouteImport.update({
   path: '/comercial',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCoachRoute = AppCoachRouteImport.update({
+  id: '/coach',
+  path: '/coach',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCampanhaRoute = AppCampanhaRouteImport.update({
   id: '/campanha',
   path: '/campanha',
@@ -125,6 +132,11 @@ const ApiPublicHotmartDebugRoute = ApiPublicHotmartDebugRouteImport.update({
   path: '/api/public/hotmart-debug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppCoachIdRoute = AppCoachIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppCoachRoute,
+} as any)
 const ApiPublicSyncTriggerRoute = ApiPublicSyncTriggerRouteImport.update({
   id: '/api/public/sync/trigger',
   path: '/api/public/sync/trigger',
@@ -141,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/agente': typeof AppAgenteRoute
   '/areas': typeof AppAreasRoute
   '/campanha': typeof AppCampanhaRoute
+  '/coach': typeof AppCoachRouteWithChildren
   '/comercial': typeof AppComercialRoute
   '/comissionamento': typeof AppComissionamentoRoute
   '/executivo': typeof AppExecutivoRoute
@@ -153,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/resultados': typeof AppResultadosRoute
   '/vendas-reais': typeof AppVendasReaisRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
+  '/coach/$id': typeof AppCoachIdRoute
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
@@ -162,6 +176,7 @@ export interface FileRoutesByTo {
   '/agente': typeof AppAgenteRoute
   '/areas': typeof AppAreasRoute
   '/campanha': typeof AppCampanhaRoute
+  '/coach': typeof AppCoachRouteWithChildren
   '/comercial': typeof AppComercialRoute
   '/comissionamento': typeof AppComissionamentoRoute
   '/executivo': typeof AppExecutivoRoute
@@ -175,6 +190,7 @@ export interface FileRoutesByTo {
   '/vendas-reais': typeof AppVendasReaisRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/': typeof AppIndexRoute
+  '/coach/$id': typeof AppCoachIdRoute
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
@@ -186,6 +202,7 @@ export interface FileRoutesById {
   '/_app/agente': typeof AppAgenteRoute
   '/_app/areas': typeof AppAreasRoute
   '/_app/campanha': typeof AppCampanhaRoute
+  '/_app/coach': typeof AppCoachRouteWithChildren
   '/_app/comercial': typeof AppComercialRoute
   '/_app/comissionamento': typeof AppComissionamentoRoute
   '/_app/executivo': typeof AppExecutivoRoute
@@ -199,6 +216,7 @@ export interface FileRoutesById {
   '/_app/vendas-reais': typeof AppVendasReaisRoute
   '/_app/vendedor-produto': typeof AppVendedorProdutoRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/coach/$id': typeof AppCoachIdRoute
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
@@ -211,6 +229,7 @@ export interface FileRouteTypes {
     | '/agente'
     | '/areas'
     | '/campanha'
+    | '/coach'
     | '/comercial'
     | '/comissionamento'
     | '/executivo'
@@ -223,6 +242,7 @@ export interface FileRouteTypes {
     | '/resultados'
     | '/vendas-reais'
     | '/vendedor-produto'
+    | '/coach/$id'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
     | '/api/public/sync/hotmart'
@@ -232,6 +252,7 @@ export interface FileRouteTypes {
     | '/agente'
     | '/areas'
     | '/campanha'
+    | '/coach'
     | '/comercial'
     | '/comissionamento'
     | '/executivo'
@@ -245,6 +266,7 @@ export interface FileRouteTypes {
     | '/vendas-reais'
     | '/vendedor-produto'
     | '/'
+    | '/coach/$id'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
     | '/api/public/sync/hotmart'
@@ -255,6 +277,7 @@ export interface FileRouteTypes {
     | '/_app/agente'
     | '/_app/areas'
     | '/_app/campanha'
+    | '/_app/coach'
     | '/_app/comercial'
     | '/_app/comissionamento'
     | '/_app/executivo'
@@ -268,6 +291,7 @@ export interface FileRouteTypes {
     | '/_app/vendas-reais'
     | '/_app/vendedor-produto'
     | '/_app/'
+    | '/_app/coach/$id'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
     | '/api/public/sync/hotmart'
@@ -382,6 +406,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppComercialRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/coach': {
+      id: '/_app/coach'
+      path: '/coach'
+      fullPath: '/coach'
+      preLoaderRoute: typeof AppCoachRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/campanha': {
       id: '/_app/campanha'
       path: '/campanha'
@@ -417,6 +448,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHotmartDebugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/coach/$id': {
+      id: '/_app/coach/$id'
+      path: '/$id'
+      fullPath: '/coach/$id'
+      preLoaderRoute: typeof AppCoachIdRouteImport
+      parentRoute: typeof AppCoachRoute
+    }
     '/api/public/sync/trigger': {
       id: '/api/public/sync/trigger'
       path: '/api/public/sync/trigger'
@@ -434,10 +472,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppCoachRouteChildren {
+  AppCoachIdRoute: typeof AppCoachIdRoute
+}
+
+const AppCoachRouteChildren: AppCoachRouteChildren = {
+  AppCoachIdRoute: AppCoachIdRoute,
+}
+
+const AppCoachRouteWithChildren = AppCoachRoute._addFileChildren(
+  AppCoachRouteChildren,
+)
+
 interface AppRouteChildren {
   AppAgenteRoute: typeof AppAgenteRoute
   AppAreasRoute: typeof AppAreasRoute
   AppCampanhaRoute: typeof AppCampanhaRoute
+  AppCoachRoute: typeof AppCoachRouteWithChildren
   AppComercialRoute: typeof AppComercialRoute
   AppComissionamentoRoute: typeof AppComissionamentoRoute
   AppExecutivoRoute: typeof AppExecutivoRoute
@@ -457,6 +508,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAgenteRoute: AppAgenteRoute,
   AppAreasRoute: AppAreasRoute,
   AppCampanhaRoute: AppCampanhaRoute,
+  AppCoachRoute: AppCoachRouteWithChildren,
   AppComercialRoute: AppComercialRoute,
   AppComissionamentoRoute: AppComissionamentoRoute,
   AppExecutivoRoute: AppExecutivoRoute,
@@ -484,13 +536,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

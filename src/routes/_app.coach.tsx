@@ -1,0 +1,448 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  Sparkles, Upload, AlertTriangle, Settings, MessageSquare,
+  TrendingUp, TrendingDown, Clock, Target, Users, RefreshCw, Trash2, CheckCircle2,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import {
+  listCoachConversationsFn, listCoachAlertsFn, uploadConversationFn,
+  analyzeConversationFn, runAlertsScanFn, resolveCoachAlertFn,
+  deleteCoachConversationFn, getCoachConfigFn, saveCoachConfigFn,
+} from "@/lib/coach.functions";
+
+export const Route = createFileRoute("/_app/coach")({
+  component: CoachPage,
+});
+
+function fmtDate(iso: string | null | undefined) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+function fmtEur(n: number | null | undefined) {
+  if (n == null) return "—";
+  return "€" + n.toLocaleString("pt-PT", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+function sentimentColor(s: string | null | undefined) {
+  if (s === "positivo") return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
+  if (s === "negativo") return "bg-rose-500/15 text-rose-700 dark:text-rose-400";
+  return "bg-slate-500/15 text-slate-700 dark:text-slate-300";
+}
+function scoreColor(n: number | null | undefined) {
+  if (n == null) return "text-muted-foreground";
+  if (n >= 8) return "text-emerald-600 dark:text-emerald-400";
+  if (n >= 6) return "text-amber-600 dark:text-amber-400";
+  return "text-rose-600 dark:text-rose-400";
+}
+
+function CoachPage() {
+  const [tab, setTab] = useState("visao");
+  return (
+    <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-indigo-600 flex items-center justify-center">
+          <Sparkles className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold">Coach Comercial com IA</h1>
+          <p className="text-xs text-muted-foreground">Análise inteligente das conversas dos vendedores</p>
+        </div>
+      </div>
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="w-full flex-wrap h-auto">
+          <TabsTrigger value="visao"><TrendingUp className="h-4 w-4 mr-1" />Visão geral</TabsTrigger>
+          <TabsTrigger value="conversas"><MessageSquare className="h-4 w-4 mr-1" />Conversas</TabsTrigger>
+          <TabsTrigger value="alertas"><AlertTriangle className="h-4 w-4 mr-1" />Alertas</TabsTrigger>
+          <TabsTrigger value="upload"><Upload className="h-4 w-4 mr-1" />Nova análise</TabsTrigger>
+          <TabsTrigger value="config"><Settings className="h-4 w-4 mr-1" />Config</TabsTrigger>
+        </TabsList>
+        <TabsContent value="visao"><VisaoGeral /></TabsContent>
+        <TabsContent value="conversas"><Conversas /></TabsContent>
+        <TabsContent value="alertas"><Alertas /></TabsContent>
+        <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>
+        <TabsContent value="config"><ConfigTab /></TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+// ─── Visão geral ─────────────────────────────────────────────────────────
+function VisaoGeral() {
+  const { data: convs = [] } = useQuery({ queryKey: ["coach-convs"], queryFn: () => listCoachConversationsFn() });
+  const { data: alerts = [] } = useQuery({ queryKey: ["coach-alerts"], queryFn: () => listCoachAlertsFn() });
+
+  const analyzed = convs.filter((c: any) => c.analysis && c.analysis.status === "ok");
+  const avgScore = analyzed.length
+    ? Number((analyzed.reduce((s: number, c: any) => s + Number(c.analysis.score_geral ?? 0), 0) / analyzed.length).toFixed(1))
+    : null;
+  const tentativas = analyzed.length ? Math.round((analyzed.filter((c: any) => c.analysis.tentou_fechar).length / analyzed.length) * 100) : 0;
+  const respTimes = analyzed.map((c: any) => c.analysis.tempo_medio_resposta_min).filter((x: any) => x != null);
+  const avgResp = respTimes.length ? Math.round(respTimes.reduce((a: number, b: number) => a + b, 0) / respTimes.length) : null;
+  const openAlerts = alerts.filter((a: any) => !a.resolved).length;
+
+  // Ranking vendedores
+  const bySeller = new Map<string, { name: string; count: number; sum: number; wins: number }>();
+  for (const c of analyzed) {
+    const a: any = c.analysis;
+    if (!a) continue;
+    const name = c.seller_name ?? c.seller_email ?? "—";
+    const cur = bySeller.get(name) ?? { name, count: 0, sum: 0, wins: 0 };
+    cur.count += 1;
+    cur.sum += Number(a.score_geral ?? 0);
+    if (a.tentou_fechar) cur.wins += 1;
+    bySeller.set(name, cur);
+  }
+  const ranking = Array.from(bySeller.values())
+    .map((s) => ({ ...s, avg: Number((s.sum / s.count).toFixed(1)) }))
+    .sort((a, b) => b.avg - a.avg);
+
+  // Top objeções
+  const objCount = new Map<string, number>();
+  for (const c of analyzed) {
+    const a: any = c.analysis;
+    if (!a) continue;
+    for (const o of (a.objecoes ?? []) as unknown[]) {
+      const k = String(o).trim();
+      if (k) objCount.set(k, (objCount.get(k) ?? 0) + 1);
+    }
+  }
+  const topObj = Array.from(objCount.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  return (
+    <div className="space-y-4 mt-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCard icon={<Target className="h-4 w-4" />} label="Nota média equipa" value={avgScore != null ? avgScore.toFixed(1) : "—"} valueClass={scoreColor(avgScore)} />
+        <KpiCard icon={<TrendingUp className="h-4 w-4" />} label="% com tentativa de fecho" value={tentativas + "%"} />
+        <KpiCard icon={<Clock className="h-4 w-4" />} label="Tempo médio resposta" value={avgResp != null ? avgResp + " min" : "—"} />
+        <KpiCard icon={<AlertTriangle className="h-4 w-4" />} label="Alertas abertos" value={String(openAlerts)} valueClass={openAlerts > 0 ? "text-rose-600 dark:text-rose-400" : ""} />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" />Ranking por qualidade</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {ranking.length === 0 && <p className="text-sm text-muted-foreground">Sem análises ainda.</p>}
+            {ranking.map((s, i) => (
+              <div key={s.name} className="flex items-center gap-3">
+                <span className="text-xs font-bold w-5 text-muted-foreground">{i + 1}º</span>
+                <span className="flex-1 text-sm truncate">{s.name}</span>
+                <span className="text-xs text-muted-foreground">{s.count} conv.</span>
+                <span className={"text-sm font-bold w-10 text-right " + scoreColor(s.avg)}>{s.avg.toFixed(1)}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3"><CardTitle className="text-base">Principais objeções</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {topObj.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma objeção catalogada.</p>}
+            {topObj.map(([o, n]) => (
+              <div key={o} className="flex items-center gap-3">
+                <span className="flex-1 text-sm">{o}</span>
+                <Badge variant="secondary">{n}</Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function KpiCard({ icon, label, value, valueClass = "" }: { icon: React.ReactNode; label: string; value: string; valueClass?: string }) {
+  return (
+    <Card>
+      <CardContent className="pt-4 pb-3">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">{icon}{label}</div>
+        <p className={"text-2xl font-bold mt-1 " + valueClass}>{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Conversas ──────────────────────────────────────────────────────────
+function Conversas() {
+  const qc = useQueryClient();
+  const { data: convs = [], isLoading } = useQuery({ queryKey: ["coach-convs"], queryFn: () => listCoachConversationsFn() });
+  const [q, setQ] = useState("");
+  const [minScore, setMinScore] = useState("");
+
+  const analyze = useMutation({
+    mutationFn: (id: string) => analyzeConversationFn({ data: { conversationId: id, force: true } }),
+    onSuccess: (r: any) => {
+      toast.success(r?.status === "insufficient_data" ? "Dados insuficientes" : "Análise concluída");
+      qc.invalidateQueries({ queryKey: ["coach-convs"] });
+      qc.invalidateQueries({ queryKey: ["coach-alerts"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha na análise"),
+  });
+  const del = useMutation({
+    mutationFn: (id: string) => deleteCoachConversationFn({ data: { id } }),
+    onSuccess: () => { toast.success("Conversa apagada"); qc.invalidateQueries({ queryKey: ["coach-convs"] }); },
+  });
+
+  const filtered = useMemo(() => {
+    let list = convs;
+    if (q) {
+      const s = q.toLowerCase();
+      list = list.filter((c: any) =>
+        (c.seller_name ?? "").toLowerCase().includes(s) ||
+        (c.contact_name ?? "").toLowerCase().includes(s) ||
+        (c.deal_id ?? "").toLowerCase().includes(s));
+    }
+    if (minScore) {
+      const m = Number(minScore);
+      list = list.filter((c: any) => (c.analysis?.score_geral ?? 0) >= m);
+    }
+    return list;
+  }, [convs, q, minScore]);
+
+  return (
+    <div className="space-y-3 mt-4">
+      <div className="flex flex-wrap gap-2">
+        <Input placeholder="Buscar por vendedor, cliente, deal…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
+        <Input placeholder="Nota mínima" type="number" min={0} max={10} value={minScore} onChange={(e) => setMinScore(e.target.value)} className="max-w-[120px]" />
+      </div>
+
+      {isLoading && <p className="text-sm text-muted-foreground">A carregar…</p>}
+      {!isLoading && filtered.length === 0 && (
+        <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
+          Nenhuma conversa. Vai à aba <b>Nova análise</b> para colar uma transcrição de WhatsApp.
+        </CardContent></Card>
+      )}
+
+      <div className="space-y-2">
+        {filtered.map((c: any) => (
+          <Card key={c.id}>
+            <CardContent className="p-3 flex items-start gap-3">
+              <div className={"h-12 w-12 rounded-lg flex flex-col items-center justify-center shrink-0 " + (c.analysis?.status === "ok" ? "bg-muted" : "bg-muted/50")}>
+                <span className={"text-lg font-bold leading-none " + scoreColor(c.analysis?.score_geral)}>
+                  {c.analysis?.status === "ok" ? Number(c.analysis.score_geral ?? 0).toFixed(1) : c.analysis?.status === "insufficient_data" ? "—" : "?"}
+                </span>
+                <span className="text-[10px] text-muted-foreground mt-0.5">nota</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-sm">{c.contact_name ?? "Contacto —"}</span>
+                  <span className="text-xs text-muted-foreground">•</span>
+                  <span className="text-xs text-muted-foreground">{c.seller_name ?? c.seller_email ?? "sem vendedor"}</span>
+                  {c.analysis?.sentimento && (
+                    <span className={"text-[10px] px-1.5 py-0.5 rounded " + sentimentColor(c.analysis.sentimento)}>{c.analysis.sentimento}</span>
+                  )}
+                  {c.analysis?.prob_fecho != null && (
+                    <Badge variant="outline" className="text-[10px]">Fecho {c.analysis.prob_fecho}%</Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  {c.origin_name ?? "—"} · {c.stage ?? "—"} · {c.message_count} msgs · Última: {fmtDate(c.last_message_at)} · {fmtEur(c.deal_value)}
+                </p>
+                {c.analysis?.resumo && <p className="text-xs mt-1 line-clamp-2">{c.analysis.resumo}</p>}
+              </div>
+              <div className="flex flex-col gap-1 shrink-0">
+                <Link to="/coach/$id" params={{ id: c.id }}>
+                  <Button size="sm" variant="outline">Abrir</Button>
+                </Link>
+                <Button size="sm" variant="ghost" onClick={() => analyze.mutate(c.id)} disabled={analyze.isPending}>
+                  <RefreshCw className={"h-3.5 w-3.5 " + (analyze.isPending ? "animate-spin" : "")} />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => { if (confirm("Apagar conversa?")) del.mutate(c.id); }}>
+                  <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Alertas ────────────────────────────────────────────────────────────
+function Alertas() {
+  const qc = useQueryClient();
+  const { data: alerts = [], isLoading } = useQuery({ queryKey: ["coach-alerts"], queryFn: () => listCoachAlertsFn() });
+  const scan = useMutation({
+    mutationFn: () => runAlertsScanFn(),
+    onSuccess: (r: any) => { toast.success(`${r.created} novos alertas`); qc.invalidateQueries({ queryKey: ["coach-alerts"] }); },
+  });
+  const toggle = useMutation({
+    mutationFn: ({ id, resolved }: { id: string; resolved: boolean }) => resolveCoachAlertFn({ data: { id, resolved } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["coach-alerts"] }),
+  });
+
+  const typeLabel: Record<string, string> = {
+    lead_quente_sem_resposta: "Lead quente sem resposta",
+    follow_up_esquecido: "Follow-up esquecido",
+    intencao_compra: "Intenção de compra",
+    conversa_parada: "Conversa parada",
+    risco_perda: "Risco de perda",
+    nota_baixa: "Nota baixa",
+  };
+  const sevColor: Record<string, string> = {
+    high: "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30",
+    medium: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    low: "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30",
+  };
+
+  return (
+    <div className="space-y-3 mt-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {alerts.filter((a: any) => !a.resolved).length} abertos · {alerts.filter((a: any) => a.resolved).length} resolvidos
+        </p>
+        <Button size="sm" onClick={() => scan.mutate()} disabled={scan.isPending}>
+          <RefreshCw className={"h-4 w-4 mr-1 " + (scan.isPending ? "animate-spin" : "")} />Rodar scan
+        </Button>
+      </div>
+      {isLoading && <p className="text-sm text-muted-foreground">A carregar…</p>}
+      {!isLoading && alerts.length === 0 && (
+        <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Nenhum alerta.</CardContent></Card>
+      )}
+      {alerts.map((a: any) => (
+        <Card key={a.id} className={a.resolved ? "opacity-60" : ""}>
+          <CardContent className="p-3 flex items-start gap-3">
+            <Badge className={"shrink-0 border " + (sevColor[a.severity] ?? "")}>{a.severity}</Badge>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">{typeLabel[a.type] ?? a.type}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{a.seller_name ?? a.seller_email ?? "—"} · {fmtDate(a.created_at)}</p>
+              <p className="text-sm mt-1">{a.message}</p>
+            </div>
+            <div className="flex flex-col gap-1 shrink-0">
+              {a.conversation_id && (
+                <Link to="/coach/$id" params={{ id: a.conversation_id }}>
+                  <Button size="sm" variant="outline">Abrir</Button>
+                </Link>
+              )}
+              <Button size="sm" variant={a.resolved ? "outline" : "default"} onClick={() => toggle.mutate({ id: a.id, resolved: !a.resolved })}>
+                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />{a.resolved ? "Reabrir" : "Resolver"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+// ─── Upload manual ──────────────────────────────────────────────────────
+function UploadTab({ onDone }: { onDone: () => void }) {
+  const qc = useQueryClient();
+  const nav = useNavigate();
+  const [form, setForm] = useState({
+    sellerName: "", sellerEmail: "", contactName: "", contactEmail: "",
+    originName: "", stage: "", dealValue: "", transcript: "",
+  });
+  const upload = useMutation({
+    mutationFn: async () => {
+      const res = await uploadConversationFn({ data: {
+        sellerName: form.sellerName || undefined,
+        sellerEmail: form.sellerEmail || undefined,
+        contactName: form.contactName || undefined,
+        contactEmail: form.contactEmail || undefined,
+        originName: form.originName || undefined,
+        stage: form.stage || undefined,
+        dealValue: form.dealValue ? Number(form.dealValue) : undefined,
+        transcript: form.transcript,
+      }});
+      // dispara análise automática
+      try { await analyzeConversationFn({ data: { conversationId: res.id } }); } catch {}
+      return res;
+    },
+    onSuccess: (r) => {
+      toast.success(`Conversa criada (${r.message_count} msgs) — análise IA iniciada`);
+      qc.invalidateQueries({ queryKey: ["coach-convs"] });
+      nav({ to: "/coach/$id", params: { id: r.id } });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha no upload"),
+  });
+
+  return (
+    <div className="mt-4 space-y-3">
+      <Card>
+        <CardHeader><CardTitle className="text-base">Nova análise de conversa</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label className="text-xs">Vendedor</Label><Input value={form.sellerName} onChange={(e) => setForm({ ...form, sellerName: e.target.value })} placeholder="Ex: Gisele Pimentel" /></div>
+            <div><Label className="text-xs">Email vendedor</Label><Input value={form.sellerEmail} onChange={(e) => setForm({ ...form, sellerEmail: e.target.value })} /></div>
+            <div><Label className="text-xs">Cliente</Label><Input value={form.contactName} onChange={(e) => setForm({ ...form, contactName: e.target.value })} /></div>
+            <div><Label className="text-xs">Email cliente</Label><Input value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>
+            <div><Label className="text-xs">Origem/Funil</Label><Input value={form.originName} onChange={(e) => setForm({ ...form, originName: e.target.value })} /></div>
+            <div><Label className="text-xs">Etapa</Label><Input value={form.stage} onChange={(e) => setForm({ ...form, stage: e.target.value })} /></div>
+            <div><Label className="text-xs">Valor negócio (€)</Label><Input type="number" value={form.dealValue} onChange={(e) => setForm({ ...form, dealValue: e.target.value })} /></div>
+          </div>
+          <div>
+            <Label className="text-xs">Transcrição da conversa</Label>
+            <Textarea
+              rows={12}
+              value={form.transcript}
+              onChange={(e) => setForm({ ...form, transcript: e.target.value })}
+              placeholder={"Cola aqui o export do WhatsApp. Exemplo:\n[12/07/2026, 14:32] Gisele: Bom dia! Vi que se inscreveu…\n[12/07/2026, 14:40] João Cliente: Olá, sim, queria saber o preço"}
+              className="font-mono text-xs"
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Suporta formato "[data, hora] Nome: mensagem" e variantes. A IA vai identificar automaticamente vendedor/cliente com base no nome informado acima.
+            </p>
+          </div>
+          <Button onClick={() => upload.mutate()} disabled={upload.isPending || form.transcript.trim().length < 20}>
+            {upload.isPending ? "A processar…" : "Analisar com IA"}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Config ─────────────────────────────────────────────────────────────
+function ConfigTab() {
+  const qc = useQueryClient();
+  const { data: cfg } = useQuery({ queryKey: ["coach-config"], queryFn: () => getCoachConfigFn() });
+  const [form, setForm] = useState<{ nota_minima: number; horas_lead_quente: number; dias_sem_resposta: number } | null>(null);
+  const current = form ?? cfg;
+  const save = useMutation({
+    mutationFn: () => saveCoachConfigFn({ data: {
+      nota_minima: Number(current!.nota_minima),
+      horas_lead_quente: Number(current!.horas_lead_quente),
+      dias_sem_resposta: Number(current!.dias_sem_resposta),
+    }}),
+    onSuccess: () => { toast.success("Config salva"); qc.invalidateQueries({ queryKey: ["coach-config"] }); },
+  });
+  if (!current) return <p className="text-sm text-muted-foreground mt-4">A carregar…</p>;
+  return (
+    <div className="mt-4">
+      <Card>
+        <CardHeader><CardTitle className="text-base">Parâmetros de alerta</CardTitle></CardHeader>
+        <CardContent className="space-y-3 max-w-md">
+          <div>
+            <Label className="text-xs">Nota mínima aceitável (0–10)</Label>
+            <Input type="number" min={0} max={10} value={current.nota_minima}
+              onChange={(e) => setForm({ ...current, nota_minima: Number(e.target.value) })} />
+          </div>
+          <div>
+            <Label className="text-xs">Horas até virar "lead quente sem resposta"</Label>
+            <Input type="number" min={1} value={current.horas_lead_quente}
+              onChange={(e) => setForm({ ...current, horas_lead_quente: Number(e.target.value) })} />
+          </div>
+          <div>
+            <Label className="text-xs">Dias sem resposta = conversa parada</Label>
+            <Input type="number" min={1} value={current.dias_sem_resposta}
+              onChange={(e) => setForm({ ...current, dias_sem_resposta: Number(e.target.value) })} />
+          </div>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar</Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
