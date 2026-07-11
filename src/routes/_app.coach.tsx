@@ -95,11 +95,13 @@ function VisaoGeral() {
   // Ranking vendedores
   const bySeller = new Map<string, { name: string; count: number; sum: number; wins: number }>();
   for (const c of analyzed) {
+    const a: any = c.analysis;
+    if (!a) continue;
     const name = c.seller_name ?? c.seller_email ?? "—";
     const cur = bySeller.get(name) ?? { name, count: 0, sum: 0, wins: 0 };
     cur.count += 1;
-    cur.sum += Number(c.analysis.score_geral ?? 0);
-    if (c.analysis.tentou_fechar) cur.wins += 1;
+    cur.sum += Number(a.score_geral ?? 0);
+    if (a.tentou_fechar) cur.wins += 1;
     bySeller.set(name, cur);
   }
   const ranking = Array.from(bySeller.values())
@@ -109,7 +111,9 @@ function VisaoGeral() {
   // Top objeções
   const objCount = new Map<string, number>();
   for (const c of analyzed) {
-    for (const o of c.analysis.objecoes ?? []) {
+    const a: any = c.analysis;
+    if (!a) continue;
+    for (const o of (a.objecoes ?? []) as unknown[]) {
       const k = String(o).trim();
       if (k) objCount.set(k, (objCount.get(k) ?? 0) + 1);
     }
