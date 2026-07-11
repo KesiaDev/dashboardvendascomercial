@@ -721,6 +721,392 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_alerts: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          deal_id: string | null
+          id: string
+          message: string
+          resolved: boolean
+          resolved_at: string | null
+          seller_email: string | null
+          seller_name: string | null
+          severity: string
+          type: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          id?: string
+          message: string
+          resolved?: boolean
+          resolved_at?: string | null
+          seller_email?: string | null
+          seller_name?: string | null
+          severity?: string
+          type: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          id?: string
+          message?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          seller_email?: string | null
+          seller_name?: string | null
+          severity?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_alerts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "coach_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_analyses: {
+        Row: {
+          analyzed_at: string
+          clareza: number | null
+          conducao: number | null
+          conversation_id: string
+          created_at: string
+          descoberta: number | null
+          empatia: number | null
+          id: string
+          model: string | null
+          nivel_interesse: string | null
+          objecoes: Json | null
+          oportunidades_perdidas: Json | null
+          prob_fecho: number | null
+          proxima_acao: string | null
+          qualidade: number | null
+          rapport: number | null
+          respondeu_todas_duvidas: boolean | null
+          resumo: string | null
+          score_geral: number | null
+          sentimento: string | null
+          status: string
+          sugestao_resposta: string | null
+          sugestoes: Json | null
+          tempo_medio_resposta_min: number | null
+          tentou_fechar: boolean | null
+        }
+        Insert: {
+          analyzed_at?: string
+          clareza?: number | null
+          conducao?: number | null
+          conversation_id: string
+          created_at?: string
+          descoberta?: number | null
+          empatia?: number | null
+          id?: string
+          model?: string | null
+          nivel_interesse?: string | null
+          objecoes?: Json | null
+          oportunidades_perdidas?: Json | null
+          prob_fecho?: number | null
+          proxima_acao?: string | null
+          qualidade?: number | null
+          rapport?: number | null
+          respondeu_todas_duvidas?: boolean | null
+          resumo?: string | null
+          score_geral?: number | null
+          sentimento?: string | null
+          status?: string
+          sugestao_resposta?: string | null
+          sugestoes?: Json | null
+          tempo_medio_resposta_min?: number | null
+          tentou_fechar?: boolean | null
+        }
+        Update: {
+          analyzed_at?: string
+          clareza?: number | null
+          conducao?: number | null
+          conversation_id?: string
+          created_at?: string
+          descoberta?: number | null
+          empatia?: number | null
+          id?: string
+          model?: string | null
+          nivel_interesse?: string | null
+          objecoes?: Json | null
+          oportunidades_perdidas?: Json | null
+          prob_fecho?: number | null
+          proxima_acao?: string | null
+          qualidade?: number | null
+          rapport?: number | null
+          respondeu_todas_duvidas?: boolean | null
+          resumo?: string | null
+          score_geral?: number | null
+          sentimento?: string | null
+          status?: string
+          sugestao_resposta?: string | null
+          sugestoes?: Json | null
+          tempo_medio_resposta_min?: number | null
+          tentou_fechar?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_analyses_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: true
+            referencedRelation: "coach_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_config: {
+        Row: {
+          dias_sem_resposta: number
+          horas_lead_quente: number
+          id: number
+          nota_minima: number
+          updated_at: string
+        }
+        Insert: {
+          dias_sem_resposta?: number
+          horas_lead_quente?: number
+          id?: number
+          nota_minima?: number
+          updated_at?: string
+        }
+        Update: {
+          dias_sem_resposta?: number
+          horas_lead_quente?: number
+          id?: number
+          nota_minima?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coach_conversations: {
+        Row: {
+          contact_email: string | null
+          contact_name: string | null
+          created_at: string
+          deal_id: string | null
+          deal_value: number | null
+          first_message_at: string | null
+          id: string
+          last_message_at: string | null
+          message_count: number
+          origin_name: string | null
+          raw_transcript: string | null
+          seller_email: string | null
+          seller_name: string | null
+          source: string
+          stage: string | null
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string
+          deal_id?: string | null
+          deal_value?: number | null
+          first_message_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          message_count?: number
+          origin_name?: string | null
+          raw_transcript?: string | null
+          seller_email?: string | null
+          seller_name?: string | null
+          source?: string
+          stage?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string
+          deal_id?: string | null
+          deal_value?: number | null
+          first_message_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          message_count?: number
+          origin_name?: string | null
+          raw_transcript?: string | null
+          seller_email?: string | null
+          seller_name?: string | null
+          source?: string
+          stage?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coach_meeting_analyses: {
+        Row: {
+          analyzed_at: string
+          apresentacao: number | null
+          argumentacao: number | null
+          clareza: number | null
+          definiu_proximos_passos: boolean | null
+          descoberta: number | null
+          escuta: number | null
+          feedback: string | null
+          id: string
+          meeting_id: string
+          model: string | null
+          objecoes: number | null
+          perguntas: number | null
+          pontos_fortes: Json | null
+          pontos_melhoria: Json | null
+          preparacao: number | null
+          prob_conversao: number | null
+          rapport: number | null
+          recomendacoes: string | null
+          score_geral: number | null
+          seguranca: number | null
+          tentou_fechar: boolean | null
+        }
+        Insert: {
+          analyzed_at?: string
+          apresentacao?: number | null
+          argumentacao?: number | null
+          clareza?: number | null
+          definiu_proximos_passos?: boolean | null
+          descoberta?: number | null
+          escuta?: number | null
+          feedback?: string | null
+          id?: string
+          meeting_id: string
+          model?: string | null
+          objecoes?: number | null
+          perguntas?: number | null
+          pontos_fortes?: Json | null
+          pontos_melhoria?: Json | null
+          preparacao?: number | null
+          prob_conversao?: number | null
+          rapport?: number | null
+          recomendacoes?: string | null
+          score_geral?: number | null
+          seguranca?: number | null
+          tentou_fechar?: boolean | null
+        }
+        Update: {
+          analyzed_at?: string
+          apresentacao?: number | null
+          argumentacao?: number | null
+          clareza?: number | null
+          definiu_proximos_passos?: boolean | null
+          descoberta?: number | null
+          escuta?: number | null
+          feedback?: string | null
+          id?: string
+          meeting_id?: string
+          model?: string | null
+          objecoes?: number | null
+          perguntas?: number | null
+          pontos_fortes?: Json | null
+          pontos_melhoria?: Json | null
+          preparacao?: number | null
+          prob_conversao?: number | null
+          rapport?: number | null
+          recomendacoes?: string | null
+          score_geral?: number | null
+          seguranca?: number | null
+          tentou_fechar?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_meeting_analyses_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
+            referencedRelation: "coach_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_meetings: {
+        Row: {
+          contact_name: string | null
+          created_at: string
+          deal_id: string | null
+          duration_min: number | null
+          id: string
+          meeting_date: string | null
+          seller_email: string | null
+          seller_name: string | null
+          source: string | null
+          transcript: string | null
+          updated_at: string
+        }
+        Insert: {
+          contact_name?: string | null
+          created_at?: string
+          deal_id?: string | null
+          duration_min?: number | null
+          id?: string
+          meeting_date?: string | null
+          seller_email?: string | null
+          seller_name?: string | null
+          source?: string | null
+          transcript?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contact_name?: string | null
+          created_at?: string
+          deal_id?: string | null
+          duration_min?: number | null
+          id?: string
+          meeting_date?: string | null
+          seller_email?: string | null
+          seller_name?: string | null
+          source?: string | null
+          transcript?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coach_messages: {
+        Row: {
+          body: string
+          conversation_id: string
+          created_at: string
+          direction: string
+          id: string
+          sender_name: string | null
+          sent_at: string
+        }
+        Insert: {
+          body: string
+          conversation_id: string
+          created_at?: string
+          direction: string
+          id?: string
+          sender_name?: string | null
+          sent_at: string
+        }
+        Update: {
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          sender_name?: string | null
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "coach_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manual_sales: {
         Row: {
           affiliate_mismatch: boolean
