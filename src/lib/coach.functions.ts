@@ -528,7 +528,7 @@ export type CoachIntegrationLog = {
 export const fetchClintWebhookStatsFn = createServerFn({ method: "GET" }).handler(async () => {
   const db = await admin();
   const [convRes, logRes] = await Promise.all([
-    (db as any).from("coach_conversations").select("id", { count: "exact", head: true }).eq("source", "clint_webhook"),
+    (db as any).from("coach_conversations").select("id", { count: "exact", head: true }).eq("source", "clint"),
     (db as any).from("coach_integration_logs")
       .select("created_at, status")
       .order("created_at", { ascending: false })
