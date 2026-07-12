@@ -1182,6 +1182,77 @@ export type Database = {
         }
         Relationships: []
       }
+      referrals: {
+        Row: {
+          client_email: string | null
+          client_name: string
+          contacted_at: string | null
+          converted_at: string | null
+          converted_value_eur: number | null
+          created_at: string
+          created_by_email: string | null
+          id: string
+          notes: string | null
+          product_interest: string | null
+          referred_email: string | null
+          referred_name: string
+          referred_phone: string | null
+          seller_email: string | null
+          seller_name: string
+          source_sale_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_email?: string | null
+          client_name: string
+          contacted_at?: string | null
+          converted_at?: string | null
+          converted_value_eur?: number | null
+          created_at?: string
+          created_by_email?: string | null
+          id?: string
+          notes?: string | null
+          product_interest?: string | null
+          referred_email?: string | null
+          referred_name: string
+          referred_phone?: string | null
+          seller_email?: string | null
+          seller_name: string
+          source_sale_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_email?: string | null
+          client_name?: string
+          contacted_at?: string | null
+          converted_at?: string | null
+          converted_value_eur?: number | null
+          created_at?: string
+          created_by_email?: string | null
+          id?: string
+          notes?: string | null
+          product_interest?: string | null
+          referred_email?: string | null
+          referred_name?: string
+          referred_phone?: string | null
+          seller_email?: string | null
+          seller_name?: string
+          source_sale_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_source_sale_id_fkey"
+            columns: ["source_sale_id"]
+            isOneToOne: false
+            referencedRelation: "manual_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales: {
         Row: {
           categoria_produto: string | null
