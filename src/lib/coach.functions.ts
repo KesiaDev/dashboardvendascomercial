@@ -514,3 +514,67 @@ export const saveCoachConfigFn = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ─── Integração Clint (webhook em tempo real) ─────────────────────────────
+
+export type CoachIntegrationLog = {
+  id: number;
+  event_type: string | null;
+  status: string | null;
+  error_msg: string | null;
+  created_at: string;
+};
+
+export const fetchClintWebhookStatsFn = createServerFn({ method: "GET" }).handler(async () => {
+  const db = await admin();
+  const [convRes, logRes] = await Promise.all([
+    (db as any).from("coach_conversations").select("id", { count: "exact", head: true }).eq("source", "clint_webhook"),
+    (db as any).from("coach_integration_logs")
+      .select("created_at, status")
+      .order("created_at", { ascending: false })
+      .limit(1),
+  ]);
+  const lastEvent = logRes.data?.[0] ?? null;
+  return {
+    webhook_conversation_count: (convRes.count as number) ?? 0,
+    last_event_at: lastEvent?.created_at ?? null,
+    is_connected: lastEvent
+      ? Date.now() - new Date(lastEvent.created_at).getTime() < 7 * 24 * 60 * 60 * 1000
+      : false,
+  };
+});
+
+export const fetchClintIntegrationLogsFn = createServerFn({ method: "GET" }).handler(async () => {
+  const db = await admin();
+  const { data: rows, error } = await (db as any)
+    .from("coach_integration_logs")
+    .select("id, event_type, status, error_msg, created_at")
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) throw new Error(error.message);
+  return (rows ?? []) as CoachIntegrationLog[];
+});
+
+export const runClintMigrationsFn = createServerFn({ method: "POST" }).handler(async () => {
+  const db = await admin();
+  const sqls = [
+    `ALTER TABLE coach_conversations ADD COLUMN IF NOT EXISTS clint_conversation_id text;`,
+    `ALTER TABLE coach_conversations ADD COLUMN IF NOT EXISTS clint_contact_id text;`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_coach_conv_clint_id ON coach_conversations(clint_conversation_id) WHERE clint_conversation_id IS NOT NULL;`,
+    `ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS clint_message_id text;`,
+    `CREATE TABLE IF NOT EXISTS coach_integration_logs (
+      id bigserial PRIMARY KEY,
+      event_type text,
+      payload jsonb,
+      status text DEFAULT 'received',
+      error_msg text,
+      created_at timestamptz DEFAULT now()
+    );`,
+    `CREATE INDEX IF NOT EXISTS idx_coach_logs_created ON coach_integration_logs(created_at DESC);`,
+  ];
+  for (const sql of sqls) {
+    const { error } = await (db as any).rpc("exec_sql", { query: sql }).single();
+    if (error && !error.message?.includes("already exists")) throw new Error(error.message);
+  }
+  return { ok: true };
+});

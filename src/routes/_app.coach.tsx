@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Sparkles, Upload, AlertTriangle, Settings, MessageSquare,
-  TrendingUp, TrendingDown, Clock, Target, Users, RefreshCw, Trash2, CheckCircle2,
+  TrendingUp, TrendingDown, Clock, Target, Users, RefreshCw, Trash2, CheckCircle2, Zap, Copy,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +19,7 @@ import {
   listCoachConversationsFn, listCoachAlertsFn, uploadConversationFn,
   analyzeConversationFn, runAlertsScanFn, resolveCoachAlertFn,
   deleteCoachConversationFn, getCoachConfigFn, saveCoachConfigFn,
+  fetchClintWebhookStatsFn, fetchClintIntegrationLogsFn, runClintMigrationsFn,
 } from "@/lib/coach.functions";
 
 export const Route = createFileRoute("/_app/coach")({
@@ -67,12 +68,14 @@ function CoachPage() {
           <TabsTrigger value="alertas"><AlertTriangle className="h-4 w-4 mr-1" />Alertas</TabsTrigger>
           <TabsTrigger value="upload"><Upload className="h-4 w-4 mr-1" />Nova análise</TabsTrigger>
           <TabsTrigger value="config"><Settings className="h-4 w-4 mr-1" />Config</TabsTrigger>
+          <TabsTrigger value="integracao"><Zap className="h-4 w-4 mr-1" />Integração Clint</TabsTrigger>
         </TabsList>
         <TabsContent value="visao"><VisaoGeral /></TabsContent>
         <TabsContent value="conversas"><Conversas /></TabsContent>
         <TabsContent value="alertas"><Alertas /></TabsContent>
         <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>
         <TabsContent value="config"><ConfigTab /></TabsContent>
+        <TabsContent value="integracao"><IntegracaoClint /></TabsContent>
       </Tabs>
     </div>
   );
@@ -441,6 +444,152 @@ function ConfigTab() {
               onChange={(e) => setForm({ ...current, dias_sem_resposta: Number(e.target.value) })} />
           </div>
           <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar</Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Integração Clint (webhook em tempo real) ────────────────────────────
+function IntegracaoClint() {
+  const qc = useQueryClient();
+  const webhookUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/api/clint/webhook`
+    : "/api/clint/webhook";
+
+  const { data: stats } = useQuery({
+    queryKey: ["clint-webhook-stats"],
+    queryFn: () => fetchClintWebhookStatsFn(),
+    refetchInterval: 30_000,
+  });
+  const { data: logs = [] } = useQuery({
+    queryKey: ["clint-integration-logs"],
+    queryFn: () => fetchClintIntegrationLogsFn(),
+    refetchInterval: 30_000,
+  });
+
+  const migrate = useMutation({
+    mutationFn: () => runClintMigrationsFn(),
+    onSuccess: () => {
+      toast.success("Tabelas criadas com sucesso");
+      qc.invalidateQueries({ queryKey: ["clint-webhook-stats"] });
+    },
+    onError: (e: unknown) => toast.error((e as Error).message ?? "Falha"),
+  });
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    toast.success("URL copiada!");
+  };
+
+  const statusColor = stats?.is_connected
+    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+    : "bg-slate-500/15 text-slate-600 dark:text-slate-400";
+
+  const statusLabel = stats?.is_connected ? "Conectado" : "Aguardando eventos";
+
+  return (
+    <div className="mt-4 space-y-4">
+      {/* Status */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs text-muted-foreground mb-1">Status</p>
+            <span className={"text-sm font-semibold px-2 py-1 rounded " + statusColor}>{statusLabel}</span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs text-muted-foreground mb-1">Conversas via webhook</p>
+            <p className="text-2xl font-bold">{stats?.webhook_conversation_count ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs text-muted-foreground mb-1">Último evento</p>
+            <p className="text-sm">{stats?.last_event_at ? fmtDate(stats.last_event_at) : "—"}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Webhook URL */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base">URL do webhook</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex items-center gap-2">
+            <code className="flex-1 bg-muted px-3 py-2 rounded text-xs font-mono break-all">{webhookUrl}</code>
+            <Button size="sm" variant="outline" onClick={copyUrl}><Copy className="h-3.5 w-3.5" /></Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Configure esta URL no painel da Clint em <b>Configurações → Integrações → Webhooks</b>.
+            Selecione os eventos de mensagem/atendimento e cole a URL acima.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Config Clint API */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Credenciais Clint</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">API Token Clint</Label>
+              <Input type="password" placeholder="U2FsdGVkX1/+..." className="font-mono text-xs"
+                defaultValue={import.meta.env.VITE_CLINT_TOKEN ?? ""} readOnly />
+              <p className="text-[10px] text-muted-foreground mt-1">Definido via variável VITE_CLINT_TOKEN</p>
+            </div>
+            <div>
+              <Label className="text-xs">API Base URL</Label>
+              <Input value="https://api.clint.digital/v1/" readOnly className="text-xs" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Migração */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Inicialização do banco</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Cria as colunas e tabelas necessárias para a integração Clint (idempotente — pode rodar várias vezes).
+          </p>
+          <Button onClick={() => migrate.mutate()} disabled={migrate.isPending} variant="outline">
+            <RefreshCw className={"h-4 w-4 mr-2 " + (migrate.isPending ? "animate-spin" : "")} />
+            {migrate.isPending ? "Executando…" : "Rodar migrations"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Log de eventos */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Log de eventos recentes</CardTitle>
+            <Button size="sm" variant="ghost" onClick={() => qc.invalidateQueries({ queryKey: ["clint-integration-logs"] })}>
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {logs.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Nenhum evento registrado ainda. Configure o webhook na Clint e aguarde.
+            </p>
+          )}
+          <div className="space-y-1.5">
+            {logs.map((log) => (
+              <div key={log.id} className="flex items-start gap-2 text-xs">
+                <span className={"shrink-0 px-1.5 py-0.5 rounded font-medium " + (
+                  log.status === "processed" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                  : log.status === "error" ? "bg-rose-500/15 text-rose-700 dark:text-rose-400"
+                  : "bg-slate-500/15 text-slate-600 dark:text-slate-400"
+                )}>{log.status}</span>
+                <span className="text-muted-foreground shrink-0">{fmtDate(log.created_at)}</span>
+                <span className="font-mono">{log.event_type ?? "—"}</span>
+                {log.error_msg && <span className="text-rose-500 truncate">{log.error_msg}</span>}
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

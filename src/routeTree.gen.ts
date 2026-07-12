@@ -33,6 +33,7 @@ import { Route as ApiPublicHotmartDebugRouteImport } from './routes/api/public/h
 import { Route as AppCoachIdRouteImport } from './routes/_app.coach.$id'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
 import { Route as ApiPublicSyncHotmartRouteImport } from './routes/api/public/sync.hotmart'
+import { Route as ApiClintWebhookRouteImport } from './routes/api/clint/webhook'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -153,6 +154,11 @@ const ApiPublicSyncHotmartRoute = ApiPublicSyncHotmartRouteImport.update({
   path: '/api/public/sync/hotmart',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiClintWebhookRoute = ApiClintWebhookRouteImport.update({
+  id: '/api/clint/webhook',
+  path: '/api/clint/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -178,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
+  '/api/clint/webhook': typeof ApiClintWebhookRoute
 }
 export interface FileRoutesByTo {
   '/agente': typeof AppAgenteRoute
@@ -203,6 +210,7 @@ export interface FileRoutesByTo {
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
+  '/api/clint/webhook': typeof ApiClintWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -230,6 +238,7 @@ export interface FileRoutesById {
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
+  '/api/clint/webhook': typeof ApiClintWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -282,6 +291,7 @@ export interface FileRouteTypes {
     | '/api/public/hotmart-raw'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
+    | '/api/clint/webhook'
   id:
     | '__root__'
     | '/_app'
@@ -308,6 +318,7 @@ export interface FileRouteTypes {
     | '/api/public/hotmart-raw'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
+    | '/api/clint/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -316,6 +327,7 @@ export interface RootRouteChildren {
   ApiPublicHotmartRawRoute: typeof ApiPublicHotmartRawRoute
   ApiPublicSyncHotmartRoute: typeof ApiPublicSyncHotmartRoute
   ApiPublicSyncTriggerRoute: typeof ApiPublicSyncTriggerRoute
+  ApiClintWebhookRoute: typeof ApiClintWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -488,6 +500,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSyncHotmartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/clint/webhook': {
+      id: '/api/clint/webhook'
+      path: '/api/clint/webhook'
+      fullPath: '/api/clint/webhook'
+      preLoaderRoute: typeof ApiClintWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -553,6 +572,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHotmartRawRoute: ApiPublicHotmartRawRoute,
   ApiPublicSyncHotmartRoute: ApiPublicSyncHotmartRoute,
   ApiPublicSyncTriggerRoute: ApiPublicSyncTriggerRoute,
+  ApiClintWebhookRoute: ApiClintWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
