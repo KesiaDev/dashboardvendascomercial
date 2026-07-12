@@ -56,21 +56,24 @@ async function processWebhookEvent(db: any, event: string, body: Record<string, 
   const seller = (data.user as Record<string, unknown>) ?? (data.seller as Record<string, unknown>) ?? {};
   const msg = (data.message as Record<string, unknown>) ?? (data.msg as Record<string, unknown>) ?? {};
 
-  const contactName = (contact.name as string) ?? (data.lead_name as string) ?? null;
-  const contactEmail = (contact.email as string) ?? null;
+  const contactName = (contact.name as string) ?? (data.contact_name as string) ?? (data.lead_name as string) ?? null;
+  const contactEmail = (contact.email as string) ?? (data.contact_email as string) ?? null;
   const contactId = (contact.id as string) ?? null;
-  const sellerName = (seller.full_name as string) ?? (seller.name as string) ?? (data.seller_name as string) ?? null;
+  const sellerName = (seller.full_name as string) ?? (seller.name as string) ?? (data.deal_user as string) ?? (data.seller_name as string) ?? null;
   const sellerEmail = (seller.email as string) ?? (data.seller_email as string) ?? null;
   const originName = (data.origin_name as string) ?? ((data.origin as Record<string, unknown>)?.name as string) ?? null;
-  const stage = (data.stage as string) ?? ((data.stage_data as Record<string, unknown>)?.name as string) ?? null;
+  const stage = (data.deal_stage as string) ?? (data.stage as string) ?? ((data.stage_data as Record<string, unknown>)?.name as string) ?? null;
 
-  const isMessageEvent =
-    event.includes("message") || event.includes("mensagem") ||
+  const hasMessageContent =
     (msg as Record<string, unknown>).content != null ||
     (msg as Record<string, unknown>).text != null ||
     (msg as Record<string, unknown>).body != null;
 
-  if (!isMessageEvent || !clintConvId) return;
+  const isMessageEvent = event.includes("message") || event.includes("mensagem") || hasMessageContent;
+  const isStageEvent = event.includes("stage") || event.includes("etapa") || event.includes("status");
+
+  // Process only events that have a conversation ID and are either a message or stage change
+  if ((!isMessageEvent && !isStageEvent) || !clintConvId) return;
 
   // Upsert conversa via clint_conversation_id
   const { data: existing } = await db
@@ -113,37 +116,39 @@ async function processWebhookEvent(db: any, event: string, body: Record<string, 
     conversationId = existing.id;
   }
 
-  // Determina direção e conteúdo da mensagem
-  const rawFrom = (msg.from as string) ?? (msg.author as string) ?? "";
-  const direction: "inbound" | "outbound" =
-    rawFrom === "contact" || rawFrom === "client" ? "inbound"
-    : rawFrom === "user" || rawFrom === "seller" ? "outbound"
-    : (data.author_type as string) === "client" ? "inbound"
-    : "outbound";
+  // Insere mensagem apenas quando há conteúdo
+  if (hasMessageContent) {
+    const rawFrom = (msg.from as string) ?? (msg.author as string) ?? "";
+    const direction: "inbound" | "outbound" =
+      rawFrom === "contact" || rawFrom === "client" ? "inbound"
+      : rawFrom === "user" || rawFrom === "seller" ? "outbound"
+      : (data.author_type as string) === "client" ? "inbound"
+      : "outbound";
 
-  const senderName = direction === "inbound" ? contactName : sellerName;
+    const senderName = direction === "inbound" ? contactName : sellerName;
 
-  const body_ =
-    (msg.content as string) ??
-    (msg.text as string) ??
-    (msg.body as string) ??
-    (data.content as string) ??
-    "";
+    const body_ =
+      (msg.content as string) ??
+      (msg.text as string) ??
+      (msg.body as string) ??
+      (data.content as string) ??
+      "";
 
-  const sentAt =
-    (msg.sent_at as string) ??
-    (msg.timestamp as string) ??
-    (msg.created_at as string) ??
-    now;
+    const sentAt =
+      (msg.sent_at as string) ??
+      (msg.timestamp as string) ??
+      (msg.created_at as string) ??
+      now;
 
-  await db.from("coach_messages").insert({
-    conversation_id: conversationId,
-    clint_message_id: (msg.id as string) ?? null,
-    sent_at: sentAt,
-    direction,
-    sender_name: senderName,
-    body: body_,
-  });
+    await db.from("coach_messages").insert({
+      conversation_id: conversationId,
+      clint_message_id: (msg.id as string) ?? null,
+      sent_at: sentAt,
+      direction,
+      sender_name: senderName,
+      body: body_,
+    });
+  }
 }
 
 export const Route = createFileRoute("/api/clint/webhook")({
