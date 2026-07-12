@@ -16,6 +16,7 @@ import { Route as AppVendasReaisRouteImport } from './routes/_app.vendas-reais'
 import { Route as AppResultadosRouteImport } from './routes/_app.resultados'
 import { Route as AppRankingRouteImport } from './routes/_app.ranking'
 import { Route as AppProdutividadeRouteImport } from './routes/_app.produtividade'
+import { Route as AppIndicacoesRouteImport } from './routes/_app.indicacoes'
 import { Route as AppImportRouteImport } from './routes/_app.import'
 import { Route as AppFunisRouteImport } from './routes/_app.funis'
 import { Route as AppFechamentoSemanalRouteImport } from './routes/_app.fechamento-semanal'
@@ -65,6 +66,11 @@ const AppRankingRoute = AppRankingRouteImport.update({
 const AppProdutividadeRoute = AppProdutividadeRouteImport.update({
   id: '/produtividade',
   path: '/produtividade',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIndicacoesRoute = AppIndicacoesRouteImport.update({
+  id: '/indicacoes',
+  path: '/indicacoes',
   getParentRoute: () => AppRoute,
 } as any)
 const AppImportRoute = AppImportRouteImport.update({
@@ -161,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/fechamento-semanal': typeof AppFechamentoSemanalRoute
   '/funis': typeof AppFunisRoute
   '/import': typeof AppImportRoute
+  '/indicacoes': typeof AppIndicacoesRoute
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
   '/resultados': typeof AppResultadosRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByTo {
   '/fechamento-semanal': typeof AppFechamentoSemanalRoute
   '/funis': typeof AppFunisRoute
   '/import': typeof AppImportRoute
+  '/indicacoes': typeof AppIndicacoesRoute
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
   '/resultados': typeof AppResultadosRoute
@@ -210,6 +218,7 @@ export interface FileRoutesById {
   '/_app/fechamento-semanal': typeof AppFechamentoSemanalRoute
   '/_app/funis': typeof AppFunisRoute
   '/_app/import': typeof AppImportRoute
+  '/_app/indicacoes': typeof AppIndicacoesRoute
   '/_app/produtividade': typeof AppProdutividadeRoute
   '/_app/ranking': typeof AppRankingRoute
   '/_app/resultados': typeof AppResultadosRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
     | '/fechamento-semanal'
     | '/funis'
     | '/import'
+    | '/indicacoes'
     | '/produtividade'
     | '/ranking'
     | '/resultados'
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
     | '/fechamento-semanal'
     | '/funis'
     | '/import'
+    | '/indicacoes'
     | '/produtividade'
     | '/ranking'
     | '/resultados'
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/_app/fechamento-semanal'
     | '/_app/funis'
     | '/_app/import'
+    | '/_app/indicacoes'
     | '/_app/produtividade'
     | '/_app/ranking'
     | '/_app/resultados'
@@ -355,6 +367,13 @@ declare module '@tanstack/react-router' {
       path: '/produtividade'
       fullPath: '/produtividade'
       preLoaderRoute: typeof AppProdutividadeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/indicacoes': {
+      id: '/_app/indicacoes'
+      path: '/indicacoes'
+      fullPath: '/indicacoes'
+      preLoaderRoute: typeof AppIndicacoesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/import': {
@@ -496,6 +515,7 @@ interface AppRouteChildren {
   AppFechamentoSemanalRoute: typeof AppFechamentoSemanalRoute
   AppFunisRoute: typeof AppFunisRoute
   AppImportRoute: typeof AppImportRoute
+  AppIndicacoesRoute: typeof AppIndicacoesRoute
   AppProdutividadeRoute: typeof AppProdutividadeRoute
   AppRankingRoute: typeof AppRankingRoute
   AppResultadosRoute: typeof AppResultadosRoute
@@ -516,6 +536,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFechamentoSemanalRoute: AppFechamentoSemanalRoute,
   AppFunisRoute: AppFunisRoute,
   AppImportRoute: AppImportRoute,
+  AppIndicacoesRoute: AppIndicacoesRoute,
   AppProdutividadeRoute: AppProdutividadeRoute,
   AppRankingRoute: AppRankingRoute,
   AppResultadosRoute: AppResultadosRoute,
@@ -536,13 +557,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
