@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -468,13 +468,27 @@ function IntegracaoClint() {
     refetchInterval: 30_000,
   });
 
+  const [migrationSql, setMigrationSql] = React.useState<string | null>(null);
+
   const migrate = useMutation({
     mutationFn: () => runClintMigrationsFn(),
-    onSuccess: () => {
-      toast.success("Tabelas criadas com sucesso");
+    onSuccess: (res) => {
+      if ((res as any)?.already_applied) {
+        toast.success("Migrations já aplicadas!");
+      } else {
+        toast.success("Tabelas criadas com sucesso");
+      }
+      setMigrationSql(null);
       qc.invalidateQueries({ queryKey: ["clint-webhook-stats"] });
     },
-    onError: (e: unknown) => toast.error((e as Error).message ?? "Falha"),
+    onError: (e: unknown) => {
+      const msg = (e as Error).message ?? "";
+      if (msg.startsWith("MIGRATION_NEEDED:")) {
+        setMigrationSql(msg.replace("MIGRATION_NEEDED:", ""));
+      } else {
+        toast.error(msg || "Falha ao verificar migrations");
+      }
+    },
   });
 
   const copyUrl = () => {
@@ -549,14 +563,47 @@ function IntegracaoClint() {
       {/* Migração */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-base">Inicialização do banco</CardTitle></CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
             Cria as colunas e tabelas necessárias para a integração Clint (idempotente — pode rodar várias vezes).
           </p>
           <Button onClick={() => migrate.mutate()} disabled={migrate.isPending} variant="outline">
             <RefreshCw className={"h-4 w-4 mr-2 " + (migrate.isPending ? "animate-spin" : "")} />
-            {migrate.isPending ? "Executando…" : "Rodar migrations"}
+            {migrate.isPending ? "Verificando…" : "Rodar migrations"}
           </Button>
+          {migrationSql && (
+            <div className="space-y-2">
+              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+                Tabelas ainda não criadas. Copie o SQL abaixo e rode no{" "}
+                <a
+                  href="https://supabase.com/dashboard/project/spnmnxbglztrtgtjyvyz/sql/new"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  Supabase SQL Editor
+                </a>
+                :
+              </p>
+              <div className="relative">
+                <pre className="bg-muted text-xs rounded p-3 overflow-x-auto whitespace-pre-wrap font-mono max-h-48">
+                  {migrationSql}
+                </pre>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="absolute top-2 right-2"
+                  onClick={() => {
+                    navigator.clipboard.writeText(migrationSql);
+                    toast.success("SQL copiado!");
+                  }}
+                >
+                  <Copy className="h-3 w-3 mr-1" />
+                  Copiar
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

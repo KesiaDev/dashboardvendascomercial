@@ -557,24 +557,49 @@ export const fetchClintIntegrationLogsFn = createServerFn({ method: "GET" }).han
 
 export const runClintMigrationsFn = createServerFn({ method: "POST" }).handler(async () => {
   const db = await admin();
-  const sqls = [
-    `ALTER TABLE coach_conversations ADD COLUMN IF NOT EXISTS clint_conversation_id text;`,
-    `ALTER TABLE coach_conversations ADD COLUMN IF NOT EXISTS clint_contact_id text;`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS idx_coach_conv_clint_id ON coach_conversations(clint_conversation_id) WHERE clint_conversation_id IS NOT NULL;`,
-    `ALTER TABLE coach_messages ADD COLUMN IF NOT EXISTS clint_message_id text;`,
-    `CREATE TABLE IF NOT EXISTS coach_integration_logs (
-      id bigserial PRIMARY KEY,
-      event_type text,
-      payload jsonb,
-      status text DEFAULT 'received',
-      error_msg text,
-      created_at timestamptz DEFAULT now()
-    );`,
-    `CREATE INDEX IF NOT EXISTS idx_coach_logs_created ON coach_integration_logs(created_at DESC);`,
-  ];
-  for (const sql of sqls) {
-    const { error } = await (db as any).rpc("exec_sql", { query: sql }).single();
-    if (error && !error.message?.includes("already exists")) throw new Error(error.message);
+
+  // Check if coach_integration_logs already exists by querying it
+  const { error: tableErr } = await (db as any)
+    .from("coach_integration_logs")
+    .select("id")
+    .limit(1);
+
+  const logsExist = !tableErr || !tableErr.message?.includes("does not exist");
+
+  // Check if clint_conversation_id column exists
+  const { data: colData } = await (db as any)
+    .from("information_schema.columns")
+    .select("column_name")
+    .eq("table_schema", "public")
+    .eq("table_name", "coach_conversations")
+    .eq("column_name", "clint_conversation_id")
+    .maybeSingle();
+
+  const colExists = !!colData;
+
+  if (logsExist && colExists) {
+    return { ok: true, already_applied: true };
   }
-  return { ok: true };
+
+  // Migrations not applied — return the SQL for the user to run in Supabase SQL editor
+  const migrationSql = `-- Run this in Supabase SQL Editor: https://supabase.com/dashboard/project/spnmnxbglztrtgtjyvyz/sql/new
+ALTER TABLE public.coach_conversations ADD COLUMN IF NOT EXISTS clint_conversation_id text;
+ALTER TABLE public.coach_conversations ADD COLUMN IF NOT EXISTS clint_contact_id text;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_coach_conv_clint_id ON public.coach_conversations(clint_conversation_id) WHERE clint_conversation_id IS NOT NULL;
+ALTER TABLE public.coach_messages ADD COLUMN IF NOT EXISTS clint_message_id text;
+CREATE TABLE IF NOT EXISTS public.coach_integration_logs (
+  id bigserial PRIMARY KEY,
+  event_type text,
+  payload jsonb,
+  status text DEFAULT 'received',
+  error_msg text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_coach_logs_created ON public.coach_integration_logs(created_at DESC);
+GRANT SELECT, INSERT, UPDATE ON public.coach_integration_logs TO authenticated;
+GRANT ALL ON public.coach_integration_logs TO service_role;
+ALTER TABLE public.coach_integration_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "coach_logs_auth_all" ON public.coach_integration_logs FOR ALL TO authenticated USING (true) WITH CHECK (true);`;
+
+  throw new Error(`MIGRATION_NEEDED:${migrationSql}`);
 });
