@@ -96,7 +96,7 @@ export const updateReferralStatusFn = createServerFn({ method: "POST" })
       patch.converted_at = new Date().toISOString();
       if (data.converted_value_eur != null) patch.converted_value_eur = data.converted_value_eur;
     }
-    const { error } = await db.from("referrals").update(patch).eq("id", data.id);
+    const { error } = await db.from("referrals").update(patch as never).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
