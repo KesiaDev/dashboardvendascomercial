@@ -558,26 +558,13 @@ export const fetchClintIntegrationLogsFn = createServerFn({ method: "GET" }).han
 export const runClintMigrationsFn = createServerFn({ method: "POST" }).handler(async () => {
   const db = await admin();
 
-  // Check if coach_integration_logs already exists by querying it
+  // Check if coach_integration_logs exists — if it does, all migrations are applied
   const { error: tableErr } = await (db as any)
     .from("coach_integration_logs")
     .select("id")
     .limit(1);
 
-  const logsExist = !tableErr || !tableErr.message?.includes("does not exist");
-
-  // Check if clint_conversation_id column exists
-  const { data: colData } = await (db as any)
-    .from("information_schema.columns")
-    .select("column_name")
-    .eq("table_schema", "public")
-    .eq("table_name", "coach_conversations")
-    .eq("column_name", "clint_conversation_id")
-    .maybeSingle();
-
-  const colExists = !!colData;
-
-  if (logsExist && colExists) {
+  if (!tableErr) {
     return { ok: true, already_applied: true };
   }
 
