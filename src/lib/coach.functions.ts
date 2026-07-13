@@ -5,7 +5,6 @@ async function admin() {
   return supabaseAdmin;
 }
 
-// ─── Tipos ────────────────────────────────────────────────────────────────
 export type CoachConversation = {
   id: string;
   deal_id: string | null;
@@ -47,6 +46,11 @@ export type CoachAnalysis = {
   proxima_acao: string | null;
   sugestao_resposta: string | null;
   resumo: string | null;
+  justificativa_nota: string | null;
+  pontos_fortes: any;
+  pontos_melhoria: any;
+  prompt_version: string;
+  triggered_by: string;
   status: string;
   model: string | null;
   analyzed_at: string;
@@ -63,17 +67,34 @@ export type CoachAlert = {
   message: string;
   resolved: boolean;
   resolved_at: string | null;
+  state: "aberto" | "visto" | "resolvido";
   created_at: string;
 };
 
-// ─── Parser de transcrição colada ─────────────────────────────────────────
-// Aceita formatos comuns de export WhatsApp:
-//   [12/07/2026, 14:32] Vendedor: mensagem
-//   12/07/2026 14:32 - Vendedor: mensagem
-//   Vendedor (14:32): mensagem
+export type WeeklyStats = {
+  seller_name: string | null;
+  seller_email: string | null;
+  week_start: string;
+  convs_analyzed: number;
+  avg_score: number | null;
+  avg_resp_min: number | null;
+  total_fechamentos: number;
+  pct_fechamento: number | null;
+};
+
+export type CoachConfig = {
+  id: number;
+  nota_minima: number;
+  horas_lead_quente: number;
+  dias_sem_resposta: number;
+  auto_analysis: boolean;
+  analysis_interval_hours: number;
+  seller_phones: Array<{ name: string; phone: string }>;
+};
+
 function parseTranscript(text: string, sellerName?: string) {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const msgs: { sent_at: string; sender_name: string; body: string; direction: "inbound" | "outbound" }[] = [];
+  const msgs: { sent_at: string; sender_name: string; body: string; direction: "inbound" | "outbound"; author: "cliente" | "vendedor" }[] = [];
   const sellerNorm = (sellerName ?? "").toLowerCase().trim();
 
   const patterns = [
@@ -94,60 +115,37 @@ function parseTranscript(text: string, sellerName?: string) {
         const dt = new Date(year, (mm ?? 1) - 1, dd ?? 1, hh ?? 0, mi ?? 0);
         currentDate = dt;
         const senderClean = sender.trim();
-        const isSeller = sellerNorm && senderClean.toLowerCase().includes(sellerNorm);
-        msgs.push({
-          sent_at: dt.toISOString(),
-          sender_name: senderClean,
-          body: body.trim(),
-          direction: isSeller ? "outbound" : "inbound",
-        });
+        const isSeller = sellerNorm ? senderClean.toLowerCase().includes(sellerNorm) : false;
+        const direction: "inbound" | "outbound" = isSeller ? "outbound" : "inbound";
+        msgs.push({ sent_at: dt.toISOString(), sender_name: senderClean, body: body.trim(), direction, author: isSeller ? "vendedor" : "cliente" });
         matched = true;
         break;
       }
     }
     if (!matched && msgs.length > 0) {
-      // linha de continuação da última mensagem
       msgs[msgs.length - 1].body += "\n" + line;
     } else if (!matched) {
-      // sem cabeçalho: trata cada linha como mensagem separada
-      msgs.push({
-        sent_at: currentDate.toISOString(),
-        sender_name: "—",
-        body: line,
-        direction: "inbound",
-      });
+      msgs.push({ sent_at: currentDate.toISOString(), sender_name: "—", body: line, direction: "inbound", author: "cliente" });
     }
   }
   return msgs;
 }
 
 function avgResponseTimeMin(msgs: { sent_at: string; direction: string }[]): number | null {
-  let sum = 0;
-  let n = 0;
+  let sum = 0; let n = 0;
   for (let i = 1; i < msgs.length; i++) {
     if (msgs[i].direction === "outbound" && msgs[i - 1].direction === "inbound") {
       const d = new Date(msgs[i].sent_at).getTime() - new Date(msgs[i - 1].sent_at).getTime();
-      if (d > 0 && d < 1000 * 60 * 60 * 48) {
-        sum += d / 60000;
-        n++;
-      }
+      if (d > 0 && d < 1000 * 60 * 60 * 48) { sum += d / 60000; n++; }
     }
   }
   return n > 0 ? Math.round(sum / n) : null;
 }
 
-// ─── Upload / criar conversa manual ───────────────────────────────────────
 export const uploadConversationFn = createServerFn({ method: "POST" })
   .inputValidator((d: {
-    dealId?: string;
-    sellerName?: string;
-    sellerEmail?: string;
-    contactName?: string;
-    contactEmail?: string;
-    originName?: string;
-    stage?: string;
-    dealValue?: number;
-    transcript: string;
+    dealId?: string; sellerName?: string; sellerEmail?: string; contactName?: string;
+    contactEmail?: string; originName?: string; stage?: string; dealValue?: number; transcript: string;
   }) => d)
   .handler(async ({ data }) => {
     const db = await admin();
@@ -155,25 +153,14 @@ export const uploadConversationFn = createServerFn({ method: "POST" })
     const firstAt = msgs[0]?.sent_at ?? null;
     const lastAt = msgs[msgs.length - 1]?.sent_at ?? null;
 
-    const { data: conv, error } = await db
-      .from("coach_conversations")
-      .insert({
-        deal_id: data.dealId ?? null,
-        seller_email: data.sellerEmail ?? null,
-        seller_name: data.sellerName ?? null,
-        contact_name: data.contactName ?? null,
-        contact_email: data.contactEmail ?? null,
-        origin_name: data.originName ?? null,
-        stage: data.stage ?? null,
-        deal_value: data.dealValue ?? null,
-        source: "manual_upload",
-        first_message_at: firstAt,
-        last_message_at: lastAt,
-        message_count: msgs.length,
-        raw_transcript: data.transcript,
-      })
-      .select()
-      .single();
+    const { data: conv, error } = await db.from("coach_conversations").insert({
+      deal_id: data.dealId ?? null, seller_email: data.sellerEmail ?? null,
+      seller_name: data.sellerName ?? null, contact_name: data.contactName ?? null,
+      contact_email: data.contactEmail ?? null, origin_name: data.originName ?? null,
+      stage: data.stage ?? null, deal_value: data.dealValue ?? null,
+      source: "manual_upload", first_message_at: firstAt, last_message_at: lastAt,
+      message_count: msgs.length, raw_transcript: data.transcript,
+    }).select().single();
     if (error) throw new Error(error.message);
 
     if (msgs.length) {
@@ -181,169 +168,134 @@ export const uploadConversationFn = createServerFn({ method: "POST" })
       const { error: e2 } = await db.from("coach_messages").insert(rows);
       if (e2) throw new Error(e2.message);
     }
-
     return { id: conv.id, message_count: msgs.length };
   });
 
-// ─── Análise IA via Lovable AI Gateway ────────────────────────────────────
-const ANALYSIS_SCHEMA_HINT = `Devolve APENAS JSON no formato:
+const PROMPT_VERSION = "v2";
+
+const ANALYSIS_SCHEMA_V2 = `Devolve APENAS JSON no formato:
 {
-  "score_geral": 0-10,
-  "prob_fecho": 0-100,
-  "sentimento": "positivo"|"neutro"|"negativo",
-  "nivel_interesse": "alto"|"medio"|"baixo",
-  "qualidade": 0-10,
-  "clareza": 0-10,
-  "empatia": 0-10,
-  "rapport": 0-10,
-  "descoberta": 0-10,
-  "conducao": 0-10,
-  "tentou_fechar": true|false,
-  "respondeu_todas_duvidas": true|false,
-  "objecoes": ["..."],
-  "oportunidades_perdidas": ["..."],
-  "sugestoes": ["..."],
-  "proxima_acao": "frase curta",
-  "sugestao_resposta": "texto de mensagem pronta pro vendedor mandar agora",
-  "resumo": "2-3 frases interpretativas — não repete os números"
+  "nota": 0-10 (número, pode ter .5),
+  "justificativa_nota": "frase curta explicando a nota",
+  "tentativa_fechamento": true|false,
+  "objecoes": [] ou lista com zero ou mais dos valores: "preço","prazo","concorrência","confiança","timing","outro",
+  "pontos_fortes": ["frase curta", ...] (máx 4),
+  "pontos_melhoria": ["frase curta", ...] (máx 4),
+  "resumo": "máximo 3 frases interpretativas — interpreta padrões, não repete números"
 }`;
+
+export async function analyzeConversationCore(
+  db: any,
+  conversationId: string,
+  force = false,
+  triggeredBy: "manual" | "auto_timer" | "stage_change" | "upload" = "manual",
+) {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) throw new Error("LOVABLE_API_KEY ausente");
+
+  const { data: conv, error: ce } = await db.from("coach_conversations").select("*").eq("id", conversationId).single();
+  if (ce || !conv) throw new Error(ce?.message ?? "Conversa não encontrada");
+
+  const { data: msgs, error: me } = await db.from("coach_messages")
+    .select("sent_at,direction,author,sender_name,body")
+    .eq("conversation_id", conversationId)
+    .order("sent_at", { ascending: true });
+  if (me) throw new Error(me.message);
+  const messages = msgs ?? [];
+
+  if (!force) {
+    const { data: prev } = await db.from("coach_analyses")
+      .select("analyzed_at, prompt_version").eq("conversation_id", conversationId).maybeSingle();
+    if (prev?.analyzed_at && conv.last_message_at &&
+        new Date(prev.analyzed_at) > new Date(conv.last_message_at) &&
+        prev.prompt_version === PROMPT_VERSION) {
+      return { skipped: true, reason: "up_to_date" };
+    }
+  }
+
+  if (messages.length < 3) {
+    await db.from("coach_analyses").upsert(
+      { conversation_id: conversationId, status: "insufficient_data", prompt_version: PROMPT_VERSION,
+        triggered_by: triggeredBy, model: null, resumo: "Conversa muito curta para análise significativa (< 3 mensagens)." },
+      { onConflict: "conversation_id" },
+    );
+    return { status: "insufficient_data" };
+  }
+
+  const avgResp = avgResponseTimeMin(messages);
+  const transcript = messages.map((m: any) => {
+    const role = m.author === "vendedor" || m.direction === "outbound" ? "Vendedor" : "Cliente";
+    const ts = new Date(m.sent_at).toISOString().slice(0, 16).replace("T", " ");
+    return `[${ts}] ${role} (${m.sender_name ?? "—"}): ${m.body}`;
+  }).join("\n");
+
+  const context = {
+    vendedor: conv.seller_name, cliente: conv.contact_name, origem: conv.origin_name,
+    etapa: conv.stage, valor_negocio: conv.deal_value,
+    tempo_medio_resposta_vendedor_min: avgResp, total_mensagens: messages.length,
+  };
+
+  const model = "google/gemini-2.5-flash";
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "Você é o Coach Comercial da LLMídia. Analisa a conversa entre um VENDEDOR e um CLIENTE e devolve avaliação técnica em JSON.\n\n" +
+            "REGRAS:\n- Nunca invente dados. Se algo não aparece, reflita nos pontos_melhoria, não chute.\n" +
+            "- nota de 0 a 10 (uma casa decimal). Seja rigoroso: 10 é conversão perfeita.\n" +
+            "- tentativa_fechamento: true se o vendedor pediu explicitamente pela venda/reunião/proposta.\n" +
+            "- objecoes: apenas categorias que aparecem de facto na conversa.\n" +
+            "- pontos_fortes e pontos_melhoria: frases curtas e accionáveis, não genéricas.\n" +
+            "- resumo: interpreta padrões de comportamento em 3 frases máx.\n\n" +
+            ANALYSIS_SCHEMA_V2,
+        },
+        { role: "user", content: `CONTEXTO:\n${JSON.stringify(context, null, 2)}\n\nTRANSCRIÇÃO:\n${transcript}` },
+      ],
+    }),
+  });
+
+  if (!resp.ok) { const b = await resp.text(); throw new Error(`Lovable AI ${resp.status}: ${b}`); }
+  const json = (await resp.json()) as any;
+  const raw = json?.choices?.[0]?.message?.content ?? "{}";
+  let parsed: any = {};
+  try { parsed = JSON.parse(raw); } catch { const m = raw.match(/\{[\s\S]*\}/); if (m) parsed = JSON.parse(m[0]); }
+
+  const row = {
+    conversation_id: conversationId,
+    score_geral: parsed.nota ?? null,
+    justificativa_nota: parsed.justificativa_nota ?? null,
+    tentou_fechar: parsed.tentativa_fechamento ?? null,
+    objecoes: Array.isArray(parsed.objecoes) ? parsed.objecoes : [],
+    pontos_fortes: Array.isArray(parsed.pontos_fortes) ? parsed.pontos_fortes : [],
+    pontos_melhoria: Array.isArray(parsed.pontos_melhoria) ? parsed.pontos_melhoria : [],
+    resumo: parsed.resumo ?? null,
+    tempo_medio_resposta_min: avgResp,
+    prob_fecho: null, sentimento: null, nivel_interesse: null,
+    qualidade: null, clareza: null, empatia: null, rapport: null, descoberta: null, conducao: null,
+    respondeu_todas_duvidas: null, oportunidades_perdidas: [], sugestoes: [],
+    proxima_acao: null, sugestao_resposta: null,
+    prompt_version: PROMPT_VERSION, triggered_by: triggeredBy,
+    status: "ok", model, analyzed_at: new Date().toISOString(),
+  };
+
+  const { error: ue } = await db.from("coach_analyses").upsert(row, { onConflict: "conversation_id" });
+  if (ue) throw new Error(ue.message);
+
+  await evaluateAlertsForConversation(db, conv, row);
+  return { status: "ok", score_geral: row.score_geral };
+}
 
 export const analyzeConversationFn = createServerFn({ method: "POST" })
   .inputValidator((d: { conversationId: string; force?: boolean }) => d)
   .handler(async ({ data }) => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("LOVABLE_API_KEY ausente");
     const db = await admin();
-
-    const { data: conv, error: ce } = await db
-      .from("coach_conversations")
-      .select("*")
-      .eq("id", data.conversationId)
-      .single();
-    if (ce || !conv) throw new Error(ce?.message ?? "Conversa não encontrada");
-
-    const { data: msgs, error: me } = await db
-      .from("coach_messages")
-      .select("sent_at,direction,sender_name,body")
-      .eq("conversation_id", data.conversationId)
-      .order("sent_at", { ascending: true });
-    if (me) throw new Error(me.message);
-    const messages = msgs ?? [];
-
-    // Reanalisa só se houver msgs novas ou force=true
-    if (!data.force) {
-      const { data: prev } = await db
-        .from("coach_analyses")
-        .select("analyzed_at")
-        .eq("conversation_id", data.conversationId)
-        .maybeSingle();
-      if (prev?.analyzed_at && conv.last_message_at && new Date(prev.analyzed_at) > new Date(conv.last_message_at)) {
-        return { skipped: true, reason: "up_to_date" };
-      }
-    }
-
-    if (messages.length < 3) {
-      await db.from("coach_analyses").upsert(
-        { conversation_id: data.conversationId, status: "insufficient_data", model: null, resumo: "Conversa muito curta para análise significativa (< 3 mensagens)." },
-        { onConflict: "conversation_id" },
-      );
-      return { status: "insufficient_data" };
-    }
-
-    const avgResp = avgResponseTimeMin(messages);
-    const transcript = messages
-      .map((m) => `[${new Date(m.sent_at).toISOString().slice(0, 16).replace("T", " ")}] ${m.direction === "outbound" ? "VENDEDOR" : "CLIENTE"} (${m.sender_name ?? "—"}): ${m.body}`)
-      .join("\n");
-
-    const context = {
-      vendedor: conv.seller_name,
-      cliente: conv.contact_name,
-      origem: conv.origin_name,
-      etapa: conv.stage,
-      valor_negocio: conv.deal_value,
-      tempo_medio_resposta_vendedor_min: avgResp,
-    };
-
-    const model = "google/gemini-2.5-flash";
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content:
-              "Você é o Coach Comercial da LLMídia. Analisa a conversa entre um VENDEDOR e um CLIENTE e devolve avaliação técnica em JSON.\n\n" +
-              "REGRAS:\n" +
-              "- Nunca invente dados. Se algo não aparece na conversa, dê nota baixa e explique nas sugestões, não chute.\n" +
-              "- Notas de 0 a 10, inteiros. score_geral pode ter uma casa decimal.\n" +
-              "- prob_fecho é % (0-100) baseada nos sinais reais de compra.\n" +
-              "- objecoes: só as que o cliente REALMENTE levantou.\n" +
-              "- proxima_acao: uma frase acionável (ex: 'Ligar ainda hoje e apresentar o plano trimestral').\n" +
-              "- sugestao_resposta: mensagem pronta em PT-PT/PT-BR, no tom do vendedor, pra ele mandar agora.\n" +
-              "- resumo INTERPRETA. Não diga 'a conversa teve 20 mensagens'; diga 'o cliente demonstrou interesse claro mas o vendedor não avançou para o fecho'.\n\n" +
-              ANALYSIS_SCHEMA_HINT,
-          },
-          {
-            role: "user",
-            content: `CONTEXTO:\n${JSON.stringify(context, null, 2)}\n\nTRANSCRIÇÃO:\n${transcript}`,
-          },
-        ],
-      }),
-    });
-
-    if (!resp.ok) {
-      const body = await resp.text();
-      throw new Error(`Lovable AI ${resp.status}: ${body}`);
-    }
-    const json = (await resp.json()) as any;
-    const raw = json?.choices?.[0]?.message?.content ?? "{}";
-    let parsed: any = {};
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      const m = raw.match(/\{[\s\S]*\}/);
-      if (m) parsed = JSON.parse(m[0]);
-    }
-
-    const row = {
-      conversation_id: data.conversationId,
-      score_geral: parsed.score_geral ?? null,
-      prob_fecho: parsed.prob_fecho ?? null,
-      sentimento: parsed.sentimento ?? null,
-      nivel_interesse: parsed.nivel_interesse ?? null,
-      tempo_medio_resposta_min: avgResp,
-      qualidade: parsed.qualidade ?? null,
-      clareza: parsed.clareza ?? null,
-      empatia: parsed.empatia ?? null,
-      rapport: parsed.rapport ?? null,
-      descoberta: parsed.descoberta ?? null,
-      conducao: parsed.conducao ?? null,
-      tentou_fechar: parsed.tentou_fechar ?? null,
-      respondeu_todas_duvidas: parsed.respondeu_todas_duvidas ?? null,
-      objecoes: parsed.objecoes ?? [],
-      oportunidades_perdidas: parsed.oportunidades_perdidas ?? [],
-      sugestoes: parsed.sugestoes ?? [],
-      proxima_acao: parsed.proxima_acao ?? null,
-      sugestao_resposta: parsed.sugestao_resposta ?? null,
-      resumo: parsed.resumo ?? null,
-      status: "ok",
-      model,
-      analyzed_at: new Date().toISOString(),
-    };
-
-    const { error: ue } = await db.from("coach_analyses").upsert(row, { onConflict: "conversation_id" });
-    if (ue) throw new Error(ue.message);
-
-    // Dispara alertas derivados desta análise
-    await evaluateAlertsForConversation(db, conv, row);
-
-    return { status: "ok", score_geral: row.score_geral };
+    return analyzeConversationCore(db, data.conversationId, data.force ?? false, "manual");
   });
 
 async function evaluateAlertsForConversation(db: any, conv: CoachConversation, a: any) {
@@ -353,41 +305,71 @@ async function evaluateAlertsForConversation(db: any, conv: CoachConversation, a
 
   if (a.score_geral !== null && a.score_geral < notaMin) {
     alerts.push({
-      deal_id: conv.deal_id,
-      conversation_id: conv.id,
-      seller_email: conv.seller_email,
-      seller_name: conv.seller_name,
-      type: "nota_baixa",
-      severity: a.score_geral < notaMin - 2 ? "high" : "medium",
-      message: `Nota geral ${a.score_geral} (mín. ${notaMin}) — ${a.proxima_acao ?? "revisar atendimento"}.`,
+      deal_id: conv.deal_id, conversation_id: conv.id,
+      seller_email: conv.seller_email, seller_name: conv.seller_name,
+      type: "nota_baixa", severity: a.score_geral < notaMin - 2 ? "high" : "medium",
+      message: `Nota geral ${a.score_geral} (mín. ${notaMin}) — ${a.justificativa_nota ?? "revisar atendimento"}.`,
+      state: "aberto",
     });
   }
-  if (a.prob_fecho !== null && a.prob_fecho >= 70 && a.tentou_fechar === false) {
+  if (a.score_geral !== null && a.score_geral >= 7 && a.tentou_fechar === false &&
+      Array.isArray(a.pontos_melhoria) && a.pontos_melhoria.length > 0) {
     alerts.push({
-      deal_id: conv.deal_id,
-      conversation_id: conv.id,
-      seller_email: conv.seller_email,
-      seller_name: conv.seller_name,
-      type: "intencao_compra",
-      severity: "high",
-      message: `Cliente com ${a.prob_fecho}% de probabilidade de fecho e vendedor ainda não tentou fechar.`,
+      deal_id: conv.deal_id, conversation_id: conv.id,
+      seller_email: conv.seller_email, seller_name: conv.seller_name,
+      type: "intencao_compra", severity: "high",
+      message: `Conversa com nota ${a.score_geral} mas sem tentativa de fecho.`,
+      state: "aberto",
     });
   }
-  if (Array.isArray(a.oportunidades_perdidas) && a.oportunidades_perdidas.length >= 2) {
-    alerts.push({
-      deal_id: conv.deal_id,
-      conversation_id: conv.id,
-      seller_email: conv.seller_email,
-      seller_name: conv.seller_name,
-      type: "risco_perda",
-      severity: "medium",
-      message: `${a.oportunidades_perdidas.length} oportunidades perdidas identificadas.`,
-    });
-  }
-  if (alerts.length) await db.from("coach_alerts").insert(alerts);
+
+  if (!alerts.length) return;
+  const { data: existing } = await db.from("coach_alerts")
+    .select("conversation_id,type").eq("conversation_id", conv.id).neq("state", "resolvido");
+  const seen = new Set((existing ?? []).map((e: any) => `${e.conversation_id}|${e.type}`));
+  const fresh = alerts.filter((al) => !seen.has(`${al.conversation_id}|${al.type}`));
+  if (fresh.length) await db.from("coach_alerts").insert(fresh);
 }
 
-// ─── Alertas de tempo (sem resposta / parada) ────────────────────────────
+export const runAutoAnalysisFn = createServerFn({ method: "POST" }).handler(async () => {
+  const db = await admin();
+  const { data: cfg } = await db.from("coach_config")
+    .select("auto_analysis, analysis_interval_hours").eq("id", 1).maybeSingle();
+
+  if (cfg?.auto_analysis === false) return { skipped: true, reason: "disabled" };
+
+  const intervalHours = cfg?.analysis_interval_hours ?? 1;
+  const cutoff = new Date(Date.now() - intervalHours * 60 * 60 * 1000).toISOString();
+
+  const { data: convs } = await db.from("coach_conversations")
+    .select("id, last_message_at").eq("source", "clint")
+    .not("last_message_at", "is", null).lt("last_message_at", cutoff)
+    .order("last_message_at", { ascending: false }).limit(10);
+
+  if (!convs?.length) return { analyzed: 0 };
+
+  const ids = convs.map((c: any) => c.id);
+  const { data: analyses } = await db.from("coach_analyses")
+    .select("conversation_id, analyzed_at, prompt_version").in("conversation_id", ids).eq("status", "ok");
+
+  const analysedMap = new Map((analyses ?? []).map((a: any) => [a.conversation_id, { analyzedAt: a.analyzed_at, version: a.prompt_version }]));
+
+  const needsAnalysis = convs.filter((c: any) => {
+    const entry = analysedMap.get(c.id);
+    if (!entry) return true;
+    return entry.version !== PROMPT_VERSION || new Date(entry.analyzedAt) < new Date(c.last_message_at);
+  });
+
+  let analyzed = 0;
+  for (const c of needsAnalysis) {
+    try {
+      const result = await analyzeConversationCore(db, c.id, false, "auto_timer");
+      if (result && !(result as any).skipped) analyzed++;
+    } catch {}
+  }
+  return { analyzed };
+});
+
 export const runAlertsScanFn = createServerFn({ method: "POST" }).handler(async () => {
   const db = await admin();
   const { data: cfg } = await db.from("coach_config").select("*").eq("id", 1).maybeSingle();
@@ -395,38 +377,30 @@ export const runAlertsScanFn = createServerFn({ method: "POST" }).handler(async 
   const diasParado = cfg?.dias_sem_resposta ?? 3;
   const now = Date.now();
 
-  const { data: convs } = await db
-    .from("coach_conversations")
+  const { data: convs } = await db.from("coach_conversations")
     .select("id,deal_id,seller_email,seller_name,last_message_at")
-    .not("last_message_at", "is", null)
-    .limit(2000);
+    .not("last_message_at", "is", null).limit(2000);
 
   const alerts: any[] = [];
   for (const c of convs ?? []) {
     const lastMs = new Date(c.last_message_at!).getTime();
     const hours = (now - lastMs) / (1000 * 60 * 60);
     if (hours >= horasLead && hours < 24) {
-      alerts.push({
-        deal_id: c.deal_id, conversation_id: c.id, seller_email: c.seller_email, seller_name: c.seller_name,
-        type: "lead_quente_sem_resposta", severity: "high",
-        message: `Sem resposta há ${Math.round(hours)}h (mín. ${horasLead}h).`,
-      });
+      alerts.push({ deal_id: c.deal_id, conversation_id: c.id, seller_email: c.seller_email,
+        seller_name: c.seller_name, type: "lead_quente_sem_resposta", severity: "high",
+        message: `Sem resposta há ${Math.round(hours)}h (mín. ${horasLead}h).`, state: "aberto" });
     } else if (hours >= diasParado * 24) {
-      alerts.push({
-        deal_id: c.deal_id, conversation_id: c.id, seller_email: c.seller_email, seller_name: c.seller_name,
-        type: "conversa_parada", severity: "medium",
-        message: `Conversa parada há ${Math.round(hours / 24)} dias.`,
-      });
+      alerts.push({ deal_id: c.deal_id, conversation_id: c.id, seller_email: c.seller_email,
+        seller_name: c.seller_name, type: "conversa_parada", severity: "medium",
+        message: `Conversa parada há ${Math.round(hours / 24)} dias.`, state: "aberto" });
     }
   }
 
   if (alerts.length) {
-    // dedup simples: não recria se já existe alerta aberto do mesmo tipo pra mesma conversa
-    const { data: existing } = await db
-      .from("coach_alerts")
+    const { data: existing } = await db.from("coach_alerts")
       .select("conversation_id,type")
-      .eq("resolved", false)
-      .in("conversation_id", alerts.map((a) => a.conversation_id));
+      .in("conversation_id", alerts.map((a) => a.conversation_id))
+      .neq("state", "resolvido");
     const seen = new Set((existing ?? []).map((e: any) => `${e.conversation_id}|${e.type}`));
     const fresh = alerts.filter((a) => !seen.has(`${a.conversation_id}|${a.type}`));
     if (fresh.length) await db.from("coach_alerts").insert(fresh);
@@ -435,22 +409,18 @@ export const runAlertsScanFn = createServerFn({ method: "POST" }).handler(async 
   return { created: 0 };
 });
 
-// ─── Listagens ────────────────────────────────────────────────────────────
 export const listCoachConversationsFn = createServerFn({ method: "GET" }).handler(async () => {
   const db = await admin();
-  const { data: convs, error } = await db
-    .from("coach_conversations")
-    .select("*")
-    .order("last_message_at", { ascending: false, nullsFirst: false })
-    .limit(500);
+  const { data: convs, error } = await db.from("coach_conversations")
+    .select("*").order("last_message_at", { ascending: false, nullsFirst: false }).limit(500);
   if (error) throw new Error(error.message);
-  const ids = (convs ?? []).map((c) => c.id);
+  const ids = (convs ?? []).map((c: any) => c.id);
   const { data: analyses } = ids.length
     ? await db.from("coach_analyses").select("*").in("conversation_id", ids)
     : { data: [] as CoachAnalysis[] };
   const byConv = new Map<string, CoachAnalysis>();
   for (const a of (analyses ?? []) as CoachAnalysis[]) byConv.set(a.conversation_id, a);
-  return (convs ?? []).map((c) => ({ ...c, analysis: byConv.get(c.id) ?? null }));
+  return (convs ?? []).map((c: any) => ({ ...c, analysis: byConv.get(c.id) ?? null }));
 });
 
 export const getCoachConversationFn = createServerFn({ method: "GET" })
@@ -476,24 +446,20 @@ export const deleteCoachConversationFn = createServerFn({ method: "POST" })
 
 export const listCoachAlertsFn = createServerFn({ method: "GET" }).handler(async () => {
   const db = await admin();
-  const { data, error } = await db
-    .from("coach_alerts")
-    .select("*")
-    .order("resolved", { ascending: true })
-    .order("created_at", { ascending: false })
-    .limit(500);
+  const { data, error } = await db.from("coach_alerts")
+    .select("*").order("created_at", { ascending: false }).limit(500);
   if (error) throw new Error(error.message);
   return (data ?? []) as CoachAlert[];
 });
 
 export const resolveCoachAlertFn = createServerFn({ method: "POST" })
-  .inputValidator((d: { id: string; resolved: boolean }) => d)
+  .inputValidator((d: { id: string; state: "aberto" | "visto" | "resolvido" }) => d)
   .handler(async ({ data }) => {
     const db = await admin();
-    const { error } = await db
-      .from("coach_alerts")
-      .update({ resolved: data.resolved, resolved_at: data.resolved ? new Date().toISOString() : null })
-      .eq("id", data.id);
+    const resolved = data.state === "resolvido";
+    const { error } = await db.from("coach_alerts").update({
+      state: data.state, resolved, resolved_at: resolved ? new Date().toISOString() : null,
+    }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -501,92 +467,66 @@ export const resolveCoachAlertFn = createServerFn({ method: "POST" })
 export const getCoachConfigFn = createServerFn({ method: "GET" }).handler(async () => {
   const db = await admin();
   const { data } = await db.from("coach_config").select("*").eq("id", 1).maybeSingle();
-  return data ?? { id: 1, nota_minima: 6, horas_lead_quente: 4, dias_sem_resposta: 3 };
+  return (data ?? {
+    id: 1, nota_minima: 6, horas_lead_quente: 4, dias_sem_resposta: 3,
+    auto_analysis: true, analysis_interval_hours: 1, seller_phones: [],
+  }) as CoachConfig;
 });
 
 export const saveCoachConfigFn = createServerFn({ method: "POST" })
-  .inputValidator((d: { nota_minima: number; horas_lead_quente: number; dias_sem_resposta: number }) => d)
+  .inputValidator((d: {
+    nota_minima: number; horas_lead_quente: number; dias_sem_resposta: number;
+    auto_analysis?: boolean; analysis_interval_hours?: number;
+    seller_phones?: Array<{ name: string; phone: string }>;
+  }) => d)
   .handler(async ({ data }) => {
     const db = await admin();
-    const { error } = await db
-      .from("coach_config")
-      .upsert({ id: 1, ...data, updated_at: new Date().toISOString() });
+    const { error } = await db.from("coach_config").upsert({
+      id: 1, nota_minima: data.nota_minima, horas_lead_quente: data.horas_lead_quente,
+      dias_sem_resposta: data.dias_sem_resposta, auto_analysis: data.auto_analysis ?? true,
+      analysis_interval_hours: data.analysis_interval_hours ?? 1,
+      seller_phones: data.seller_phones ?? [], updated_at: new Date().toISOString(),
+    });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
-// ─── Integração Clint (webhook em tempo real) ─────────────────────────────
+export const fetchWeeklyStatsFn = createServerFn({ method: "GET" }).handler(async () => {
+  const db = await admin();
+  const { data, error } = await db.from("coach_weekly_summary").select("*").limit(120);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as WeeklyStats[];
+});
 
 export type CoachIntegrationLog = {
-  id: number;
-  event_type: string | null;
-  status: string | null;
-  error_msg: string | null;
-  created_at: string;
+  id: number; event_type: string | null; status: string | null; error_msg: string | null; created_at: string;
 };
 
 export const fetchClintWebhookStatsFn = createServerFn({ method: "GET" }).handler(async () => {
   const db = await admin();
   const [convRes, logRes] = await Promise.all([
     (db as any).from("coach_conversations").select("id", { count: "exact", head: true }).eq("source", "clint"),
-    (db as any).from("coach_integration_logs")
-      .select("created_at, status")
-      .order("created_at", { ascending: false })
-      .limit(1),
+    (db as any).from("coach_integration_logs").select("created_at, status").order("created_at", { ascending: false }).limit(1),
   ]);
   const lastEvent = logRes.data?.[0] ?? null;
   return {
     webhook_conversation_count: (convRes.count as number) ?? 0,
     last_event_at: lastEvent?.created_at ?? null,
-    is_connected: lastEvent
-      ? Date.now() - new Date(lastEvent.created_at).getTime() < 7 * 24 * 60 * 60 * 1000
-      : false,
+    is_connected: lastEvent ? Date.now() - new Date(lastEvent.created_at).getTime() < 7 * 24 * 60 * 60 * 1000 : false,
   };
 });
 
 export const fetchClintIntegrationLogsFn = createServerFn({ method: "GET" }).handler(async () => {
   const db = await admin();
   const { data: rows, error } = await (db as any)
-    .from("coach_integration_logs")
-    .select("id, event_type, status, error_msg, created_at")
-    .order("created_at", { ascending: false })
-    .limit(50);
+    .from("coach_integration_logs").select("id, event_type, status, error_msg, created_at")
+    .order("created_at", { ascending: false }).limit(50);
   if (error) throw new Error(error.message);
   return (rows ?? []) as CoachIntegrationLog[];
 });
 
 export const runClintMigrationsFn = createServerFn({ method: "POST" }).handler(async () => {
   const db = await admin();
-
-  // Check if coach_integration_logs exists — if it does, all migrations are applied
-  const { error: tableErr } = await (db as any)
-    .from("coach_integration_logs")
-    .select("id")
-    .limit(1);
-
-  if (!tableErr) {
-    return { ok: true, already_applied: true };
-  }
-
-  // Migrations not applied — return the SQL for the user to run in Supabase SQL editor
-  const migrationSql = `-- Run this in Supabase SQL Editor: https://supabase.com/dashboard/project/spnmnxbglztrtgtjyvyz/sql/new
-ALTER TABLE public.coach_conversations ADD COLUMN IF NOT EXISTS clint_conversation_id text;
-ALTER TABLE public.coach_conversations ADD COLUMN IF NOT EXISTS clint_contact_id text;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_coach_conv_clint_id ON public.coach_conversations(clint_conversation_id) WHERE clint_conversation_id IS NOT NULL;
-ALTER TABLE public.coach_messages ADD COLUMN IF NOT EXISTS clint_message_id text;
-CREATE TABLE IF NOT EXISTS public.coach_integration_logs (
-  id bigserial PRIMARY KEY,
-  event_type text,
-  payload jsonb,
-  status text DEFAULT 'received',
-  error_msg text,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_coach_logs_created ON public.coach_integration_logs(created_at DESC);
-GRANT SELECT, INSERT, UPDATE ON public.coach_integration_logs TO authenticated;
-GRANT ALL ON public.coach_integration_logs TO service_role;
-ALTER TABLE public.coach_integration_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "coach_logs_auth_all" ON public.coach_integration_logs FOR ALL TO authenticated USING (true) WITH CHECK (true);`;
-
-  throw new Error(`MIGRATION_NEEDED:${migrationSql}`);
-});
+  const { error: tableErr } = await (db as any).from("clint_events_raw").select("id").limit(1);
+  if (!tableErr) return { ok: true, already_applied: true };
+  throw new Error("MIGRATION_NEEDED:Rode o arquivo supabase/migrations/20260713120000_coach_backend_v2.sql no Supabase SQL Editor");
