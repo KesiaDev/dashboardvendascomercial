@@ -218,7 +218,8 @@ async function processWebhookEvent(
   const isStageEvent =
     event.includes("stage") || event.includes("etapa") || event === "stage_change" || (stage != null && !hasMessageContent);
 
-  if (!clintConvId && !dealId) return { stageConversationId: null };
+  const contactKey = contactEmail ?? contactPhone ?? null;
+  if (!clintConvId && !dealId && !contactKey) return { stageConversationId: null };
   if (!isMessageEvent && !isStageEvent) return { stageConversationId: null };
 
   const now = new Date().toISOString();
