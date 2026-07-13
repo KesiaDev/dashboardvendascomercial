@@ -636,9 +636,13 @@ function ConfigTab() {
 
 function IntegracaoClint() {
   const qc = useQueryClient();
-  const webhookUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/api/clint/webhook`
-    : "/api/clint/webhook";
+  const isPreview = typeof window !== "undefined" && window.location.hostname.includes("lovableproject.com");
+  const webhookUrl = isPreview
+    ? "https://dashboardvendascomercial.lovable.app/api/clint/webhook"
+    : typeof window !== "undefined"
+      ? `${window.location.origin}/api/clint/webhook`
+      : "/api/clint/webhook";
+
 
   const { data: stats } = useQuery({
     queryKey: ["clint-webhook-stats"], queryFn: () => fetchClintWebhookStatsFn(), refetchInterval: 30_000,
@@ -762,9 +766,16 @@ function IntegracaoClint() {
                   : "bg-slate-500/15 text-slate-600 dark:text-slate-400"
                 )}>{log.status}</span>
                 <span className="text-muted-foreground shrink-0">{fmtDate(log.created_at)}</span>
-                <span className="font-mono">{log.event_type ?? "—"}</span>
+                <span className={
+                  log.event_type === "unknown"
+                    ? "font-mono text-amber-500"
+                    : "font-mono"
+                }>
+                  {log.event_type === "unknown" ? "⚠ unknown (evento não reconhecido)" : log.event_type ?? "—"}
+                </span>
                 {log.error_msg && <span className="text-rose-500 truncate">{log.error_msg}</span>}
               </div>
+
             ))}
           </div>
         </CardContent>
