@@ -17,7 +17,7 @@ async function clintFetch(path: string, token: string) {
   return r;
 }
 
-async function tryEndpoints(token: string, dealId: string | null, phone: string | null) {
+async function tryEndpointsWithContact(token: string, dealId: string | null, phone: string | null, contactId: string | null) {
   const attempts: string[] = [];
   const errors: Array<{ url: string; status: number; body?: string }> = [];
 
