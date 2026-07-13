@@ -304,14 +304,13 @@ async function processWebhookEvent(
       if (!ie && newConv) conversationId = newConv.id;
     }
   } else if (contactKey) {
-    // Payload sem deal_id/conversation_id — chave por contact_email (fallback phone)
-    const matchCol = contactEmail ? "contact_email" : "contact_phone";
-    const matchVal = contactEmail ?? contactPhone;
+    // Payload sem deal_id/conversation_id — chave por contact_email
+    if (!contactEmail) return { stageConversationId: null };
     const { data: existing } = await db
       .from("coach_conversations")
       .select("id")
       .eq("source", "clint")
-      .eq(matchCol, matchVal)
+      .eq("contact_email", contactEmail)
       .maybeSingle();
 
     if (existing) {
@@ -323,7 +322,6 @@ async function processWebhookEvent(
           seller_name: sellerName ?? undefined,
           seller_email: sellerEmail ?? undefined,
           contact_name: contactName ?? undefined,
-          contact_phone: contactPhone ?? undefined,
           last_message_at: hasMessageContent ? now : undefined,
         })
         .eq("id", existing.id);
@@ -335,7 +333,6 @@ async function processWebhookEvent(
           seller_email: sellerEmail,
           contact_name: contactName,
           contact_email: contactEmail,
-          contact_phone: contactPhone,
           origin_name: originName,
           stage,
           source: "clint",
