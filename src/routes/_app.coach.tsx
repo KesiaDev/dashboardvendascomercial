@@ -389,8 +389,11 @@ function Conversas() {
                 <Link to="/coach/$id" params={{ id: c.id }}>
                   <Button size="sm" variant="outline">Abrir</Button>
                 </Link>
-                <Button size="sm" variant="ghost" onClick={() => analyze.mutate(c.id)} disabled={analyze.isPending}>
-                  <RefreshCw className={"h-3.5 w-3.5 " + (analyze.isPending ? "animate-spin" : "")} />
+                <Button size="sm" variant="ghost" title="Sincronizar mensagens da Clint" onClick={() => syncOne(c.id)} disabled={syncingId === c.id}>
+                  <RefreshCw className={"h-3.5 w-3.5 " + (syncingId === c.id ? "animate-spin" : "")} />
+                </Button>
+                <Button size="sm" variant="ghost" title="Re-analisar" onClick={() => analyze.mutate(c.id)} disabled={analyze.isPending}>
+                  <Sparkles className={"h-3.5 w-3.5 " + (analyze.isPending ? "animate-pulse" : "")} />
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => { if (confirm("Apagar conversa?")) del.mutate(c.id); }}>
                   <Trash2 className="h-3.5 w-3.5 text-rose-500" />
