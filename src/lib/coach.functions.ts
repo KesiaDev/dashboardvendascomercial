@@ -530,3 +530,4 @@ export const runClintMigrationsFn = createServerFn({ method: "POST" }).handler(a
   const { error: tableErr } = await (db as any).from("clint_events_raw").select("id").limit(1);
   if (!tableErr) return { ok: true, already_applied: true };
   throw new Error("MIGRATION_NEEDED:Rode o arquivo supabase/migrations/20260713120000_coach_backend_v2.sql no Supabase SQL Editor");
+}
