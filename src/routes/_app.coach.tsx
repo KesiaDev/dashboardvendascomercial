@@ -636,9 +636,13 @@ function ConfigTab() {
 
 function IntegracaoClint() {
   const qc = useQueryClient();
-  const webhookUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/api/clint/webhook`
-    : "/api/clint/webhook";
+  const isPreview = typeof window !== "undefined" && window.location.hostname.includes("lovableproject.com");
+  const webhookUrl = isPreview
+    ? "https://dashboardvendascomercial.lovable.app/api/clint/webhook"
+    : typeof window !== "undefined"
+      ? `${window.location.origin}/api/clint/webhook`
+      : "/api/clint/webhook";
+
 
   const { data: stats } = useQuery({
     queryKey: ["clint-webhook-stats"], queryFn: () => fetchClintWebhookStatsFn(), refetchInterval: 30_000,
