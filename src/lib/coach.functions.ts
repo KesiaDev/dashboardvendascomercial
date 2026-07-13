@@ -5,6 +5,156 @@ async function admin() {
   return supabaseAdmin;
 }
 
+// ============ Clint API message sync ============
+const CLINT_BASE = "https://api.clint.digital/v1";
+
+async function clintFetch(path: string, token: string) {
+  const url = path.startsWith("http") ? path : `${CLINT_BASE}${path}`;
+  let r = await fetch(url, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } });
+  if (r.status === 401) {
+    r = await fetch(url, { headers: { Authorization: `Token ${token}`, Accept: "application/json" } });
+  }
+  return r;
+}
+
+async function tryEndpoints(token: string, dealId: string | null, phone: string | null) {
+  const attempts: string[] = [];
+  const errors: Array<{ url: string; status: number; body?: string }> = [];
+
+  const tryUrl = async (path: string): Promise<{ ok: true; data: any; url: string } | null> => {
+    attempts.push(path);
+    const r = await clintFetch(path, token);
+    if (r.ok) {
+      const data = await r.json().catch(() => null);
+      return { ok: true, data, url: path };
+    }
+    const body = await r.text().catch(() => "");
+    errors.push({ url: path, status: r.status, body: body.slice(0, 200) });
+    return null;
+  };
+
+  if (dealId) {
+    const r1 = await tryUrl(`/chats?deal_id=${encodeURIComponent(dealId)}`);
+    if (r1) return { ...r1, attempts, errors };
+    const r2 = await tryUrl(`/deals/${encodeURIComponent(dealId)}/chats`);
+    if (r2) return { ...r2, attempts, errors };
+    const r3 = await tryUrl(`/deals/${encodeURIComponent(dealId)}/messages`);
+    if (r3) return { ...r3, attempts, errors };
+  }
+  if (phone) {
+    const cleanPhone = phone.replace(/\D/g, "");
+    const rc = await clintFetch(`/contacts?phone=${encodeURIComponent(cleanPhone)}`, token);
+    attempts.push(`/contacts?phone=${cleanPhone}`);
+    if (rc.ok) {
+      const cj: any = await rc.json().catch(() => null);
+      const contactId = cj?.data?.[0]?.id ?? cj?.[0]?.id ?? cj?.results?.[0]?.id ?? cj?.id;
+      if (contactId) {
+        const r4 = await tryUrl(`/contacts/${contactId}/chats`);
+        if (r4) return { ...r4, attempts, errors };
+        const r5 = await tryUrl(`/contacts/${contactId}/messages`);
+        if (r5) return { ...r5, attempts, errors };
+      }
+    } else {
+      errors.push({ url: `/contacts?phone=${cleanPhone}`, status: rc.status });
+    }
+  }
+  return { ok: false as const, attempts, errors };
+}
+
+function extractMessages(payload: any): any[] {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload.messages)) return payload.messages;
+  if (Array.isArray(payload.results)) return payload.results;
+  if (Array.isArray(payload.chats)) {
+    return payload.chats.flatMap((c: any) => c.messages ?? []);
+  }
+  if (Array.isArray(payload.data?.messages)) return payload.data.messages;
+  return [];
+}
+
+function normalizeMessage(m: any) {
+  const id = String(m.id ?? m.message_id ?? m.uuid ?? m._id ?? "");
+  const content = m.content ?? m.body ?? m.text ?? m.message ?? m.caption ?? "";
+  const sentAt = m.sent_at ?? m.created_at ?? m.timestamp ?? m.date ?? m.createdAt ?? null;
+  const dirRaw = (m.direction ?? m.type ?? m.from ?? "").toString().toLowerCase();
+  const isOutgoing =
+    dirRaw.includes("out") || dirRaw === "seller" || dirRaw === "agent" || dirRaw === "user" ||
+    m.fromMe === true || m.from_me === true || m.is_from_me === true || m.outgoing === true;
+  return {
+    clint_message_id: id || null,
+    body: String(content ?? ""),
+    sent_at: sentAt ? new Date(sentAt).toISOString() : new Date().toISOString(),
+    direction: isOutgoing ? "outbound" : "inbound",
+    author: isOutgoing ? "vendedor" : "cliente",
+    sender_name: m.sender_name ?? m.from_name ?? m.author_name ?? null,
+  };
+}
+
+export const syncClintMessagesFn = createServerFn({ method: "POST" })
+  .inputValidator((d: { conversationId: string }) => d)
+  .handler(async ({ data }) => {
+    const token = process.env.CLINT_API_TOKEN;
+    if (!token) throw new Error("CLINT_API_TOKEN ausente");
+    const db = await admin();
+
+    const { data: conv, error: ce } = await db
+      .from("coach_conversations")
+      .select("id, deal_id, lead_phone, contact_email")
+      .eq("id", data.conversationId)
+      .single();
+    if (ce || !conv) throw new Error(ce?.message ?? "Conversa não encontrada");
+
+    const result = await tryEndpoints(token, conv.deal_id, (conv as any).lead_phone ?? null);
+    if (!result.ok) {
+      throw new Error(
+        `Nenhum endpoint Clint retornou dados. Tentativas: ${result.attempts.join(", ")}. ` +
+        `Erros: ${JSON.stringify(result.errors)}`
+      );
+    }
+
+    const rawMessages = extractMessages(result.data);
+    const rawSample = rawMessages[0] ?? result.data;
+
+    if (!rawMessages.length) {
+      return { synced: 0, rawSample, endpoint: result.url, attempts: result.attempts };
+    }
+
+    // dedupe against existing clint_message_id
+    const { data: existing } = await db
+      .from("coach_messages")
+      .select("clint_message_id")
+      .eq("conversation_id", conv.id)
+      .not("clint_message_id", "is", null);
+    const seen = new Set((existing ?? []).map((r: any) => r.clint_message_id));
+
+    const rows = rawMessages
+      .map(normalizeMessage)
+      .filter((m) => m.clint_message_id && !seen.has(m.clint_message_id))
+      .map((m) => ({ ...m, conversation_id: conv.id }));
+
+    if (rows.length) {
+      const { error: ie } = await db.from("coach_messages").insert(rows);
+      if (ie) throw new Error(`Insert falhou: ${ie.message}. Sample: ${JSON.stringify(rawSample)}`);
+    }
+
+    // Update aggregate on conversation
+    const { data: agg } = await db
+      .from("coach_messages")
+      .select("sent_at")
+      .eq("conversation_id", conv.id)
+      .order("sent_at", { ascending: false });
+    const count = agg?.length ?? 0;
+    const lastAt = agg?.[0]?.sent_at ?? null;
+    const firstAt = agg?.[agg.length - 1]?.sent_at ?? null;
+    await db.from("coach_conversations")
+      .update({ message_count: count, last_message_at: lastAt, first_message_at: firstAt })
+      .eq("id", conv.id);
+
+    return { synced: rows.length, total: count, rawSample, endpoint: result.url, attempts: result.attempts };
+  });
+
 export type CoachConversation = {
   id: string;
   deal_id: string | null;
