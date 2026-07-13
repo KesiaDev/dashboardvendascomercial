@@ -766,9 +766,16 @@ function IntegracaoClint() {
                   : "bg-slate-500/15 text-slate-600 dark:text-slate-400"
                 )}>{log.status}</span>
                 <span className="text-muted-foreground shrink-0">{fmtDate(log.created_at)}</span>
-                <span className="font-mono">{log.event_type ?? "—"}</span>
+                <span className={
+                  log.event_type === "unknown"
+                    ? "font-mono text-amber-500"
+                    : "font-mono"
+                }>
+                  {log.event_type === "unknown" ? "⚠ unknown (evento não reconhecido)" : log.event_type ?? "—"}
+                </span>
                 {log.error_msg && <span className="text-rose-500 truncate">{log.error_msg}</span>}
               </div>
+
             ))}
           </div>
         </CardContent>
