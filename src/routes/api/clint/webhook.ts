@@ -193,7 +193,11 @@ async function processWebhookEvent(
     (data.deal_user as string) ??
     (data.seller_name as string) ??
     null;
-  const sellerEmail = (seller.email as string) ?? (data.seller_email as string) ?? null;
+  const sellerEmail =
+    (seller.email as string) ??
+    (data.seller_email as string) ??
+    (data.deal_user as string) ??
+    null;
 
   const originName =
     (data.origin_name as string) ??
@@ -214,7 +218,8 @@ async function processWebhookEvent(
   const isStageEvent =
     event.includes("stage") || event.includes("etapa") || event === "stage_change" || (stage != null && !hasMessageContent);
 
-  if (!clintConvId && !dealId) return { stageConversationId: null };
+  const contactKey = contactEmail ?? contactPhone ?? null;
+  if (!clintConvId && !dealId && !contactKey) return { stageConversationId: null };
   if (!isMessageEvent && !isStageEvent) return { stageConversationId: null };
 
   const now = new Date().toISOString();
@@ -283,6 +288,47 @@ async function processWebhookEvent(
         .from("coach_conversations")
         .insert({
           deal_id: dealId,
+          seller_name: sellerName,
+          seller_email: sellerEmail,
+          contact_name: contactName,
+          contact_email: contactEmail,
+          origin_name: originName,
+          stage,
+          source: "clint",
+          first_message_at: now,
+          last_message_at: now,
+          message_count: 0,
+        })
+        .select("id")
+        .single();
+      if (!ie && newConv) conversationId = newConv.id;
+    }
+  } else if (contactKey) {
+    // Payload sem deal_id/conversation_id — chave por contact_email
+    if (!contactEmail) return { stageConversationId: null };
+    const { data: existing } = await db
+      .from("coach_conversations")
+      .select("id")
+      .eq("source", "clint")
+      .eq("contact_email", contactEmail)
+      .maybeSingle();
+
+    if (existing) {
+      conversationId = existing.id;
+      await db
+        .from("coach_conversations")
+        .update({
+          stage: stage ?? undefined,
+          seller_name: sellerName ?? undefined,
+          seller_email: sellerEmail ?? undefined,
+          contact_name: contactName ?? undefined,
+          last_message_at: hasMessageContent ? now : undefined,
+        })
+        .eq("id", existing.id);
+    } else {
+      const { data: newConv, error: ie } = await db
+        .from("coach_conversations")
+        .insert({
           seller_name: sellerName,
           seller_email: sellerEmail,
           contact_name: contactName,
