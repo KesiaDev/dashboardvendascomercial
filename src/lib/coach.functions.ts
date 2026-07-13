@@ -41,6 +41,12 @@ async function tryEndpointsWithContact(token: string, dealId: string | null, pho
     const r3 = await tryUrl(`/deals/${encodeURIComponent(dealId)}/messages`);
     if (r3) return { ...r3, attempts, errors };
   }
+  if (contactId) {
+    const rA = await tryUrl(`/contacts/${contactId}/chats`);
+    if (rA) return { ...rA, attempts, errors };
+    const rB = await tryUrl(`/contacts/${contactId}/messages`);
+    if (rB) return { ...rB, attempts, errors };
+  }
   if (phone) {
     const cleanPhone = phone.replace(/\D/g, "");
     const rc = await clintFetch(`/contacts?phone=${encodeURIComponent(cleanPhone)}`, token);
