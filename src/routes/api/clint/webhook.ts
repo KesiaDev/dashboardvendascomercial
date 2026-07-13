@@ -269,7 +269,35 @@ async function processWebhookEvent(
       .eq("deal_id", dealId)
       .eq("source", "clint")
       .maybeSingle();
-    if (existing) conversationId = existing.id;
+
+    if (existing) {
+      conversationId = existing.id;
+      if (stage) {
+        await db
+          .from("coach_conversations")
+          .update({ stage, seller_name: sellerName ?? undefined })
+          .eq("id", existing.id);
+      }
+    } else {
+      const { data: newConv, error: ie } = await db
+        .from("coach_conversations")
+        .insert({
+          deal_id: dealId,
+          seller_name: sellerName,
+          seller_email: sellerEmail,
+          contact_name: contactName,
+          contact_email: contactEmail,
+          origin_name: originName,
+          stage,
+          source: "clint",
+          first_message_at: now,
+          last_message_at: now,
+          message_count: 0,
+        })
+        .select("id")
+        .single();
+      if (!ie && newConv) conversationId = newConv.id;
+    }
   }
 
   if (!conversationId) return { stageConversationId: null };
