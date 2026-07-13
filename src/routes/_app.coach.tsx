@@ -295,6 +295,36 @@ function Conversas() {
     onSuccess: () => { toast.success("Conversa apagada"); qc.invalidateQueries({ queryKey: ["coach-convs"] }); },
   });
 
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const syncOne = async (id: string, silent = false) => {
+    setSyncingId(id);
+    try {
+      const r: any = await syncClintMessagesFn({ data: { conversationId: id } });
+      if (!silent) toast.success(`Sincronizado: ${r.synced} nova(s) msg (total ${r.total ?? "?"})`);
+      qc.invalidateQueries({ queryKey: ["coach-convs"] });
+      return r;
+    } catch (e: any) {
+      if (!silent) {
+        toast.error(e?.message ?? "Falha no sync", {
+          description: "Ver consola para payload Clint",
+          duration: 8000,
+        });
+        console.error("[Clint sync]", e);
+      }
+    } finally {
+      setSyncingId((s) => (s === id ? null : s));
+    }
+  };
+
+  const autoSyncedRef = useRef(false);
+  useEffect(() => {
+    if (autoSyncedRef.current || !convs.length) return;
+    autoSyncedRef.current = true;
+    const targets = convs.filter((c: any) => (c.message_count ?? 0) === 0).slice(0, 5);
+    (async () => { for (const c of targets) await syncOne(c.id, true); })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [convs.length]);
+
   const filtered = useMemo(() => {
     let list = convs;
     if (q) {
