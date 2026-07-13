@@ -303,6 +303,50 @@ async function processWebhookEvent(
         .single();
       if (!ie && newConv) conversationId = newConv.id;
     }
+  } else if (contactKey) {
+    // Payload sem deal_id/conversation_id — chave por contact_email (fallback phone)
+    const matchCol = contactEmail ? "contact_email" : "contact_phone";
+    const matchVal = contactEmail ?? contactPhone;
+    const { data: existing } = await db
+      .from("coach_conversations")
+      .select("id")
+      .eq("source", "clint")
+      .eq(matchCol, matchVal)
+      .maybeSingle();
+
+    if (existing) {
+      conversationId = existing.id;
+      await db
+        .from("coach_conversations")
+        .update({
+          stage: stage ?? undefined,
+          seller_name: sellerName ?? undefined,
+          seller_email: sellerEmail ?? undefined,
+          contact_name: contactName ?? undefined,
+          contact_phone: contactPhone ?? undefined,
+          last_message_at: hasMessageContent ? now : undefined,
+        })
+        .eq("id", existing.id);
+    } else {
+      const { data: newConv, error: ie } = await db
+        .from("coach_conversations")
+        .insert({
+          seller_name: sellerName,
+          seller_email: sellerEmail,
+          contact_name: contactName,
+          contact_email: contactEmail,
+          contact_phone: contactPhone,
+          origin_name: originName,
+          stage,
+          source: "clint",
+          first_message_at: now,
+          last_message_at: now,
+          message_count: 0,
+        })
+        .select("id")
+        .single();
+      if (!ie && newConv) conversationId = newConv.id;
+    }
   }
 
   if (!conversationId) return { stageConversationId: null };
