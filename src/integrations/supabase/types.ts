@@ -889,6 +889,8 @@ export type Database = {
       }
       coach_conversations: {
         Row: {
+          clint_contact_id: string | null
+          clint_conversation_id: string | null
           contact_email: string | null
           contact_name: string | null
           created_at: string
@@ -907,6 +909,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          clint_contact_id?: string | null
+          clint_conversation_id?: string | null
           contact_email?: string | null
           contact_name?: string | null
           created_at?: string
@@ -925,6 +929,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          clint_contact_id?: string | null
+          clint_conversation_id?: string | null
           contact_email?: string | null
           contact_name?: string | null
           created_at?: string
@@ -941,6 +947,33 @@ export type Database = {
           source?: string
           stage?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      coach_integration_logs: {
+        Row: {
+          created_at: string
+          error_msg: string | null
+          event_type: string | null
+          id: number
+          payload: Json | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_msg?: string | null
+          event_type?: string | null
+          id?: number
+          payload?: Json | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_msg?: string | null
+          event_type?: string | null
+          id?: number
+          payload?: Json | null
+          status?: string | null
         }
         Relationships: []
       }
@@ -1072,6 +1105,7 @@ export type Database = {
       coach_messages: {
         Row: {
           body: string
+          clint_message_id: string | null
           conversation_id: string
           created_at: string
           direction: string
@@ -1081,6 +1115,7 @@ export type Database = {
         }
         Insert: {
           body: string
+          clint_message_id?: string | null
           conversation_id: string
           created_at?: string
           direction: string
@@ -1090,6 +1125,7 @@ export type Database = {
         }
         Update: {
           body?: string
+          clint_message_id?: string | null
           conversation_id?: string
           created_at?: string
           direction?: string
