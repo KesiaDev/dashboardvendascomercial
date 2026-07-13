@@ -101,12 +101,27 @@ export const syncClintMessagesFn = createServerFn({ method: "POST" })
 
     const { data: conv, error: ce } = await db
       .from("coach_conversations")
-      .select("id, deal_id, lead_phone, contact_email")
+      .select("id, deal_id, contact_email, clint_contact_id")
       .eq("id", data.conversationId)
       .single();
     if (ce || !conv) throw new Error(ce?.message ?? "Conversa não encontrada");
 
-    const result = await tryEndpoints(token, conv.deal_id, (conv as any).lead_phone ?? null);
+    // Look up a phone number from any linked message
+    const { data: phoneRow } = await db
+      .from("coach_messages")
+      .select("lead_phone")
+      .eq("conversation_id", conv.id)
+      .not("lead_phone", "is", null)
+      .limit(1)
+      .maybeSingle();
+    const phone = (phoneRow as any)?.lead_phone ?? null;
+
+    const result = await tryEndpointsWithContact(
+      token,
+      conv.deal_id,
+      phone,
+      (conv as any).clint_contact_id ?? null,
+    );
     if (!result.ok) {
       throw new Error(
         `Nenhum endpoint Clint retornou dados. Tentativas: ${result.attempts.join(", ")}. ` +
