@@ -325,3 +325,4 @@ export const Route = createFileRoute("/api/clint/webhook")({
       GET: () => Response.json({ ok: true, status: "webhook endpoint active" }),
     },
   },
+});
