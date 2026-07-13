@@ -578,6 +578,36 @@ export type Database = {
         }
         Relationships: []
       }
+      clint_events_raw: {
+        Row: {
+          error_msg: string | null
+          event_type: string | null
+          external_id: string | null
+          id: number
+          payload: Json | null
+          received_at: string
+          status: string
+        }
+        Insert: {
+          error_msg?: string | null
+          event_type?: string | null
+          external_id?: string | null
+          id?: number
+          payload?: Json | null
+          received_at?: string
+          status?: string
+        }
+        Update: {
+          error_msg?: string | null
+          event_type?: string | null
+          external_id?: string | null
+          id?: number
+          payload?: Json | null
+          received_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       clint_lost_statuses: {
         Row: {
           id: string
@@ -733,6 +763,7 @@ export type Database = {
           seller_email: string | null
           seller_name: string | null
           severity: string
+          state: string
           type: string
         }
         Insert: {
@@ -746,6 +777,7 @@ export type Database = {
           seller_email?: string | null
           seller_name?: string | null
           severity?: string
+          state?: string
           type: string
         }
         Update: {
@@ -759,6 +791,7 @@ export type Database = {
           seller_email?: string | null
           seller_name?: string | null
           severity?: string
+          state?: string
           type?: string
         }
         Relationships: [
@@ -781,11 +814,15 @@ export type Database = {
           descoberta: number | null
           empatia: number | null
           id: string
+          justificativa_nota: string | null
           model: string | null
           nivel_interesse: string | null
           objecoes: Json | null
           oportunidades_perdidas: Json | null
+          pontos_fortes: Json | null
+          pontos_melhoria: Json | null
           prob_fecho: number | null
+          prompt_version: string
           proxima_acao: string | null
           qualidade: number | null
           rapport: number | null
@@ -798,6 +835,7 @@ export type Database = {
           sugestoes: Json | null
           tempo_medio_resposta_min: number | null
           tentou_fechar: boolean | null
+          triggered_by: string
         }
         Insert: {
           analyzed_at?: string
@@ -808,11 +846,15 @@ export type Database = {
           descoberta?: number | null
           empatia?: number | null
           id?: string
+          justificativa_nota?: string | null
           model?: string | null
           nivel_interesse?: string | null
           objecoes?: Json | null
           oportunidades_perdidas?: Json | null
+          pontos_fortes?: Json | null
+          pontos_melhoria?: Json | null
           prob_fecho?: number | null
+          prompt_version?: string
           proxima_acao?: string | null
           qualidade?: number | null
           rapport?: number | null
@@ -825,6 +867,7 @@ export type Database = {
           sugestoes?: Json | null
           tempo_medio_resposta_min?: number | null
           tentou_fechar?: boolean | null
+          triggered_by?: string
         }
         Update: {
           analyzed_at?: string
@@ -835,11 +878,15 @@ export type Database = {
           descoberta?: number | null
           empatia?: number | null
           id?: string
+          justificativa_nota?: string | null
           model?: string | null
           nivel_interesse?: string | null
           objecoes?: Json | null
           oportunidades_perdidas?: Json | null
+          pontos_fortes?: Json | null
+          pontos_melhoria?: Json | null
           prob_fecho?: number | null
+          prompt_version?: string
           proxima_acao?: string | null
           qualidade?: number | null
           rapport?: number | null
@@ -852,6 +899,7 @@ export type Database = {
           sugestoes?: Json | null
           tempo_medio_resposta_min?: number | null
           tentou_fechar?: boolean | null
+          triggered_by?: string
         }
         Relationships: [
           {
@@ -865,24 +913,33 @@ export type Database = {
       }
       coach_config: {
         Row: {
+          analysis_interval_hours: number
+          auto_analysis: boolean
           dias_sem_resposta: number
           horas_lead_quente: number
           id: number
           nota_minima: number
+          seller_phones: Json | null
           updated_at: string
         }
         Insert: {
+          analysis_interval_hours?: number
+          auto_analysis?: boolean
           dias_sem_resposta?: number
           horas_lead_quente?: number
           id?: number
           nota_minima?: number
+          seller_phones?: Json | null
           updated_at?: string
         }
         Update: {
+          analysis_interval_hours?: number
+          auto_analysis?: boolean
           dias_sem_resposta?: number
           horas_lead_quente?: number
           id?: number
           nota_minima?: number
+          seller_phones?: Json | null
           updated_at?: string
         }
         Relationships: []
@@ -1104,32 +1161,41 @@ export type Database = {
       }
       coach_messages: {
         Row: {
+          author: string | null
           body: string
           clint_message_id: string | null
           conversation_id: string
           created_at: string
           direction: string
           id: string
+          lead_phone: string | null
+          seller_id: string | null
           sender_name: string | null
           sent_at: string
         }
         Insert: {
+          author?: string | null
           body: string
           clint_message_id?: string | null
           conversation_id: string
           created_at?: string
           direction: string
           id?: string
+          lead_phone?: string | null
+          seller_id?: string | null
           sender_name?: string | null
           sent_at: string
         }
         Update: {
+          author?: string | null
           body?: string
           clint_message_id?: string | null
           conversation_id?: string
           created_at?: string
           direction?: string
           id?: string
+          lead_phone?: string | null
+          seller_id?: string | null
           sender_name?: string | null
           sent_at?: string
         }
@@ -1438,7 +1504,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      coach_weekly_summary: {
+        Row: {
+          avg_resp_min: number | null
+          avg_score: number | null
+          convs_analyzed: number | null
+          pct_fechamento: number | null
+          seller_email: string | null
+          seller_name: string | null
+          total_fechamentos: number | null
+          week_start: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       categoria_produto: { Args: { nome: string }; Returns: string }
