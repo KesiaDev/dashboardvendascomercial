@@ -20,7 +20,7 @@ import {
   analyzeConversationFn, runAlertsScanFn, resolveCoachAlertFn,
   deleteCoachConversationFn, getCoachConfigFn, saveCoachConfigFn,
   fetchClintWebhookStatsFn, fetchClintIntegrationLogsFn, runClintMigrationsFn,
-  fetchWeeklyStatsFn, runAutoAnalysisFn,
+  fetchWeeklyStatsFn, runAutoAnalysisFn, syncClintMessagesFn,
   type CoachConfig, type WeeklyStats,
 } from "@/lib/coach.functions";
 
