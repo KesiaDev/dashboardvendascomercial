@@ -20,7 +20,7 @@ import {
   analyzeConversationFn, runAlertsScanFn, resolveCoachAlertFn,
   deleteCoachConversationFn, getCoachConfigFn, saveCoachConfigFn,
   fetchClintWebhookStatsFn, fetchClintIntegrationLogsFn, runClintMigrationsFn,
-  fetchWeeklyStatsFn, runAutoAnalysisFn,
+  fetchWeeklyStatsFn, runAutoAnalysisFn, syncClintMessagesFn,
   type CoachConfig, type WeeklyStats,
 } from "@/lib/coach.functions";
 
@@ -295,6 +295,36 @@ function Conversas() {
     onSuccess: () => { toast.success("Conversa apagada"); qc.invalidateQueries({ queryKey: ["coach-convs"] }); },
   });
 
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const syncOne = async (id: string, silent = false) => {
+    setSyncingId(id);
+    try {
+      const r: any = await syncClintMessagesFn({ data: { conversationId: id } });
+      if (!silent) toast.success(`Sincronizado: ${r.synced} nova(s) msg (total ${r.total ?? "?"})`);
+      qc.invalidateQueries({ queryKey: ["coach-convs"] });
+      return r;
+    } catch (e: any) {
+      if (!silent) {
+        toast.error(e?.message ?? "Falha no sync", {
+          description: "Ver consola para payload Clint",
+          duration: 8000,
+        });
+        console.error("[Clint sync]", e);
+      }
+    } finally {
+      setSyncingId((s) => (s === id ? null : s));
+    }
+  };
+
+  const autoSyncedRef = useRef(false);
+  useEffect(() => {
+    if (autoSyncedRef.current || !convs.length) return;
+    autoSyncedRef.current = true;
+    const targets = convs.filter((c: any) => (c.message_count ?? 0) === 0).slice(0, 5);
+    (async () => { for (const c of targets) await syncOne(c.id, true); })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [convs.length]);
+
   const filtered = useMemo(() => {
     let list = convs;
     if (q) {
@@ -359,8 +389,11 @@ function Conversas() {
                 <Link to="/coach/$id" params={{ id: c.id }}>
                   <Button size="sm" variant="outline">Abrir</Button>
                 </Link>
-                <Button size="sm" variant="ghost" onClick={() => analyze.mutate(c.id)} disabled={analyze.isPending}>
-                  <RefreshCw className={"h-3.5 w-3.5 " + (analyze.isPending ? "animate-spin" : "")} />
+                <Button size="sm" variant="ghost" title="Sincronizar mensagens da Clint" onClick={() => syncOne(c.id)} disabled={syncingId === c.id}>
+                  <RefreshCw className={"h-3.5 w-3.5 " + (syncingId === c.id ? "animate-spin" : "")} />
+                </Button>
+                <Button size="sm" variant="ghost" title="Re-analisar" onClick={() => analyze.mutate(c.id)} disabled={analyze.isPending}>
+                  <Sparkles className={"h-3.5 w-3.5 " + (analyze.isPending ? "animate-pulse" : "")} />
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => { if (confirm("Apagar conversa?")) del.mutate(c.id); }}>
                   <Trash2 className="h-3.5 w-3.5 text-rose-500" />
