@@ -193,7 +193,11 @@ async function processWebhookEvent(
     (data.deal_user as string) ??
     (data.seller_name as string) ??
     null;
-  const sellerEmail = (seller.email as string) ?? (data.seller_email as string) ?? null;
+  const sellerEmail =
+    (seller.email as string) ??
+    (data.seller_email as string) ??
+    (data.deal_user as string) ??
+    null;
 
   const originName =
     (data.origin_name as string) ??
