@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Sparkles, Upload, AlertTriangle, Settings, MessageSquare,
-  TrendingUp, TrendingDown, Clock, Target, Users, RefreshCw, Trash2, CheckCircle2, Zap, Copy,
+  TrendingUp, Clock, Target, Users, RefreshCw, Trash2, CheckCircle2,
+  Zap, Copy, Eye, BarChart2, Phone, Plus, X,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,13 +14,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import {
   listCoachConversationsFn, listCoachAlertsFn, uploadConversationFn,
   analyzeConversationFn, runAlertsScanFn, resolveCoachAlertFn,
   deleteCoachConversationFn, getCoachConfigFn, saveCoachConfigFn,
   fetchClintWebhookStatsFn, fetchClintIntegrationLogsFn, runClintMigrationsFn,
+  fetchWeeklyStatsFn, runAutoAnalysisFn,
+  type CoachConfig, type WeeklyStats,
 } from "@/lib/coach.functions";
 
 export const Route = createFileRoute("/_app/coach")({
@@ -49,6 +51,37 @@ function scoreColor(n: number | null | undefined) {
 
 function CoachPage() {
   const [tab, setTab] = useState("visao");
+  const qc = useQueryClient();
+  const { data: cfg } = useQuery({ queryKey: ["coach-config"], queryFn: () => getCoachConfigFn() });
+
+  const autoEnabled = cfg?.auto_analysis ?? true;
+  const analysisIntervalMs = (cfg?.analysis_interval_hours ?? 1) * 60 * 60 * 1000;
+  const scanTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const analysisTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    scanTimerRef.current = setInterval(async () => {
+      try { await runAlertsScanFn(); qc.invalidateQueries({ queryKey: ["coach-alerts"] }); } catch {}
+    }, 5 * 60 * 1000);
+    return () => { if (scanTimerRef.current) clearInterval(scanTimerRef.current); };
+  }, [qc]);
+
+  useEffect(() => {
+    if (!autoEnabled) return;
+    const runAnalysis = async () => {
+      try {
+        const r = await runAutoAnalysisFn();
+        if ((r as any)?.analyzed > 0) {
+          qc.invalidateQueries({ queryKey: ["coach-convs"] });
+          qc.invalidateQueries({ queryKey: ["coach-alerts"] });
+        }
+      } catch {}
+    };
+    runAnalysis();
+    analysisTimerRef.current = setInterval(runAnalysis, analysisIntervalMs);
+    return () => { if (analysisTimerRef.current) clearInterval(analysisTimerRef.current); };
+  }, [autoEnabled, analysisIntervalMs, qc]);
+
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
       <div className="flex items-center gap-3">
@@ -59,6 +92,11 @@ function CoachPage() {
           <h1 className="text-xl md:text-2xl font-bold">Coach Comercial com IA</h1>
           <p className="text-xs text-muted-foreground">Análise inteligente das conversas dos vendedores</p>
         </div>
+        {autoEnabled && (
+          <Badge variant="outline" className="ml-auto text-[10px] text-emerald-600 border-emerald-500/40">
+            ● auto-análise ativa
+          </Badge>
+        )}
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -81,29 +119,87 @@ function CoachPage() {
   );
 }
 
-// ─── Visão geral ─────────────────────────────────────────────────────────
+function KpiCard({ icon, label, value, valueClass = "" }: { icon: React.ReactNode; label: string; value: string; valueClass?: string }) {
+  return (
+    <Card>
+      <CardContent className="pt-4 pb-3">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">{icon}{label}</div>
+        <p className={"text-2xl font-bold mt-1 " + valueClass}>{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function WeeklyChart({ stats }: { stats: WeeklyStats[] }) {
+  const weeks = [...new Set(stats.map((s) => s.week_start))].sort((a, b) => b.localeCompare(a)).slice(0, 6);
+  const sellers = [...new Set(stats.map((s) => s.seller_name ?? s.seller_email ?? "—"))];
+  if (!weeks.length || !sellers.length) return null;
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs border-separate border-spacing-0">
+        <thead>
+          <tr>
+            <th className="text-left py-1 pr-3 text-muted-foreground font-normal min-w-[120px]">Vendedor</th>
+            {weeks.map((w) => (
+              <th key={w} className="px-2 text-center text-muted-foreground font-normal whitespace-nowrap">
+                {new Date(w + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sellers.map((seller) => (
+            <tr key={seller}>
+              <td className="py-1 pr-3 font-medium truncate max-w-[140px]">{seller}</td>
+              {weeks.map((w) => {
+                const entry = stats.find(
+                  (s) => (s.seller_name ?? s.seller_email ?? "—") === seller && s.week_start === w,
+                );
+                return (
+                  <td key={w} className="px-2 text-center">
+                    {entry ? (
+                      <span className={"font-bold " + scoreColor(entry.avg_score)}>
+                        {Number(entry.avg_score ?? 0).toFixed(1)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/40">—</span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function VisaoGeral() {
   const { data: convs = [] } = useQuery({ queryKey: ["coach-convs"], queryFn: () => listCoachConversationsFn() });
   const { data: alerts = [] } = useQuery({ queryKey: ["coach-alerts"], queryFn: () => listCoachAlertsFn() });
+  const { data: weekly = [] } = useQuery({ queryKey: ["coach-weekly"], queryFn: () => fetchWeeklyStatsFn(), staleTime: 5 * 60_000 });
 
   const analyzed = convs.filter((c: any) => c.analysis && c.analysis.status === "ok");
   const avgScore = analyzed.length
     ? Number((analyzed.reduce((s: number, c: any) => s + Number(c.analysis.score_geral ?? 0), 0) / analyzed.length).toFixed(1))
     : null;
-  const tentativas = analyzed.length ? Math.round((analyzed.filter((c: any) => c.analysis.tentou_fechar).length / analyzed.length) * 100) : 0;
+  const tentativas = analyzed.length
+    ? Math.round((analyzed.filter((c: any) => c.analysis.tentou_fechar).length / analyzed.length) * 100)
+    : 0;
   const respTimes = analyzed.map((c: any) => c.analysis.tempo_medio_resposta_min).filter((x: any) => x != null);
-  const avgResp = respTimes.length ? Math.round(respTimes.reduce((a: number, b: number) => a + b, 0) / respTimes.length) : null;
-  const openAlerts = alerts.filter((a: any) => !a.resolved).length;
+  const avgResp = respTimes.length
+    ? Math.round(respTimes.reduce((a: number, b: number) => a + b, 0) / respTimes.length)
+    : null;
+  const openAlerts = alerts.filter((a: any) => a.state !== "resolvido" && !a.resolved).length;
 
-  // Ranking vendedores
   const bySeller = new Map<string, { name: string; count: number; sum: number; wins: number }>();
   for (const c of analyzed) {
     const a: any = c.analysis;
-    if (!a) continue;
-    const name = c.seller_name ?? c.seller_email ?? "—";
+    const name = (c as any).seller_name ?? (c as any).seller_email ?? "—";
     const cur = bySeller.get(name) ?? { name, count: 0, sum: 0, wins: 0 };
-    cur.count += 1;
-    cur.sum += Number(a.score_geral ?? 0);
+    cur.count += 1; cur.sum += Number(a.score_geral ?? 0);
     if (a.tentou_fechar) cur.wins += 1;
     bySeller.set(name, cur);
   }
@@ -111,12 +207,10 @@ function VisaoGeral() {
     .map((s) => ({ ...s, avg: Number((s.sum / s.count).toFixed(1)) }))
     .sort((a, b) => b.avg - a.avg);
 
-  // Top objeções
   const objCount = new Map<string, number>();
   for (const c of analyzed) {
     const a: any = c.analysis;
-    if (!a) continue;
-    for (const o of (a.objecoes ?? []) as unknown[]) {
+    for (const o of (a.objecoes ?? []) as string[]) {
       const k = String(o).trim();
       if (k) objCount.set(k, (objCount.get(k) ?? 0) + 1);
     }
@@ -134,7 +228,9 @@ function VisaoGeral() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" />Ranking por qualidade</CardTitle></CardHeader>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" />Ranking por qualidade</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-2">
             {ranking.length === 0 && <p className="text-sm text-muted-foreground">Sem análises ainda.</p>}
             {ranking.map((s, i) => (
@@ -154,29 +250,30 @@ function VisaoGeral() {
             {topObj.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma objeção catalogada.</p>}
             {topObj.map(([o, n]) => (
               <div key={o} className="flex items-center gap-3">
-                <span className="flex-1 text-sm">{o}</span>
+                <span className="flex-1 text-sm capitalize">{o}</span>
                 <Badge variant="secondary">{n}</Badge>
               </div>
             ))}
           </CardContent>
         </Card>
       </div>
+
+      {weekly.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart2 className="h-4 w-4" />Nota média por vendedor · semanas recentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <WeeklyChart stats={weekly} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
 
-function KpiCard({ icon, label, value, valueClass = "" }: { icon: React.ReactNode; label: string; value: string; valueClass?: string }) {
-  return (
-    <Card>
-      <CardContent className="pt-4 pb-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">{icon}{label}</div>
-        <p className={"text-2xl font-bold mt-1 " + valueClass}>{value}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ─── Conversas ──────────────────────────────────────────────────────────
 function Conversas() {
   const qc = useQueryClient();
   const { data: convs = [], isLoading } = useQuery({ queryKey: ["coach-convs"], queryFn: () => listCoachConversationsFn() });
@@ -189,6 +286,7 @@ function Conversas() {
       toast.success(r?.status === "insufficient_data" ? "Dados insuficientes" : "Análise concluída");
       qc.invalidateQueries({ queryKey: ["coach-convs"] });
       qc.invalidateQueries({ queryKey: ["coach-alerts"] });
+      qc.invalidateQueries({ queryKey: ["coach-weekly"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Falha na análise"),
   });
@@ -245,14 +343,17 @@ function Conversas() {
                   {c.analysis?.sentimento && (
                     <span className={"text-[10px] px-1.5 py-0.5 rounded " + sentimentColor(c.analysis.sentimento)}>{c.analysis.sentimento}</span>
                   )}
-                  {c.analysis?.prob_fecho != null && (
-                    <Badge variant="outline" className="text-[10px]">Fecho {c.analysis.prob_fecho}%</Badge>
+                  {c.analysis?.tentou_fechar === true && (
+                    <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-500/40">tentou fechar</Badge>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1 truncate">
                   {c.origin_name ?? "—"} · {c.stage ?? "—"} · {c.message_count} msgs · Última: {fmtDate(c.last_message_at)} · {fmtEur(c.deal_value)}
                 </p>
                 {c.analysis?.resumo && <p className="text-xs mt-1 line-clamp-2">{c.analysis.resumo}</p>}
+                {c.analysis?.justificativa_nota && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5 italic line-clamp-1">{c.analysis.justificativa_nota}</p>
+                )}
               </div>
               <div className="flex flex-col gap-1 shrink-0">
                 <Link to="/coach/$id" params={{ id: c.id }}>
@@ -273,16 +374,17 @@ function Conversas() {
   );
 }
 
-// ─── Alertas ────────────────────────────────────────────────────────────
 function Alertas() {
   const qc = useQueryClient();
   const { data: alerts = [], isLoading } = useQuery({ queryKey: ["coach-alerts"], queryFn: () => listCoachAlertsFn() });
+
   const scan = useMutation({
     mutationFn: () => runAlertsScanFn(),
     onSuccess: (r: any) => { toast.success(`${r.created} novos alertas`); qc.invalidateQueries({ queryKey: ["coach-alerts"] }); },
   });
-  const toggle = useMutation({
-    mutationFn: ({ id, resolved }: { id: string; resolved: boolean }) => resolveCoachAlertFn({ data: { id, resolved } }),
+  const setState = useMutation({
+    mutationFn: ({ id, state }: { id: string; state: "aberto" | "visto" | "resolvido" }) =>
+      resolveCoachAlertFn({ data: { id, state } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["coach-alerts"] }),
   });
 
@@ -299,48 +401,76 @@ function Alertas() {
     medium: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
     low: "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30",
   };
+  const stateBadge: Record<string, string> = {
+    aberto: "border-slate-300 text-slate-500",
+    visto: "border-amber-400 text-amber-600",
+    resolvido: "border-emerald-400 text-emerald-600",
+  };
+
+  const openCount = alerts.filter((a: any) => a.state === "aberto" || (!a.state && !a.resolved)).length;
+  const vistoCount = alerts.filter((a: any) => a.state === "visto").length;
+  const resolvidoCount = alerts.filter((a: any) => a.state === "resolvido" || a.resolved).length;
 
   return (
     <div className="space-y-3 mt-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm text-muted-foreground">
-          {alerts.filter((a: any) => !a.resolved).length} abertos · {alerts.filter((a: any) => a.resolved).length} resolvidos
+          {openCount} abertos · {vistoCount} vistos · {resolvidoCount} resolvidos
         </p>
         <Button size="sm" onClick={() => scan.mutate()} disabled={scan.isPending}>
           <RefreshCw className={"h-4 w-4 mr-1 " + (scan.isPending ? "animate-spin" : "")} />Rodar scan
         </Button>
       </div>
+
       {isLoading && <p className="text-sm text-muted-foreground">A carregar…</p>}
       {!isLoading && alerts.length === 0 && (
         <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Nenhum alerta.</CardContent></Card>
       )}
-      {alerts.map((a: any) => (
-        <Card key={a.id} className={a.resolved ? "opacity-60" : ""}>
-          <CardContent className="p-3 flex items-start gap-3">
-            <Badge className={"shrink-0 border " + (sevColor[a.severity] ?? "")}>{a.severity}</Badge>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold">{typeLabel[a.type] ?? a.type}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{a.seller_name ?? a.seller_email ?? "—"} · {fmtDate(a.created_at)}</p>
-              <p className="text-sm mt-1">{a.message}</p>
-            </div>
-            <div className="flex flex-col gap-1 shrink-0">
-              {a.conversation_id && (
-                <Link to="/coach/$id" params={{ id: a.conversation_id }}>
-                  <Button size="sm" variant="outline">Abrir</Button>
-                </Link>
-              )}
-              <Button size="sm" variant={a.resolved ? "outline" : "default"} onClick={() => toggle.mutate({ id: a.id, resolved: !a.resolved })}>
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />{a.resolved ? "Reabrir" : "Resolver"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+
+      {alerts.map((a: any) => {
+        const currentState: string = a.state ?? (a.resolved ? "resolvido" : "aberto");
+        const isResolved = currentState === "resolvido";
+        return (
+          <Card key={a.id} className={isResolved ? "opacity-60" : ""}>
+            <CardContent className="p-3 flex items-start gap-3">
+              <Badge className={"shrink-0 border " + (sevColor[a.severity] ?? "")}>{a.severity}</Badge>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold">{typeLabel[a.type] ?? a.type}</p>
+                  <Badge variant="outline" className={"text-[10px] " + (stateBadge[currentState] ?? "")}>
+                    {currentState}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">{a.seller_name ?? a.seller_email ?? "—"} · {fmtDate(a.created_at)}</p>
+                <p className="text-sm mt-1">{a.message}</p>
+              </div>
+              <div className="flex flex-col gap-1 shrink-0">
+                {a.conversation_id && (
+                  <Link to="/coach/$id" params={{ id: a.conversation_id }}>
+                    <Button size="sm" variant="outline">Abrir</Button>
+                  </Link>
+                )}
+                {currentState === "aberto" && (
+                  <Button size="sm" variant="outline" onClick={() => setState.mutate({ id: a.id, state: "visto" })}>
+                    <Eye className="h-3.5 w-3.5 mr-1" />Visto
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant={isResolved ? "outline" : "default"}
+                  onClick={() => setState.mutate({ id: a.id, state: isResolved ? "aberto" : "resolvido" })}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" />{isResolved ? "Reabrir" : "Resolver"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }
 
-// ─── Upload manual ──────────────────────────────────────────────────────
 function UploadTab({ onDone }: { onDone: () => void }) {
   const qc = useQueryClient();
   const nav = useNavigate();
@@ -351,16 +481,11 @@ function UploadTab({ onDone }: { onDone: () => void }) {
   const upload = useMutation({
     mutationFn: async () => {
       const res = await uploadConversationFn({ data: {
-        sellerName: form.sellerName || undefined,
-        sellerEmail: form.sellerEmail || undefined,
-        contactName: form.contactName || undefined,
-        contactEmail: form.contactEmail || undefined,
-        originName: form.originName || undefined,
-        stage: form.stage || undefined,
-        dealValue: form.dealValue ? Number(form.dealValue) : undefined,
-        transcript: form.transcript,
+        sellerName: form.sellerName || undefined, sellerEmail: form.sellerEmail || undefined,
+        contactName: form.contactName || undefined, contactEmail: form.contactEmail || undefined,
+        originName: form.originName || undefined, stage: form.stage || undefined,
+        dealValue: form.dealValue ? Number(form.dealValue) : undefined, transcript: form.transcript,
       }});
-      // dispara análise automática
       try { await analyzeConversationFn({ data: { conversationId: res.id } }); } catch {}
       return res;
     },
@@ -389,15 +514,11 @@ function UploadTab({ onDone }: { onDone: () => void }) {
           <div>
             <Label className="text-xs">Transcrição da conversa</Label>
             <Textarea
-              rows={12}
-              value={form.transcript}
+              rows={12} value={form.transcript}
               onChange={(e) => setForm({ ...form, transcript: e.target.value })}
-              placeholder={"Cola aqui o export do WhatsApp. Exemplo:\n[12/07/2026, 14:32] Gisele: Bom dia! Vi que se inscreveu…\n[12/07/2026, 14:40] João Cliente: Olá, sim, queria saber o preço"}
+              placeholder={"Cola aqui o export do WhatsApp. Exemplo:\n[12/07/2026, 14:32] Gisele: Bom dia!\n[12/07/2026, 14:40] João: Olá, sim"}
               className="font-mono text-xs"
             />
-            <p className="text-[10px] text-muted-foreground mt-1">
-              Suporta formato "[data, hora] Nome: mensagem" e variantes. A IA vai identificar automaticamente vendedor/cliente com base no nome informado acima.
-            </p>
           </div>
           <Button onClick={() => upload.mutate()} disabled={upload.isPending || form.transcript.trim().length < 20}>
             {upload.isPending ? "A processar…" : "Analisar com IA"}
@@ -408,33 +529,43 @@ function UploadTab({ onDone }: { onDone: () => void }) {
   );
 }
 
-// ─── Config ─────────────────────────────────────────────────────────────
 function ConfigTab() {
   const qc = useQueryClient();
   const { data: cfg } = useQuery({ queryKey: ["coach-config"], queryFn: () => getCoachConfigFn() });
-  const [form, setForm] = useState<{ nota_minima: number; horas_lead_quente: number; dias_sem_resposta: number } | null>(null);
+  const [form, setForm] = useState<CoachConfig | null>(null);
   const current = form ?? cfg;
+
   const save = useMutation({
     mutationFn: () => saveCoachConfigFn({ data: {
       nota_minima: Number(current!.nota_minima),
       horas_lead_quente: Number(current!.horas_lead_quente),
       dias_sem_resposta: Number(current!.dias_sem_resposta),
+      auto_analysis: current!.auto_analysis ?? true,
+      analysis_interval_hours: Number(current!.analysis_interval_hours ?? 1),
+      seller_phones: current!.seller_phones ?? [],
     }}),
-    onSuccess: () => { toast.success("Config salva"); qc.invalidateQueries({ queryKey: ["coach-config"] }); },
+    onSuccess: () => { toast.success("Config salva"); qc.invalidateQueries({ queryKey: ["coach-config"] }); setForm(null); },
   });
+
   if (!current) return <p className="text-sm text-muted-foreground mt-4">A carregar…</p>;
+  const phones = current.seller_phones ?? [];
+
+  function updatePhone(idx: number, field: "name" | "phone", value: string) {
+    setForm({ ...current!, seller_phones: phones.map((p, i) => i === idx ? { ...p, [field]: value } : p) });
+  }
+
   return (
-    <div className="mt-4">
+    <div className="mt-4 space-y-4 max-w-lg">
       <Card>
         <CardHeader><CardTitle className="text-base">Parâmetros de alerta</CardTitle></CardHeader>
-        <CardContent className="space-y-3 max-w-md">
+        <CardContent className="space-y-3">
           <div>
             <Label className="text-xs">Nota mínima aceitável (0–10)</Label>
             <Input type="number" min={0} max={10} value={current.nota_minima}
               onChange={(e) => setForm({ ...current, nota_minima: Number(e.target.value) })} />
           </div>
           <div>
-            <Label className="text-xs">Horas até virar "lead quente sem resposta"</Label>
+            <Label className="text-xs">Horas até "lead quente sem resposta"</Label>
             <Input type="number" min={1} value={current.horas_lead_quente}
               onChange={(e) => setForm({ ...current, horas_lead_quente: Number(e.target.value) })} />
           </div>
@@ -443,14 +574,66 @@ function ConfigTab() {
             <Input type="number" min={1} value={current.dias_sem_resposta}
               onChange={(e) => setForm({ ...current, dias_sem_resposta: Number(e.target.value) })} />
           </div>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar</Button>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Auto-análise</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">Ativar auto-análise de conversas Clint</Label>
+            <Switch checked={current.auto_analysis ?? true}
+              onCheckedChange={(v) => setForm({ ...current, auto_analysis: v })} />
+          </div>
+          {(current.auto_analysis ?? true) && (
+            <div>
+              <Label className="text-xs">Intervalo mínimo entre análises (horas)</Label>
+              <Input type="number" min={1} value={current.analysis_interval_hours ?? 1}
+                onChange={(e) => setForm({ ...current, analysis_interval_hours: Number(e.target.value) })} />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Só analisa conversas com última mensagem há pelo menos este número de horas.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Phone className="h-4 w-4" />Telefones dos vendedores
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Usados para identificar quem é "vendedor" nas mensagens do webhook da Clint.
+          </p>
+          {phones.map((p, idx) => (
+            <div key={idx} className="flex gap-2 items-center">
+              <Input placeholder="Ex: 351910000000" value={p.phone}
+                onChange={(e) => updatePhone(idx, "phone", e.target.value)} className="text-xs flex-1" />
+              <Input placeholder="Nome" value={p.name}
+                onChange={(e) => updatePhone(idx, "name", e.target.value)} className="text-xs flex-1" />
+              <Button size="sm" variant="ghost"
+                onClick={() => setForm({ ...current, seller_phones: phones.filter((_, i) => i !== idx) })}>
+                <X className="h-3.5 w-3.5 text-rose-500" />
+              </Button>
+            </div>
+          ))}
+          <Button size="sm" variant="outline"
+            onClick={() => setForm({ ...current, seller_phones: [...phones, { name: "", phone: "" }] })}>
+            <Plus className="h-3.5 w-3.5 mr-1" />Adicionar vendedor
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Button onClick={() => save.mutate()} disabled={save.isPending}>
+        {save.isPending ? "A salvar…" : "Salvar configuração"}
+      </Button>
     </div>
   );
 }
 
-// ─── Integração Clint (webhook em tempo real) ────────────────────────────
 function IntegracaoClint() {
   const qc = useQueryClient();
   const webhookUrl = typeof window !== "undefined"
@@ -458,90 +641,67 @@ function IntegracaoClint() {
     : "/api/clint/webhook";
 
   const { data: stats } = useQuery({
-    queryKey: ["clint-webhook-stats"],
-    queryFn: () => fetchClintWebhookStatsFn(),
-    refetchInterval: 30_000,
+    queryKey: ["clint-webhook-stats"], queryFn: () => fetchClintWebhookStatsFn(), refetchInterval: 30_000,
   });
   const { data: logs = [] } = useQuery({
-    queryKey: ["clint-integration-logs"],
-    queryFn: () => fetchClintIntegrationLogsFn(),
-    refetchInterval: 30_000,
+    queryKey: ["clint-integration-logs"], queryFn: () => fetchClintIntegrationLogsFn(), refetchInterval: 30_000,
   });
 
   const [migrationSql, setMigrationSql] = React.useState<string | null>(null);
-
   const migrate = useMutation({
     mutationFn: () => runClintMigrationsFn(),
     onSuccess: (res) => {
-      if ((res as any)?.already_applied) {
-        toast.success("Migrations já aplicadas!");
-      } else {
-        toast.success("Tabelas criadas com sucesso");
-      }
+      if ((res as any)?.already_applied) toast.success("Migrations já aplicadas!");
+      else toast.success("Tabelas criadas com sucesso");
       setMigrationSql(null);
       qc.invalidateQueries({ queryKey: ["clint-webhook-stats"] });
     },
     onError: (e: unknown) => {
       const msg = (e as Error).message ?? "";
-      if (msg.startsWith("MIGRATION_NEEDED:")) {
-        setMigrationSql(msg.replace("MIGRATION_NEEDED:", ""));
-      } else {
-        toast.error(msg || "Falha ao verificar migrations");
-      }
+      if (msg.startsWith("MIGRATION_NEEDED:")) setMigrationSql(msg.replace("MIGRATION_NEEDED:", ""));
+      else toast.error(msg || "Falha ao verificar migrations");
     },
   });
-
-  const copyUrl = () => {
-    navigator.clipboard.writeText(webhookUrl);
-    toast.success("URL copiada!");
-  };
 
   const statusColor = stats?.is_connected
     ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
     : "bg-slate-500/15 text-slate-600 dark:text-slate-400";
 
-  const statusLabel = stats?.is_connected ? "Conectado" : "Aguardando eventos";
-
   return (
     <div className="mt-4 space-y-4">
-      {/* Status */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <p className="text-xs text-muted-foreground mb-1">Status</p>
-            <span className={"text-sm font-semibold px-2 py-1 rounded " + statusColor}>{statusLabel}</span>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <p className="text-xs text-muted-foreground mb-1">Conversas via webhook</p>
-            <p className="text-2xl font-bold">{stats?.webhook_conversation_count ?? 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <p className="text-xs text-muted-foreground mb-1">Último evento</p>
-            <p className="text-sm">{stats?.last_event_at ? fmtDate(stats.last_event_at) : "—"}</p>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="pt-4 pb-3">
+          <p className="text-xs text-muted-foreground mb-1">Status</p>
+          <span className={"text-sm font-semibold px-2 py-1 rounded " + statusColor}>
+            {stats?.is_connected ? "Conectado" : "Aguardando eventos"}
+          </span>
+        </CardContent></Card>
+        <Card><CardContent className="pt-4 pb-3">
+          <p className="text-xs text-muted-foreground mb-1">Conversas via webhook</p>
+          <p className="text-2xl font-bold">{stats?.webhook_conversation_count ?? 0}</p>
+        </CardContent></Card>
+        <Card><CardContent className="pt-4 pb-3">
+          <p className="text-xs text-muted-foreground mb-1">Último evento</p>
+          <p className="text-sm">{stats?.last_event_at ? fmtDate(stats.last_event_at) : "—"}</p>
+        </CardContent></Card>
       </div>
 
-      {/* Webhook URL */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-base">URL do webhook</CardTitle></CardHeader>
         <CardContent className="space-y-2">
           <div className="flex items-center gap-2">
             <code className="flex-1 bg-muted px-3 py-2 rounded text-xs font-mono break-all">{webhookUrl}</code>
-            <Button size="sm" variant="outline" onClick={copyUrl}><Copy className="h-3.5 w-3.5" /></Button>
+            <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(webhookUrl); toast.success("URL copiada!"); }}>
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Configure esta URL no painel da Clint em <b>Configurações → Integrações → Webhooks</b>.
-            Selecione os eventos de mensagem/atendimento e cole a URL acima.
+            Configure em <b>Clint → Configurações → Integrações → Webhooks</b>.
+            Selecione "Qualquer mudança de etapa" e mensagens de atendimento.
           </p>
         </CardContent>
       </Card>
 
-      {/* Config Clint API */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-base">Credenciais Clint</CardTitle></CardHeader>
         <CardContent className="space-y-2">
@@ -550,7 +710,7 @@ function IntegracaoClint() {
               <Label className="text-xs">API Token Clint</Label>
               <Input type="password" placeholder="U2FsdGVkX1/+..." className="font-mono text-xs"
                 defaultValue={import.meta.env.VITE_CLINT_TOKEN ?? ""} readOnly />
-              <p className="text-[10px] text-muted-foreground mt-1">Definido via variável VITE_CLINT_TOKEN</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Definido via VITE_CLINT_TOKEN</p>
             </div>
             <div>
               <Label className="text-xs">API Base URL</Label>
@@ -560,54 +720,24 @@ function IntegracaoClint() {
         </CardContent>
       </Card>
 
-      {/* Migração */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-base">Inicialização do banco</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Cria as colunas e tabelas necessárias para a integração Clint (idempotente — pode rodar várias vezes).
+            Verifica se as tabelas v2 foram aplicadas.
           </p>
           <Button onClick={() => migrate.mutate()} disabled={migrate.isPending} variant="outline">
             <RefreshCw className={"h-4 w-4 mr-2 " + (migrate.isPending ? "animate-spin" : "")} />
-            {migrate.isPending ? "Verificando…" : "Rodar migrations"}
+            {migrate.isPending ? "Verificando…" : "Verificar migrations"}
           </Button>
           {migrationSql && (
             <div className="space-y-2">
-              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
-                Tabelas ainda não criadas. Copie o SQL abaixo e rode no{" "}
-                <a
-                  href="https://supabase.com/dashboard/project/spnmnxbglztrtgtjyvyz/sql/new"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
-                  Supabase SQL Editor
-                </a>
-                :
-              </p>
-              <div className="relative">
-                <pre className="bg-muted text-xs rounded p-3 overflow-x-auto whitespace-pre-wrap font-mono max-h-48">
-                  {migrationSql}
-                </pre>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="absolute top-2 right-2"
-                  onClick={() => {
-                    navigator.clipboard.writeText(migrationSql);
-                    toast.success("SQL copiado!");
-                  }}
-                >
-                  <Copy className="h-3 w-3 mr-1" />
-                  Copiar
-                </Button>
-              </div>
+              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">{migrationSql}</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Log de eventos */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -620,7 +750,7 @@ function IntegracaoClint() {
         <CardContent>
           {logs.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhum evento registrado ainda. Configure o webhook na Clint e aguarde.
+              Nenhum evento registrado. Configure o webhook na Clint e aguarde.
             </p>
           )}
           <div className="space-y-1.5">
