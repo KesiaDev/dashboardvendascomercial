@@ -6,65 +6,51 @@ async function admin() {
 }
 
 // ============ Clint API message sync ============
-const CLINT_BASE = "https://api.clint.digital/v1";
+const CLINT_HOST = "https://api.clint.digital";
 
 async function clintFetch(path: string, token: string) {
-  const url = path.startsWith("http") ? path : `${CLINT_BASE}${path}`;
-  let r = await fetch(url, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } });
-  if (r.status === 401) {
-    r = await fetch(url, { headers: { Authorization: `Token ${token}`, Accept: "application/json" } });
-  }
+  const url = path.startsWith("http") ? path : `${CLINT_HOST}${path}`;
+  console.log(`[Clint sync] GET ${url}`);
+  const r = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  });
+  console.log(`[Clint sync] ← ${r.status} ${url}`);
   return r;
 }
 
-async function tryEndpointsWithContact(token: string, dealId: string | null, phone: string | null, contactId: string | null) {
+async function findContactId(
+  token: string,
+  phone: string | null,
+  email: string | null,
+): Promise<{ contactId: string | null; attempts: string[]; errors: any[] }> {
   const attempts: string[] = [];
-  const errors: Array<{ url: string; status: number; body?: string }> = [];
+  const errors: any[] = [];
 
-  const tryUrl = async (path: string): Promise<{ ok: true; data: any; url: string } | null> => {
+  const lookup = async (path: string) => {
     attempts.push(path);
     const r = await clintFetch(path, token);
-    if (r.ok) {
-      const data = await r.json().catch(() => null);
-      return { ok: true, data, url: path };
+    if (!r.ok) {
+      const body = await r.text().catch(() => "");
+      errors.push({ url: path, status: r.status, body: body.slice(0, 200) });
+      return null;
     }
-    const body = await r.text().catch(() => "");
-    errors.push({ url: path, status: r.status, body: body.slice(0, 200) });
-    return null;
+    const j: any = await r.json().catch(() => null);
+    const list = j?.data ?? j?.contacts ?? j?.results ?? (Array.isArray(j) ? j : null);
+    const id = list?.[0]?.id ?? j?.id ?? null;
+    console.log(`[Clint sync] contactId via ${path} =`, id);
+    return id ? String(id) : null;
   };
 
-  if (dealId) {
-    const r1 = await tryUrl(`/chats?deal_id=${encodeURIComponent(dealId)}`);
-    if (r1) return { ...r1, attempts, errors };
-    const r2 = await tryUrl(`/deals/${encodeURIComponent(dealId)}/chats`);
-    if (r2) return { ...r2, attempts, errors };
-    const r3 = await tryUrl(`/deals/${encodeURIComponent(dealId)}/messages`);
-    if (r3) return { ...r3, attempts, errors };
-  }
-  if (contactId) {
-    const rA = await tryUrl(`/contacts/${contactId}/chats`);
-    if (rA) return { ...rA, attempts, errors };
-    const rB = await tryUrl(`/contacts/${contactId}/messages`);
-    if (rB) return { ...rB, attempts, errors };
-  }
   if (phone) {
-    const cleanPhone = phone.replace(/\D/g, "");
-    const rc = await clintFetch(`/contacts?phone=${encodeURIComponent(cleanPhone)}`, token);
-    attempts.push(`/contacts?phone=${cleanPhone}`);
-    if (rc.ok) {
-      const cj: any = await rc.json().catch(() => null);
-      const contactId = cj?.data?.[0]?.id ?? cj?.[0]?.id ?? cj?.results?.[0]?.id ?? cj?.id;
-      if (contactId) {
-        const r4 = await tryUrl(`/contacts/${contactId}/chats`);
-        if (r4) return { ...r4, attempts, errors };
-        const r5 = await tryUrl(`/contacts/${contactId}/messages`);
-        if (r5) return { ...r5, attempts, errors };
-      }
-    } else {
-      errors.push({ url: `/contacts?phone=${cleanPhone}`, status: rc.status });
-    }
+    const clean = phone.replace(/\D/g, "");
+    const id = await lookup(`/v1/contacts?phone=${encodeURIComponent(clean)}`);
+    if (id) return { contactId: id, attempts, errors };
   }
-  return { ok: false as const, attempts, errors };
+  if (email) {
+    const id = await lookup(`/v1/contacts?email=${encodeURIComponent(email)}`);
+    if (id) return { contactId: id, attempts, errors };
+  }
+  return { contactId: null, attempts, errors };
 }
 
 function extractMessages(payload: any): any[] {
