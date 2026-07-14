@@ -106,6 +106,7 @@ function CoachPage() {
         <TabsList className="w-full flex-wrap h-auto">
           <TabsTrigger value="visao"><TrendingUp className="h-4 w-4 mr-1" />Visão geral</TabsTrigger>
           <TabsTrigger value="conversas"><MessageSquare className="h-4 w-4 mr-1" />Conversas</TabsTrigger>
+          <TabsTrigger value="performance"><Award className="h-4 w-4 mr-1" />Performance</TabsTrigger>
           <TabsTrigger value="alertas"><AlertTriangle className="h-4 w-4 mr-1" />Alertas</TabsTrigger>
           <TabsTrigger value="upload"><Upload className="h-4 w-4 mr-1" />Nova análise</TabsTrigger>
           <TabsTrigger value="config"><Settings className="h-4 w-4 mr-1" />Config</TabsTrigger>
@@ -113,6 +114,7 @@ function CoachPage() {
         </TabsList>
         <TabsContent value="visao"><VisaoGeral /></TabsContent>
         <TabsContent value="conversas"><Conversas /></TabsContent>
+        <TabsContent value="performance"><Performance /></TabsContent>
         <TabsContent value="alertas"><Alertas /></TabsContent>
         <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>
         <TabsContent value="config"><ConfigTab /></TabsContent>
