@@ -616,7 +616,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
           <p className="text-xs text-muted-foreground">Líder do mês</p>
           {sellerRanking[0]?(<>
             <div className="flex items-center gap-2 mt-1">
-              <span className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ring-2" style={{background:sellerColor(sellerRanking[0].name),["--tw-ring-color" as any]:sellerColor(sellerRanking[0].name)}}>{sellerRanking[0].name.charAt(0)}</span>
+              <SellerAvatar name={sellerRanking[0].name} size={30} ring="ring-2" />
               <p className="text-lg font-bold truncate" style={{color:sellerColor(sellerRanking[0].name)}}>{sellerRanking[0].name.split(" ")[0]}</p>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">{fmtEur(sellerRanking[0].total)} · {sellerRanking[0].count} vendas</p>
