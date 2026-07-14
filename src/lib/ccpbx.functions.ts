@@ -103,19 +103,22 @@ export const syncCcpbxCallsFn = createServerFn({ method: "POST" })
     // Mapa de deals por telefone para vincular
     const { data: deals } = await supabaseAdmin
       .from("clint_deals")
-      .select("id,lead_phone,lead_name,user_email,user_name")
-      .not("lead_phone", "is", null)
+      .select("id,contact_phone,contact_name,user_email,user_name")
+      .not("contact_phone", "is", null)
       .limit(20000);
     const dealsByPhone = new Map<string, any>();
     for (const d of deals ?? []) {
-      const n = normalizePhone(d.lead_phone);
+      const n = normalizePhone(d.contact_phone);
       if (n.length >= 8) dealsByPhone.set(n.slice(-9), d);
     }
 
     // Mapa de usuários CCPBX → email (best effort a partir de clint_users)
-    const { data: users } = await supabaseAdmin.from("clint_users").select("email,name").limit(500);
+    const { data: users } = await supabaseAdmin.from("clint_users").select("email,first_name,last_name").limit(500);
     const userByName = new Map<string, any>();
-    for (const u of users ?? []) if (u.name) userByName.set(cleanSellerName(u.name).toLowerCase(), u);
+    for (const u of users ?? []) {
+      const nm = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
+      if (nm) userByName.set(cleanSellerName(nm).toLowerCase(), u);
+    }
 
     const rows: any[] = [];
     for (const c of cdrs) {
