@@ -64,7 +64,7 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     // 1. Deals ganhos no período
     const { data: deals } = await supabaseAdmin
       .from("clint_deals")
-      .select("id,user_name,user_email,won_by_user_name,won_by_user_email,status,won_at,value,currency")
+      .select("id,user_name,user_email,won_by_name,won_by_email,status,won_at,value,currency")
       .eq("status", "WON")
       .gte("won_at", startISO)
       .lte("won_at", endISO)
