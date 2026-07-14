@@ -26,6 +26,7 @@ import {
   type CoachConfig, type WeeklyStats,
 } from "@/lib/coach.functions";
 import { getHotmartWebhookTokenFn } from "@/lib/hotmart-webhook.functions";
+import { syncCcpbxCallsFn, listCcpbxCallsFn, analyzeCallFn, type CallRow } from "@/lib/ccpbx.functions";
 
 export const Route = createFileRoute("/_app/coach")({
   component: CoachPage,
