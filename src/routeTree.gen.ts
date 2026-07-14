@@ -35,6 +35,7 @@ import { Route as ApiClintWebhookRouteImport } from './routes/api/clint/webhook'
 import { Route as AppCoachIdRouteImport } from './routes/_app.coach.$id'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
 import { Route as ApiPublicSyncHotmartRouteImport } from './routes/api/public/sync.hotmart'
+import { Route as ApiPublicSyncCcpbxRouteImport } from './routes/api/public/sync.ccpbx'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -165,6 +166,11 @@ const ApiPublicSyncHotmartRoute = ApiPublicSyncHotmartRouteImport.update({
   path: '/api/public/sync/hotmart',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSyncCcpbxRoute = ApiPublicSyncCcpbxRouteImport.update({
+  id: '/api/public/sync/ccpbx',
+  path: '/api/public/sync/ccpbx',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/api/hotmart/webhook': typeof ApiHotmartWebhookRoute
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
+  '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -217,6 +224,7 @@ export interface FileRoutesByTo {
   '/api/hotmart/webhook': typeof ApiHotmartWebhookRoute
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
+  '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -246,6 +254,7 @@ export interface FileRoutesById {
   '/api/hotmart/webhook': typeof ApiHotmartWebhookRoute
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
+  '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -275,6 +284,7 @@ export interface FileRouteTypes {
     | '/api/hotmart/webhook'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
+    | '/api/public/sync/ccpbx'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   fileRoutesByTo: FileRoutesByTo
@@ -302,6 +312,7 @@ export interface FileRouteTypes {
     | '/api/hotmart/webhook'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
+    | '/api/public/sync/ccpbx'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   id:
@@ -330,6 +341,7 @@ export interface FileRouteTypes {
     | '/api/hotmart/webhook'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
+    | '/api/public/sync/ccpbx'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   fileRoutesById: FileRoutesById
@@ -340,6 +352,7 @@ export interface RootRouteChildren {
   ApiHotmartWebhookRoute: typeof ApiHotmartWebhookRoute
   ApiPublicHotmartDebugRoute: typeof ApiPublicHotmartDebugRoute
   ApiPublicHotmartRawRoute: typeof ApiPublicHotmartRawRoute
+  ApiPublicSyncCcpbxRoute: typeof ApiPublicSyncCcpbxRoute
   ApiPublicSyncHotmartRoute: typeof ApiPublicSyncHotmartRoute
   ApiPublicSyncTriggerRoute: typeof ApiPublicSyncTriggerRoute
 }
@@ -528,6 +541,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSyncHotmartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/sync/ccpbx': {
+      id: '/api/public/sync/ccpbx'
+      path: '/api/public/sync/ccpbx'
+      fullPath: '/api/public/sync/ccpbx'
+      preLoaderRoute: typeof ApiPublicSyncCcpbxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -593,6 +613,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHotmartWebhookRoute: ApiHotmartWebhookRoute,
   ApiPublicHotmartDebugRoute: ApiPublicHotmartDebugRoute,
   ApiPublicHotmartRawRoute: ApiPublicHotmartRawRoute,
+  ApiPublicSyncCcpbxRoute: ApiPublicSyncCcpbxRoute,
   ApiPublicSyncHotmartRoute: ApiPublicSyncHotmartRoute,
   ApiPublicSyncTriggerRoute: ApiPublicSyncTriggerRoute,
 }

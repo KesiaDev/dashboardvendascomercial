@@ -911,6 +911,78 @@ export type Database = {
           },
         ]
       }
+      coach_calls: {
+        Row: {
+          agent_email: string | null
+          agent_name: string | null
+          agent_user: string | null
+          analysis: Json | null
+          analyzed_at: string | null
+          ccpbx_id: string
+          contact_name: string | null
+          created_at: string
+          deal_id: string | null
+          direction: string | null
+          duration_sec: number
+          from_number: string | null
+          id: string
+          raw: Json | null
+          recording_url: string | null
+          score: number | null
+          started_at: string
+          status: string | null
+          synced_at: string
+          to_number: string | null
+          transcript: string | null
+        }
+        Insert: {
+          agent_email?: string | null
+          agent_name?: string | null
+          agent_user?: string | null
+          analysis?: Json | null
+          analyzed_at?: string | null
+          ccpbx_id: string
+          contact_name?: string | null
+          created_at?: string
+          deal_id?: string | null
+          direction?: string | null
+          duration_sec?: number
+          from_number?: string | null
+          id?: string
+          raw?: Json | null
+          recording_url?: string | null
+          score?: number | null
+          started_at: string
+          status?: string | null
+          synced_at?: string
+          to_number?: string | null
+          transcript?: string | null
+        }
+        Update: {
+          agent_email?: string | null
+          agent_name?: string | null
+          agent_user?: string | null
+          analysis?: Json | null
+          analyzed_at?: string | null
+          ccpbx_id?: string
+          contact_name?: string | null
+          created_at?: string
+          deal_id?: string | null
+          direction?: string | null
+          duration_sec?: number
+          from_number?: string | null
+          id?: string
+          raw?: Json | null
+          recording_url?: string | null
+          score?: number | null
+          started_at?: string
+          status?: string | null
+          synced_at?: string
+          to_number?: string | null
+          transcript?: string | null
+        }
+        Relationships: []
+      }
       coach_config: {
         Row: {
           analysis_interval_hours: number
