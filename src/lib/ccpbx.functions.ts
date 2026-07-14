@@ -153,7 +153,7 @@ export const syncCcpbxCallsFn = createServerFn({ method: "POST" })
         agent_name: agent_name ? cleanSellerName(agent_name) : null,
         agent_email: agentMatch?.email ?? deal?.user_email ?? null,
         deal_id: deal?.id ?? null,
-        contact_name: deal?.lead_name ?? null,
+        contact_name: deal?.contact_name ?? null,
         status,
         recording_url,
         raw: c,
