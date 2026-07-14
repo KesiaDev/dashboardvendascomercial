@@ -23,6 +23,7 @@ import {
   fetchWeeklyStatsFn, runAutoAnalysisFn, syncClintMessagesFn,
   type CoachConfig, type WeeklyStats,
 } from "@/lib/coach.functions";
+import { getHotmartWebhookTokenFn } from "@/lib/hotmart-webhook.functions";
 
 export const Route = createFileRoute("/_app/coach")({
   component: CoachPage,
