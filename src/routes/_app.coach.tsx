@@ -857,3 +857,222 @@ function HotmartWebhookCard() {
   );
 }
 
+
+// ==================== PERFORMANCE TAB ====================
+function fmtBRL(n: number) {
+  return "R$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+function fmtPct(n: number) {
+  return (n * 100).toFixed(1) + "%";
+}
+function SellerAvatar({ name, size = 32 }: { name: string; size?: number }) {
+  const photo = getSellerPhoto(name);
+  const initials = name.split(" ").slice(0, 2).map((p) => p[0]).join("").toUpperCase();
+  if (photo) {
+    return <img src={photo} alt={name} className="rounded-full object-cover" style={{ width: size, height: size }} />;
+  }
+  return (
+    <div
+      className="rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white flex items-center justify-center text-[10px] font-bold"
+      style={{ width: size, height: size }}
+    >
+      {initials || "?"}
+    </div>
+  );
+}
+
+function PerformanceTab() {
+  const [range, setRange] = useState<PerfRange>("week");
+  const [scope, setScope] = useState<"team" | "seller">("team");
+  const [sellerKey, setSellerKey] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string>("");
+
+  const { data: perf, isLoading } = useQuery({
+    queryKey: ["coach-perf", range],
+    queryFn: () => fetchPerformanceFn({ data: { range } }),
+  });
+
+  const fbMutation = useMutation({
+    mutationFn: () => generatePerformanceFeedbackFn({ data: { range, scope, sellerKey: sellerKey ?? undefined } }),
+    onSuccess: (r) => setFeedback((r as any).text ?? ""),
+    onError: (e: any) => toast.error(String(e?.message ?? e)),
+  });
+
+  const rangeLabel = range === "day" ? "Hoje" : range === "week" ? "7 dias" : "30 dias";
+
+  return (
+    <div className="space-y-4">
+      {/* Controles */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex rounded-lg border p-1 bg-card">
+          {(["day", "week", "month"] as PerfRange[]).map((r) => (
+            <button
+              key={r}
+              onClick={() => setRange(r)}
+              className={
+                "px-3 py-1 text-xs rounded-md transition " +
+                (range === r ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")
+              }
+            >
+              {r === "day" ? "Diário" : r === "week" ? "Semanal" : "Mensal"}
+            </button>
+          ))}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <div className="inline-flex rounded-lg border p-1 bg-card">
+            <button
+              onClick={() => { setScope("team"); setSellerKey(null); }}
+              className={"px-3 py-1 text-xs rounded-md " + (scope === "team" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
+            >Equipe</button>
+            <button
+              onClick={() => setScope("seller")}
+              className={"px-3 py-1 text-xs rounded-md " + (scope === "seller" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
+            >Por vendedor</button>
+          </div>
+          {scope === "seller" && perf && (
+            <select
+              className="text-xs border rounded-md px-2 py-1 bg-background"
+              value={sellerKey ?? ""}
+              onChange={(e) => setSellerKey(e.target.value || null)}
+            >
+              <option value="">— escolher —</option>
+              {perf.sellers.map((s) => (
+                <option key={s.key} value={s.key}>{s.name}</option>
+              ))}
+            </select>
+          )}
+          <Button
+            size="sm"
+            onClick={() => fbMutation.mutate()}
+            disabled={fbMutation.isPending || (scope === "seller" && !sellerKey)}
+          >
+            <Sparkles className="h-4 w-4 mr-1" />
+            {fbMutation.isPending ? "Gerando..." : "Gerar feedback IA"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Team KPIs */}
+      {perf && (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <KpiCard icon={<MessageSquare className="h-3 w-3" />} label={`Atendimentos (${rangeLabel})`} value={String(perf.team.atendimentos)} />
+          <KpiCard icon={<CheckCircle2 className="h-3 w-3" />} label="Vendas" value={String(perf.team.vendas)} />
+          <KpiCard icon={<TrendingUp className="h-3 w-3" />} label="Faturamento" value={fmtBRL(perf.team.faturamento)} />
+          <KpiCard icon={<Target className="h-3 w-3" />} label="Taxa conversão" value={fmtPct(perf.team.taxaConversao)} />
+          <KpiCard icon={<Sparkles className="h-3 w-3" />} label="Nota IA média" value={perf.team.notaMedia != null ? perf.team.notaMedia.toFixed(1) : "—"} valueClass={scoreColor(perf.team.notaMedia)} />
+        </div>
+      )}
+
+      {/* Feedback IA */}
+      {feedback && (
+        <Card className="border-fuchsia-500/30 bg-fuchsia-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-fuchsia-500" />
+              Feedback do Coach IA · {scope === "team" ? "equipe" : perf?.sellers.find((s) => s.key === sellerKey)?.name} · {rangeLabel}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm whitespace-pre-wrap leading-relaxed">{feedback}</div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Daily mini-chart */}
+      {perf && perf.range !== "day" && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2"><BarChart2 className="h-4 w-4" />Atendimentos × Vendas por dia</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DailyBars daily={perf.daily} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Ranking */}
+      {perf && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2"><Users className="h-4 w-4" />Ranking por vendedor · {rangeLabel}</CardTitle>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            {isLoading ? (
+              <p className="text-xs text-muted-foreground">Carregando…</p>
+            ) : perf.sellers.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nenhuma atividade no período.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="text-xs text-muted-foreground">
+                  <tr className="border-b">
+                    <th className="text-left py-2 pl-1">#</th>
+                    <th className="text-left">Vendedor</th>
+                    <th className="text-right">Atend.</th>
+                    <th className="text-right">Vendas</th>
+                    <th className="text-right">Faturamento</th>
+                    <th className="text-right">Conv.</th>
+                    <th className="text-right">Nota IA</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {perf.sellers.map((s, i) => (
+                    <tr key={s.key} className="border-b last:border-0 hover:bg-muted/30">
+                      <td className="py-2 pl-1 text-xs text-muted-foreground">{i + 1}º</td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <SellerAvatar name={s.name} />
+                          <div>
+                            <div className="font-medium">{s.name}</div>
+                            <div className="text-[10px] text-muted-foreground">{s.email || "—"}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="text-right">{s.atendimentos}</td>
+                      <td className="text-right font-medium">{s.vendas}</td>
+                      <td className="text-right">{fmtBRL(s.faturamento)}</td>
+                      <td className="text-right">{fmtPct(s.taxaConversao)}</td>
+                      <td className={"text-right font-semibold " + scoreColor(s.notaMedia)}>
+                        {s.notaMedia != null ? s.notaMedia.toFixed(1) : "—"}
+                      </td>
+                      <td className="text-right">
+                        <button
+                          onClick={() => { setScope("seller"); setSellerKey(s.key); fbMutation.mutate(); }}
+                          className="text-[10px] text-fuchsia-600 hover:underline"
+                          title="Gerar feedback IA para este vendedor"
+                        >
+                          <Sparkles className="h-3 w-3 inline" /> IA
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
+  const max = Math.max(1, ...daily.map((d) => Math.max(d.atendimentos, d.vendas)));
+  return (
+    <div className="flex items-end gap-1 h-32">
+      {daily.map((d) => (
+        <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-0.5" title={`${d.date} · ${d.atendimentos} atend / ${d.vendas} vendas`}>
+          <div className="w-full flex items-end gap-0.5 h-full">
+            <div className="flex-1 bg-indigo-500/60 rounded-sm" style={{ height: `${(d.atendimentos / max) * 100}%` }} />
+            <div className="flex-1 bg-fuchsia-500 rounded-sm" style={{ height: `${(d.vendas / max) * 100}%` }} />
+          </div>
+          <div className="text-[9px] text-muted-foreground">{d.date.slice(5)}</div>
+        </div>
+      ))}
+      <div className="ml-2 flex flex-col gap-1 text-[10px] self-start">
+        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-indigo-500/60 rounded-sm" /> Atend.</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-fuchsia-500 rounded-sm" /> Vendas</span>
+      </div>
+    </div>
+  );
+}
