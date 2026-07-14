@@ -109,6 +109,7 @@ function CoachPage() {
           <TabsTrigger value="conversas"><MessageSquare className="h-4 w-4 mr-1" />Conversas</TabsTrigger>
           <TabsTrigger value="performance"><Award className="h-4 w-4 mr-1" />Performance</TabsTrigger>
           <TabsTrigger value="alertas"><AlertTriangle className="h-4 w-4 mr-1" />Alertas</TabsTrigger>
+          <TabsTrigger value="ligacoes"><Phone className="h-4 w-4 mr-1" />Ligações</TabsTrigger>
           <TabsTrigger value="upload"><Upload className="h-4 w-4 mr-1" />Nova análise</TabsTrigger>
           <TabsTrigger value="config"><Settings className="h-4 w-4 mr-1" />Config</TabsTrigger>
           <TabsTrigger value="integracao"><Zap className="h-4 w-4 mr-1" />Integração Clint</TabsTrigger>
@@ -117,6 +118,7 @@ function CoachPage() {
         <TabsContent value="conversas"><Conversas /></TabsContent>
         <TabsContent value="performance"><PerformanceTab /></TabsContent>
         <TabsContent value="alertas"><Alertas /></TabsContent>
+        <TabsContent value="ligacoes"><LigacoesTab /></TabsContent>
         <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>
         <TabsContent value="config"><ConfigTab /></TabsContent>
         <TabsContent value="integracao"><IntegracaoClint /></TabsContent>
