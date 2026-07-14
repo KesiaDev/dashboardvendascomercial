@@ -206,7 +206,7 @@ export const syncClintMessagesFn = createServerFn({ method: "POST" })
       .update({ message_count: count, last_message_at: lastAt, first_message_at: firstAt })
       .eq("id", conv.id);
 
-    return { synced: rows.length, total: count, rawSample, endpoint: result.url, attempts: result.attempts };
+    return { synced: rows.length, total: count, rawSample, endpoint: msgsPath, attempts: allAttempts };
   });
 
 export type CoachConversation = {
