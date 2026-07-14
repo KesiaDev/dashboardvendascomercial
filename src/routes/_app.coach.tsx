@@ -1079,3 +1079,115 @@ function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
     </div>
   );
 }
+
+// ---------- Ligações (CCPBX) ----------
+function fmtDur(s: number) {
+  const m = Math.floor(s / 60), r = s % 60;
+  return `${m}:${r.toString().padStart(2, "0")}`;
+}
+function LigacoesTab() {
+  const qc = useQueryClient();
+  const [days, setDays] = useState(7);
+  const { data: calls, isLoading } = useQuery({
+    queryKey: ["ccpbx-calls"],
+    queryFn: () => listCcpbxCallsFn({ data: { limit: 200 } }),
+  });
+  const syncMut = useMutation({
+    mutationFn: () => syncCcpbxCallsFn({ data: { days } }),
+    onSuccess: (r: any) => {
+      toast.success(`Sync CCPBX: ${r.upserted} ligações (${r.fetched} recebidas)`);
+      qc.invalidateQueries({ queryKey: ["ccpbx-calls"] });
+    },
+    onError: (e: any) => toast.error(String(e?.message ?? e)),
+  });
+  const analyzeMut = useMutation({
+    mutationFn: (id: string) => analyzeCallFn({ data: { callId: id } }),
+    onSuccess: () => {
+      toast.success("Análise concluída");
+      qc.invalidateQueries({ queryKey: ["ccpbx-calls"] });
+    },
+    onError: (e: any) => toast.error(String(e?.message ?? e)),
+  });
+
+  const list = (calls ?? []) as CallRow[];
+  const totalDur = list.reduce((a, c) => a + (c.duration_sec ?? 0), 0);
+  const analyzed = list.filter(c => c.score != null).length;
+  const avgScore = analyzed > 0 ? list.reduce((a, c) => a + (c.score ?? 0), 0) / analyzed : null;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCard icon={<Phone className="h-4 w-4 text-indigo-600" />} label="Ligações" value={String(list.length)} />
+        <KpiCard icon={<Clock className="h-4 w-4 text-amber-600" />} label="Tempo total" value={fmtDur(totalDur)} />
+        <KpiCard icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} label="Analisadas" value={String(analyzed)} />
+        <KpiCard icon={<Award className="h-4 w-4 text-fuchsia-600" />} label="Nota média" value={avgScore == null ? "—" : avgScore.toFixed(1)} valueClass={scoreColor(avgScore)} />
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <CardTitle className="text-base">Ligações do CCPBX</CardTitle>
+            <div className="ml-auto flex items-center gap-2">
+              <Label className="text-xs">Dias:</Label>
+              <Input type="number" min={1} max={90} className="h-8 w-20" value={days} onChange={(e) => setDays(Math.max(1, Math.min(90, Number(e.target.value) || 7)))} />
+              <Button size="sm" onClick={() => syncMut.mutate()} disabled={syncMut.isPending}>
+                <RefreshCw className={`h-4 w-4 mr-1 ${syncMut.isPending ? "animate-spin" : ""}`} />
+                Sincronizar
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> :
+            list.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma ligação. Clique em Sincronizar para importar do CCPBX.</p> :
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-xs text-muted-foreground border-b">
+                  <tr>
+                    <th className="py-2 pr-2">Quando</th>
+                    <th className="py-2 pr-2">Agente</th>
+                    <th className="py-2 pr-2">Contato</th>
+                    <th className="py-2 pr-2">Direção</th>
+                    <th className="py-2 pr-2">Dur.</th>
+                    <th className="py-2 pr-2">Status</th>
+                    <th className="py-2 pr-2">Nota</th>
+                    <th className="py-2 pr-2 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map((c) => (
+                    <tr key={c.id} className="border-b hover:bg-muted/40">
+                      <td className="py-2 pr-2 whitespace-nowrap">{fmtDate(c.started_at)}</td>
+                      <td className="py-2 pr-2">{c.agent_name ?? c.agent_user ?? "—"}</td>
+                      <td className="py-2 pr-2">
+                        <div>{c.contact_name ?? "—"}</div>
+                        <div className="text-[11px] text-muted-foreground">{c.direction === "outbound" ? c.to_number : c.from_number}</div>
+                      </td>
+                      <td className="py-2 pr-2">
+                        <Badge variant="outline" className="text-[10px]">{c.direction ?? "?"}</Badge>
+                      </td>
+                      <td className="py-2 pr-2">{fmtDur(c.duration_sec)}</td>
+                      <td className="py-2 pr-2 text-xs">{c.status ?? "—"}</td>
+                      <td className={`py-2 pr-2 font-semibold ${scoreColor(c.score)}`}>{c.score == null ? "—" : c.score.toFixed(1)}</td>
+                      <td className="py-2 pr-2 text-right">
+                        <div className="flex justify-end items-center gap-1">
+                          {c.recording_url && (
+                            <a href={c.recording_url} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:underline">áudio</a>
+                          )}
+                          <Button size="sm" variant="ghost" disabled={analyzeMut.isPending} onClick={() => analyzeMut.mutate(c.id)}>
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            {c.analyzed_at ? "Reanalisar" : "Analisar"}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          }
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
