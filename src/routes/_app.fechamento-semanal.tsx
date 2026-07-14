@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getSellerPhoto } from "@/lib/seller-photos";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   Tooltip as RTooltip, Cell,
@@ -36,6 +38,20 @@ const COLORS: Record<string, string> = {
 function sellerColor(name: string) {
   const key = Object.keys(COLORS).find((k) => name.toLowerCase().includes(k.split(" ")[0].toLowerCase()));
   return key ? COLORS[key] : "#64748b";
+}
+
+function SellerAvatar({ name, size = 28, ring }: { name: string; size?: number; ring?: string }) {
+  const photo = getSellerPhoto(name);
+  const color = sellerColor(name);
+  const style: React.CSSProperties = { width: size, height: size, background: color };
+  return (
+    <Avatar className={`shrink-0 ${ring ?? ""}`} style={style}>
+      {photo && <AvatarImage src={photo} alt={name} />}
+      <AvatarFallback className="text-white font-bold bg-transparent" style={{ fontSize: Math.max(10, size * 0.4) }}>
+        {name.charAt(0)}
+      </AvatarFallback>
+    </Avatar>
+  );
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -125,8 +141,7 @@ function Podium({ top }: { top: SellerStat[] }) {
         const st = PODIUM_STYLES[i];
         return (
           <div key={s.name} className={`flex flex-col items-center gap-1.5 flex-1 min-w-0 ${heights[i]}`}>
-            <div className={`${st.size} rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 ${st.ring}`}
-              style={{background:sellerColor(s.name)}}>{s.name.charAt(0)}</div>
+            <SellerAvatar name={s.name} size={i===1?44:i===0?36:32} ring={st.ring} />
             <div className={`w-full rounded-lg px-2 py-2 text-center ${st.card}`}>
               <div className="text-xl leading-none">{medals[i]}</div>
               <div className="text-xs font-semibold mt-1 truncate">{s.name.split(" ")[0]}</div>
@@ -283,7 +298,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
             {sellerRanking.slice(3).map((s,i)=>(
               <div key={s.name} className="flex items-center gap-2 py-1.5 border-t border-border/50 text-sm">
                 <span className="text-muted-foreground w-5 text-right text-xs">{i+4}º</span>
-                <span className="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{background:sellerColor(s.name)}}>{s.name.charAt(0)}</span>
+                <SellerAvatar name={s.name} size={22} />
                 <span className="flex-1 truncate">{s.name.split(" ")[0]}</span>
                 <span className="tabular-nums text-xs font-medium">{fmtEur(s.total)}</span>
               </div>
@@ -378,7 +393,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
               {topByWeeks.length===0?(<p className="text-xs text-muted-foreground">Sem dados ainda.</p>):topByWeeks.map(([name,count],i)=>(
                 <div key={name} className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground w-4">{i+1}º</span>
-                  <span className="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{background:sellerColor(name)}}>{name.charAt(0)}</span>
+                  <SellerAvatar name={name} size={22} />
                   <span className="flex-1 text-sm truncate">{name.split(" ")[0]}</span>
                   <Badge variant="secondary" className="text-xs">{count}x</Badge>
                 </div>
@@ -601,7 +616,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
           <p className="text-xs text-muted-foreground">Líder do mês</p>
           {sellerRanking[0]?(<>
             <div className="flex items-center gap-2 mt-1">
-              <span className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ring-2" style={{background:sellerColor(sellerRanking[0].name),["--tw-ring-color" as any]:sellerColor(sellerRanking[0].name)}}>{sellerRanking[0].name.charAt(0)}</span>
+              <SellerAvatar name={sellerRanking[0].name} size={30} ring="ring-2" />
               <p className="text-lg font-bold truncate" style={{color:sellerColor(sellerRanking[0].name)}}>{sellerRanking[0].name.split(" ")[0]}</p>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">{fmtEur(sellerRanking[0].total)} · {sellerRanking[0].count} vendas</p>
@@ -653,7 +668,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
             {sellerRanking.slice(3).map((s,i)=>(
               <div key={s.name} className="flex items-center gap-2 py-1.5 border-t border-border/50 text-sm">
                 <span className="text-muted-foreground w-5 text-right text-xs">{i+4}º</span>
-                <span className="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{background:sellerColor(s.name)}}>{s.name.charAt(0)}</span>
+                <SellerAvatar name={s.name} size={22} />
                 <span className="flex-1 truncate">{s.name.split(" ")[0]}</span>
                 <span className="tabular-nums text-xs font-medium">{fmtEur(s.total)}</span>
               </div>
