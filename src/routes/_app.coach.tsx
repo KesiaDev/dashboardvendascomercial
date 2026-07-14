@@ -114,7 +114,7 @@ function CoachPage() {
         </TabsList>
         <TabsContent value="visao"><VisaoGeral /></TabsContent>
         <TabsContent value="conversas"><Conversas /></TabsContent>
-        <TabsContent value="performance"><Performance /></TabsContent>
+        <TabsContent value="performance"><PerformanceTab /></TabsContent>
         <TabsContent value="alertas"><Alertas /></TabsContent>
         <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>
         <TabsContent value="config"><ConfigTab /></TabsContent>
