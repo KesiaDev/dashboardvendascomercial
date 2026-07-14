@@ -12,7 +12,7 @@ async function clintFetch(path: string, token: string) {
   const url = path.startsWith("http") ? path : `${CLINT_HOST}${path}`;
   console.log(`[Clint sync] GET ${url}`);
   const r = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    headers: { "api-token": token, Accept: "application/json" },
   });
   console.log(`[Clint sync] ← ${r.status} ${url}`);
   return r;
