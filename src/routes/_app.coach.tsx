@@ -740,6 +740,9 @@ function IntegracaoClint() {
         </CardContent>
       </Card>
 
+      <HotmartWebhookCard />
+
+
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-base">Credenciais Clint</CardTitle></CardHeader>
         <CardContent className="space-y-2">
