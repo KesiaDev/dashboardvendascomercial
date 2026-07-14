@@ -5,8 +5,10 @@ import { toast } from "sonner";
 import {
   Sparkles, Upload, AlertTriangle, Settings, MessageSquare,
   TrendingUp, Clock, Target, Users, RefreshCw, Trash2, CheckCircle2,
-  Zap, Copy, Eye, BarChart2, Phone, Plus, X,
+  Zap, Copy, Eye, BarChart2, Phone, Plus, X, Award,
 } from "lucide-react";
+import { fetchPerformanceFn, generatePerformanceFeedbackFn, type PerfRange, type SellerPerf, type PerfResult } from "@/lib/performance.functions";
+import { getSellerPhoto } from "@/lib/seller-photos";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
