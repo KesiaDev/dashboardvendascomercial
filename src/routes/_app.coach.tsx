@@ -23,6 +23,7 @@ import {
   fetchWeeklyStatsFn, runAutoAnalysisFn, syncClintMessagesFn,
   type CoachConfig, type WeeklyStats,
 } from "@/lib/coach.functions";
+import { getHotmartWebhookTokenFn } from "@/lib/hotmart-webhook.functions";
 
 export const Route = createFileRoute("/_app/coach")({
   component: CoachPage,
@@ -739,6 +740,9 @@ function IntegracaoClint() {
         </CardContent>
       </Card>
 
+      <HotmartWebhookCard />
+
+
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-base">Credenciais Clint</CardTitle></CardHeader>
         <CardContent className="space-y-2">
@@ -816,3 +820,36 @@ function IntegracaoClint() {
     </div>
   );
 }
+
+function HotmartWebhookCard() {
+  const { data } = useQuery({
+    queryKey: ["hotmart-webhook-token"],
+    queryFn: () => getHotmartWebhookTokenFn(),
+  });
+  const isPreview = typeof window !== "undefined" && window.location.hostname.includes("lovableproject.com");
+  const origin = isPreview
+    ? "https://dashboardvendascomercial.lovable.app"
+    : typeof window !== "undefined" ? window.location.origin : "";
+  const token = data?.token ?? "";
+  const url = token ? `${origin}/api/hotmart/webhook?hottok=${token}` : `${origin}/api/hotmart/webhook?hottok=…`;
+  return (
+    <Card>
+      <CardHeader className="pb-2"><CardTitle className="text-base">Hotmart Webhook</CardTitle></CardHeader>
+      <CardContent className="space-y-2">
+        <div className="flex items-center gap-2">
+          <code className="flex-1 bg-muted px-3 py-2 rounded text-xs font-mono break-all">{url}</code>
+          <Button size="sm" variant="outline" disabled={!token}
+            onClick={() => { navigator.clipboard.writeText(url); toast.success("URL copiada!"); }}>
+            <Copy className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Configure em <b>Hotmart → Ferramentas → Webhook</b>. Eventos: <code>PURCHASE_APPROVED</code>,
+          <code>PURCHASE_COMPLETE</code>, <code>PURCHASE_REFUNDED</code>, <code>PURCHASE_CHARGEBACK</code>,
+          <code>PURCHASE_CANCELED</code>, <code>PURCHASE_DISPUTE</code>. Alimenta a tabela <code>sales</code> automaticamente.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
