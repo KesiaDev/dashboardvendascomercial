@@ -393,7 +393,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
               {topByWeeks.length===0?(<p className="text-xs text-muted-foreground">Sem dados ainda.</p>):topByWeeks.map(([name,count],i)=>(
                 <div key={name} className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground w-4">{i+1}º</span>
-                  <span className="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{background:sellerColor(name)}}>{name.charAt(0)}</span>
+                  <SellerAvatar name={name} size={22} />
                   <span className="flex-1 text-sm truncate">{name.split(" ")[0]}</span>
                   <Badge variant="secondary" className="text-xs">{count}x</Badge>
                 </div>
