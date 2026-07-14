@@ -121,8 +121,8 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
 
     // Vendas ganhas
     for (const d of deals ?? []) {
-      const email = d.won_by_user_email ?? d.user_email;
-      const name = d.won_by_user_name ?? d.user_name;
+      const email = d.won_by_email ?? d.user_email;
+      const name = d.won_by_name ?? d.user_name;
       if (!email && !name) continue;
       if (isExcludedSeller(name)) continue;
       const s = ensure(email, name);
