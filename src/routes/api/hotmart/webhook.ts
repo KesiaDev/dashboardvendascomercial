@@ -63,7 +63,13 @@ async function handle(request: Request) {
     const url = new URL(request.url);
     const token = url.searchParams.get("hottok");
     const expected = process.env.HOTMART_WEBHOOK_TOKEN;
-    if (!expected || token !== expected) {
+    if (!expected) {
+      console.warn("[Hotmart webhook] WARN: token validation skipped - env var not set");
+    } else if (token !== expected) {
+      console.error("[Hotmart webhook] unauthorized: token mismatch", {
+        got_len: token?.length ?? 0,
+        expected_len: expected.length,
+      });
       return new Response(JSON.stringify({ ok: false, error: "unauthorized" }), {
         status: 401,
         headers: { "content-type": "application/json" },
