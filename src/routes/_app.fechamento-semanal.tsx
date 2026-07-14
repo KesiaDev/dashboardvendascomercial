@@ -141,8 +141,7 @@ function Podium({ top }: { top: SellerStat[] }) {
         const st = PODIUM_STYLES[i];
         return (
           <div key={s.name} className={`flex flex-col items-center gap-1.5 flex-1 min-w-0 ${heights[i]}`}>
-            <div className={`${st.size} rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 ${st.ring}`}
-              style={{background:sellerColor(s.name)}}>{s.name.charAt(0)}</div>
+            <SellerAvatar name={s.name} size={i===1?44:i===0?36:32} ring={st.ring} />
             <div className={`w-full rounded-lg px-2 py-2 text-center ${st.card}`}>
               <div className="text-xl leading-none">{medals[i]}</div>
               <div className="text-xs font-semibold mt-1 truncate">{s.name.split(" ")[0]}</div>
