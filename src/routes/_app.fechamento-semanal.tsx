@@ -298,7 +298,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
             {sellerRanking.slice(3).map((s,i)=>(
               <div key={s.name} className="flex items-center gap-2 py-1.5 border-t border-border/50 text-sm">
                 <span className="text-muted-foreground w-5 text-right text-xs">{i+4}º</span>
-                <span className="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{background:sellerColor(s.name)}}>{s.name.charAt(0)}</span>
+                <SellerAvatar name={s.name} size={22} />
                 <span className="flex-1 truncate">{s.name.split(" ")[0]}</span>
                 <span className="tabular-nums text-xs font-medium">{fmtEur(s.total)}</span>
               </div>
