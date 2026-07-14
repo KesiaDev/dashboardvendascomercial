@@ -40,6 +40,20 @@ function sellerColor(name: string) {
   return key ? COLORS[key] : "#64748b";
 }
 
+function SellerAvatar({ name, size = 28, ring }: { name: string; size?: number; ring?: string }) {
+  const photo = getSellerPhoto(name);
+  const color = sellerColor(name);
+  const style: React.CSSProperties = { width: size, height: size, background: color };
+  return (
+    <Avatar className={`shrink-0 ${ring ?? ""}`} style={style}>
+      {photo && <AvatarImage src={photo} alt={name} />}
+      <AvatarFallback className="text-white font-bold bg-transparent" style={{ fontSize: Math.max(10, size * 0.4) }}>
+        {name.charAt(0)}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function todayBR(): string {
