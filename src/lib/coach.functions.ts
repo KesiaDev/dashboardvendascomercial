@@ -98,7 +98,13 @@ export const syncClintMessagesFn = createServerFn({ method: "POST" })
       .single();
     if (ce || !conv) throw new Error(ce?.message ?? "Conversa não encontrada");
 
-    // Look up a phone number from any linked message
+    console.log(`[Clint sync] conversa ${conv.id}`, {
+      deal_id: conv.deal_id,
+      contact_email: conv.contact_email,
+      clint_contact_id: (conv as any).clint_contact_id,
+    });
+
+    // fetch phone from any linked message
     const { data: phoneRow } = await db
       .from("coach_messages")
       .select("lead_phone")
@@ -107,28 +113,64 @@ export const syncClintMessagesFn = createServerFn({ method: "POST" })
       .limit(1)
       .maybeSingle();
     const phone = (phoneRow as any)?.lead_phone ?? null;
+    console.log(`[Clint sync] phone from messages =`, phone);
 
-    const result = await tryEndpointsWithContact(
-      token,
-      conv.deal_id,
-      phone,
-      (conv as any).clint_contact_id ?? null,
-    );
-    if (!result.ok) {
+    const allAttempts: string[] = [];
+    const allErrors: any[] = [];
+
+    // Step 1: resolve contactId
+    let contactId: string | null = (conv as any).clint_contact_id ?? null;
+    if (!contactId) {
+      const lookup = await findContactId(token, phone, conv.contact_email);
+      allAttempts.push(...lookup.attempts);
+      allErrors.push(...lookup.errors);
+      contactId = lookup.contactId;
+    }
+    if (!contactId) {
       throw new Error(
-        `Nenhum endpoint Clint retornou dados. Tentativas: ${result.attempts.join(", ")}. ` +
-        `Erros: ${JSON.stringify(result.errors)}`
+        `Contato Clint não encontrado. Tentativas: ${allAttempts.join(", ")}. Erros: ${JSON.stringify(allErrors)}`,
       );
     }
+    console.log(`[Clint sync] usando contactId=${contactId}`);
 
-    const rawMessages = extractMessages(result.data);
-    const rawSample = rawMessages[0] ?? result.data;
+    // Step 2: chats do contato
+    const chatsPath = `/v2/chats/contact/${encodeURIComponent(contactId)}`;
+    allAttempts.push(chatsPath);
+    const chatsRes = await clintFetch(chatsPath, token);
+    if (!chatsRes.ok) {
+      const body = await chatsRes.text().catch(() => "");
+      throw new Error(`GET ${chatsPath} → ${chatsRes.status}: ${body.slice(0, 200)}`);
+    }
+    const chatsJson: any = await chatsRes.json().catch(() => null);
+    const chats = chatsJson?.data ?? chatsJson?.chats ?? (Array.isArray(chatsJson) ? chatsJson : []);
+    console.log(`[Clint sync] chats encontrados:`, chats?.length ?? 0);
+    if (!chats?.length) {
+      return { synced: 0, rawSample: chatsJson, endpoint: chatsPath, attempts: allAttempts };
+    }
+    const chatId = chats[0]?.id;
+    if (!chatId) {
+      return { synced: 0, rawSample: chats[0], endpoint: chatsPath, attempts: allAttempts };
+    }
+    console.log(`[Clint sync] chatId mais recente=${chatId}`);
+
+    // Step 3: mensagens do chat
+    const msgsPath = `/v2/messages/chat/${encodeURIComponent(chatId)}`;
+    allAttempts.push(msgsPath);
+    const msgsRes = await clintFetch(msgsPath, token);
+    if (!msgsRes.ok) {
+      const body = await msgsRes.text().catch(() => "");
+      throw new Error(`GET ${msgsPath} → ${msgsRes.status}: ${body.slice(0, 200)}`);
+    }
+    const msgsJson: any = await msgsRes.json().catch(() => null);
+    const rawMessages = extractMessages(msgsJson);
+    const rawSample = rawMessages[0] ?? msgsJson;
+    console.log(`[Clint sync] mensagens no chat:`, rawMessages.length);
 
     if (!rawMessages.length) {
-      return { synced: 0, rawSample, endpoint: result.url, attempts: result.attempts };
+      return { synced: 0, rawSample, endpoint: msgsPath, attempts: allAttempts };
     }
 
-    // dedupe against existing clint_message_id
+    // dedupe
     const { data: existing } = await db
       .from("coach_messages")
       .select("clint_message_id")
@@ -144,6 +186,11 @@ export const syncClintMessagesFn = createServerFn({ method: "POST" })
     if (rows.length) {
       const { error: ie } = await db.from("coach_messages").insert(rows);
       if (ie) throw new Error(`Insert falhou: ${ie.message}. Sample: ${JSON.stringify(rawSample)}`);
+    }
+
+    // persist contactId for future syncs
+    if (!(conv as any).clint_contact_id) {
+      await db.from("coach_conversations").update({ clint_contact_id: contactId }).eq("id", conv.id);
     }
 
     // Update aggregate on conversation
