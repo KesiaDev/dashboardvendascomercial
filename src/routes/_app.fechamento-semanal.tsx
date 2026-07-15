@@ -273,13 +273,13 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
           <CardContent>
             <ResponsiveContainer width="100%" height={230}>
               <BarChart data={dailyData} margin={{top:4,right:4,bottom:0,left:0}}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false}/>
-                <XAxis dataKey="label" tick={{fontSize:11,fill:"hsl(var(--muted-foreground))"}} axisLine={false} tickLine={false}/>
-                <YAxis tickFormatter={v=>`€${(v/1000).toFixed(0)}k`} tick={{fontSize:11,fill:"hsl(var(--muted-foreground))"}} axisLine={false} tickLine={false} width={44}/>
-                <RTooltip content={<DayTooltip/>} cursor={{fill:"hsl(var(--muted))",opacity:0.4}}/>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
+                <XAxis dataKey="label" tick={{fontSize:11,fill:"var(--muted-foreground)"}} axisLine={false} tickLine={false}/>
+                <YAxis tickFormatter={v=>`€${(v/1000).toFixed(0)}k`} tick={{fontSize:11,fill:"var(--muted-foreground)"}} axisLine={false} tickLine={false} width={44}/>
+                <RTooltip content={<DayTooltip/>} cursor={{fill:"var(--muted)",opacity:0.4}}/>
                 <Bar dataKey="total" radius={[6,6,0,0]} maxBarSize={60}>
                   {dailyData.map((d,i)=>(
-                    <Cell key={i} fill={d.isFuture?"hsl(var(--muted))":d.date===today?"#6366f1":d.total===(bestDay?.total??-1)&&d.total>0?"#10b981":"#6366f160"}/>
+                    <Cell key={i} fill={d.isFuture?"var(--muted)":d.date===today?"#6366f1":d.total===(bestDay?.total??-1)&&d.total>0?"#10b981":"#6366f160"}/>
                   ))}
                 </Bar>
               </BarChart>
@@ -641,10 +641,10 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
             {weekData.length===0?(<p className="text-sm text-muted-foreground py-8 text-center">Nenhuma venda neste mês.</p>):(
               <ResponsiveContainer width="100%" height={230}>
                 <BarChart data={weekData} margin={{top:4,right:4,bottom:0,left:0}}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false}/>
-                  <XAxis dataKey="label" tick={{fontSize:12,fill:"hsl(var(--muted-foreground))"}} axisLine={false} tickLine={false}/>
-                  <YAxis tickFormatter={v=>`€${(v/1000).toFixed(0)}k`} tick={{fontSize:11,fill:"hsl(var(--muted-foreground))"}} axisLine={false} tickLine={false} width={44}/>
-                  <RTooltip content={<WeekTooltip/>} cursor={{fill:"hsl(var(--muted))",opacity:0.4}}/>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
+                  <XAxis dataKey="label" tick={{fontSize:12,fill:"var(--muted-foreground)"}} axisLine={false} tickLine={false}/>
+                  <YAxis tickFormatter={v=>`€${(v/1000).toFixed(0)}k`} tick={{fontSize:11,fill:"var(--muted-foreground)"}} axisLine={false} tickLine={false} width={44}/>
+                  <RTooltip content={<WeekTooltip/>} cursor={{fill:"var(--muted)",opacity:0.4}}/>
                   <Bar dataKey="total" radius={[6,6,0,0]} maxBarSize={80}>
                     {weekData.map((w,i)=>{
                       if (w.idx===bestWeek?.idx) return <Cell key={i} fill="#10b981"/>;
