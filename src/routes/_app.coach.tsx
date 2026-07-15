@@ -352,8 +352,21 @@ function Conversas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [convs.length]);
 
+  const sellerOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of convs as any[]) {
+      const key = (c.seller_email ?? c.seller_name ?? "").toString();
+      if (!key) continue;
+      if (!map.has(key)) map.set(key, displaySellerName(c.seller_name ?? c.seller_email ?? key));
+    }
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [convs]);
+
   const filtered = useMemo(() => {
     let list = convs;
+    if (sellerFilter) {
+      list = list.filter((c: any) => (c.seller_email ?? c.seller_name ?? "") === sellerFilter);
+    }
     if (q) {
       const s = q.toLowerCase();
       list = list.filter((c: any) =>
@@ -366,14 +379,28 @@ function Conversas() {
       list = list.filter((c: any) => (c.analysis?.score_geral ?? 0) >= m);
     }
     return list;
-  }, [convs, q, minScore]);
+  }, [convs, q, minScore, sellerFilter]);
 
   return (
     <div className="space-y-3 mt-4">
       <TeamInsightsPanel />
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
+        <select
+          value={sellerFilter}
+          onChange={(e) => setSellerFilter(e.target.value)}
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+        >
+          <option value="">Todos os vendedores</option>
+          {sellerOptions.map(([key, label]) => (
+            <option key={key} value={key}>{label}</option>
+          ))}
+        </select>
         <Input placeholder="Buscar por vendedor, cliente, deal…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
         <Input placeholder="Nota mínima" type="number" min={0} max={10} value={minScore} onChange={(e) => setMinScore(e.target.value)} className="max-w-[120px]" />
+        {(sellerFilter || q || minScore) && (
+          <Button size="sm" variant="ghost" onClick={() => { setSellerFilter(""); setQ(""); setMinScore(""); }}>Limpar</Button>
+        )}
+        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} de {convs.length}</span>
       </div>
 
 
