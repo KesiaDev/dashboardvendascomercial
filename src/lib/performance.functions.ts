@@ -17,8 +17,8 @@ export type SellerPerf = {
 
 export type PerfResult = {
   range: PerfRange;
-  periodStart: string; // ISO date (YYYY-MM-DD)
-  periodEnd: string;   // ISO date inclusivo
+  periodStart: string;
+  periodEnd: string;
   periodLabel: string;
   sellers: SellerPerf[];
   team: {
@@ -29,8 +29,11 @@ export type PerfResult = {
     notaMedia: number | null;
     analisesCount: number;
     vendedoresAtivos: number;
+    leadsNovos: number;
+    leadPorVenda: number | null;
+    conversaoLead: number;
   };
-  daily: { date: string; atendimentos: number; vendas: number; faturamento: number }[];
+  daily: { date: string; atendimentos: number; vendas: number; faturamento: number; leads: number }[];
 };
 
 // ─── Datas (referência: SEASON_START da planilha de fechamento) ─────────────
