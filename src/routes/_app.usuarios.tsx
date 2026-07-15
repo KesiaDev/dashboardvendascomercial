@@ -23,7 +23,7 @@ function UsuariosPage() {
     queryFn: () => listAppUsersFn(),
   });
 
-  const [form, setForm] = useState({ full_name: "", email: "", password: "", role: "vendedor" as "vendedor" | "gestor" });
+  const [form, setForm] = useState({ full_name: "", email: "", password: "", role: "vendedor" as "vendedor" | "gestor" | "admin" });
 
   const createM = useMutation({
     mutationFn: () => createAppUserFn({ data: form }),
