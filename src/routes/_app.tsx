@@ -1,6 +1,6 @@
 import { Link, Outlet, createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BarChart3, ClipboardCheck, CalendarDays, Trophy, TrendingUp, DollarSign, Menu, TrendingUpIcon, GitMerge, Sparkles, Share2, LogOut } from "lucide-react";
+import { BarChart3, ClipboardCheck, CalendarDays, Trophy, TrendingUp, DollarSign, Menu, TrendingUpIcon, GitMerge, Sparkles, Share2, LogOut, Users } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -24,6 +24,7 @@ const ALL_NAV_ITEMS = [
   { to: "/funis",               label: "Funis",              icon: GitMerge,         adminOnly: true },
   { to: "/coach",               label: "Coach IA",           icon: Sparkles,         adminOnly: true },
   { to: "/indicacoes",          label: "Indicações",         icon: Share2,           adminOnly: true },
+  { to: "/usuarios",            label: "Usuários",           icon: Users,            adminOnly: true },
 ] as const;
 
 function AppLayout() {
