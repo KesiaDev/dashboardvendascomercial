@@ -24,7 +24,7 @@ function safeNext(value: string | null): string | null {
 function getPendingDestination(user: any) {
   const stored = typeof window !== "undefined" ? safeNext(window.sessionStorage.getItem(GOOGLE_NEXT_KEY)) : null;
   if (typeof window !== "undefined") window.sessionStorage.removeItem(GOOGLE_NEXT_KEY);
-  if (stored) return stored;
+  if (stored && (isAdminUser(user) || stored === "/fechamento" || stored === "/fechamento-semanal")) return stored;
   return isAdminUser(user) ? "/" : "/fechamento";
 }
 
@@ -68,7 +68,7 @@ function AuthPage() {
     setGoogleLoading(true);
     try {
       const next = safeNext(new URLSearchParams(window.location.search).get("next"));
-      window.sessionStorage.setItem(GOOGLE_NEXT_KEY, next ?? "/");
+      if (next) window.sessionStorage.setItem(GOOGLE_NEXT_KEY, next);
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
       });
