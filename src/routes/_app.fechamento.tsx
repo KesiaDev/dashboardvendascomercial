@@ -149,7 +149,7 @@ function LoginCard() {
   );
 }
 
-type SaleRow = Awaited<ReturnType<typeof listManualSales>>[number];
+type SaleRow = ManualSale;
 
 const ADMIN_EMAILS = ["kesia@llmidia.com", "kesiawnandi@gmail.com", "kesia@llmidiaco.com"];
 function isAdminEmail(e: string) { return ADMIN_EMAILS.includes((e ?? "").trim().toLowerCase()); }
