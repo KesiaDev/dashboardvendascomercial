@@ -154,7 +154,10 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     type Acc = SellerPerf & { _scoreSum: number; _scoreN: number };
     const sellerMap = new Map<string, Acc>();
     const ensure = (email: string | null, name: string | null): Acc => {
-      const cleaned = cleanSellerName(name ?? email ?? "—");
+      const canonical = normalizeSeller(email) !== (email ?? "")
+        ? normalizeSeller(email)
+        : normalizeSeller(name);
+      const cleaned = cleanSellerName(canonical ?? name ?? email ?? "—");
       const key = cleaned.toLowerCase();
       let cur = sellerMap.get(key);
       if (!cur) {
