@@ -305,6 +305,7 @@ function Conversas() {
   const { data: convs = [], isLoading } = useQuery({ queryKey: ["coach-convs"], queryFn: () => listCoachConversationsFn() });
   const [q, setQ] = useState("");
   const [minScore, setMinScore] = useState("");
+  const [sellerFilter, setSellerFilter] = useState("");
 
   const analyze = useMutation({
     mutationFn: (id: string) => analyzeConversationFn({ data: { conversationId: id, force: true } }),
@@ -351,8 +352,21 @@ function Conversas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [convs.length]);
 
+  const sellerOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of convs as any[]) {
+      const key = (c.seller_email ?? c.seller_name ?? "").toString();
+      if (!key) continue;
+      if (!map.has(key)) map.set(key, displaySellerName(c.seller_name ?? c.seller_email ?? key));
+    }
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [convs]);
+
   const filtered = useMemo(() => {
     let list = convs;
+    if (sellerFilter) {
+      list = list.filter((c: any) => (c.seller_email ?? c.seller_name ?? "") === sellerFilter);
+    }
     if (q) {
       const s = q.toLowerCase();
       list = list.filter((c: any) =>
@@ -365,14 +379,28 @@ function Conversas() {
       list = list.filter((c: any) => (c.analysis?.score_geral ?? 0) >= m);
     }
     return list;
-  }, [convs, q, minScore]);
+  }, [convs, q, minScore, sellerFilter]);
 
   return (
     <div className="space-y-3 mt-4">
       <TeamInsightsPanel />
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
+        <select
+          value={sellerFilter}
+          onChange={(e) => setSellerFilter(e.target.value)}
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+        >
+          <option value="">Todos os vendedores</option>
+          {sellerOptions.map(([key, label]) => (
+            <option key={key} value={key}>{label}</option>
+          ))}
+        </select>
         <Input placeholder="Buscar por vendedor, cliente, deal…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
         <Input placeholder="Nota mínima" type="number" min={0} max={10} value={minScore} onChange={(e) => setMinScore(e.target.value)} className="max-w-[120px]" />
+        {(sellerFilter || q || minScore) && (
+          <Button size="sm" variant="ghost" onClick={() => { setSellerFilter(""); setQ(""); setMinScore(""); }}>Limpar</Button>
+        )}
+        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} de {convs.length}</span>
       </div>
 
 
@@ -1345,6 +1373,8 @@ function fmtDur(s: number) {
 function LigacoesTab() {
   const qc = useQueryClient();
   const [days, setDays] = useState(7);
+  const [sellerFilter, setSellerFilter] = useState("");
+  const [q, setQ] = useState("");
   const { data: calls, isLoading } = useQuery({
     queryKey: ["ccpbx-calls"],
     queryFn: () => listCcpbxCallsFn({ data: { limit: 200 } }),
@@ -1366,7 +1396,33 @@ function LigacoesTab() {
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
 
-  const list = (calls ?? []) as CallRow[];
+  const allCalls = (calls ?? []) as CallRow[];
+  const sellerOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of allCalls) {
+      const key = (c.agent_email ?? c.agent_name ?? c.agent_user ?? "").toString();
+      if (!key) continue;
+      if (!map.has(key)) map.set(key, displaySellerName(c.agent_name ?? c.agent_email ?? key));
+    }
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [allCalls]);
+
+  const list = useMemo(() => {
+    let l = allCalls;
+    if (sellerFilter) {
+      l = l.filter((c) => (c.agent_email ?? c.agent_name ?? c.agent_user ?? "") === sellerFilter);
+    }
+    if (q) {
+      const s = q.toLowerCase();
+      l = l.filter((c) =>
+        (c.agent_name ?? "").toLowerCase().includes(s) ||
+        (c.contact_name ?? "").toLowerCase().includes(s) ||
+        (c.from_number ?? "").toLowerCase().includes(s) ||
+        (c.to_number ?? "").toLowerCase().includes(s));
+    }
+    return l;
+  }, [allCalls, sellerFilter, q]);
+
   const totalDur = list.reduce((a, c) => a + (c.duration_sec ?? 0), 0);
   const analyzed = list.filter(c => c.score != null).length;
   const avgScore = analyzed > 0 ? list.reduce((a, c) => a + (c.score ?? 0), 0) / analyzed : null;
@@ -1393,10 +1449,27 @@ function LigacoesTab() {
               </Button>
             </div>
           </div>
+          <div className="flex items-center gap-2 flex-wrap mt-3">
+            <select
+              value={sellerFilter}
+              onChange={(e) => setSellerFilter(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="">Todos os vendedores</option>
+              {sellerOptions.map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            <Input placeholder="Buscar por agente, contato, número…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs h-9" />
+            {(sellerFilter || q) && (
+              <Button size="sm" variant="ghost" onClick={() => { setSellerFilter(""); setQ(""); }}>Limpar</Button>
+            )}
+            <span className="text-xs text-muted-foreground ml-auto">{list.length} de {allCalls.length}</span>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> :
-            list.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma ligação. Clique em Sincronizar para importar do CCPBX.</p> :
+            list.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma ligação encontrada com os filtros atuais.</p> :
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-xs text-muted-foreground border-b">
