@@ -1063,22 +1063,69 @@ function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
   const max = Math.max(1, ...daily.map((d) => Math.max(d.atendimentos, d.vendas)));
   console.log("[Performance chart]", { count: daily.length, hasData: daily.some(d => d.atendimentos || d.vendas), daily });
   if (!daily.length) {
-    return <div className="h-32 flex items-center justify-center text-xs text-muted-foreground">Sem dados no período.</div>;
+    return <div className="h-40 flex items-center justify-center text-xs text-muted-foreground">Sem dados no período.</div>;
   }
+  const chartWidth = Math.max(420, daily.length * 76);
+  const chartHeight = 168;
+  const top = 22;
+  const bottom = 24;
+  const plotHeight = chartHeight - top - bottom;
+  const groupWidth = chartWidth / daily.length;
+  const barWidth = Math.max(10, Math.min(18, groupWidth * 0.22));
+  const scaleY = (value: number) => (value / max) * plotHeight;
   return (
-    <div className="flex items-end gap-1 h-32">
-      {daily.map((d) => (
-        <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-0.5" title={`${d.date} · ${d.atendimentos} atend / ${d.vendas} vendas`}>
-          <div className="w-full flex items-end gap-0.5 h-full">
-            <div className="flex-1 bg-indigo-500/60 rounded-sm" style={{ height: `${(d.atendimentos / max) * 100}%` }} />
-            <div className="flex-1 bg-fuchsia-500 rounded-sm" style={{ height: `${(d.vendas / max) * 100}%` }} />
-          </div>
-          <div className="text-[9px] text-muted-foreground">{d.date.slice(5)}</div>
-        </div>
-      ))}
-      <div className="ml-2 flex flex-col gap-1 text-[10px] self-start">
-        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-indigo-500/60 rounded-sm" /> Atend.</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-fuchsia-500 rounded-sm" /> Vendas</span>
+    <div className="grid grid-cols-[minmax(0,1fr)_74px] gap-3">
+      <div className="overflow-x-auto">
+        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-44 min-w-full" role="img" aria-label="Atendimentos e vendas por dia">
+          <line x1="0" x2={chartWidth} y1={chartHeight - bottom} y2={chartHeight - bottom} className="stroke-border" strokeWidth="1" />
+          {daily.map((d, i) => {
+            const cx = groupWidth * i + groupWidth / 2;
+            const atendH = scaleY(d.atendimentos);
+            const vendasH = scaleY(d.vendas);
+            const atendVisibleH = d.atendimentos > 0 ? Math.max(8, atendH) : 0;
+            const vendasVisibleH = d.vendas > 0 ? Math.max(8, vendasH) : 0;
+            const baseY = chartHeight - bottom;
+            return (
+              <g key={d.date}>
+                <title>{`${d.date} · ${d.atendimentos} atend / ${d.vendas} vendas`}</title>
+                <rect
+                  x={cx - barWidth - 2}
+                  y={baseY - atendVisibleH}
+                  width={barWidth}
+                  height={atendVisibleH}
+                  rx="2"
+                  className="fill-indigo-500/70"
+                />
+                <rect
+                  x={cx + 2}
+                  y={baseY - vendasVisibleH}
+                  width={barWidth}
+                  height={vendasVisibleH}
+                  rx="2"
+                  className="fill-fuchsia-500"
+                />
+                {d.atendimentos > 0 && (
+                  <text x={cx - barWidth / 2 - 2} y={baseY - atendVisibleH - 5} textAnchor="middle" className="fill-muted-foreground text-[10px] font-medium">
+                    {d.atendimentos}
+                  </text>
+                )}
+                {d.vendas > 0 && (
+                  <text x={cx + barWidth / 2 + 2} y={baseY - vendasVisibleH - 5} textAnchor="middle" className="fill-fuchsia-600 text-[10px] font-semibold">
+                    {d.vendas}
+                  </text>
+                )}
+                <text x={cx} y={chartHeight - 6} textAnchor="middle" className="fill-muted-foreground text-[10px]">
+                  {d.date.slice(5)}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+      <div className="flex flex-col gap-1 text-[10px]">
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-indigo-500/70" /> Atend.</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-fuchsia-500" /> Vendas</span>
+        <span className="mt-2 text-muted-foreground">Máx: {max}</span>
       </div>
     </div>
   );
