@@ -6,7 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { isAdminEmail, ALLOWED_NON_ADMIN_ROUTES } from "@/lib/auth";
+import { isAdminUser, ALLOWED_NON_ADMIN_ROUTES } from "@/lib/auth";
 import logoIcon from "@/assets/logo-icon.png";
 
 export const Route = createFileRoute("/_app")({
