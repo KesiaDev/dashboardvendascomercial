@@ -21,13 +21,20 @@ function AuthPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
+    const go = (em: string | null | undefined) => {
+      navigate({ to: isAdminEmail(em) ? "/" : "/fechamento", replace: true });
+    };
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        const em = data.session.user.email;
-        navigate({ to: isAdminEmail(em) ? "/" : "/fechamento", replace: true });
+      if (data.session) go(data.session.user.email);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
+        go(session.user.email);
       }
     });
+    return () => sub.subscription.unsubscribe();
   }, [navigate]);
+
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
