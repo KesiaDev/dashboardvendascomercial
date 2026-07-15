@@ -13,17 +13,31 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+const GOOGLE_NEXT_KEY = "dashcomercial_google_next";
+
+function safeNext(value: string | null): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
+  if (value.startsWith("/auth")) return null;
+  return value;
+}
+
+function getPendingDestination(user: any) {
+  const stored = typeof window !== "undefined" ? safeNext(window.sessionStorage.getItem(GOOGLE_NEXT_KEY)) : null;
+  if (typeof window !== "undefined") window.sessionStorage.removeItem(GOOGLE_NEXT_KEY);
+  if (stored) return stored;
+  return isAdminUser(user) ? "/" : "/fechamento";
+}
+
 function AuthPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const callbackUrl = () => `${window.location.origin}/auth/callback`;
 
   useEffect(() => {
     const go = (u: any) => {
-      navigate({ to: isAdminUser(u) ? "/" : "/fechamento", replace: true });
+      navigate({ to: getPendingDestination(u), replace: true });
     };
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) go(data.session.user);
@@ -53,18 +67,21 @@ function AuthPage() {
   async function onGoogle() {
     setGoogleLoading(true);
     try {
+      const next = safeNext(new URLSearchParams(window.location.search).get("next"));
+      window.sessionStorage.setItem(GOOGLE_NEXT_KEY, next ?? "/");
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: callbackUrl(),
+        redirect_uri: window.location.origin,
       });
       if (result.error) {
-        toast.error(result.error.message || "Falha ao entrar com Google");
+        const message = result.error.message || "Falha ao entrar com Google";
+        toast.error(message === "Sign in was cancelled" ? "Login cancelado ou interrompido. Toque em Continuar com Google novamente." : message);
         return;
       }
       if (result.redirected) return;
 
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        navigate({ to: isAdminUser(data.session.user) ? "/" : "/fechamento", replace: true });
+        navigate({ to: getPendingDestination(data.session.user), replace: true });
       }
     } finally {
       setGoogleLoading(false);
