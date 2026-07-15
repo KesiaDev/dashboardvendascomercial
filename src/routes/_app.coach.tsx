@@ -443,7 +443,11 @@ function Alertas() {
   const setState = useMutation({
     mutationFn: ({ id, state }: { id: string; state: "aberto" | "visto" | "resolvido" }) =>
       resolveCoachAlertFn({ data: { id, state } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["coach-alerts"] }),
+    onSuccess: (_r, v) => {
+      toast.success(v.state === "resolvido" ? "Alerta resolvido" : v.state === "visto" ? "Marcado como visto" : "Alerta reaberto");
+      qc.invalidateQueries({ queryKey: ["coach-alerts"] });
+    },
+    onError: (e: any) => toast.error(`Falha ao atualizar alerta: ${e?.message ?? e}`),
   });
 
   const typeLabel: Record<string, string> = {
