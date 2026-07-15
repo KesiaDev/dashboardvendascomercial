@@ -957,12 +957,27 @@ function PerformanceTab() {
 
       {/* Team KPIs */}
       {perf && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <KpiCard icon={<MessageSquare className="h-3 w-3" />} label={`Atendimentos (${rangeLabel})`} value={String(perf.team.atendimentos)} />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads novos (${rangeLabel})`} value={String(perf.team.leadsNovos)} />
+          <KpiCard icon={<MessageSquare className="h-3 w-3" />} label="Atendimentos" value={String(perf.team.atendimentos)} />
           <KpiCard icon={<CheckCircle2 className="h-3 w-3" />} label="Vendas" value={String(perf.team.vendas)} />
           <KpiCard icon={<TrendingUp className="h-3 w-3" />} label="Faturamento" value={fmtEUR(perf.team.faturamento)} />
-          <KpiCard icon={<Target className="h-3 w-3" />} label="Taxa conversão" value={fmtPct(perf.team.taxaConversao)} />
+          <KpiCard
+            icon={<Target className="h-3 w-3" />}
+            label="Conv. lead→venda"
+            value={fmtPct(perf.team.conversaoLead)}
+            valueClass="text-emerald-600"
+          />
           <KpiCard icon={<Sparkles className="h-3 w-3" />} label="Nota IA média" value={perf.team.notaMedia != null ? perf.team.notaMedia.toFixed(1) : "—"} valueClass={scoreColor(perf.team.notaMedia)} />
+        </div>
+      )}
+      {perf && (
+        <div className="text-[11px] text-muted-foreground -mt-2 px-1">
+          Taxa conv. atendimento→venda: <span className="font-medium text-foreground">{fmtPct(perf.team.taxaConversao)}</span>
+          {perf.team.leadPorVenda != null && (
+            <> · Leads por venda: <span className="font-medium text-foreground">{perf.team.leadPorVenda.toFixed(1)}</span></>
+          )}
+          <> · Fonte de leads: <span className="font-medium">Pipeline Comercial V3</span></>
         </div>
       )}
 
