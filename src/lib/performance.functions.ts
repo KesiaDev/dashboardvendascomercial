@@ -79,9 +79,34 @@ function rangeBounds(range: PerfRange): { startDate: string; endDate: string; la
   return { startDate, endDate, label: `${MONTHS_PT[m-1]} ${y}` };
 }
 
+// Mapeia emails corporativos e variantes para o nome canônico — evita
+// duplicar linhas do mesmo vendedor no ranking (ex.: "Gisele Gagliano" vs
+// "giselegagliano@..." vs "Gisele Pimentel").
+const SELLER_CANONICAL: Record<string, string> = {
+  "joaopessoa@lucianolarrossa.com":      "João Pessoa",
+  "giselegagliano@lucianolarrossa.com":  "Gisele Pimentel",
+  "fabionadal@lucianolarrossa.com":      "Fabio Nadal",
+  "ritabandeira@lucianolarrossa.com":    "Rita Bandeira",
+  "luana.guimaraes@lucianolarrossa.com": "Luana Guimarães",
+};
+
+function normalizeSeller(raw: string | null | undefined): string {
+  if (!raw) return "—";
+  const lower = raw.trim().toLowerCase();
+  for (const [email, name] of Object.entries(SELLER_CANONICAL)) {
+    if (lower === email || lower.includes(email.split("@")[0])) return name;
+  }
+  return raw;
+}
+
 function normKey(email?: string | null, name?: string | null): string {
+  // Passa email E nome pelo normalizeSeller antes de virar chave — sem isso,
+  // "joaopessoa@..." e "João Pessoa" viram vendedores diferentes.
+  const fromEmail = email ? normalizeSeller(email) : null;
+  if (fromEmail && fromEmail !== email) return fromEmail.toLowerCase();
+  const fromName = name ? normalizeSeller(name) : null;
+  if (fromName) return cleanSellerName(fromName).toLowerCase();
   if (email && email.trim()) return email.trim().toLowerCase();
-  if (name && name.trim()) return cleanSellerName(name).toLowerCase();
   return "—";
 }
 
