@@ -960,7 +960,7 @@ function PerformanceTab() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <KpiCard icon={<MessageSquare className="h-3 w-3" />} label={`Atendimentos (${rangeLabel})`} value={String(perf.team.atendimentos)} />
           <KpiCard icon={<CheckCircle2 className="h-3 w-3" />} label="Vendas" value={String(perf.team.vendas)} />
-          <KpiCard icon={<TrendingUp className="h-3 w-3" />} label="Faturamento" value={fmtBRL(perf.team.faturamento)} />
+          <KpiCard icon={<TrendingUp className="h-3 w-3" />} label="Faturamento" value={fmtEUR(perf.team.faturamento)} />
           <KpiCard icon={<Target className="h-3 w-3" />} label="Taxa conversão" value={fmtPct(perf.team.taxaConversao)} />
           <KpiCard icon={<Sparkles className="h-3 w-3" />} label="Nota IA média" value={perf.team.notaMedia != null ? perf.team.notaMedia.toFixed(1) : "—"} valueClass={scoreColor(perf.team.notaMedia)} />
         </div>
@@ -1033,7 +1033,7 @@ function PerformanceTab() {
                       </td>
                       <td className="text-right">{s.atendimentos}</td>
                       <td className="text-right font-medium">{s.vendas}</td>
-                      <td className="text-right">{fmtBRL(s.faturamento)}</td>
+                      <td className="text-right">{fmtEUR(s.faturamento)}</td>
                       <td className="text-right">{fmtPct(s.taxaConversao)}</td>
                       <td className={"text-right font-semibold " + scoreColor(s.notaMedia)}>
                         {s.notaMedia != null ? s.notaMedia.toFixed(1) : "—"}
