@@ -82,32 +82,30 @@ function rangeBounds(range: PerfRange): { startDate: string; endDate: string; la
 // Mapeia emails corporativos e variantes para o nome canônico — evita
 // duplicar linhas do mesmo vendedor no ranking (ex.: "Gisele Gagliano" vs
 // "giselegagliano@..." vs "Gisele Pimentel").
-const SELLER_CANONICAL: Record<string, string> = {
-  "joaopessoa@lucianolarrossa.com":      "João Pessoa",
-  "giselegagliano@lucianolarrossa.com":  "Gisele Pimentel",
-  "fabionadal@lucianolarrossa.com":      "Fabio Nadal",
-  "ritabandeira@lucianolarrossa.com":    "Rita Bandeira",
-  "luana.guimaraes@lucianolarrossa.com": "Luana Guimarães",
-};
+// Aliases → nome canônico. Cobre variantes de e-mail (com/sem ponto), locais
+// (joaopessoa, gisele, gagliano, pimentel...) e o próprio nome escrito.
+const SELLER_ALIASES: { match: string[]; name: string }[] = [
+  { name: "João Pessoa",     match: ["joaopessoa", "joao pessoa", "joão pessoa"] },
+  { name: "Gisele Pimentel", match: ["giselegagliano", "gisele gagliano", "gisele pimentel", "gisele"] },
+  { name: "Fabio Nadal",     match: ["fabionadal", "fabio nadal", "nadal"] },
+  { name: "Rita Bandeira",   match: ["ritabandeira", "rita bandeira", "rita"] },
+  { name: "Luana Guimarães", match: ["luanaguimaraes", "luana.guimaraes", "luana guimaraes", "luana guimarães", "luana"] },
+];
 
-function normalizeSeller(raw: string | null | undefined): string {
-  if (!raw) return "—";
+function canonicalFrom(raw: string | null | undefined): string | null {
+  if (!raw) return null;
   const lower = raw.trim().toLowerCase();
-  for (const [email, name] of Object.entries(SELLER_CANONICAL)) {
-    if (lower === email || lower.includes(email.split("@")[0])) return name;
+  if (!lower) return null;
+  for (const { match, name } of SELLER_ALIASES) {
+    for (const m of match) {
+      if (lower === m || lower.includes(m)) return name;
+    }
   }
-  return raw;
+  return null;
 }
 
-function normKey(email?: string | null, name?: string | null): string {
-  // Passa email E nome pelo normalizeSeller antes de virar chave — sem isso,
-  // "joaopessoa@..." e "João Pessoa" viram vendedores diferentes.
-  const fromEmail = email ? normalizeSeller(email) : null;
-  if (fromEmail && fromEmail !== email) return fromEmail.toLowerCase();
-  const fromName = name ? normalizeSeller(name) : null;
-  if (fromName) return cleanSellerName(fromName).toLowerCase();
-  if (email && email.trim()) return email.trim().toLowerCase();
-  return "—";
+function normalizeSeller(raw: string | null | undefined): string {
+  return canonicalFrom(raw) ?? (raw?.trim() || "—");
 }
 
 export const fetchPerformanceFn = createServerFn({ method: "POST" })
