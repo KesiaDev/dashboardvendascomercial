@@ -23,6 +23,7 @@ import {
   deleteCoachConversationFn, getCoachConfigFn, saveCoachConfigFn,
   fetchClintWebhookStatsFn, fetchClintIntegrationLogsFn, runClintMigrationsFn,
   fetchWeeklyStatsFn, runAutoAnalysisFn, syncClintMessagesFn,
+  generateTeamInsightsFn, type TeamInsights,
   type CoachConfig, type WeeklyStats,
 } from "@/lib/coach.functions";
 import { getHotmartWebhookTokenFn } from "@/lib/hotmart-webhook.functions";
@@ -368,10 +369,12 @@ function Conversas() {
 
   return (
     <div className="space-y-3 mt-4">
+      <TeamInsightsPanel />
       <div className="flex flex-wrap gap-2">
         <Input placeholder="Buscar por vendedor, cliente, deal…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
         <Input placeholder="Nota mínima" type="number" min={0} max={10} value={minScore} onChange={(e) => setMinScore(e.target.value)} className="max-w-[120px]" />
       </div>
+
 
       {isLoading && <p className="text-sm text-muted-foreground">A carregar…</p>}
       {!isLoading && filtered.length === 0 && (
@@ -429,6 +432,180 @@ function Conversas() {
         ))}
       </div>
     </div>
+  );
+}
+
+function TeamInsightsPanel() {
+  const [days, setDays] = useState(30);
+  const [data, setData] = useState<TeamInsights | null>(null);
+  const gen = useMutation({
+    mutationFn: () => generateTeamInsightsFn({ data: { days } }),
+    onSuccess: (r) => { setData(r); toast.success(`Insights gerados (${r.sample_size} conversas)`); },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao gerar insights"),
+  });
+
+  const prioColor = (p: string) =>
+    p === "alta" ? "bg-red-500/15 text-red-600 dark:text-red-400"
+    : p === "media" ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+    : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
+
+  return (
+    <Card className="border-primary/20">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            Visão do Coordenador — padrões do time
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <select
+              value={days}
+              onChange={(e) => setDays(Number(e.target.value))}
+              className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+            >
+              <option value={7}>Últimos 7 dias</option>
+              <option value={14}>Últimos 14 dias</option>
+              <option value={30}>Últimos 30 dias</option>
+              <option value={60}>Últimos 60 dias</option>
+              <option value={90}>Últimos 90 dias</option>
+            </select>
+            <Button size="sm" onClick={() => gen.mutate()} disabled={gen.isPending}>
+              <Sparkles className={"h-3.5 w-3.5 mr-1 " + (gen.isPending ? "animate-pulse" : "")} />
+              {gen.isPending ? "Analisando…" : data ? "Regenerar" : "Gerar insights"}
+            </Button>
+          </div>
+        </div>
+        {!data && !gen.isPending && (
+          <p className="text-xs text-muted-foreground">
+            Cruza todas as análises recentes e devolve padrões comuns, treinos recomendados e boas práticas para compartilhar entre o time.
+          </p>
+        )}
+      </CardHeader>
+      {data && (
+        <CardContent className="space-y-4 pt-0">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div className="rounded-md bg-muted/50 p-2">
+              <div className="text-muted-foreground">Conversas</div>
+              <div className="text-base font-semibold">{data.sample_size}</div>
+            </div>
+            <div className="rounded-md bg-muted/50 p-2">
+              <div className="text-muted-foreground">Nota média</div>
+              <div className="text-base font-semibold">{data.avg_score?.toFixed(1) ?? "—"}</div>
+            </div>
+            <div className="rounded-md bg-muted/50 p-2">
+              <div className="text-muted-foreground">Janela</div>
+              <div className="text-base font-semibold">{data.window_days}d</div>
+            </div>
+            <div className="rounded-md bg-muted/50 p-2">
+              <div className="text-muted-foreground">Gerado em</div>
+              <div className="text-xs font-medium">{fmtDate(data.generated_at)}</div>
+            </div>
+          </div>
+
+          {data.coordinator_summary && (
+            <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-sm leading-relaxed">
+              {data.coordinator_summary}
+            </div>
+          )}
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-md border p-3">
+              <div className="text-xs font-semibold text-red-600 dark:text-red-400 mb-2 flex items-center gap-1">
+                <AlertTriangle className="h-3.5 w-3.5" /> Pontos a melhorar (padrões do time)
+              </div>
+              {data.top_weaknesses.length === 0 && <p className="text-xs text-muted-foreground">Sem padrões relevantes.</p>}
+              <ul className="space-y-2">
+                {data.top_weaknesses.map((w, i) => (
+                  <li key={i} className="text-xs">
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-semibold">{w.theme}</span>
+                      <Badge variant="outline" className="text-[10px]">{w.frequency}×</Badge>
+                    </div>
+                    {w.example && <div className="text-muted-foreground italic mt-0.5">“{w.example}”</div>}
+                    {w.sellers?.length > 0 && <div className="text-[10px] text-muted-foreground mt-0.5">Afeta: {w.sellers.join(", ")}</div>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-md border p-3">
+              <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2 flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Boas práticas para compartilhar
+              </div>
+              {data.top_strengths.length === 0 && data.shareable_best_practices.length === 0 && (
+                <p className="text-xs text-muted-foreground">Sem destaques ainda.</p>
+              )}
+              <ul className="space-y-2">
+                {data.top_strengths.map((w, i) => (
+                  <li key={"s" + i} className="text-xs">
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-semibold">{w.theme}</span>
+                      <Badge variant="outline" className="text-[10px]">{w.frequency}×</Badge>
+                    </div>
+                    {w.example && <div className="text-muted-foreground italic mt-0.5">“{w.example}”</div>}
+                    {w.sellers?.length > 0 && <div className="text-[10px] text-muted-foreground mt-0.5">Referência: {w.sellers.join(", ")}</div>}
+                  </li>
+                ))}
+                {data.shareable_best_practices.map((p, i) => (
+                  <li key={"p" + i} className="text-xs border-t pt-2">
+                    <div>{p.practice}</div>
+                    <div className="text-[10px] text-muted-foreground">Vindo de: {p.from_seller}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-md border p-3">
+              <div className="text-xs font-semibold mb-2 flex items-center gap-1">
+                <Target className="h-3.5 w-3.5" /> Treinamentos recomendados
+              </div>
+              {data.training_recommendations.length === 0 && <p className="text-xs text-muted-foreground">—</p>}
+              <ul className="space-y-2">
+                {data.training_recommendations.map((t, i) => (
+                  <li key={i} className="text-xs">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold">{t.title}</span>
+                      <span className={"text-[10px] px-1.5 py-0.5 rounded " + prioColor(t.priority)}>{t.priority}</span>
+                      <Badge variant="outline" className="text-[10px]">{t.format}</Badge>
+                    </div>
+                    <div className="text-muted-foreground mt-0.5">{t.why}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-md border p-3">
+              <div className="text-xs font-semibold mb-2 flex items-center gap-1">
+                <Award className="h-3.5 w-3.5" /> Foco por vendedor
+              </div>
+              {data.seller_focus.length === 0 && <p className="text-xs text-muted-foreground">—</p>}
+              <ul className="space-y-2">
+                {data.seller_focus.map((s, i) => (
+                  <li key={i} className="text-xs">
+                    <div className="font-semibold">{s.seller}</div>
+                    <div className="text-muted-foreground">{s.focus}</div>
+                    <div className="mt-0.5"><span className="text-[10px] text-primary">Ação:</span> {s.suggested_action}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {data.top_objections.length > 0 && (
+            <div className="rounded-md border p-3">
+              <div className="text-xs font-semibold mb-2">Objeções mais frequentes</div>
+              <div className="flex flex-wrap gap-1.5">
+                {data.top_objections.map((o, i) => (
+                  <Badge key={i} variant="secondary" className="text-[10px]">{o.theme} · {o.frequency}×</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
   );
 }
 
