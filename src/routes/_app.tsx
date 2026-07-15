@@ -6,7 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { isAdminEmail, ALLOWED_NON_ADMIN_ROUTES } from "@/lib/auth";
+import { isAdminUser, ALLOWED_NON_ADMIN_ROUTES } from "@/lib/auth";
 import logoIcon from "@/assets/logo-icon.png";
 
 export const Route = createFileRoute("/_app")({
@@ -30,7 +30,7 @@ const ALL_NAV_ITEMS = [
 function AppLayout() {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<"loading" | "auth" | "ready">("loading");
-  const [email, setEmail] = useState<string | null>(null);
+  const [user, setUser] = useState<{ email: string | null; user_metadata?: any } | null>(null);
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -38,13 +38,12 @@ function AppLayout() {
     let cancelled = false;
     supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return;
-      const em = data.session?.user.email ?? null;
-      setEmail(em);
+      setUser(data.session?.user ? { email: data.session.user.email ?? null, user_metadata: data.session.user.user_metadata } : null);
       setStatus(data.session ? "ready" : "auth");
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
-      setEmail(session?.user.email ?? null);
+      setUser(session?.user ? { email: session.user.email ?? null, user_metadata: session.user.user_metadata } : null);
       setStatus(session ? "ready" : "auth");
     });
     return () => {
@@ -57,7 +56,7 @@ function AppLayout() {
     if (status === "auth") navigate({ to: "/auth", replace: true });
   }, [status, navigate]);
 
-  const admin = isAdminEmail(email);
+  const admin = isAdminUser(user);
 
   useEffect(() => {
     if (status !== "ready") return;
@@ -122,7 +121,7 @@ function AppLayout() {
           <div className="flex items-center gap-2">
             {admin && <CurrencyToggle />}
             <ThemeToggle />
-            <span className="hidden text-xs text-muted-foreground sm:inline">{email}</span>
+            <span className="hidden text-xs text-muted-foreground sm:inline">{user?.email}</span>
             <Button variant="ghost" size="icon" aria-label="Sair" onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
             </Button>

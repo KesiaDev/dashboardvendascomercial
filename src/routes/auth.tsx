@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { isAdminEmail } from "@/lib/auth";
+import { isAdminUser } from "@/lib/auth";
 import logoIcon from "@/assets/logo-icon.png";
 
 export const Route = createFileRoute("/auth")({
@@ -22,15 +22,15 @@ function AuthPage() {
   const callbackUrl = () => `${window.location.origin}/auth/callback`;
 
   useEffect(() => {
-    const go = (em: string | null | undefined) => {
-      navigate({ to: isAdminEmail(em) ? "/" : "/fechamento", replace: true });
+    const go = (u: any) => {
+      navigate({ to: isAdminUser(u) ? "/" : "/fechamento", replace: true });
     };
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) go(data.session.user.email);
+      if (data.session) go(data.session.user);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
-        go(session.user.email);
+        go(session.user);
       }
     });
     return () => sub.subscription.unsubscribe();
@@ -46,8 +46,8 @@ function AuthPage() {
       toast.error(error.message);
       return;
     }
-    const em = data.user?.email;
-    navigate({ to: isAdminEmail(em) ? "/" : "/fechamento", replace: true });
+    const u = data.user;
+    navigate({ to: isAdminUser(u) ? "/" : "/fechamento", replace: true });
   }
 
   async function onGoogle() {
@@ -63,9 +63,8 @@ function AuthPage() {
       if (result.redirected) return;
 
       const { data } = await supabase.auth.getSession();
-      const em = data.session?.user.email;
       if (data.session) {
-        navigate({ to: isAdminEmail(em) ? "/" : "/fechamento", replace: true });
+        navigate({ to: isAdminUser(data.session.user) ? "/" : "/fechamento", replace: true });
       }
     } finally {
       setGoogleLoading(false);

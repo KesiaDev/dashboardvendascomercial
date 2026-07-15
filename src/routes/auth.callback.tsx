@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { isAdminEmail, ALLOWED_NON_ADMIN_ROUTES } from "@/lib/auth";
+import { isAdminUser, ALLOWED_NON_ADMIN_ROUTES } from "@/lib/auth";
 import logoIcon from "@/assets/logo-icon.png";
 
 export const Route = createFileRoute("/auth/callback")({
@@ -14,8 +14,8 @@ function safeNext(value: string | null): string | null {
   return value;
 }
 
-function getDestination(email: string | null | undefined, next: string | null) {
-  if (isAdminEmail(email)) return next ?? "/";
+function getDestination(user: any, next: string | null) {
+  if (isAdminUser(user)) return next ?? "/";
   return next && ALLOWED_NON_ADMIN_ROUTES.includes(next) ? next : "/fechamento";
 }
 
@@ -50,7 +50,7 @@ function AuthCallbackPage() {
         const session = data.session;
         if (!session) throw new Error("Sessão não encontrada após o login.");
         if (cancelled) return;
-        navigate({ to: getDestination(session.user.email, next), replace: true });
+        navigate({ to: getDestination(session.user, next), replace: true });
       } catch (error) {
         if (cancelled) return;
         setMessage(error instanceof Error ? error.message : "Não foi possível concluir o login.");
