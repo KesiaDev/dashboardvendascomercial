@@ -2,9 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ADMIN_EMAILS } from "@/lib/auth";
 
-function assertAdmin(email: string | undefined | null) {
-  const e = (email ?? "").trim().toLowerCase();
-  if (!ADMIN_EMAILS.includes(e)) throw new Error("Acesso negado: apenas administradores");
+function assertAdmin(claims: any) {
+  const email = (claims?.email ?? "").toString().trim().toLowerCase();
+  const metaRole = (claims?.user_metadata?.role ?? "").toString().trim().toLowerCase();
+  if (ADMIN_EMAILS.includes(email)) return;
+  if (metaRole === "admin") return;
+  throw new Error("Acesso negado: apenas administradores");
 }
 
 export type AppUser = {
