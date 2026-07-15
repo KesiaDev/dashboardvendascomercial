@@ -901,7 +901,7 @@ function PerformanceTab() {
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
 
-  const rangeLabel = range === "day" ? "Hoje" : range === "week" ? "7 dias" : "30 dias";
+  const rangeLabel = perf?.periodLabel ?? (range === "day" ? "Hoje" : range === "week" ? "Semana" : "Mês");
 
   return (
     <div className="space-y-4">
