@@ -14,6 +14,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppVendedorProdutoRouteImport } from './routes/_app.vendedor-produto'
 import { Route as AppVendasReaisRouteImport } from './routes/_app.vendas-reais'
+import { Route as AppUsuariosRouteImport } from './routes/_app.usuarios'
 import { Route as AppResultadosRouteImport } from './routes/_app.resultados'
 import { Route as AppRankingRouteImport } from './routes/_app.ranking'
 import { Route as AppProdutividadeRouteImport } from './routes/_app.produtividade'
@@ -60,6 +61,11 @@ const AppVendedorProdutoRoute = AppVendedorProdutoRouteImport.update({
 const AppVendasReaisRoute = AppVendasReaisRouteImport.update({
   id: '/vendas-reais',
   path: '/vendas-reais',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppUsuariosRoute = AppUsuariosRouteImport.update({
+  id: '/usuarios',
+  path: '/usuarios',
   getParentRoute: () => AppRoute,
 } as any)
 const AppResultadosRoute = AppResultadosRouteImport.update({
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
   '/resultados': typeof AppResultadosRoute
+  '/usuarios': typeof AppUsuariosRoute
   '/vendas-reais': typeof AppVendasReaisRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/coach/$id': typeof AppCoachIdRoute
@@ -224,6 +231,7 @@ export interface FileRoutesByTo {
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
   '/resultados': typeof AppResultadosRoute
+  '/usuarios': typeof AppUsuariosRoute
   '/vendas-reais': typeof AppVendasReaisRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/': typeof AppIndexRoute
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   '/_app/produtividade': typeof AppProdutividadeRoute
   '/_app/ranking': typeof AppRankingRoute
   '/_app/resultados': typeof AppResultadosRoute
+  '/_app/usuarios': typeof AppUsuariosRoute
   '/_app/vendas-reais': typeof AppVendasReaisRoute
   '/_app/vendedor-produto': typeof AppVendedorProdutoRoute
   '/_app/': typeof AppIndexRoute
@@ -287,6 +296,7 @@ export interface FileRouteTypes {
     | '/produtividade'
     | '/ranking'
     | '/resultados'
+    | '/usuarios'
     | '/vendas-reais'
     | '/vendedor-produto'
     | '/coach/$id'
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/produtividade'
     | '/ranking'
     | '/resultados'
+    | '/usuarios'
     | '/vendas-reais'
     | '/vendedor-produto'
     | '/'
@@ -345,6 +356,7 @@ export interface FileRouteTypes {
     | '/_app/produtividade'
     | '/_app/ranking'
     | '/_app/resultados'
+    | '/_app/usuarios'
     | '/_app/vendas-reais'
     | '/_app/vendedor-produto'
     | '/_app/'
@@ -405,6 +417,13 @@ declare module '@tanstack/react-router' {
       path: '/vendas-reais'
       fullPath: '/vendas-reais'
       preLoaderRoute: typeof AppVendasReaisRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/usuarios': {
+      id: '/_app/usuarios'
+      path: '/usuarios'
+      fullPath: '/usuarios'
+      preLoaderRoute: typeof AppUsuariosRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/resultados': {
@@ -599,6 +618,7 @@ interface AppRouteChildren {
   AppProdutividadeRoute: typeof AppProdutividadeRoute
   AppRankingRoute: typeof AppRankingRoute
   AppResultadosRoute: typeof AppResultadosRoute
+  AppUsuariosRoute: typeof AppUsuariosRoute
   AppVendasReaisRoute: typeof AppVendasReaisRoute
   AppVendedorProdutoRoute: typeof AppVendedorProdutoRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -620,6 +640,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppProdutividadeRoute: AppProdutividadeRoute,
   AppRankingRoute: AppRankingRoute,
   AppResultadosRoute: AppResultadosRoute,
+  AppUsuariosRoute: AppUsuariosRoute,
   AppVendasReaisRoute: AppVendasReaisRoute,
   AppVendedorProdutoRoute: AppVendedorProdutoRoute,
   AppIndexRoute: AppIndexRoute,
