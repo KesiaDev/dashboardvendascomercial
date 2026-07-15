@@ -369,10 +369,12 @@ function Conversas() {
 
   return (
     <div className="space-y-3 mt-4">
+      <TeamInsightsPanel />
       <div className="flex flex-wrap gap-2">
         <Input placeholder="Buscar por vendedor, cliente, deal…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
         <Input placeholder="Nota mínima" type="number" min={0} max={10} value={minScore} onChange={(e) => setMinScore(e.target.value)} className="max-w-[120px]" />
       </div>
+
 
       {isLoading && <p className="text-sm text-muted-foreground">A carregar…</p>}
       {!isLoading && filtered.length === 0 && (
