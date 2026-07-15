@@ -22,7 +22,7 @@ const ALL_NAV_ITEMS = [
   { to: "/vendas-reais",        label: "Vendas Reais",       icon: TrendingUpIcon,   adminOnly: true },
   { to: "/comissionamento",     label: "Comissionamento",    icon: DollarSign,       adminOnly: true },
   { to: "/funis",               label: "Funis",              icon: GitMerge,         adminOnly: true },
-  { to: "/coach",               label: "Coach IA",           icon: Sparkles,         adminOnly: true },
+  { to: "/coach",               label: "Análise Comercial",  icon: Sparkles,         adminOnly: true },
   { to: "/indicacoes",          label: "Indicações",         icon: Share2,           adminOnly: true },
   { to: "/usuarios",            label: "Usuários",           icon: Users,            adminOnly: true },
 ] as const;
