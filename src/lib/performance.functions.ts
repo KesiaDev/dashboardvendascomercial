@@ -13,7 +13,10 @@ export type SellerPerf = {
   taxaConversao: number;
   notaMedia: number | null;
   analisesCount: number;
+  leadsNovos: number;
+  conversaoLead: number; // vendas / leadsNovos
 };
+
 
 export type PerfResult = {
   range: PerfRange;
@@ -164,8 +167,10 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
           key, name: cleaned, email: email ?? "",
           atendimentos: 0, vendas: 0, faturamento: 0,
           taxaConversao: 0, notaMedia: null, analisesCount: 0,
+          leadsNovos: 0, conversaoLead: 0,
           _scoreSum: 0, _scoreN: 0,
         };
+
         sellerMap.set(key, cur);
       } else if (!cur.email && email) {
         cur.email = email;
@@ -210,7 +215,7 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     // Leads novos — Pipeline Comercial V3 (origin_name = PIPELINE_COMERCIAL-V3)
     const { data: leads } = await supabaseAdmin
       .from("clint_deals")
-      .select("id,created_at")
+      .select("id,created_at,user_email,user_name")
       .eq("origin_name", "PIPELINE_COMERCIAL-V3")
       .gte("created_at", startTS)
       .lte("created_at", endTS)
@@ -221,6 +226,12 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       leadsNovos += 1;
       const k = new Date(l.created_at).toISOString().slice(0, 10);
       const cur = dailyMap.get(k); if (cur) cur.leads += 1;
+      // atribui lead ao vendedor (não cria linha nova se não houver vendedor)
+      if (l.user_email || l.user_name) {
+        if (isExcludedSeller(l.user_name)) continue;
+        const acc = ensure(l.user_email, l.user_name);
+        acc.leadsNovos += 1;
+      }
     }
 
     const sellers: SellerPerf[] = Array.from(sellerMap.values())
@@ -231,8 +242,11 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         taxaConversao: s.atendimentos > 0 ? s.vendas / s.atendimentos : 0,
         notaMedia: s._scoreN > 0 ? s._scoreSum / s._scoreN : null,
         analisesCount: s.analisesCount,
+        leadsNovos: s.leadsNovos,
+        conversaoLead: s.leadsNovos > 0 ? s.vendas / s.leadsNovos : 0,
       }))
       .sort((a, b) => b.faturamento - a.faturamento || b.vendas - a.vendas);
+
 
     const teamAt = sellers.reduce((a, s) => a + s.atendimentos, 0);
     const teamVd = sellers.reduce((a, s) => a + s.vendas, 0);

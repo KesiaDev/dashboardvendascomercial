@@ -1025,10 +1025,12 @@ function PerformanceTab() {
                   <tr className="border-b">
                     <th className="text-left py-2 pl-1">#</th>
                     <th className="text-left">Vendedor</th>
+                    <th className="text-right">Leads</th>
                     <th className="text-right">Atend.</th>
                     <th className="text-right">Vendas</th>
                     <th className="text-right">Faturamento</th>
-                    <th className="text-right">Conv.</th>
+                    <th className="text-right" title="Vendas ÷ Leads">Conv. Lead</th>
+                    <th className="text-right" title="Vendas ÷ Atendimentos">Conv. Atend.</th>
                     <th className="text-right">Nota IA</th>
                     <th></th>
                   </tr>
@@ -1046,13 +1048,16 @@ function PerformanceTab() {
                           </div>
                         </div>
                       </td>
+                      <td className="text-right">{s.leadsNovos}</td>
                       <td className="text-right">{s.atendimentos}</td>
                       <td className="text-right font-medium">{s.vendas}</td>
                       <td className="text-right">{fmtEUR(s.faturamento)}</td>
+                      <td className="text-right">{s.leadsNovos > 0 ? fmtPct(s.conversaoLead) : "—"}</td>
                       <td className="text-right">{fmtPct(s.taxaConversao)}</td>
                       <td className={"text-right font-semibold " + scoreColor(s.notaMedia)}>
                         {s.notaMedia != null ? s.notaMedia.toFixed(1) : "—"}
                       </td>
+
                       <td className="text-right">
                         <button
                           onClick={() => { setScope("seller"); setSellerKey(s.key); fbMutation.mutate(); }}
