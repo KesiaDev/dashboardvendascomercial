@@ -1061,6 +1061,10 @@ function PerformanceTab() {
 
 function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
   const max = Math.max(1, ...daily.map((d) => Math.max(d.atendimentos, d.vendas)));
+  console.log("[Performance chart]", { count: daily.length, hasData: daily.some(d => d.atendimentos || d.vendas), daily });
+  if (!daily.length) {
+    return <div className="h-32 flex items-center justify-center text-xs text-muted-foreground">Sem dados no período.</div>;
+  }
   return (
     <div className="flex items-end gap-1 h-32">
       {daily.map((d) => (
