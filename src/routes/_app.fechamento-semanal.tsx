@@ -310,7 +310,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
 
       {/* Tabela de vendas */}
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-1.5"><ShoppingBag className="h-4 w-4 text-muted-foreground"/>Vendas — Semana {weekIdx+1} · {fmtDate(start)} a {fmtDate(end)}</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-1.5"><ShoppingBag className="h-4 w-4 text-muted-foreground"/>Vendas — Semana {weekIdx+1+WEEK_LABEL_OFFSET} · {fmtDate(start)} a {fmtDate(end)}</CardTitle></CardHeader>
         <CardContent className="p-0">
           {weekSales.length===0?(<p className="text-sm text-muted-foreground px-4 py-6">Nenhuma venda registrada nesta semana.</p>):(
             <div className="overflow-x-auto">
