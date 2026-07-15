@@ -558,7 +558,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
       const map: Record<string,number>={};
       for (const s of sales) map[s.seller_name]=(map[s.seller_name]??0)+Number(s.value_eur);
       const top=Object.entries(map).sort((a,b)=>b[1]-a[1])[0];
-      return {idx:i,start,end,total,count:sales.length,topSeller:top?.[0]??null,label:`S${i+1}`};
+      return {idx:i,start,end,total,count:sales.length,topSeller:top?.[0]??null,label:`S${i+1+WEEK_LABEL_OFFSET}`};
     }).filter(Boolean) as NonNullable<ReturnType<typeof weekRange>&{idx:number;total:number;count:number;topSeller:string|null;label:string}>[];
   },[allSales,yearMonth,maxWeek]);
 
