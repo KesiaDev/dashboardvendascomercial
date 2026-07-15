@@ -4,21 +4,22 @@ import { cleanSellerName, isExcludedSeller } from "@/lib/bi";
 export type PerfRange = "day" | "week" | "month";
 
 export type SellerPerf = {
-  key: string; // normalized email or name
+  key: string;
   name: string;
   email: string;
-  atendimentos: number; // conversas com msgs no período
+  atendimentos: number;
   vendas: number;
-  faturamento: number; // BRL bruto
-  taxaConversao: number; // vendas / atendimentos
+  faturamento: number; // EUR (fonte de verdade: manual_sales.value_eur)
+  taxaConversao: number;
   notaMedia: number | null;
   analisesCount: number;
 };
 
 export type PerfResult = {
   range: PerfRange;
-  periodStart: string;
-  periodEnd: string;
+  periodStart: string; // ISO date (YYYY-MM-DD)
+  periodEnd: string;   // ISO date inclusivo
+  periodLabel: string;
   sellers: SellerPerf[];
   team: {
     atendimentos: number;
@@ -29,27 +30,58 @@ export type PerfResult = {
     analisesCount: number;
     vendedoresAtivos: number;
   };
-  daily: { date: string; atendimentos: number; vendas: number }[];
+  daily: { date: string; atendimentos: number; vendas: number; faturamento: number }[];
 };
 
-function rangeBounds(range: PerfRange): { start: Date; end: Date } {
-  const end = new Date();
-  const start = new Date();
+// ─── Datas (referência: SEASON_START da planilha de fechamento) ─────────────
+const SEASON_START = "2026-06-01"; // Segunda-feira, início da temporada
+const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+function todayBR(): string {
+  return new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
+}
+function addDays(iso: string, n: number): string {
+  const d = new Date(iso + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function eachDay(startISO: string, endISO: string): string[] {
+  const out: string[] = [];
+  let cur = startISO;
+  while (cur <= endISO) { out.push(cur); cur = addDays(cur, 1); }
+  return out;
+}
+
+/**
+ * Calcula limites do período alinhados ao Fechamento Semanal:
+ *  - day: dia corrente (fuso BR)
+ *  - week: semana comercial (S{n}) baseada em SEASON_START, 7 dias
+ *  - month: mês calendário corrente
+ */
+function rangeBounds(range: PerfRange): { startDate: string; endDate: string; label: string } {
+  const today = todayBR();
   if (range === "day") {
-    start.setHours(0, 0, 0, 0);
-  } else if (range === "week") {
-    start.setDate(start.getDate() - 6);
-    start.setHours(0, 0, 0, 0);
-  } else {
-    start.setDate(start.getDate() - 29);
-    start.setHours(0, 0, 0, 0);
+    return { startDate: today, endDate: today, label: `Hoje (${today.slice(8)}/${today.slice(5,7)})` };
   }
-  return { start, end };
+  if (range === "week") {
+    const season = new Date(SEASON_START + "T12:00:00Z");
+    const now = new Date(today + "T12:00:00Z");
+    const idx = Math.max(0, Math.floor((now.getTime() - season.getTime()) / (7 * 86_400_000)));
+    const startDate = addDays(SEASON_START, idx * 7);
+    const endDate = addDays(startDate, 6);
+    return { startDate, endDate, label: `Semana S${idx + 1} (${startDate.slice(8)}/${startDate.slice(5,7)}–${endDate.slice(8)}/${endDate.slice(5,7)})` };
+  }
+  // month = calendário
+  const [y, m] = today.split("-").map(Number);
+  const startDate = `${y}-${String(m).padStart(2,"0")}-01`;
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const endDate = `${y}-${String(m).padStart(2,"0")}-${String(lastDay).padStart(2,"0")}`;
+  return { startDate, endDate, label: `${MONTHS_PT[m-1]} ${y}` };
 }
 
 function normKey(email?: string | null, name?: string | null): string {
-  if (email) return email.trim().toLowerCase();
-  if (name) return cleanSellerName(name).toLowerCase();
+  if (email && email.trim()) return email.trim().toLowerCase();
+  if (name && name.trim()) return cleanSellerName(name).toLowerCase();
   return "—";
 }
 
@@ -57,34 +89,35 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
   .inputValidator((d: { range: PerfRange }) => d)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { start, end } = rangeBounds(data.range);
-    const startISO = start.toISOString();
-    const endISO = end.toISOString();
+    const { startDate, endDate, label } = rangeBounds(data.range);
 
-    // 1. Deals ganhos no período
-    const { data: deals } = await supabaseAdmin
-      .from("clint_deals")
-      .select("id,user_name,user_email,won_by_name,won_by_email,status,won_at,value,currency")
-      .eq("status", "WON")
-      .gte("won_at", startISO)
-      .lte("won_at", endISO)
-      .limit(5000);
+    // Timestamps para tabelas com coluna timestamptz
+    const startTS = `${startDate}T00:00:00.000Z`;
+    const endTS   = `${endDate}T23:59:59.999Z`;
+
+    // 1. Vendas reais (fonte de verdade: manual_sales, EUR)
+    const { data: sales } = await supabaseAdmin
+      .from("manual_sales")
+      .select("id,seller_name,value_eur,sale_date,created_by_email")
+      .gte("sale_date", startDate)
+      .lte("sale_date", endDate)
+      .limit(10000);
 
     // 2. Conversas com atividade no período
     const { data: convs } = await supabaseAdmin
       .from("coach_conversations")
       .select("id,seller_email,seller_name,last_message_at")
-      .gte("last_message_at", startISO)
-      .lte("last_message_at", endISO)
+      .gte("last_message_at", startTS)
+      .lte("last_message_at", endTS)
       .limit(5000);
 
-    // 3. Análises Coach IA no período
+    // 3. Análises Coach IA (somente para conversas do período)
     const convIds = (convs ?? []).map((c: any) => c.id);
     let analyses: any[] = [];
     if (convIds.length) {
       const { data: a } = await supabaseAdmin
         .from("coach_analyses")
-        .select("conversation_id,score_geral,analyzed_at")
+        .select("conversation_id,score_geral")
         .in("conversation_id", convIds)
         .eq("status", "ok");
       analyses = a ?? [];
@@ -92,12 +125,14 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     const scoreByConv = new Map<string, number>();
     for (const a of analyses) if (a.score_geral != null) scoreByConv.set(a.conversation_id, a.score_geral);
 
-    const sellerMap = new Map<string, SellerPerf & { _scoreSum: number; _scoreN: number }>();
-    const ensure = (email: string | null, name: string | null): SellerPerf & { _scoreSum: number; _scoreN: number } => {
-      const key = normKey(email, name);
+    // Acumulador — chaveado por nome limpo do vendedor (manual_sales só tem name)
+    type Acc = SellerPerf & { _scoreSum: number; _scoreN: number };
+    const sellerMap = new Map<string, Acc>();
+    const ensure = (email: string | null, name: string | null): Acc => {
+      const cleaned = cleanSellerName(name ?? email ?? "—");
+      const key = cleaned.toLowerCase();
       let cur = sellerMap.get(key);
       if (!cur) {
-        const cleaned = cleanSellerName(name ?? email ?? "—");
         cur = {
           key, name: cleaned, email: email ?? "",
           atendimentos: 0, vendas: 0, faturamento: 0,
@@ -105,49 +140,44 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
           _scoreSum: 0, _scoreN: 0,
         };
         sellerMap.set(key, cur);
+      } else if (!cur.email && email) {
+        cur.email = email;
       }
       return cur;
     };
 
-    // Atendimentos + análises
+    // Vendas (manual_sales)
+    for (const s of sales ?? []) {
+      if (!s.seller_name || isExcludedSeller(s.seller_name)) continue;
+      const acc = ensure(null, s.seller_name);
+      acc.vendas += 1;
+      acc.faturamento += Number(s.value_eur ?? 0);
+    }
+
+    // Atendimentos + notas IA
     for (const c of convs ?? []) {
       if (!c.seller_email && !c.seller_name) continue;
       if (isExcludedSeller(c.seller_name)) continue;
-      const s = ensure(c.seller_email, c.seller_name);
-      s.atendimentos += 1;
+      const acc = ensure(c.seller_email, c.seller_name);
+      acc.atendimentos += 1;
       const sc = scoreByConv.get(c.id);
-      if (sc != null) { s._scoreSum += sc; s._scoreN += 1; s.analisesCount += 1; }
+      if (sc != null) { acc._scoreSum += sc; acc._scoreN += 1; acc.analisesCount += 1; }
     }
 
-    // Vendas ganhas
-    for (const d of deals ?? []) {
-      const email = d.won_by_email ?? d.user_email;
-      const name = d.won_by_name ?? d.user_name;
-      if (!email && !name) continue;
-      if (isExcludedSeller(name)) continue;
-      const s = ensure(email, name);
-      s.vendas += 1;
-      s.faturamento += Number(d.value ?? 0);
-    }
-
-    // Daily series (semana/mês)
-    const dayKey = (d: Date) => d.toISOString().slice(0, 10);
-    const daily = new Map<string, { atendimentos: number; vendas: number }>();
-    const totalDays = data.range === "day" ? 1 : data.range === "week" ? 7 : 30;
-    for (let i = 0; i < totalDays; i++) {
-      const d = new Date(end);
-      d.setDate(d.getDate() - i);
-      daily.set(dayKey(d), { atendimentos: 0, vendas: 0 });
+    // Série diária (todos os dias do período — sem gaps)
+    const dailyMap = new Map<string, { atendimentos: number; vendas: number; faturamento: number }>();
+    for (const day of eachDay(startDate, endDate)) {
+      dailyMap.set(day, { atendimentos: 0, vendas: 0, faturamento: 0 });
     }
     for (const c of convs ?? []) {
       if (!c.last_message_at) continue;
-      const k = dayKey(new Date(c.last_message_at));
-      const cur = daily.get(k); if (cur) cur.atendimentos += 1;
+      const k = new Date(c.last_message_at).toISOString().slice(0, 10);
+      const cur = dailyMap.get(k); if (cur) cur.atendimentos += 1;
     }
-    for (const d of deals ?? []) {
-      if (!d.won_at) continue;
-      const k = dayKey(new Date(d.won_at));
-      const cur = daily.get(k); if (cur) cur.vendas += 1;
+    for (const s of sales ?? []) {
+      if (!s.sale_date) continue;
+      const cur = dailyMap.get(s.sale_date);
+      if (cur) { cur.vendas += 1; cur.faturamento += Number(s.value_eur ?? 0); }
     }
 
     const sellers: SellerPerf[] = Array.from(sellerMap.values())
@@ -169,8 +199,9 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
 
     const result: PerfResult = {
       range: data.range,
-      periodStart: startISO,
-      periodEnd: endISO,
+      periodStart: startDate,
+      periodEnd: endDate,
+      periodLabel: label,
       sellers,
       team: {
         atendimentos: teamAt, vendas: teamVd, faturamento: teamFat,
@@ -179,7 +210,7 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         analisesCount: scoreN,
         vendedoresAtivos: sellers.filter((s) => s.atendimentos > 0 || s.vendas > 0).length,
       },
-      daily: Array.from(daily.entries())
+      daily: Array.from(dailyMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([date, v]) => ({ date, ...v })),
     };
@@ -193,7 +224,7 @@ export const generatePerformanceFeedbackFn = createServerFn({ method: "POST" })
     if (!key) throw new Error("LOVABLE_API_KEY não configurada");
 
     const perf = await fetchPerformanceFn({ data: { range: data.range } });
-    const rangeLabel = data.range === "day" ? "hoje" : data.range === "week" ? "últimos 7 dias" : "últimos 30 dias";
+    const rangeLabel = perf.periodLabel;
 
     let ctx: any;
     let subject: string;
@@ -218,7 +249,7 @@ export const generatePerformanceFeedbackFn = createServerFn({ method: "POST" })
             content:
               "Você é o Coach Comercial da LLMídia. Analise a performance abaixo e escreva um feedback em PT-BR, curto (máx 6 linhas), específico e acionável. " +
               "Use markdown com bullets. Destaque: (1) o que está funcionando, (2) o principal problema, (3) 1-2 ações concretas para os próximos dias. " +
-              "Nunca invente números — só use os dados fornecidos. Se atendimentos=0 ou vendas=0, diga isso claramente.",
+              "Faturamento está em EUR (€). Nunca invente números — só use os dados fornecidos. Se atendimentos=0 ou vendas=0, diga isso claramente.",
           },
           { role: "user", content: `Feedback para ${subject} (${rangeLabel}):\n\n${JSON.stringify(ctx, null, 2)}` },
         ],
