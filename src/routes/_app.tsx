@@ -30,7 +30,7 @@ const ALL_NAV_ITEMS = [
 function AppLayout() {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<"loading" | "auth" | "ready">("loading");
-  const [email, setEmail] = useState<string | null>(null);
+  const [user, setUser] = useState<{ email: string | null; user_metadata?: any } | null>(null);
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -38,13 +38,12 @@ function AppLayout() {
     let cancelled = false;
     supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return;
-      const em = data.session?.user.email ?? null;
-      setEmail(em);
+      setUser(data.session?.user ? { email: data.session.user.email ?? null, user_metadata: data.session.user.user_metadata } : null);
       setStatus(data.session ? "ready" : "auth");
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
-      setEmail(session?.user.email ?? null);
+      setUser(session?.user ? { email: session.user.email ?? null, user_metadata: session.user.user_metadata } : null);
       setStatus(session ? "ready" : "auth");
     });
     return () => {
@@ -57,7 +56,7 @@ function AppLayout() {
     if (status === "auth") navigate({ to: "/auth", replace: true });
   }, [status, navigate]);
 
-  const admin = isAdminEmail(email);
+  const admin = isAdminUser(user);
 
   useEffect(() => {
     if (status !== "ready") return;
