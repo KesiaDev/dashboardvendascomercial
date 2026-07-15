@@ -27,6 +27,8 @@ export const FUNNELS = [
   "Funil de Indicações",
   "WGRS 1",
   "Renovação Mariana",
+  "Funil Retomada de Leads Perdidos",
+  "Funil Potencial Compra Futura",
   "Renovação",
   "Retrabalho Leads",
   "WGT - Perpétuo",
