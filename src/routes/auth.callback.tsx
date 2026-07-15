@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isAdminEmail, ALLOWED_NON_ADMIN_ROUTES } from "@/lib/auth";
 import logoIcon from "@/assets/logo-icon.png";
@@ -39,10 +39,10 @@ async function completeOAuthSession() {
 function AuthCallbackPage() {
   const navigate = useNavigate();
   const [message, setMessage] = useState("Finalizando login com Google…");
-  const next = useMemo(() => safeNext(new URLSearchParams(window.location.search).get("next")), []);
 
   useEffect(() => {
     let cancelled = false;
+    const next = safeNext(new URLSearchParams(window.location.search).get("next"));
     async function finish() {
       try {
         const { data, error } = await completeOAuthSession();
@@ -61,7 +61,7 @@ function AuthCallbackPage() {
     return () => {
       cancelled = true;
     };
-  }, [navigate, next]);
+  }, [navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
