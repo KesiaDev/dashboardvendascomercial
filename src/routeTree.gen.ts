@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AppVendedorProdutoRouteImport } from './routes/_app.vendedor-produto'
 import { Route as AppVendasReaisRouteImport } from './routes/_app.vendas-reais'
 import { Route as AppUsuariosRouteImport } from './routes/_app.usuarios'
@@ -52,6 +53,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AppVendedorProdutoRoute = AppVendedorProdutoRouteImport.update({
   id: '/vendedor-produto',
@@ -186,7 +192,7 @@ const ApiPublicSyncCcpbxRoute = ApiPublicSyncCcpbxRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/agente': typeof AppAgenteRoute
   '/areas': typeof AppAreasRoute
   '/campanha': typeof AppCampanhaRoute
@@ -205,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/usuarios': typeof AppUsuariosRoute
   '/vendas-reais': typeof AppVendasReaisRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/coach/$id': typeof AppCoachIdRoute
   '/api/clint/webhook': typeof ApiClintWebhookRoute
   '/api/hotmart/webhook': typeof ApiHotmartWebhookRoute
@@ -215,7 +222,7 @@ export interface FileRoutesByFullPath {
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
 export interface FileRoutesByTo {
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/agente': typeof AppAgenteRoute
   '/areas': typeof AppAreasRoute
   '/campanha': typeof AppCampanhaRoute
@@ -234,6 +241,7 @@ export interface FileRoutesByTo {
   '/usuarios': typeof AppUsuariosRoute
   '/vendas-reais': typeof AppVendasReaisRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/': typeof AppIndexRoute
   '/coach/$id': typeof AppCoachIdRoute
   '/api/clint/webhook': typeof ApiClintWebhookRoute
@@ -247,7 +255,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/_app/agente': typeof AppAgenteRoute
   '/_app/areas': typeof AppAreasRoute
   '/_app/campanha': typeof AppCampanhaRoute
@@ -266,6 +274,7 @@ export interface FileRoutesById {
   '/_app/usuarios': typeof AppUsuariosRoute
   '/_app/vendas-reais': typeof AppVendasReaisRoute
   '/_app/vendedor-produto': typeof AppVendedorProdutoRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/_app/': typeof AppIndexRoute
   '/_app/coach/$id': typeof AppCoachIdRoute
   '/api/clint/webhook': typeof ApiClintWebhookRoute
@@ -299,6 +308,7 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/vendas-reais'
     | '/vendedor-produto'
+    | '/auth/callback'
     | '/coach/$id'
     | '/api/clint/webhook'
     | '/api/hotmart/webhook'
@@ -328,6 +338,7 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/vendas-reais'
     | '/vendedor-produto'
+    | '/auth/callback'
     | '/'
     | '/coach/$id'
     | '/api/clint/webhook'
@@ -359,6 +370,7 @@ export interface FileRouteTypes {
     | '/_app/usuarios'
     | '/_app/vendas-reais'
     | '/_app/vendedor-produto'
+    | '/auth/callback'
     | '/_app/'
     | '/_app/coach/$id'
     | '/api/clint/webhook'
@@ -372,7 +384,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
-  AuthRoute: typeof AuthRoute
+  AuthRoute: typeof AuthRouteWithChildren
   ApiClintWebhookRoute: typeof ApiClintWebhookRoute
   ApiHotmartWebhookRoute: typeof ApiHotmartWebhookRoute
   ApiPublicHotmartDebugRoute: typeof ApiPublicHotmartDebugRoute
@@ -404,6 +416,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/_app/vendedor-produto': {
       id: '/_app/vendedor-produto'
@@ -648,9 +667,19 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface AuthRouteChildren {
+  AuthCallbackRoute: typeof AuthCallbackRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthCallbackRoute: AuthCallbackRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
-  AuthRoute: AuthRoute,
+  AuthRoute: AuthRouteWithChildren,
   ApiClintWebhookRoute: ApiClintWebhookRoute,
   ApiHotmartWebhookRoute: ApiHotmartWebhookRoute,
   ApiPublicHotmartDebugRoute: ApiPublicHotmartDebugRoute,
@@ -662,3 +691,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
