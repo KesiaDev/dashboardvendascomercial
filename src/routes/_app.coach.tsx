@@ -128,10 +128,10 @@ function CoachPage() {
 
 function KpiCard({ icon, label, value, valueClass = "" }: { icon: React.ReactNode; label: string; value: string; valueClass?: string }) {
   return (
-    <Card>
-      <CardContent className="pt-4 pb-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">{icon}{label}</div>
-        <p className={"text-2xl font-bold mt-1 " + valueClass}>{value}</p>
+    <Card className="h-full">
+      <CardContent className="h-full pt-4 pb-3 flex flex-col justify-between">
+        <div className="flex items-start gap-2 text-xs text-muted-foreground min-h-[2.5rem] leading-tight">{icon}{label}</div>
+        <p className={"text-2xl font-bold " + valueClass}>{value}</p>
       </CardContent>
     </Card>
   );
@@ -956,7 +956,7 @@ function PerformanceTab() {
 
       {/* Team KPIs */}
       {perf && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 auto-rows-fr">
           <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads novos (${rangeLabel})`} value={String(perf.team.leadsNovos)} />
           <KpiCard icon={<MessageSquare className="h-3 w-3" />} label="Atendimentos" value={String(perf.team.atendimentos)} />
           <KpiCard icon={<CheckCircle2 className="h-3 w-3" />} label="Vendas" value={String(perf.team.vendas)} />
