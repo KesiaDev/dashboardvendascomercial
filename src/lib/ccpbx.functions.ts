@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { cleanSellerName } from "@/lib/bi";
 
-// CCPBX (letscall.net) integration.
-// API base é lida de CCPBX_BASE_URL. Credenciais em CCPBX_USER / CCPBX_PASS.
-// Endpoints tentados (a API expõe várias versões — tentamos em ordem e usamos
-// o primeiro que responde 200).
+// CCPBX (letscall.net) — API v2.
+// Auth: POST /api/v2/login -> { access_token }
+// CDR:  GET  /api/v2/pbx/loadCdr?month=YYYYMM&limit=&page=&filters[date][initDate]=YYYY-MM-DD&filters[date][endDate]=YYYY-MM-DD
+// Áudio: GET /api/v2/pbx/recordFile/{YYYYMM}/{cdrId}
+// Credenciais em CCPBX_USER / CCPBX_PASS. Base em CCPBX_BASE_URL (default https://ccpbx.letscall.net).
 
 export type CallRow = {
   id: string;
@@ -26,35 +27,33 @@ export type CallRow = {
   analyzed_at: string | null;
 };
 
+// Mapa fixo extensão -> e-mail canônico do vendedor (fonte: painel CCPBX + Clint).
+const EXTENSION_TO_EMAIL: Record<string, string> = {
+  "200": "ritabandeira@lucianolarrossa.com",
+  "201": "joaopessoa@lucianolarrossa.com",
+  "202": "giselegagliano@lucianolarrossa.com",
+  "203": "fabionadal@lucianolarrossa.com",
+  "204": "luanaguimaraes@lucianolarrossa.com",
+};
+
 function baseUrl(): string {
   const raw = process.env.CCPBX_BASE_URL || "https://ccpbx.letscall.net";
   return raw.replace(/\/+$/, "");
-}
-
-async function tryFetch(paths: string[], init: RequestInit): Promise<Response | null> {
-  const b = baseUrl();
-  for (const p of paths) {
-    try {
-      const r = await fetch(`${b}${p}`, init);
-      if (r.status !== 404) return r;
-    } catch {}
-  }
-  return null;
 }
 
 async function login(): Promise<string> {
   const u = process.env.CCPBX_USER;
   const p = process.env.CCPBX_PASS;
   if (!u || !p) throw new Error("CCPBX_USER/CCPBX_PASS não configurados");
-  const body = JSON.stringify({ username: u, password: p, email: u });
-  const r = await tryFetch(
-    ["/api/v1/auth/login", "/api/auth/login", "/api/login", "/auth/login"],
-    { method: "POST", headers: { "Content-Type": "application/json" }, body },
-  );
-  if (!r || !r.ok) throw new Error(`CCPBX login falhou: ${r?.status ?? "no-response"}`);
+  const r = await fetch(`${baseUrl()}/api/v2/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ email: u, password: p }),
+  });
+  if (!r.ok) throw new Error(`CCPBX login falhou: ${r.status} ${await r.text().catch(() => "")}`);
   const j = (await r.json().catch(() => ({}))) as any;
-  const token = j?.token || j?.access_token || j?.jwt || j?.data?.token;
-  if (!token) throw new Error("CCPBX login: token não retornado");
+  const token = j?.access_token || j?.token;
+  if (!token) throw new Error("CCPBX login: access_token ausente na resposta");
   return token;
 }
 
@@ -66,25 +65,45 @@ async function getToken(): Promise<string> {
   return t;
 }
 
-async function listCdrs(fromISO: string, toISO: string): Promise<any[]> {
-  const token = await getToken();
-  const qs = `?startDate=${encodeURIComponent(fromISO)}&endDate=${encodeURIComponent(toISO)}&limit=1000`;
-  const r = await tryFetch(
-    [`/api/v1/cdr${qs}`, `/api/cdr${qs}`, `/api/v1/calls${qs}`, `/api/calls${qs}`],
-    { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } },
-  );
-  if (!r || !r.ok) throw new Error(`CCPBX CDR falhou: ${r?.status ?? "no-response"}`);
-  const j = (await r.json().catch(() => ({}))) as any;
-  const items = j?.data ?? j?.items ?? j?.results ?? j?.cdrs ?? j?.calls ?? j;
-  return Array.isArray(items) ? items : [];
+function ymKey(d: Date): string {
+  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+function monthsBetween(from: Date, to: Date): string[] {
+  const out: string[] = [];
+  const cur = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), 1));
+  while (cur <= end) {
+    out.push(ymKey(cur));
+    cur.setUTCMonth(cur.getUTCMonth() + 1);
+  }
+  return out;
 }
 
-function pick<T = any>(o: any, keys: string[]): T | null {
-  for (const k of keys) {
-    const v = k.split(".").reduce((a, p) => (a == null ? a : a[p]), o);
-    if (v != null && v !== "") return v as T;
-  }
-  return null;
+async function loadCdrPage(token: string, month: string, page: number, limit: number, initDate: string, endDate: string) {
+  const qs = new URLSearchParams({
+    month,
+    page: String(page),
+    limit: String(limit),
+    order: "-calldate",
+    "filters[date][initDate]": initDate,
+    "filters[date][endDate]": endDate,
+  });
+  const r = await fetch(`${baseUrl()}/api/v2/pbx/loadCdr?${qs.toString()}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  });
+  if (!r.ok) throw new Error(`CCPBX loadCdr ${month} p${page}: ${r.status} ${await r.text().catch(() => "")}`);
+  const j = (await r.json().catch(() => ({}))) as any;
+  const data: any[] = Array.isArray(j?.data) ? j.data : [];
+  const total: number = Number(j?.meta?.total ?? j?.total ?? data.length);
+  return { data, total };
+}
+
+function toIsoFromCallDate(s: string): string {
+  // "2026-07-01 11:00:27" — assume Europe/Lisbon (UTC+1 no verão). Interpretamos como UTC para simplicidade,
+  // já que o painel exibe hora local; ao converter, mantém consistência com a base.
+  const t = s.includes("T") ? s : s.replace(" ", "T") + "Z";
+  const d = new Date(t);
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
 }
 
 function normalizePhone(p: string | null | undefined): string {
@@ -95,12 +114,28 @@ export const syncCcpbxCallsFn = createServerFn({ method: "POST" })
   .inputValidator((d: { days?: number } = {}) => d)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const days = Math.max(1, Math.min(90, data.days ?? 7));
+    const days = Math.max(1, Math.min(180, data.days ?? 30));
     const to = new Date();
     const from = new Date(Date.now() - days * 24 * 3600 * 1000);
-    const cdrs = await listCdrs(from.toISOString(), to.toISOString());
+    const initDate = from.toISOString().slice(0, 10);
+    const endDate = to.toISOString().slice(0, 10);
 
-    // Mapa de deals por telefone para vincular
+    const token = await getToken();
+    const months = monthsBetween(from, to);
+    const all: any[] = [];
+    for (const m of months) {
+      let page = 1;
+      const limit = 200;
+      // paginação
+      while (true) {
+        const { data: rows, total } = await loadCdrPage(token, m, page, limit, initDate, endDate);
+        all.push(...rows);
+        if (rows.length < limit || all.length >= total || page > 50) break;
+        page++;
+      }
+    }
+
+    // Deals por telefone para vincular contato
     const { data: deals } = await supabaseAdmin
       .from("clint_deals")
       .select("id,contact_phone,contact_name,user_email,user_name")
@@ -112,46 +147,36 @@ export const syncCcpbxCallsFn = createServerFn({ method: "POST" })
       if (n.length >= 8) dealsByPhone.set(n.slice(-9), d);
     }
 
-    // Mapa de usuários CCPBX → email (best effort a partir de clint_users)
-    const { data: users } = await supabaseAdmin.from("clint_users").select("email,first_name,last_name").limit(500);
-    const userByName = new Map<string, any>();
-    for (const u of users ?? []) {
-      const nm = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
-      if (nm) userByName.set(cleanSellerName(nm).toLowerCase(), u);
-    }
-
     const rows: any[] = [];
-    for (const c of cdrs) {
-      const ccpbx_id = String(
-        pick(c, ["id", "cdr_id", "uuid", "call_id", "uniqueid"]) ?? "",
-      );
+    for (const c of all) {
+      const ccpbx_id = String(c?.id ?? c?.uuid ?? "");
       if (!ccpbx_id) continue;
-      const started_at =
-        pick<string>(c, ["start_time", "started_at", "start", "date", "created_at", "calldate"]) ??
-        new Date().toISOString();
-      const duration_sec = Number(pick(c, ["duration", "billsec", "duration_sec", "talk_time"]) ?? 0);
-      const from_number = String(pick(c, ["from", "src", "source", "caller", "from_number"]) ?? "");
-      const to_number = String(pick(c, ["to", "dst", "destination", "callee", "to_number"]) ?? "");
-      const direction = String(pick(c, ["direction", "type", "call_type"]) ?? "").toLowerCase() || null;
-      const agent_user = pick<string>(c, ["agent", "user", "username", "extension", "agent_name"]);
-      const agent_name = pick<string>(c, ["agent_name", "user_name", "display_name"]) ?? agent_user;
-      const status = pick<string>(c, ["status", "disposition", "hangup_cause"]);
-      const recording_url = pick<string>(c, ["recording_url", "record_url", "recording", "audio_url"]);
+      const direction: string = String(c?.direction ?? "").toLowerCase() || null as any;
+      const from_number: string = String(c?.callerid ?? "");
+      const to_number: string = String(c?.destination ?? "");
+      const ext = String(c?.src_extension ?? c?.dst_extension ?? "");
+      const agent_email = EXTENSION_TO_EMAIL[ext] ?? null;
+      const agent_name = c?.src_name || c?.dst_name || null;
+      const started_at = toIsoFromCallDate(String(c?.calldate ?? ""));
+      const duration_sec = Number(c?.duration ?? 0);
+      const attended = String(c?.attended ?? "") === "1" || c?.attended === true;
+      const status = attended ? "answered" : "no-answer";
+      const month = started_at.slice(0, 7).replace("-", "");
+      const recording_url = c?.record_file ? `${baseUrl()}/api/v2/pbx/recordFile/${month}/${ccpbx_id}` : null;
 
-      const phoneKey = normalizePhone(direction === "outbound" ? to_number : from_number);
+      const phoneKey = normalizePhone(direction === "outgoing" ? to_number : from_number);
       const deal = phoneKey.length >= 8 ? dealsByPhone.get(phoneKey.slice(-9)) : null;
-      const agentMatch = agent_name ? userByName.get(cleanSellerName(agent_name).toLowerCase()) : null;
 
       rows.push({
         ccpbx_id,
-        started_at: new Date(started_at).toISOString(),
+        started_at,
         duration_sec,
         direction,
         from_number: from_number || null,
         to_number: to_number || null,
-        agent_user,
+        agent_user: ext || null,
         agent_name: agent_name ? cleanSellerName(agent_name) : null,
-        agent_email: agentMatch?.email ?? deal?.user_email ?? null,
+        agent_email: agent_email ?? deal?.user_email ?? null,
         deal_id: deal?.id ?? null,
         contact_name: deal?.contact_name ?? null,
         status,
@@ -161,12 +186,12 @@ export const syncCcpbxCallsFn = createServerFn({ method: "POST" })
       });
     }
 
-    if (rows.length === 0) return { ok: true, upserted: 0, fetched: cdrs.length };
+    if (rows.length === 0) return { ok: true, upserted: 0, fetched: all.length };
     const { error, count } = await supabaseAdmin
       .from("coach_calls")
       .upsert(rows, { onConflict: "ccpbx_id", count: "exact", ignoreDuplicates: false });
     if (error) throw new Error(error.message);
-    return { ok: true, upserted: count ?? rows.length, fetched: cdrs.length };
+    return { ok: true, upserted: count ?? rows.length, fetched: all.length };
   });
 
 export const listCcpbxCallsFn = createServerFn({ method: "POST" })
@@ -177,7 +202,7 @@ export const listCcpbxCallsFn = createServerFn({ method: "POST" })
       .from("coach_calls")
       .select("id,ccpbx_id,started_at,duration_sec,direction,from_number,to_number,agent_user,agent_name,agent_email,deal_id,contact_name,status,recording_url,transcript,score,analyzed_at")
       .order("started_at", { ascending: false })
-      .limit(Math.min(500, data.limit ?? 100));
+      .limit(Math.min(1000, data.limit ?? 200));
     if (data.agentEmail) q = q.eq("agent_email", data.agentEmail);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
@@ -194,17 +219,13 @@ export const analyzeCallFn = createServerFn({ method: "POST" })
       .from("coach_calls").select("*").eq("id", data.callId).maybeSingle();
     if (error || !call) throw new Error("Ligação não encontrada");
 
-    // Tenta baixar áudio (com JWT quando o URL é do próprio CCPBX)
+    // Baixa áudio autenticado no CCPBX
     let audioB64: string | null = null;
     let mime = "audio/mpeg";
     if (call.recording_url) {
-      const headers: Record<string, string> = {};
-      if (call.recording_url.includes("letscall") || call.recording_url.startsWith("/")) {
-        try { headers.Authorization = `Bearer ${await getToken()}`; } catch {}
-      }
-      const url = call.recording_url.startsWith("http") ? call.recording_url : `${baseUrl()}${call.recording_url}`;
       try {
-        const r = await fetch(url, { headers });
+        const token = await getToken();
+        const r = await fetch(call.recording_url, { headers: { Authorization: `Bearer ${token}` } });
         if (r.ok) {
           const buf = Buffer.from(await r.arrayBuffer());
           if (buf.length < 20 * 1024 * 1024) {
