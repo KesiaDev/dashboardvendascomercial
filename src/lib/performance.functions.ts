@@ -192,9 +192,9 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     }
 
     // Série diária (todos os dias do período — sem gaps)
-    const dailyMap = new Map<string, { atendimentos: number; vendas: number; faturamento: number }>();
+    const dailyMap = new Map<string, { atendimentos: number; vendas: number; faturamento: number; leads: number }>();
     for (const day of eachDay(startDate, endDate)) {
-      dailyMap.set(day, { atendimentos: 0, vendas: 0, faturamento: 0 });
+      dailyMap.set(day, { atendimentos: 0, vendas: 0, faturamento: 0, leads: 0 });
     }
     for (const c of convs ?? []) {
       if (!c.last_message_at) continue;
@@ -205,6 +205,22 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       if (!s.sale_date) continue;
       const cur = dailyMap.get(s.sale_date);
       if (cur) { cur.vendas += 1; cur.faturamento += Number(s.value_eur ?? 0); }
+    }
+
+    // Leads novos — Pipeline Comercial V3 (origin_name = PIPELINE_COMERCIAL-V3)
+    const { data: leads } = await supabaseAdmin
+      .from("clint_deals")
+      .select("id,created_at")
+      .eq("origin_name", "PIPELINE_COMERCIAL-V3")
+      .gte("created_at", startTS)
+      .lte("created_at", endTS)
+      .limit(20000);
+    let leadsNovos = 0;
+    for (const l of leads ?? []) {
+      if (!l.created_at) continue;
+      leadsNovos += 1;
+      const k = new Date(l.created_at).toISOString().slice(0, 10);
+      const cur = dailyMap.get(k); if (cur) cur.leads += 1;
     }
 
     const sellers: SellerPerf[] = Array.from(sellerMap.values())
@@ -236,6 +252,9 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         notaMedia: scoreN > 0 ? scoreSum / scoreN : null,
         analisesCount: scoreN,
         vendedoresAtivos: sellers.filter((s) => s.atendimentos > 0 || s.vendas > 0).length,
+        leadsNovos,
+        leadPorVenda: teamVd > 0 ? leadsNovos / teamVd : null,
+        conversaoLead: leadsNovos > 0 ? teamVd / leadsNovos : 0,
       },
       daily: Array.from(dailyMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
