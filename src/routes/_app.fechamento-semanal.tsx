@@ -24,7 +24,8 @@ export const Route = createFileRoute("/_app/fechamento-semanal")({
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const SEASON_START = "2026-06-01";
+const SEASON_START = "2026-06-29"; // Início real do dash (S5 do calendário comercial)
+const WEEK_LABEL_OFFSET = 4; // idx 0 → S5
 const DAYS_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
