@@ -146,21 +146,42 @@ function UsuariosPage() {
   );
 }
 
-function UserRow({ u, onReset, onDelete, disabled }: {
+const HARDCODED_ADMINS = ["kesiawnandi@gmail.com", "kesia@llmidiaco.com"];
+
+function UserRow({ u, onReset, onDelete, onRoleChange }: {
   u: { id: string; email: string | null; full_name: string | null; role: string; last_sign_in_at: string | null };
   onReset: (pw: string) => void;
   onDelete: () => void;
-  disabled: boolean;
+  onRoleChange: (role: "admin" | "gestor" | "vendedor") => void;
 }) {
   const [pw, setPw] = useState("");
+  const isHardcoded = HARDCODED_ADMINS.includes((u.email ?? "").trim().toLowerCase());
   return (
     <tr className="border-b last:border-0">
       <td className="py-2 pr-3">{u.full_name ?? "—"}</td>
       <td className="py-2 pr-3">{u.email}</td>
       <td className="py-2 pr-3">
-        <Badge variant={u.role === "admin" ? "default" : u.role === "gestor" ? "secondary" : "outline"}>
-          {u.role}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={u.role === "admin" ? "default" : u.role === "gestor" ? "secondary" : "outline"}>
+            {u.role}
+          </Badge>
+          <select
+            className="h-7 rounded-md border border-input bg-background px-1.5 text-xs"
+            value={u.role}
+            onChange={(e) => {
+              const next = e.target.value as "admin" | "gestor" | "vendedor";
+              if (next === u.role) return;
+              if (next === "admin" && !confirm(`Tornar ${u.email} administrador? Terá acesso total.`)) return;
+              onRoleChange(next);
+            }}
+            disabled={isHardcoded}
+            title={isHardcoded ? "Admin fixo — não editável" : "Alterar perfil"}
+          >
+            <option value="vendedor">Vendedor</option>
+            <option value="gestor">Gestor</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
       </td>
       <td className="py-2 pr-3 text-xs text-muted-foreground">
         {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString("pt-BR") : "nunca"}
@@ -173,11 +194,11 @@ function UserRow({ u, onReset, onDelete, disabled }: {
               placeholder="Nova senha"
               value={pw}
               onChange={(e) => setPw(e.target.value)}
-              disabled={disabled}
+              disabled={isHardcoded}
             />
             <Button size="sm" variant="outline"
               onClick={() => { if (pw.length >= 6) { onReset(pw); setPw(""); } }}
-              disabled={disabled || pw.length < 6}
+              disabled={isHardcoded || pw.length < 6}
               title="Redefinir senha"
             >
               <KeyRound className="h-3.5 w-3.5" />
@@ -185,7 +206,7 @@ function UserRow({ u, onReset, onDelete, disabled }: {
           </div>
           <Button size="sm" variant="ghost"
             onClick={() => { if (confirm(`Remover ${u.email}?`)) onDelete(); }}
-            disabled={disabled}
+            disabled={isHardcoded}
             title="Remover"
           >
             <Trash2 className="h-3.5 w-3.5 text-destructive" />
