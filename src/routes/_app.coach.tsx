@@ -89,13 +89,12 @@ function CoachPage() {
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-indigo-600 flex items-center justify-center">
-          <Sparkles className="h-5 w-5 text-white" />
-        </div>
+        <Sparkles className="h-6 w-6 text-muted-foreground" />
         <div>
-          <h1 className="text-xl md:text-2xl font-bold">Coach Comercial com IA</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Análise Comercial</h1>
           <p className="text-xs text-muted-foreground">Análise inteligente das conversas dos vendedores</p>
         </div>
+
         {autoEnabled && (
           <Badge variant="outline" className="ml-auto text-[10px] text-emerald-600 border-emerald-500/40">
             ● auto-análise ativa
