@@ -121,7 +121,7 @@ function AppLayout() {
           <div className="flex items-center gap-2">
             {admin && <CurrencyToggle />}
             <ThemeToggle />
-            <span className="hidden text-xs text-muted-foreground sm:inline">{email}</span>
+            <span className="hidden text-xs text-muted-foreground sm:inline">{user?.email}</span>
             <Button variant="ghost" size="icon" aria-label="Sair" onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
             </Button>
