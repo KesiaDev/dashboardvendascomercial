@@ -128,10 +128,10 @@ function CoachPage() {
 
 function KpiCard({ icon, label, value, valueClass = "" }: { icon: React.ReactNode; label: string; value: string; valueClass?: string }) {
   return (
-    <Card>
-      <CardContent className="pt-4 pb-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">{icon}{label}</div>
-        <p className={"text-2xl font-bold mt-1 " + valueClass}>{value}</p>
+    <Card className="h-full">
+      <CardContent className="h-full pt-4 pb-3 flex flex-col justify-between">
+        <div className="flex items-start gap-2 text-xs text-muted-foreground min-h-[2.5rem] leading-tight">{icon}{label}</div>
+        <p className={"text-2xl font-bold " + valueClass}>{value}</p>
       </CardContent>
     </Card>
   );
