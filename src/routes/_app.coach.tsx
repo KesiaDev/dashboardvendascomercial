@@ -1063,22 +1063,55 @@ function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
   const max = Math.max(1, ...daily.map((d) => Math.max(d.atendimentos, d.vendas)));
   console.log("[Performance chart]", { count: daily.length, hasData: daily.some(d => d.atendimentos || d.vendas), daily });
   if (!daily.length) {
-    return <div className="h-32 flex items-center justify-center text-xs text-muted-foreground">Sem dados no período.</div>;
+    return <div className="h-40 flex items-center justify-center text-xs text-muted-foreground">Sem dados no período.</div>;
   }
   return (
-    <div className="flex items-end gap-1 h-32">
-      {daily.map((d) => (
-        <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-0.5" title={`${d.date} · ${d.atendimentos} atend / ${d.vendas} vendas`}>
-          <div className="w-full flex items-end gap-0.5 h-full">
-            <div className="flex-1 bg-indigo-500/60 rounded-sm" style={{ height: `${(d.atendimentos / max) * 100}%` }} />
-            <div className="flex-1 bg-fuchsia-500 rounded-sm" style={{ height: `${(d.vendas / max) * 100}%` }} />
-          </div>
-          <div className="text-[9px] text-muted-foreground">{d.date.slice(5)}</div>
+    <div className="space-y-2">
+      <div className="grid min-h-40 grid-cols-[minmax(0,1fr)_74px] gap-3">
+        <div className="flex h-40 items-end gap-2 border-b border-muted pt-4">
+          {daily.map((d) => {
+            const atendHeight = `${Math.max(0, (d.atendimentos / max) * 100)}%`;
+            const vendasHeight = `${Math.max(0, (d.vendas / max) * 100)}%`;
+            return (
+              <div
+                key={d.date}
+                className="flex h-full min-w-9 flex-1 flex-col justify-end gap-1"
+                title={`${d.date} · ${d.atendimentos} atend / ${d.vendas} vendas`}
+              >
+                <div className="flex h-full items-end gap-1">
+                  <div className="relative flex h-full flex-1 items-end">
+                    {d.atendimentos > 0 && (
+                      <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-medium text-muted-foreground">
+                        {d.atendimentos}
+                      </span>
+                    )}
+                    <div
+                      className="w-full rounded-t-sm bg-indigo-500/70 shadow-sm"
+                      style={{ height: atendHeight, minHeight: d.atendimentos > 0 ? 10 : 0 }}
+                    />
+                  </div>
+                  <div className="relative flex h-full flex-1 items-end">
+                    {d.vendas > 0 && (
+                      <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-medium text-fuchsia-600">
+                        {d.vendas}
+                      </span>
+                    )}
+                    <div
+                      className="w-full rounded-t-sm bg-fuchsia-500 shadow-sm"
+                      style={{ height: vendasHeight, minHeight: d.vendas > 0 ? 10 : 0 }}
+                    />
+                  </div>
+                </div>
+                <div className="h-4 text-center text-[9px] text-muted-foreground">{d.date.slice(5)}</div>
+              </div>
+            );
+          })}
         </div>
-      ))}
-      <div className="ml-2 flex flex-col gap-1 text-[10px] self-start">
-        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-indigo-500/60 rounded-sm" /> Atend.</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-fuchsia-500 rounded-sm" /> Vendas</span>
+        <div className="flex flex-col gap-1 text-[10px]">
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-indigo-500/70" /> Atend.</span>
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-fuchsia-500" /> Vendas</span>
+          <span className="mt-2 text-muted-foreground">Máx: {max}</span>
+        </div>
       </div>
     </div>
   );
