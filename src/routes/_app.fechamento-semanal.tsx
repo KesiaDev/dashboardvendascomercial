@@ -24,7 +24,8 @@ export const Route = createFileRoute("/_app/fechamento-semanal")({
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const SEASON_START = "2026-06-01";
+const SEASON_START = "2026-06-29"; // Início real do dash (S5 do calendário comercial)
+const WEEK_LABEL_OFFSET = 4; // idx 0 → S5
 const DAYS_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
@@ -222,7 +223,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Button variant="outline" size="icon" disabled={weekIdx===0} onClick={()=>setWeekIdx(i=>i-1)}><ChevronLeft className="h-4 w-4"/></Button>
         <div className="text-center min-w-[170px] px-3 py-2 rounded-lg border border-border bg-card">
-          <div className="text-sm font-semibold">Semana {weekIdx+1}</div>
+          <div className="text-sm font-semibold">Semana {weekIdx+1+WEEK_LABEL_OFFSET}</div>
           <div className="text-xs text-muted-foreground">{fmtDate(start)} – {fmtDate(end)}</div>
         </div>
         <Button variant="outline" size="icon" disabled={weekIdx>=maxWeek} onClick={()=>setWeekIdx(i=>i+1)}><ChevronRight className="h-4 w-4"/></Button>
@@ -268,7 +269,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
       {/* Gráfico + Podium */}
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Evolução diária — Semana {weekIdx+1}</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Evolução diária — Semana {weekIdx+1+WEEK_LABEL_OFFSET}</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={230}>
               <BarChart data={dailyData} margin={{top:4,right:4,bottom:0,left:0}}>
@@ -309,7 +310,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
 
       {/* Tabela de vendas */}
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-1.5"><ShoppingBag className="h-4 w-4 text-muted-foreground"/>Vendas — Semana {weekIdx+1} · {fmtDate(start)} a {fmtDate(end)}</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-1.5"><ShoppingBag className="h-4 w-4 text-muted-foreground"/>Vendas — Semana {weekIdx+1+WEEK_LABEL_OFFSET} · {fmtDate(start)} a {fmtDate(end)}</CardTitle></CardHeader>
         <CardContent className="p-0">
           {weekSales.length===0?(<p className="text-sm text-muted-foreground px-4 py-6">Nenhuma venda registrada nesta semana.</p>):(
             <div className="overflow-x-auto">
@@ -557,7 +558,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
       const map: Record<string,number>={};
       for (const s of sales) map[s.seller_name]=(map[s.seller_name]??0)+Number(s.value_eur);
       const top=Object.entries(map).sort((a,b)=>b[1]-a[1])[0];
-      return {idx:i,start,end,total,count:sales.length,topSeller:top?.[0]??null,label:`S${i+1}`};
+      return {idx:i,start,end,total,count:sales.length,topSeller:top?.[0]??null,label:`S${i+1+WEEK_LABEL_OFFSET}`};
     }).filter(Boolean) as NonNullable<ReturnType<typeof weekRange>&{idx:number;total:number;count:number;topSeller:string|null;label:string}>[];
   },[allSales,yearMonth,maxWeek]);
 
