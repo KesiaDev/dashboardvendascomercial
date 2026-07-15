@@ -206,8 +206,10 @@ function FechamentoForm({ session }: { session: any }) {
   const monthFrom = today.slice(0, 7) + "-01";
 
   const { data: sales = [] } = useQuery({
-    queryKey: ["manual-sales", monthFrom],
-    queryFn: () => listManualSales({ data: { from: monthFrom } }),
+    queryKey: ["manual-sales", monthFrom, isAdmin],
+    queryFn: () => isAdmin
+      ? listManualSalesAdmin({ data: { from: monthFrom } })
+      : listManualSales({ data: { from: monthFrom } }),
   });
 
   const mutation = useMutation({
