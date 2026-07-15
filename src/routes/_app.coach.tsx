@@ -46,6 +46,24 @@ function sentimentColor(s: string | null | undefined) {
   if (s === "negativo") return "bg-rose-500/15 text-rose-700 dark:text-rose-400";
   return "bg-slate-500/15 text-slate-700 dark:text-slate-300";
 }
+const SELLER_NAME_MAP: { match: string[]; name: string }[] = [
+  { name: "João Pessoa",      match: ["joaopessoa", "joao pessoa", "joão pessoa"] },
+  { name: "Fabio Nadal",      match: ["fabionadal", "fabio nadal", "nadal"] },
+  { name: "Luana Guimarães",  match: ["luanaguimaraes", "luana.guimaraes", "luana guimaraes", "luana guimarães", "luana"] },
+  { name: "Gisele Pimentel",  match: ["giselegagliano", "gisele gagliano", "gisele pimentel", "gisele"] },
+  { name: "Rita Bandeira",    match: ["ritabandeira", "rita bandeira", "rita"] },
+];
+function displaySellerName(nameOrEmail: string | null | undefined): string {
+  const raw = (nameOrEmail ?? "").trim();
+  if (!raw) return "—";
+  const lower = raw.toLowerCase();
+  for (const { match, name } of SELLER_NAME_MAP) {
+    for (const m of match) if (lower === m || lower.includes(m)) return name;
+  }
+  // Se veio email genérico, mostra a parte antes do @
+  if (raw.includes("@")) return raw.split("@")[0];
+  return raw;
+}
 function scoreColor(n: number | null | undefined) {
   if (n == null) return "text-muted-foreground";
   if (n >= 8) return "text-emerald-600 dark:text-emerald-400";
