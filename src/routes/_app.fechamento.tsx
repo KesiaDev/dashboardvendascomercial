@@ -138,7 +138,7 @@ function LoginCard() {
         <CardContent>
           <Button className="w-full" disabled={busy} onClick={async () => {
             setBusy(true);
-            const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/fechamento` });
+            const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/auth/callback?next=/fechamento` });
             if ((res as any)?.error) { toast.error("Falha no login: " + String((res as any).error?.message ?? (res as any).error)); setBusy(false); }
           }}>
             <LogIn className="mr-2 h-4 w-4" /> Entrar com Google

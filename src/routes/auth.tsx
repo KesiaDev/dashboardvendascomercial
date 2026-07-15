@@ -19,6 +19,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const callbackUrl = () => `${window.location.origin}/auth/callback`;
 
   useEffect(() => {
     const go = (em: string | null | undefined) => {
@@ -53,14 +54,19 @@ function AuthPage() {
     setGoogleLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: callbackUrl(),
       });
       if (result.error) {
         toast.error(result.error.message || "Falha ao entrar com Google");
         return;
       }
-      if (result.redirected) return; // browser navigating away
-      // popup flow: session is set by the wrapper; onAuthStateChange handles navigation
+      if (result.redirected) return;
+
+      const { data } = await supabase.auth.getSession();
+      const em = data.session?.user.email;
+      if (data.session) {
+        navigate({ to: isAdminEmail(em) ? "/" : "/fechamento", replace: true });
+      }
     } finally {
       setGoogleLoading(false);
     }
