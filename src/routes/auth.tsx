@@ -51,19 +51,21 @@ function AuthPage() {
 
   async function onGoogle() {
     setGoogleLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        toast.error(result.error.message || "Falha ao entrar com Google");
+        return;
+      }
+      if (result.redirected) return; // browser navigating away
+      // popup flow: session is set by the wrapper; onAuthStateChange handles navigation
+    } finally {
       setGoogleLoading(false);
-      toast.error(result.error.message || "Falha ao entrar com Google");
-      return;
     }
-    if (result.redirected) return; // browser navigating away
-    const { data } = await supabase.auth.getSession();
-    const em = data.session?.user.email;
-    navigate({ to: isAdminEmail(em) ? "/" : "/fechamento", replace: true });
   }
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
