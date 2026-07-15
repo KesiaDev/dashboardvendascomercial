@@ -90,10 +90,11 @@ function UsuariosPage() {
               <select
                 className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                 value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value as "vendedor" | "gestor" })}
+                onChange={(e) => setForm({ ...form, role: e.target.value as "vendedor" | "gestor" | "admin" })}
               >
                 <option value="vendedor">Vendedor</option>
                 <option value="gestor">Gestor</option>
+                <option value="admin">Admin</option>
               </select>
             </div>
             <div className="md:col-span-5">
