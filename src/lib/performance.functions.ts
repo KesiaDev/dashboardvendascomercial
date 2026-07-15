@@ -167,8 +167,10 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
           key, name: cleaned, email: email ?? "",
           atendimentos: 0, vendas: 0, faturamento: 0,
           taxaConversao: 0, notaMedia: null, analisesCount: 0,
+          leadsNovos: 0, conversaoLead: 0,
           _scoreSum: 0, _scoreN: 0,
         };
+
         sellerMap.set(key, cur);
       } else if (!cur.email && email) {
         cur.email = email;
