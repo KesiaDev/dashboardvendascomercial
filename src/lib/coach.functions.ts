@@ -735,3 +735,124 @@ export const runClintMigrationsFn = createServerFn({ method: "POST" }).handler(a
   if (!tableErr) return { ok: true, already_applied: true };
   throw new Error("MIGRATION_NEEDED:Rode o arquivo supabase/migrations/20260713120000_coach_backend_v2.sql no Supabase SQL Editor");
 });
+
+// ============ Team Insights (coordenador comercial) ============
+export type TeamInsights = {
+  generated_at: string;
+  window_days: number;
+  sample_size: number;
+  avg_score: number | null;
+  top_weaknesses: { theme: string; frequency: number; sellers: string[]; example: string }[];
+  top_strengths: { theme: string; frequency: number; sellers: string[]; example: string }[];
+  top_objections: { theme: string; frequency: number }[];
+  seller_focus: { seller: string; focus: string; suggested_action: string }[];
+  training_recommendations: { title: string; why: string; format: string; priority: "alta" | "media" | "baixa" }[];
+  shareable_best_practices: { practice: string; from_seller: string }[];
+  coordinator_summary: string;
+};
+
+function norm(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export const generateTeamInsightsFn = createServerFn({ method: "POST" })
+  .inputValidator((d: { days?: number } = {}) => d)
+  .handler(async ({ data }): Promise<TeamInsights> => {
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) throw new Error("LOVABLE_API_KEY não configurada");
+    const db = await admin();
+    const days = Math.max(3, Math.min(180, data.days ?? 30));
+    const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
+
+    const { data: analyses, error } = await db
+      .from("coach_analyses")
+      .select("conversation_id, score_geral, pontos_fortes, pontos_melhoria, objecoes, resumo, analyzed_at")
+      .gte("analyzed_at", since)
+      .eq("status", "ok")
+      .limit(500);
+    if (error) throw new Error(error.message);
+    const rows = analyses ?? [];
+    if (rows.length === 0) {
+      return {
+        generated_at: new Date().toISOString(),
+        window_days: days, sample_size: 0, avg_score: null,
+        top_weaknesses: [], top_strengths: [], top_objections: [],
+        seller_focus: [], training_recommendations: [], shareable_best_practices: [],
+        coordinator_summary: "Sem conversas analisadas no período. Analise pelo menos algumas para gerar insights.",
+      };
+    }
+
+    const ids = rows.map((r: any) => r.conversation_id);
+    const { data: convs } = await db.from("coach_conversations")
+      .select("id, seller_name, seller_email").in("id", ids);
+    const byId = new Map<string, any>();
+    for (const c of convs ?? []) byId.set((c as any).id, c);
+
+    const scores = rows.map((r: any) => r.score_geral).filter((n: any) => typeof n === "number");
+    const avg = scores.length ? scores.reduce((a: number, b: number) => a + b, 0) / scores.length : null;
+
+    const compact = rows.slice(0, 120).map((r: any) => {
+      const conv = byId.get(r.conversation_id);
+      return {
+        seller: conv?.seller_name || conv?.seller_email || "—",
+        score: r.score_geral,
+        fortes: (r.pontos_fortes ?? []).slice(0, 4),
+        melhoria: (r.pontos_melhoria ?? []).slice(0, 4),
+        objecoes: (r.objecoes ?? []).slice(0, 3),
+      };
+    });
+
+    const sys =
+      "Você é um COORDENADOR COMERCIAL sênior da LLMídia. Recebe análises de várias conversas de venda de vários vendedores. " +
+      "Sua missão é enxergar PADRÕES no time — não repetir por vendedor. Identifique problemas comuns, boas práticas replicáveis, " +
+      "objeções recorrentes, treinamentos que resolveriam gargalos e ações práticas por vendedor. " +
+      "Responda SOMENTE JSON válido com este schema exato:\n" +
+      `{"top_weaknesses":[{"theme":"string curto","frequency":number,"sellers":["nome"],"example":"frase curta"}],` +
+      `"top_strengths":[{"theme":"string curto","frequency":number,"sellers":["nome"],"example":"frase curta"}],` +
+      `"top_objections":[{"theme":"string curto","frequency":number}],` +
+      `"seller_focus":[{"seller":"nome","focus":"o que precisa melhorar","suggested_action":"ação concreta"}],` +
+      `"training_recommendations":[{"title":"nome do treino/curso","why":"por quê","format":"workshop|role-play|leitura|call review","priority":"alta|media|baixa"}],` +
+      `"shareable_best_practices":[{"practice":"o que replicar","from_seller":"nome"}],` +
+      `"coordinator_summary":"3-5 frases direto ao ponto para o gestor"}. ` +
+      "Máx 6 itens em cada lista. Português do Brasil. Sem repetir o óbvio.";
+
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content:
+            `Janela: ${days} dias. Conversas analisadas: ${rows.length}. Nota média: ${avg?.toFixed(2) ?? "—"}.\n\n` +
+            `DADOS:\n${JSON.stringify(compact, null, 2)}` },
+        ],
+      }),
+    });
+    if (!resp.ok) throw new Error(`Lovable AI ${resp.status}: ${await resp.text().catch(() => "")}`);
+    const j = (await resp.json()) as any;
+    let parsed: any = {};
+    try { parsed = JSON.parse(j?.choices?.[0]?.message?.content ?? "{}"); } catch { parsed = {}; }
+
+    return {
+      generated_at: new Date().toISOString(),
+      window_days: days,
+      sample_size: rows.length,
+      avg_score: avg,
+      top_weaknesses: Array.isArray(parsed.top_weaknesses) ? parsed.top_weaknesses.slice(0, 6) : [],
+      top_strengths: Array.isArray(parsed.top_strengths) ? parsed.top_strengths.slice(0, 6) : [],
+      top_objections: Array.isArray(parsed.top_objections) ? parsed.top_objections.slice(0, 6) : [],
+      seller_focus: Array.isArray(parsed.seller_focus) ? parsed.seller_focus.slice(0, 8) : [],
+      training_recommendations: Array.isArray(parsed.training_recommendations) ? parsed.training_recommendations.slice(0, 6) : [],
+      shareable_best_practices: Array.isArray(parsed.shareable_best_practices) ? parsed.shareable_best_practices.slice(0, 6) : [],
+      coordinator_summary: parsed.coordinator_summary ?? "",
+    };
+  });
+
