@@ -269,7 +269,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
       {/* Gráfico + Podium */}
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Evolução diária — Semana {weekIdx+1}</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Evolução diária — Semana {weekIdx+1+WEEK_LABEL_OFFSET}</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={230}>
               <BarChart data={dailyData} margin={{top:4,right:4,bottom:0,left:0}}>
