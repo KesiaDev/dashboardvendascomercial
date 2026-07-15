@@ -6,6 +6,7 @@ import { lovable } from "@/integrations/lovable";
 import {
   createManualSale,
   listManualSales,
+  listManualSalesAdmin,
   updateManualSale,
   deleteManualSale,
   lookupByEmailFn,
@@ -148,10 +149,27 @@ function LoginCard() {
   );
 }
 
-type SaleRow = Awaited<ReturnType<typeof listManualSales>>[number];
+type SaleRow = ManualSale;
 
-const ADMIN_EMAILS = ["kesia@llmidia.com"];
+const ADMIN_EMAILS = ["kesia@llmidia.com", "kesiawnandi@gmail.com", "kesia@llmidiaco.com"];
 function isAdminEmail(e: string) { return ADMIN_EMAILS.includes((e ?? "").trim().toLowerCase()); }
+
+// Normaliza vendedor: mapeia e-mails corporativos para o nome canônico
+const SELLER_CANONICAL: Record<string, string> = {
+  "joaopessoa@lucianolarrossa.com": "João Pessoa",
+  "giselegagliano@lucianolarrossa.com": "Gisele Pimentel",
+  "fabionadal@lucianolarrossa.com": "Fabio Nadal",
+  "ritabandeira@lucianolarrossa.com": "Rita Bandeira",
+  "luana.guimaraes@lucianolarrossa.com": "Luana Guimarães",
+};
+function normalizeSeller(raw: string | null | undefined): string {
+  if (!raw) return "—";
+  const lower = raw.toLowerCase();
+  for (const [email, name] of Object.entries(SELLER_CANONICAL)) {
+    if (lower === email || lower.includes(email.split("@")[0])) return name;
+  }
+  return raw;
+}
 
 function FechamentoForm({ session }: { session: any }) {
   const email = session?.user?.email ?? "";
@@ -188,8 +206,10 @@ function FechamentoForm({ session }: { session: any }) {
   const monthFrom = today.slice(0, 7) + "-01";
 
   const { data: sales = [] } = useQuery({
-    queryKey: ["manual-sales", monthFrom],
-    queryFn: () => listManualSales({ data: { from: monthFrom } }),
+    queryKey: ["manual-sales", monthFrom, isAdmin],
+    queryFn: () => isAdmin
+      ? listManualSalesAdmin({ data: { from: monthFrom } })
+      : listManualSales({ data: { from: monthFrom } }),
   });
 
   const mutation = useMutation({
@@ -585,7 +605,7 @@ function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm }: {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold">{sale.seller_name.split(" ")[0]}</span>
+            <span className="font-semibold">{normalizeSeller(sale.seller_name).split(" ")[0]}</span>
             <span className="tabular-nums font-bold">{moneyEur(Number(sale.value_eur))}</span>
             <ConfirmBadge status={sale.confirmation_status} />
             {sale.affiliate_mismatch && (
