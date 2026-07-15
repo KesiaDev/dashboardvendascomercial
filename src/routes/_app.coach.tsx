@@ -862,8 +862,8 @@ function HotmartWebhookCard() {
 
 
 // ==================== PERFORMANCE TAB ====================
-function fmtBRL(n: number) {
-  return "R$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+function fmtEUR(n: number) {
+  return "€" + n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function fmtPct(n: number) {
   return (n * 100).toFixed(1) + "%";
