@@ -151,8 +151,25 @@ function LoginCard() {
 
 type SaleRow = Awaited<ReturnType<typeof listManualSales>>[number];
 
-const ADMIN_EMAILS = ["kesia@llmidia.com"];
+const ADMIN_EMAILS = ["kesia@llmidia.com", "kesiawnandi@gmail.com", "kesia@llmidiaco.com"];
 function isAdminEmail(e: string) { return ADMIN_EMAILS.includes((e ?? "").trim().toLowerCase()); }
+
+// Normaliza vendedor: mapeia e-mails corporativos para o nome canônico
+const SELLER_CANONICAL: Record<string, string> = {
+  "joaopessoa@lucianolarrossa.com": "João Pessoa",
+  "giselegagliano@lucianolarrossa.com": "Gisele Pimentel",
+  "fabionadal@lucianolarrossa.com": "Fabio Nadal",
+  "ritabandeira@lucianolarrossa.com": "Rita Bandeira",
+  "luana.guimaraes@lucianolarrossa.com": "Luana Guimarães",
+};
+function normalizeSeller(raw: string | null | undefined): string {
+  if (!raw) return "—";
+  const lower = raw.toLowerCase();
+  for (const [email, name] of Object.entries(SELLER_CANONICAL)) {
+    if (lower === email || lower.includes(email.split("@")[0])) return name;
+  }
+  return raw;
+}
 
 function FechamentoForm({ session }: { session: any }) {
   const email = session?.user?.email ?? "";
