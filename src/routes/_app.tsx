@@ -24,6 +24,7 @@ const ALL_NAV_ITEMS = [
   { to: "/funis",               label: "Funis",              icon: GitMerge,         adminOnly: true },
   { to: "/coach",               label: "Coach IA",           icon: Sparkles,         adminOnly: true },
   { to: "/indicacoes",          label: "Indicações",         icon: Share2,           adminOnly: true },
+  { to: "/usuarios",            label: "Usuários",           icon: Users,            adminOnly: true },
 ] as const;
 
 function AppLayout() {
