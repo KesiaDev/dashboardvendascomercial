@@ -176,7 +176,7 @@ function WeeklyChart({ stats }: { stats: WeeklyStats[] }) {
         <tbody>
           {sellers.map((seller) => (
             <tr key={seller}>
-              <td className="py-1 pr-3 font-medium truncate max-w-[140px]">{seller}</td>
+              <td className="py-1 pr-3 font-medium truncate max-w-[160px]">{displaySellerName(seller)}</td>
               {weeks.map((w) => {
                 const entry = stats.find(
                   (s) => (s.seller_name ?? s.seller_email ?? "—") === seller && s.week_start === w,
