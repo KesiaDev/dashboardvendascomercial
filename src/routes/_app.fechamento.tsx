@@ -6,6 +6,7 @@ import { lovable } from "@/integrations/lovable";
 import {
   createManualSale,
   listManualSales,
+  listManualSalesAdmin,
   updateManualSale,
   deleteManualSale,
   lookupByEmailFn,
