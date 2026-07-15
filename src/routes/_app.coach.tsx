@@ -1373,6 +1373,8 @@ function fmtDur(s: number) {
 function LigacoesTab() {
   const qc = useQueryClient();
   const [days, setDays] = useState(7);
+  const [sellerFilter, setSellerFilter] = useState("");
+  const [q, setQ] = useState("");
   const { data: calls, isLoading } = useQuery({
     queryKey: ["ccpbx-calls"],
     queryFn: () => listCcpbxCallsFn({ data: { limit: 200 } }),
@@ -1394,7 +1396,33 @@ function LigacoesTab() {
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
 
-  const list = (calls ?? []) as CallRow[];
+  const allCalls = (calls ?? []) as CallRow[];
+  const sellerOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of allCalls) {
+      const key = (c.agent_email ?? c.agent_name ?? c.agent_user ?? "").toString();
+      if (!key) continue;
+      if (!map.has(key)) map.set(key, displaySellerName(c.agent_name ?? c.agent_email ?? key));
+    }
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [allCalls]);
+
+  const list = useMemo(() => {
+    let l = allCalls;
+    if (sellerFilter) {
+      l = l.filter((c) => (c.agent_email ?? c.agent_name ?? c.agent_user ?? "") === sellerFilter);
+    }
+    if (q) {
+      const s = q.toLowerCase();
+      l = l.filter((c) =>
+        (c.agent_name ?? "").toLowerCase().includes(s) ||
+        (c.contact_name ?? "").toLowerCase().includes(s) ||
+        (c.from_number ?? "").toLowerCase().includes(s) ||
+        (c.to_number ?? "").toLowerCase().includes(s));
+    }
+    return l;
+  }, [allCalls, sellerFilter, q]);
+
   const totalDur = list.reduce((a, c) => a + (c.duration_sec ?? 0), 0);
   const analyzed = list.filter(c => c.score != null).length;
   const avgScore = analyzed > 0 ? list.reduce((a, c) => a + (c.score ?? 0), 0) / analyzed : null;
