@@ -46,6 +46,24 @@ function sentimentColor(s: string | null | undefined) {
   if (s === "negativo") return "bg-rose-500/15 text-rose-700 dark:text-rose-400";
   return "bg-slate-500/15 text-slate-700 dark:text-slate-300";
 }
+const SELLER_NAME_MAP: { match: string[]; name: string }[] = [
+  { name: "João Pessoa",      match: ["joaopessoa", "joao pessoa", "joão pessoa"] },
+  { name: "Fabio Nadal",      match: ["fabionadal", "fabio nadal", "nadal"] },
+  { name: "Luana Guimarães",  match: ["luanaguimaraes", "luana.guimaraes", "luana guimaraes", "luana guimarães", "luana"] },
+  { name: "Gisele Pimentel",  match: ["giselegagliano", "gisele gagliano", "gisele pimentel", "gisele"] },
+  { name: "Rita Bandeira",    match: ["ritabandeira", "rita bandeira", "rita"] },
+];
+function displaySellerName(nameOrEmail: string | null | undefined): string {
+  const raw = (nameOrEmail ?? "").trim();
+  if (!raw) return "—";
+  const lower = raw.toLowerCase();
+  for (const { match, name } of SELLER_NAME_MAP) {
+    for (const m of match) if (lower === m || lower.includes(m)) return name;
+  }
+  // Se veio email genérico, mostra a parte antes do @
+  if (raw.includes("@")) return raw.split("@")[0];
+  return raw;
+}
 function scoreColor(n: number | null | undefined) {
   if (n == null) return "text-muted-foreground";
   if (n >= 8) return "text-emerald-600 dark:text-emerald-400";
@@ -158,7 +176,7 @@ function WeeklyChart({ stats }: { stats: WeeklyStats[] }) {
         <tbody>
           {sellers.map((seller) => (
             <tr key={seller}>
-              <td className="py-1 pr-3 font-medium truncate max-w-[140px]">{seller}</td>
+              <td className="py-1 pr-3 font-medium truncate max-w-[160px]">{displaySellerName(seller)}</td>
               {weeks.map((w) => {
                 const entry = stats.find(
                   (s) => (s.seller_name ?? s.seller_email ?? "—") === seller && s.week_start === w,
@@ -243,7 +261,7 @@ function VisaoGeral() {
             {ranking.map((s, i) => (
               <div key={s.name} className="flex items-center gap-3">
                 <span className="text-xs font-bold w-5 text-muted-foreground">{i + 1}º</span>
-                <span className="flex-1 text-sm truncate">{s.name}</span>
+                <span className="flex-1 text-sm truncate">{displaySellerName(s.name)}</span>
                 <span className="text-xs text-muted-foreground">{s.count} conv.</span>
                 <span className={"text-sm font-bold w-10 text-right " + scoreColor(s.avg)}>{s.avg.toFixed(1)}</span>
               </div>
