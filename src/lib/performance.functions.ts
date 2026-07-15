@@ -13,7 +13,10 @@ export type SellerPerf = {
   taxaConversao: number;
   notaMedia: number | null;
   analisesCount: number;
+  leadsNovos: number;
+  conversaoLead: number; // vendas / leadsNovos
 };
+
 
 export type PerfResult = {
   range: PerfRange;
