@@ -398,13 +398,13 @@ function FunnelPanel({
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={leadsOverTime} margin={{ top:4, right:8, bottom:0, left:-20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false}/>
-                <XAxis dataKey="label" tick={{ fontSize:11, fill:"hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} interval="preserveStartEnd"/>
-                <YAxis tick={{ fontSize:11, fill:"hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false}/>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
+                <XAxis dataKey="label" tick={{ fontSize:11, fill:"var(--muted-foreground)" }} axisLine={false} tickLine={false} interval="preserveStartEnd"/>
+                <YAxis tick={{ fontSize:11, fill:"var(--muted-foreground)" }} axisLine={false} tickLine={false} allowDecimals={false}/>
                 <RTooltip
                   formatter={(v: number) => [v, "leads"]}
                   labelFormatter={(l) => timeGrain === "week" ? `Semana de ${l}` : l}
-                  contentStyle={{ background:"hsl(var(--card))", border:"1px solid hsl(var(--border))", borderRadius:8, fontSize:12 }}
+                  contentStyle={{ background:"var(--card)", border:"1px solid var(--border)", borderRadius:8, fontSize:12 }}
                 />
                 <Bar dataKey="count" fill={cfg.color} radius={[4,4,0,0]} maxBarSize={40}/>
               </BarChart>
@@ -426,12 +426,12 @@ function FunnelPanel({
             ) : (
               <ResponsiveContainer width="100%" height={Math.max(180, m.stageData.length * 36)}>
                 <BarChart data={m.stageData} layout="vertical" margin={{ top:0, right:40, bottom:0, left:0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false}/>
-                  <XAxis type="number" tick={{ fontSize:11, fill:"hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}/>
-                  <YAxis dataKey="label" type="category" width={200} tick={{ fontSize:11, fill:"hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}/>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false}/>
+                  <XAxis type="number" tick={{ fontSize:11, fill:"var(--muted-foreground)" }} axisLine={false} tickLine={false}/>
+                  <YAxis dataKey="label" type="category" width={200} tick={{ fontSize:11, fill:"var(--muted-foreground)" }} axisLine={false} tickLine={false}/>
                   <RTooltip
                     formatter={(v: number) => [v, "leads"]}
-                    contentStyle={{ background:"hsl(var(--card))", border:"1px solid hsl(var(--border))", borderRadius:8, fontSize:12 }}
+                    contentStyle={{ background:"var(--card)", border:"1px solid var(--border)", borderRadius:8, fontSize:12 }}
                   />
                   <Bar dataKey="count" radius={[0,4,4,0]} maxBarSize={28} fill={cfg.color}/>
                 </BarChart>
@@ -455,7 +455,7 @@ function FunnelPanel({
                     <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={70}>
                       {pieData.map((e, i) => <Cell key={i} fill={e.color}/>)}
                     </Pie>
-                    <RTooltip formatter={(v: number) => [v, ""]} contentStyle={{ background:"hsl(var(--card))", border:"1px solid hsl(var(--border))", borderRadius:8, fontSize:12 }}/>
+                    <RTooltip formatter={(v: number) => [v, ""]} contentStyle={{ background:"var(--card)", border:"1px solid var(--border)", borderRadius:8, fontSize:12 }}/>
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="space-y-1 mt-1">
@@ -538,12 +538,12 @@ function FunnelPanel({
           <CardContent>
             <ResponsiveContainer width="100%" height={Math.max(120, m.lostReasonsArr.length * 36)}>
               <BarChart data={m.lostReasonsArr} layout="vertical" margin={{ top:0, right:40, bottom:0, left:0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false}/>
-                <XAxis type="number" tick={{ fontSize:11, fill:"hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}/>
-                <YAxis dataKey="label" type="category" width={200} tick={{ fontSize:11, fill:"hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}/>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false}/>
+                <XAxis type="number" tick={{ fontSize:11, fill:"var(--muted-foreground)" }} axisLine={false} tickLine={false}/>
+                <YAxis dataKey="label" type="category" width={200} tick={{ fontSize:11, fill:"var(--muted-foreground)" }} axisLine={false} tickLine={false}/>
                 <RTooltip
                   formatter={(v: number) => [v, "leads"]}
-                  contentStyle={{ background:"hsl(var(--card))", border:"1px solid hsl(var(--border))", borderRadius:8, fontSize:12 }}
+                  contentStyle={{ background:"var(--card)", border:"1px solid var(--border)", borderRadius:8, fontSize:12 }}
                 />
                 <Bar dataKey="count" radius={[0,4,4,0]} maxBarSize={24} fill="#ef4444"/>
               </BarChart>
