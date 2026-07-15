@@ -305,6 +305,7 @@ function Conversas() {
   const { data: convs = [], isLoading } = useQuery({ queryKey: ["coach-convs"], queryFn: () => listCoachConversationsFn() });
   const [q, setQ] = useState("");
   const [minScore, setMinScore] = useState("");
+  const [sellerFilter, setSellerFilter] = useState("");
 
   const analyze = useMutation({
     mutationFn: (id: string) => analyzeConversationFn({ data: { conversationId: id, force: true } }),
