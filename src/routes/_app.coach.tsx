@@ -23,6 +23,7 @@ import {
   deleteCoachConversationFn, getCoachConfigFn, saveCoachConfigFn,
   fetchClintWebhookStatsFn, fetchClintIntegrationLogsFn, runClintMigrationsFn,
   fetchWeeklyStatsFn, runAutoAnalysisFn, syncClintMessagesFn,
+  generateTeamInsightsFn, type TeamInsights,
   type CoachConfig, type WeeklyStats,
 } from "@/lib/coach.functions";
 import { getHotmartWebhookTokenFn } from "@/lib/hotmart-webhook.functions";
