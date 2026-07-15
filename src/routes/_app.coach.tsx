@@ -957,12 +957,27 @@ function PerformanceTab() {
 
       {/* Team KPIs */}
       {perf && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <KpiCard icon={<MessageSquare className="h-3 w-3" />} label={`Atendimentos (${rangeLabel})`} value={String(perf.team.atendimentos)} />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads novos (${rangeLabel})`} value={String(perf.team.leadsNovos)} />
+          <KpiCard icon={<MessageSquare className="h-3 w-3" />} label="Atendimentos" value={String(perf.team.atendimentos)} />
           <KpiCard icon={<CheckCircle2 className="h-3 w-3" />} label="Vendas" value={String(perf.team.vendas)} />
           <KpiCard icon={<TrendingUp className="h-3 w-3" />} label="Faturamento" value={fmtEUR(perf.team.faturamento)} />
-          <KpiCard icon={<Target className="h-3 w-3" />} label="Taxa conversão" value={fmtPct(perf.team.taxaConversao)} />
+          <KpiCard
+            icon={<Target className="h-3 w-3" />}
+            label="Conv. lead→venda"
+            value={fmtPct(perf.team.conversaoLead)}
+            valueClass="text-emerald-600"
+          />
           <KpiCard icon={<Sparkles className="h-3 w-3" />} label="Nota IA média" value={perf.team.notaMedia != null ? perf.team.notaMedia.toFixed(1) : "—"} valueClass={scoreColor(perf.team.notaMedia)} />
+        </div>
+      )}
+      {perf && (
+        <div className="text-[11px] text-muted-foreground -mt-2 px-1">
+          Taxa conv. atendimento→venda: <span className="font-medium text-foreground">{fmtPct(perf.team.taxaConversao)}</span>
+          {perf.team.leadPorVenda != null && (
+            <> · Leads por venda: <span className="font-medium text-foreground">{perf.team.leadPorVenda.toFixed(1)}</span></>
+          )}
+          <> · Fonte de leads: <span className="font-medium">Pipeline Comercial V3</span></>
         </div>
       )}
 
@@ -1060,60 +1075,47 @@ function PerformanceTab() {
 }
 
 function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
-  const max = Math.max(1, ...daily.map((d) => Math.max(d.atendimentos, d.vendas)));
-  console.log("[Performance chart]", { count: daily.length, hasData: daily.some(d => d.atendimentos || d.vendas), daily });
+  const max = Math.max(1, ...daily.map((d) => Math.max(d.leads, d.atendimentos, d.vendas)));
   if (!daily.length) {
     return <div className="h-40 flex items-center justify-center text-xs text-muted-foreground">Sem dados no período.</div>;
   }
-  const chartWidth = Math.max(420, daily.length * 76);
-  const chartHeight = 168;
+  const chartWidth = Math.max(420, daily.length * 88);
+  const chartHeight = 180;
   const top = 22;
   const bottom = 24;
   const plotHeight = chartHeight - top - bottom;
   const groupWidth = chartWidth / daily.length;
-  const barWidth = Math.max(10, Math.min(18, groupWidth * 0.22));
+  const barWidth = Math.max(8, Math.min(16, groupWidth * 0.18));
   const scaleY = (value: number) => (value / max) * plotHeight;
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_74px] gap-3">
+    <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-3">
       <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-44 min-w-full" role="img" aria-label="Atendimentos e vendas por dia">
+        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-44 min-w-full" role="img" aria-label="Leads, atendimentos e vendas por dia">
           <line x1="0" x2={chartWidth} y1={chartHeight - bottom} y2={chartHeight - bottom} className="stroke-border" strokeWidth="1" />
           {daily.map((d, i) => {
             const cx = groupWidth * i + groupWidth / 2;
-            const atendH = scaleY(d.atendimentos);
-            const vendasH = scaleY(d.vendas);
-            const atendVisibleH = d.atendimentos > 0 ? Math.max(8, atendH) : 0;
-            const vendasVisibleH = d.vendas > 0 ? Math.max(8, vendasH) : 0;
             const baseY = chartHeight - bottom;
+            const bars = [
+              { key: "leads", v: d.leads, cls: "fill-amber-500/80", off: -barWidth - 2 - barWidth },
+              { key: "atend", v: d.atendimentos, cls: "fill-indigo-500/70", off: -barWidth / 2 },
+              { key: "vendas", v: d.vendas, cls: "fill-fuchsia-500", off: barWidth + 2 },
+            ];
             return (
               <g key={d.date}>
-                <title>{`${d.date} · ${d.atendimentos} atend / ${d.vendas} vendas`}</title>
-                <rect
-                  x={cx - barWidth - 2}
-                  y={baseY - atendVisibleH}
-                  width={barWidth}
-                  height={atendVisibleH}
-                  rx="2"
-                  className="fill-indigo-500/70"
-                />
-                <rect
-                  x={cx + 2}
-                  y={baseY - vendasVisibleH}
-                  width={barWidth}
-                  height={vendasVisibleH}
-                  rx="2"
-                  className="fill-fuchsia-500"
-                />
-                {d.atendimentos > 0 && (
-                  <text x={cx - barWidth / 2 - 2} y={baseY - atendVisibleH - 5} textAnchor="middle" className="fill-muted-foreground text-[10px] font-medium">
-                    {d.atendimentos}
-                  </text>
-                )}
-                {d.vendas > 0 && (
-                  <text x={cx + barWidth / 2 + 2} y={baseY - vendasVisibleH - 5} textAnchor="middle" className="fill-fuchsia-600 text-[10px] font-semibold">
-                    {d.vendas}
-                  </text>
-                )}
+                <title>{`${d.date} · ${d.leads} leads / ${d.atendimentos} atend / ${d.vendas} vendas`}</title>
+                {bars.map((b) => {
+                  const h = b.v > 0 ? Math.max(6, scaleY(b.v)) : 0;
+                  return (
+                    <g key={b.key}>
+                      <rect x={cx + b.off} y={baseY - h} width={barWidth} height={h} rx="2" className={b.cls} />
+                      {b.v > 0 && (
+                        <text x={cx + b.off + barWidth / 2} y={baseY - h - 4} textAnchor="middle" className="fill-muted-foreground text-[9px] font-medium">
+                          {b.v}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
                 <text x={cx} y={chartHeight - 6} textAnchor="middle" className="fill-muted-foreground text-[10px]">
                   {d.date.slice(5)}
                 </text>
@@ -1123,6 +1125,7 @@ function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
         </svg>
       </div>
       <div className="flex flex-col gap-1 text-[10px]">
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-amber-500/80" /> Leads</span>
         <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-indigo-500/70" /> Atend.</span>
         <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-fuchsia-500" /> Vendas</span>
         <span className="mt-2 text-muted-foreground">Máx: {max}</span>
