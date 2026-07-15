@@ -261,7 +261,7 @@ function VisaoGeral() {
             {ranking.map((s, i) => (
               <div key={s.name} className="flex items-center gap-3">
                 <span className="text-xs font-bold w-5 text-muted-foreground">{i + 1}º</span>
-                <span className="flex-1 text-sm truncate">{s.name}</span>
+                <span className="flex-1 text-sm truncate">{displaySellerName(s.name)}</span>
                 <span className="text-xs text-muted-foreground">{s.count} conv.</span>
                 <span className={"text-sm font-bold w-10 text-right " + scoreColor(s.avg)}>{s.avg.toFixed(1)}</span>
               </div>
