@@ -1449,10 +1449,27 @@ function LigacoesTab() {
               </Button>
             </div>
           </div>
+          <div className="flex items-center gap-2 flex-wrap mt-3">
+            <select
+              value={sellerFilter}
+              onChange={(e) => setSellerFilter(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="">Todos os vendedores</option>
+              {sellerOptions.map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            <Input placeholder="Buscar por agente, contato, número…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs h-9" />
+            {(sellerFilter || q) && (
+              <Button size="sm" variant="ghost" onClick={() => { setSellerFilter(""); setQ(""); }}>Limpar</Button>
+            )}
+            <span className="text-xs text-muted-foreground ml-auto">{list.length} de {allCalls.length}</span>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> :
-            list.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma ligação. Clique em Sincronizar para importar do CCPBX.</p> :
+            list.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma ligação encontrada com os filtros atuais.</p> :
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-xs text-muted-foreground border-b">
