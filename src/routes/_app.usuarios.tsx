@@ -130,7 +130,7 @@ function UsuariosPage() {
                     <UserRow key={u.id} u={u}
                       onReset={(pw) => resetM.mutate({ userId: u.id, password: pw })}
                       onDelete={() => delM.mutate(u.id)}
-                      disabled={u.role === "admin"}
+                      onRoleChange={(role) => roleM.mutate({ userId: u.id, role })}
                     />
                   ))}
                   {users.length === 0 && (
