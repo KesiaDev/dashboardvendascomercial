@@ -47,6 +47,12 @@ function UsuariosPage() {
     onError: (e: any) => toast.error(e?.message ?? "Falha ao remover usuário"),
   });
 
+  const roleM = useMutation({
+    mutationFn: (v: { userId: string; role: "admin" | "gestor" | "vendedor" }) => setAppUserRoleFn({ data: v }),
+    onSuccess: () => { toast.success("Perfil atualizado"); qc.invalidateQueries({ queryKey: ["app-users"] }); },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao alterar perfil"),
+  });
+
   return (
     <div className="space-y-6">
       <div>
