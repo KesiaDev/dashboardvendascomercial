@@ -293,6 +293,15 @@ function FechamentoForm({ session }: { session: any }) {
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
 
+  const markPaidMut = useMutation({
+    mutationFn: (d: { id: string; paid: boolean }) => markInstallmentPaidFn({ data: d }),
+    onSuccess: (_r, v) => {
+      toast.success(v.paid ? "Parcela marcada como paga ✅" : "Parcela reaberta");
+      qc.invalidateQueries({ queryKey: ["manual-sales"] });
+    },
+    onError: (e: any) => toast.error(String(e?.message ?? e)),
+  });
+
   // Parcelas futuras não pagas NÃO entram no total até serem confirmadas
   const paidSales = sales.filter((s) => s.installment_paid);
   const pendingInstallments = sales.filter((s) => !s.installment_paid);
