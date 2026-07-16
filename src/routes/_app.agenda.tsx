@@ -190,16 +190,167 @@ function AgendaTab({ admin, userEmail, userName }: { admin: boolean; userEmail: 
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({ label, value, tint }: { label: string; value: number; tint?: string }) {
   return (
-    <Card>
+    <Card className={`overflow-hidden bg-gradient-to-br ${tint ?? "from-secondary/40 to-secondary/10"}`}>
       <CardContent className="p-4">
-        <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-xs text-muted-foreground uppercase tracking-wide">{label}</div>
+        <div className="text-3xl font-bold mt-1">{value}</div>
       </CardContent>
     </Card>
   );
 }
+
+// ---------------- Calendar View ----------------
+const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const WEEKDAYS = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+
+const TYPE_COLOR: Record<string, string> = {
+  consultoria: "bg-primary text-primary-foreground",
+  reuniao: "bg-blue-500 text-white",
+  follow_up: "bg-amber-500 text-white",
+  fechamento: "bg-emerald-500 text-white",
+};
+
+function sameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function CalendarView({ items, onSelectItem }: { items: AgendaItem[]; onSelectItem: (i: AgendaItem) => void }) {
+  const [cursor, setCursor] = useState(() => new Date());
+  const [selected, setSelected] = useState<Date | null>(new Date());
+
+  const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+  const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
+  const gridStart = new Date(monthStart);
+  gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+  const gridEnd = new Date(monthEnd);
+  gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
+  const days: Date[] = [];
+  const cur = new Date(gridStart);
+  while (cur <= gridEnd) {
+    days.push(new Date(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  const byDay = useMemo(() => {
+    const map = new Map<string, AgendaItem[]>();
+    for (const it of items) {
+      const d = new Date(it.scheduled_at);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      const arr = map.get(key) ?? [];
+      arr.push(it);
+      map.set(key, arr);
+    }
+    for (const arr of map.values()) arr.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+    return map;
+  }, [items]);
+
+  const today = new Date();
+  const selectedItems = selected
+    ? byDay.get(`${selected.getFullYear()}-${selected.getMonth()}-${selected.getDate()}`) ?? []
+    : [];
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="bg-gradient-to-r from-primary/20 via-primary/5 to-transparent px-5 py-4 flex items-center gap-3 border-b border-border">
+        <Sparkles className="h-5 w-5 text-primary" />
+        <div className="flex-1">
+          <div className="text-lg font-semibold capitalize">{MONTH_NAMES[cursor.getMonth()]} {cursor.getFullYear()}</div>
+          <div className="text-xs text-muted-foreground">{items.length} agendamentos neste filtro</div>
+        </div>
+        <Button variant="ghost" size="icon" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => { setCursor(new Date()); setSelected(new Date()); }}>Hoje</Button>
+        <Button variant="ghost" size="icon" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-7 border-b border-border bg-muted/30">
+        {WEEKDAYS.map((w) => (
+          <div key={w} className="px-2 py-2 text-[11px] font-semibold text-muted-foreground text-center uppercase tracking-wide">{w}</div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-px bg-border">
+        {days.map((d, idx) => {
+          const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+          const dayItems = byDay.get(key) ?? [];
+          const inMonth = d.getMonth() === cursor.getMonth();
+          const isToday = sameDay(d, today);
+          const isSelected = selected && sameDay(d, selected);
+          return (
+            <button
+              key={idx}
+              onClick={() => setSelected(d)}
+              className={`min-h-[92px] p-1.5 text-left transition bg-card hover:bg-secondary/40 ${
+                inMonth ? "" : "opacity-40"
+              } ${isSelected ? "ring-2 ring-primary ring-inset" : ""}`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                  isToday ? "bg-primary text-primary-foreground" : "text-foreground"
+                }`}>{d.getDate()}</span>
+                {dayItems.length > 0 && (
+                  <span className="text-[10px] text-muted-foreground">{dayItems.length}</span>
+                )}
+              </div>
+              <div className="space-y-1">
+                {dayItems.slice(0, 3).map((it) => (
+                  <div
+                    key={it.id}
+                    className={`truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${TYPE_COLOR[it.meeting_type] ?? "bg-secondary text-foreground"}`}
+                    title={`${new Date(it.scheduled_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} · ${it.lead_name}`}
+                  >
+                    {new Date(it.scheduled_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} {it.lead_name}
+                  </div>
+                ))}
+                {dayItems.length > 3 && (
+                  <div className="text-[10px] text-muted-foreground pl-1">+{dayItems.length - 3} mais</div>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {selected && (
+        <div className="border-t border-border bg-muted/20 p-4">
+          <div className="text-sm font-semibold mb-2 capitalize">
+            {selected.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              {selectedItems.length} {selectedItems.length === 1 ? "agendamento" : "agendamentos"}
+            </span>
+          </div>
+          {selectedItems.length === 0 && (
+            <p className="text-xs text-muted-foreground">Nada agendado neste dia.</p>
+          )}
+          <div className="space-y-1.5">
+            {selectedItems.map((it) => (
+              <button
+                key={it.id}
+                onClick={() => onSelectItem(it)}
+                className="w-full flex items-center gap-3 rounded-md bg-card px-3 py-2 text-left text-sm hover:bg-secondary/60 transition"
+              >
+                <span className={`h-8 w-1 rounded-full ${TYPE_COLOR[it.meeting_type] ?? "bg-secondary"}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{it.lead_name}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {new Date(it.scheduled_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} · {it.duration_min}min · {it.seller_name ?? it.seller_email}
+                  </div>
+                </div>
+                <Badge variant="outline" className={STATUS_COLORS[it.status] ?? ""}>{it.status}</Badge>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 
 function AgendaRow({
   item, onChanged, upsert, del, admin, userEmail, userName,
