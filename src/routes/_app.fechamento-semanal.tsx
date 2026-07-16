@@ -241,6 +241,16 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
           <p className="text-xs text-muted-foreground">Total da semana</p>
           <p className="text-2xl font-bold tabular-nums mt-1 text-violet-500">{fmtEur(weekTotal)}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{weekSales.length} venda{weekSales.length!==1?"s":""}</p>
+          <div className="mt-2 grid grid-cols-2 gap-1 text-[10px]">
+            <div className="rounded bg-emerald-950/30 px-1.5 py-1">
+              <div className="font-bold text-emerald-400 tabular-nums">{fmtEur(weekNovasTotal)}</div>
+              <div className="text-muted-foreground">Novas · {weekNovas.length}</div>
+            </div>
+            <div className="rounded bg-blue-950/30 px-1.5 py-1">
+              <div className="font-bold text-blue-400 tabular-nums">{fmtEur(weekRenovTotal)}</div>
+              <div className="text-muted-foreground">Renov · {weekRenov.length}</div>
+            </div>
+          </div>
         </CardContent></Card>
 
         <Card style={{borderLeftWidth:4,borderLeftStyle:"solid",borderLeftColor:pctVsPrev===null?"#64748b":pctVsPrev>=0?"#10b981":"#ef4444"}}><CardContent className="pt-5 pb-4">
