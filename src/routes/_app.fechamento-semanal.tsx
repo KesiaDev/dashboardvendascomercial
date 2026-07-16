@@ -578,6 +578,10 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
   },[allSales,yearMonth,maxWeek]);
 
   const monthTotal = monthSales.reduce((s,x)=>s+Number(x.value_eur),0);
+  const monthNovas = monthSales.filter(s=>!isRenewalProduct(s.product));
+  const monthRenov = monthSales.filter(s=>isRenewalProduct(s.product));
+  const monthNovasTotal = monthNovas.reduce((s,x)=>s+Number(x.value_eur),0);
+  const monthRenovTotal = monthRenov.reduce((s,x)=>s+Number(x.value_eur),0);
 
   const sellerRanking: SellerStat[] = useMemo(()=>{
     const map: Record<string,SellerStat>={};
