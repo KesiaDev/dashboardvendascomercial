@@ -1251,7 +1251,7 @@ function PerformanceTab() {
                   <tr className="border-b">
                     <th className="text-left py-2 pl-1">#</th>
                     <th className="text-left">Vendedor</th>
-                    <th className="text-right">Leads</th>
+                    <th className="text-right" title="Leads novos no período filtrado">Leads</th>
                     <th className="text-right">Atend.</th>
                     <th className="text-right">Vendas</th>
                     <th className="text-right">Faturamento</th>
