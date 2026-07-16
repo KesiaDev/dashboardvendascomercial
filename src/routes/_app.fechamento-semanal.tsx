@@ -171,6 +171,10 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
   const weekTotal = weekSales.reduce((s,x)=>s+Number(x.value_eur),0);
   const prevTotal = prevSales.reduce((s,x)=>s+Number(x.value_eur),0);
   const pctVsPrev = prevTotal>0 ? Math.round(((weekTotal-prevTotal)/prevTotal)*100) : null;
+  const weekNovas = weekSales.filter(s=>!isRenewalProduct(s.product));
+  const weekRenov = weekSales.filter(s=>isRenewalProduct(s.product));
+  const weekNovasTotal = weekNovas.reduce((s,x)=>s+Number(x.value_eur),0);
+  const weekRenovTotal = weekRenov.reduce((s,x)=>s+Number(x.value_eur),0);
 
   const dailyData = useMemo(() => Array.from({length:7},(_,i)=>{
     const date = addDays(start,i);
