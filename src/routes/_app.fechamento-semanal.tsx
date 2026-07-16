@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { fetchManualSalesForCommissionFn } from "@/lib/commission.functions";
-import { fetchPipelineMetricsFn } from "@/lib/data.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import {
 } from "recharts";
 import {
   ChevronLeft, ChevronRight, Trophy, TrendingUp, TrendingDown,
-  CalendarDays, Flame, Star, ShoppingBag, ArrowRight, Users, Target, Clock, Inbox,
+  CalendarDays, Flame, Star, ShoppingBag,
 } from "lucide-react";
 import { isRenewalProduct } from "@/lib/product-groups";
 
@@ -422,117 +421,6 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
   );
 }
 
-// ─── Pipeline Aproveitamento ─────────────────────────────────────────────────
-
-function PipelineAproveitamento({ month, monthTotal, monthSalesCount }: {
-  month: string;
-  monthTotal: number;
-  monthSalesCount: number;
-}) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["pipeline-metrics", month],
-    queryFn: () => fetchPipelineMetricsFn({ data: { month } }),
-    staleTime: 5 * 60_000,
-  });
-
-  function fmtCiclo(days: number | null) {
-    if (days === null) return "—";
-    const d = Math.floor(days);
-    const h = Math.floor((days - d) * 24);
-    if (d === 0) return `${h}h`;
-    return h > 0 ? `${d}d ${h}h` : `${d}d`;
-  }
-
-  const skeleton = "h-6 w-16 bg-muted/50 animate-pulse rounded";
-
-  return (
-    <Card className="border border-violet-500/30 bg-violet-500/5">
-      <CardContent className="pt-4 pb-4">
-        <p className="text-xs font-semibold text-violet-400 mb-3 flex items-center gap-1.5">
-          <Target className="h-3.5 w-3.5" />
-          Pipeline Comercial-V3 + Sessão Estratégica — aproveitamento do mês
-        </p>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Recebidos */}
-          <div className="flex flex-col items-center rounded-lg border border-border/60 bg-card/60 px-4 py-2.5 min-w-[80px]">
-            <Inbox className="h-4 w-4 text-muted-foreground mb-1" />
-            {isLoading ? <div className={skeleton} /> : (
-              <span className="text-xl font-bold tabular-nums">{data?.recebidos ?? "—"}</span>
-            )}
-            <span className="text-[11px] text-muted-foreground mt-0.5">Recebidos</span>
-          </div>
-
-          <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-
-          {/* Em aberto */}
-          <div className="flex flex-col items-center rounded-lg border border-border/60 bg-card/60 px-4 py-2.5 min-w-[80px]">
-            <Users className="h-4 w-4 text-blue-400 mb-1" />
-            {isLoading ? <div className={skeleton} /> : (
-              <span className="text-xl font-bold tabular-nums text-blue-400">{data?.emAberto ?? "—"}</span>
-            )}
-            <span className="text-[11px] text-muted-foreground mt-0.5">Em aberto</span>
-          </div>
-
-          <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-
-          {/* Fechados (Clint WON) */}
-          <div className="flex flex-col items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 min-w-[80px]">
-            <Trophy className="h-4 w-4 text-emerald-400 mb-1" />
-            {isLoading ? <div className={skeleton} /> : (
-              <span className="text-xl font-bold tabular-nums text-emerald-400">{data?.fechados ?? "—"}</span>
-            )}
-            <span className="text-[11px] text-muted-foreground mt-0.5">Ganhos</span>
-          </div>
-
-          {/* Separador */}
-          <div className="hidden sm:flex items-center self-stretch mx-2">
-            <div className="w-px h-full bg-border/50" />
-          </div>
-
-          {/* Conversão */}
-          <div className="flex flex-col items-center rounded-lg border border-border/60 bg-card/60 px-4 py-2.5 min-w-[80px]">
-            <Target className="h-4 w-4 text-amber-400 mb-1" />
-            {isLoading ? <div className={skeleton} /> : (
-              <span className="text-xl font-bold tabular-nums text-amber-400">
-                {data ? `${data.conversao.toFixed(1)}%` : "—"}
-              </span>
-            )}
-            <span className="text-[11px] text-muted-foreground mt-0.5">Conversão</span>
-          </div>
-
-          {/* Ciclo médio */}
-          <div className="flex flex-col items-center rounded-lg border border-border/60 bg-card/60 px-4 py-2.5 min-w-[80px]">
-            <Clock className="h-4 w-4 text-muted-foreground mb-1" />
-            {isLoading ? <div className={skeleton} /> : (
-              <span className="text-xl font-bold tabular-nums">{fmtCiclo(data?.cicloMedioDias ?? null)}</span>
-            )}
-            <span className="text-[11px] text-muted-foreground mt-0.5">Ciclo médio</span>
-          </div>
-
-          {/* Seta para receita */}
-          <div className="hidden sm:flex items-center self-stretch mx-1">
-            <ArrowRight className="h-5 w-5 text-violet-400" />
-          </div>
-
-          {/* Total fechado (manual_sales) */}
-          <div className="flex flex-col items-center rounded-lg border border-violet-500/40 bg-violet-500/10 px-4 py-2.5 min-w-[100px]">
-            <span className="text-[10px] font-semibold text-violet-400 mb-1">RECEITA</span>
-            <span className="text-xl font-bold tabular-nums text-violet-400">{fmtEur(monthTotal)}</span>
-            <span className="text-[11px] text-muted-foreground mt-0.5">{monthSalesCount} vendas registradas</span>
-          </div>
-        </div>
-
-        {!isLoading && data && (
-          <p className="text-[11px] text-muted-foreground mt-2.5">
-            Dados de entrada: Clint CRM · Receita: fechamento manual · Conversão = ganhos Clint / recebidos no mês
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 // ─── View Mês ─────────────────────────────────────────────────────────────────
 
 function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) {
@@ -612,9 +500,6 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
         </div>
         <Button variant="outline" size="icon" disabled={!canNext} onClick={()=>setYearMonth(months[monthIdx+1])}><ChevronRight className="h-4 w-4"/></Button>
       </div>
-
-      {/* Pipeline Aproveitamento */}
-      <PipelineAproveitamento month={yearMonth} monthTotal={monthTotal} monthSalesCount={monthSales.length} />
 
       {/* KPIs do mês */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
