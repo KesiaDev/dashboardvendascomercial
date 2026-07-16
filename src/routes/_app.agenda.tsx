@@ -155,10 +155,13 @@ function AgendaTab({ admin, userEmail, userName }: { admin: boolean; userEmail: 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <StatCard label="Total" value={filtered.length} />
-        <StatCard label="Próximos" value={upcoming.length} />
-        <StatCard label="Realizados" value={filtered.filter((i) => i.status === "realizado").length} />
+        <StatCard label="Total" value={filtered.length} tint="from-primary/20 to-primary/5" />
+        <StatCard label="Próximos" value={upcoming.length} tint="from-blue-500/20 to-blue-500/5" />
+        <StatCard label="Realizados" value={filtered.filter((i) => i.status === "realizado").length} tint="from-emerald-500/20 to-emerald-500/5" />
       </div>
+
+      <CalendarView items={filtered} onSelectItem={() => { /* row edit handles it */ }} />
+
 
       <Card>
         <CardHeader><CardTitle className="text-base">Próximos ({upcoming.length})</CardTitle></CardHeader>
