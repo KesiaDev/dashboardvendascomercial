@@ -37,7 +37,7 @@ import {
 import { toast } from "sonner";
 import {
   CheckCircle2, LogIn, LogOut, Pencil, Plus, Trash2, X,
-  Search, AlertCircle, RefreshCw, CheckCheck, AlertTriangle,
+  Search, AlertCircle, RefreshCw, CheckCheck, AlertTriangle, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
