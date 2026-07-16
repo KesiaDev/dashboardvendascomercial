@@ -25,6 +25,7 @@ export type CallRow = {
   transcript: string | null;
   score: number | null;
   analyzed_at: string | null;
+  analysis: any | null;
 };
 
 // Mapa fixo extensão -> e-mail canônico do vendedor (fonte: painel CCPBX + Clint).
