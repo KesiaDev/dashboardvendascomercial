@@ -70,6 +70,12 @@ export type ManualSale = {
   bonus_semanal_eur: BonusSemanalEur | null;
   affiliate_mismatch: boolean;
   hotmart_nome_afiliado: string | null;
+  // Parcelamento (até 3x)
+  installment_number: number;
+  installment_total: number;
+  parent_sale_id: string | null;
+  installment_paid: boolean;
+  installment_paid_at: string | null;
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
