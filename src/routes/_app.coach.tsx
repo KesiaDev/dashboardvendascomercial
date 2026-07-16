@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   listCoachConversationsFn, listCoachAlertsFn, uploadConversationFn,
   analyzeConversationFn, runAlertsScanFn, resolveCoachAlertFn,
@@ -1382,6 +1383,7 @@ function LigacoesTab() {
   const [days, setDays] = useState(7);
   const [sellerFilter, setSellerFilter] = useState("");
   const [q, setQ] = useState("");
+  const [selected, setSelected] = useState<CallRow | null>(null);
 
   const bounds = useMemo(() => {
     // Alinha ao fuso BR (UTC-3) como o restante do dashboard
@@ -1555,6 +1557,11 @@ function LigacoesTab() {
                           {c.recording_url && (
                             <a href={c.recording_url} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:underline">áudio</a>
                           )}
+                          {c.analysis && (
+                            <Button size="sm" variant="outline" onClick={() => setSelected(c)}>
+                              Ver análise
+                            </Button>
+                          )}
                           <Button size="sm" variant="ghost" disabled={analyzeMut.isPending} onClick={() => analyzeMut.mutate(c.id)}>
                             <Sparkles className="h-3 w-3 mr-1" />
                             {c.analyzed_at ? "Reanalisar" : "Analisar"}
@@ -1569,6 +1576,82 @@ function LigacoesTab() {
           }
         </CardContent>
       </Card>
+
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Análise da ligação</DialogTitle>
+          </DialogHeader>
+          {selected && (() => {
+            const a: any = selected.analysis ?? {};
+            const list = (v: any): string[] => Array.isArray(v) ? v.filter(Boolean).map(String) : [];
+            return (
+              <div className="space-y-4 text-sm">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className={cn("text-3xl font-bold", scoreColor(selected.score))}>
+                    {selected.score == null ? "—" : selected.score.toFixed(1)}
+                  </div>
+                  {a.sentimento && (
+                    <span className={cn("text-xs px-2 py-0.5 rounded", sentimentColor(a.sentimento))}>{a.sentimento}</span>
+                  )}
+                  {a.tentou_fechar === true && <Badge variant="outline" className="text-[10px]">Tentou fechar</Badge>}
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    {selected.agent_name ?? selected.agent_user ?? "—"} → {selected.contact_name ?? "—"} · {fmtDur(selected.duration_sec)}
+                  </span>
+                </div>
+
+                {a.resumo && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground mb-1">Resumo</p>
+                    <p>{a.resumo}</p>
+                  </div>
+                )}
+
+                {list(a.pontos_fortes).length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-emerald-600 mb-1">Pontos fortes</p>
+                    <ul className="list-disc pl-5 space-y-0.5">{list(a.pontos_fortes).map((s, i) => <li key={i}>{s}</li>)}</ul>
+                  </div>
+                )}
+
+                {list(a.pontos_melhoria).length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-amber-600 mb-1">Pontos a melhorar</p>
+                    <ul className="list-disc pl-5 space-y-0.5">{list(a.pontos_melhoria).map((s, i) => <li key={i}>{s}</li>)}</ul>
+                  </div>
+                )}
+
+                {list(a.objecoes).length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-rose-600 mb-1">Objeções</p>
+                    <ul className="list-disc pl-5 space-y-0.5">{list(a.objecoes).map((s, i) => <li key={i}>{s}</li>)}</ul>
+                  </div>
+                )}
+
+                {a.proxima_acao && (
+                  <div>
+                    <p className="text-xs font-semibold text-indigo-600 mb-1">Próxima ação</p>
+                    <p>{a.proxima_acao}</p>
+                  </div>
+                )}
+
+                {selected.transcript && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground mb-1">Transcrição</p>
+                    <div className="p-3 rounded bg-muted text-xs whitespace-pre-wrap max-h-60 overflow-y-auto">{selected.transcript}</div>
+                  </div>
+                )}
+
+                {selected.recording_url && (
+                  <a href={selected.recording_url} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:underline">
+                    Ouvir gravação
+                  </a>
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
