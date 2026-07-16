@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Plus, Trash2, Bot, Save, Video, Phone, Mail, User as UserIcon } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Bot, Save, Video, Phone, Mail, User as UserIcon, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { isAdminUser } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
