@@ -18,6 +18,7 @@ import {
   type HotmartMatch,
   type ManualSale,
 } from "@/lib/manual-sales.functions";
+import { isRenewalProduct } from "@/lib/product-groups";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
