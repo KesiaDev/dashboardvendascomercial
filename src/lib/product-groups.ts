@@ -46,6 +46,11 @@ export function mapProductToGroup(productName: string): string {
   return "outros";
 }
 
+/** Retorna true se o nome do produto (do fechamento manual ou Hotmart) for uma renovação. */
+export function isRenewalProduct(productName: string | null | undefined): boolean {
+  return (productName || "").toLowerCase().includes("renova");
+}
+
 export function getGroupById(id: string): ProductGroup {
   return PRODUCT_GROUPS.find((g) => g.id === id) ?? PRODUCT_GROUPS[PRODUCT_GROUPS.length - 1];
 }
