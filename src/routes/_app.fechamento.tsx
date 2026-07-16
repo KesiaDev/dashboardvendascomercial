@@ -753,6 +753,16 @@ function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm, onMarkPaid }: {
         </div>
       </div>
       <div className="flex gap-1 flex-wrap">
+        {isInstallment && (
+          <Button
+            variant={isPendingInst ? "default" : "ghost"}
+            size="sm"
+            className={cn("h-7 px-2", isPendingInst && "bg-emerald-600 hover:bg-emerald-700 text-white")}
+            onClick={() => onMarkPaid(!sale.installment_paid)}
+          >
+            {isPendingInst ? <><CheckCircle2 className="mr-1 h-3 w-3" /> Marcar pago</> : <><Clock className="mr-1 h-3 w-3" /> Reabrir</>}
+          </Button>
+        )}
         <Button variant="ghost" size="sm" className="h-7 px-2" onClick={onEdit}>
           <Pencil className="mr-1 h-3 w-3" /> Editar
         </Button>
