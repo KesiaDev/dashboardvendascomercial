@@ -1299,7 +1299,12 @@ export type Database = {
           funnel: string
           hotmart_nome_afiliado: string | null
           id: string
+          installment_number: number
+          installment_paid: boolean
+          installment_paid_at: string | null
+          installment_total: number
           notes: string | null
+          parent_sale_id: string | null
           product: string
           roleta_type: string | null
           sale_date: string
@@ -1323,7 +1328,12 @@ export type Database = {
           funnel: string
           hotmart_nome_afiliado?: string | null
           id?: string
+          installment_number?: number
+          installment_paid?: boolean
+          installment_paid_at?: string | null
+          installment_total?: number
           notes?: string | null
+          parent_sale_id?: string | null
           product: string
           roleta_type?: string | null
           sale_date: string
@@ -1347,14 +1357,27 @@ export type Database = {
           funnel?: string
           hotmart_nome_afiliado?: string | null
           id?: string
+          installment_number?: number
+          installment_paid?: boolean
+          installment_paid_at?: string | null
+          installment_total?: number
           notes?: string | null
+          parent_sale_id?: string | null
           product?: string
           roleta_type?: string | null
           sale_date?: string
           seller_name?: string
           value_eur?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "manual_sales_parent_sale_id_fkey"
+            columns: ["parent_sale_id"]
+            isOneToOne: false
+            referencedRelation: "manual_sales"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       referrals: {
         Row: {
