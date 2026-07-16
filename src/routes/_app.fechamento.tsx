@@ -554,6 +554,16 @@ function FechamentoForm({ session }: { session: any }) {
               <CardDescription>
                 {sales.length} venda(s) · {moneyEur(monthTotal)}
               </CardDescription>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-center text-xs">
+                <div className="rounded-md bg-emerald-950/30 p-2">
+                  <p className="font-bold text-emerald-400 tabular-nums">{moneyEur(monthNovasTotal)}</p>
+                  <p className="text-muted-foreground">Novas ({monthNovas.length})</p>
+                </div>
+                <div className="rounded-md bg-blue-950/30 p-2">
+                  <p className="font-bold text-blue-400 tabular-nums">{moneyEur(monthRenovTotal)}</p>
+                  <p className="text-muted-foreground">Renovações ({monthRenov.length})</p>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-2">
               {sales.length === 0 && (
