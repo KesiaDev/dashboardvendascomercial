@@ -622,6 +622,16 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
           <p className="text-xs text-muted-foreground">Total do mês</p>
           <p className="text-2xl font-bold tabular-nums mt-1 text-violet-500">{fmtEur(monthTotal)}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{monthSales.length} vendas</p>
+          <div className="mt-2 grid grid-cols-2 gap-1 text-[10px]">
+            <div className="rounded bg-emerald-950/30 px-1.5 py-1">
+              <div className="font-bold text-emerald-400 tabular-nums">{fmtEur(monthNovasTotal)}</div>
+              <div className="text-muted-foreground">Novas · {monthNovas.length}</div>
+            </div>
+            <div className="rounded bg-blue-950/30 px-1.5 py-1">
+              <div className="font-bold text-blue-400 tabular-nums">{fmtEur(monthRenovTotal)}</div>
+              <div className="text-muted-foreground">Renov · {monthRenov.length}</div>
+            </div>
+          </div>
         </CardContent></Card>
 
         <Card className="border-l-4 border-orange-500"><CardContent className="pt-5 pb-4">
