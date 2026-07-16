@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import {
   ChevronLeft, ChevronRight, Trophy, TrendingUp, TrendingDown,
-  CalendarDays, Flame, Star, ShoppingBag, ArrowRight, Users, Target, Clock, Inbox, RefreshCw,
+  CalendarDays, Flame, Star, ShoppingBag, ArrowRight, Users, Target, Clock, Inbox,
 } from "lucide-react";
 import { isRenewalProduct } from "@/lib/product-groups";
 
