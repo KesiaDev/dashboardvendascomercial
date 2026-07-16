@@ -293,9 +293,13 @@ function FechamentoForm({ session }: { session: any }) {
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
 
-  const todaySales = sales.filter((s) => s.sale_date === today);
+  // Parcelas futuras não pagas NÃO entram no total até serem confirmadas
+  const paidSales = sales.filter((s) => s.installment_paid);
+  const pendingInstallments = sales.filter((s) => !s.installment_paid);
+
+  const todaySales = paidSales.filter((s) => s.sale_date === today);
   const todayTotal = todaySales.reduce((acc, s) => acc + Number(s.value_eur), 0);
-  const monthTotal = sales.reduce((acc, s) => acc + Number(s.value_eur), 0);
+  const monthTotal = paidSales.reduce((acc, s) => acc + Number(s.value_eur), 0);
   const formTotal = items.reduce((acc, it) => acc + (Number(it.value.replace(",", ".")) || 0), 0);
 
   // Separação Novas vs Renovações (renovações não contam como venda nova)
@@ -303,8 +307,8 @@ function FechamentoForm({ session }: { session: any }) {
   const todayRenov = todaySales.filter((s) => isRenewalProduct(s.product));
   const todayNovasTotal = todayNovas.reduce((a, s) => a + Number(s.value_eur), 0);
   const todayRenovTotal = todayRenov.reduce((a, s) => a + Number(s.value_eur), 0);
-  const monthNovas = sales.filter((s) => !isRenewalProduct(s.product));
-  const monthRenov = sales.filter((s) => isRenewalProduct(s.product));
+  const monthNovas = paidSales.filter((s) => !isRenewalProduct(s.product));
+  const monthRenov = paidSales.filter((s) => isRenewalProduct(s.product));
   const monthNovasTotal = monthNovas.reduce((a, s) => a + Number(s.value_eur), 0);
   const monthRenovTotal = monthRenov.reduce((a, s) => a + Number(s.value_eur), 0);
 
