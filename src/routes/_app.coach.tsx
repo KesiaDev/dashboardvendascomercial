@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ptBR } from "date-fns/locale/pt-BR";
 import {
   Sparkles, Upload, AlertTriangle, Settings, MessageSquare,
   TrendingUp, Clock, Target, Users, RefreshCw, Trash2, CheckCircle2,
