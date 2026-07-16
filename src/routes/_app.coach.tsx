@@ -1203,7 +1203,7 @@ function PerformanceTab() {
           {perf.team.leadPorVenda != null && (
             <> · Leads por venda: <span className="font-medium text-foreground">{perf.team.leadPorVenda.toFixed(1)}</span></>
           )}
-          <> · Fonte de leads: <span className="font-medium">Pipeline Comercial V3</span></>
+          <> · Fonte (leads novos criados no período): <span className="font-medium">Pipeline Comercial V3</span></>
         </div>
       )}
 
