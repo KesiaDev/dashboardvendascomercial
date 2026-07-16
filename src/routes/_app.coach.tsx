@@ -2,13 +2,16 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   Sparkles, Upload, AlertTriangle, Settings, MessageSquare,
   TrendingUp, Clock, Target, Users, RefreshCw, Trash2, CheckCircle2,
-  Zap, Copy, Eye, BarChart2, Phone, Plus, X, Award,
+  Zap, Copy, Eye, BarChart2, Phone, Plus, X, Award, CalendarIcon,
 } from "lucide-react";
-import { fetchPerformanceFn, generatePerformanceFeedbackFn, type PerfRange, type SellerPerf, type PerfResult } from "@/lib/performance.functions";
+import { fetchPerformanceFn, generatePerformanceFeedbackFn, rangeBoundsFor, type PerfRange, type SellerPerf, type PerfResult } from "@/lib/performance.functions";
 import { getSellerPhoto } from "@/lib/seller-photos";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -17,6 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   listCoachConversationsFn, listCoachAlertsFn, uploadConversationFn,
   analyzeConversationFn, runAlertsScanFn, resolveCoachAlertFn,
