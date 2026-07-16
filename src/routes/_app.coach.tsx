@@ -2,13 +2,16 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   Sparkles, Upload, AlertTriangle, Settings, MessageSquare,
   TrendingUp, Clock, Target, Users, RefreshCw, Trash2, CheckCircle2,
-  Zap, Copy, Eye, BarChart2, Phone, Plus, X, Award,
+  Zap, Copy, Eye, BarChart2, Phone, Plus, X, Award, CalendarIcon,
 } from "lucide-react";
-import { fetchPerformanceFn, generatePerformanceFeedbackFn, type PerfRange, type SellerPerf, type PerfResult } from "@/lib/performance.functions";
+import { fetchPerformanceFn, generatePerformanceFeedbackFn, rangeBoundsFor, type PerfRange, type SellerPerf, type PerfResult } from "@/lib/performance.functions";
 import { getSellerPhoto } from "@/lib/seller-photos";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -17,6 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   listCoachConversationsFn, listCoachAlertsFn, uploadConversationFn,
   analyzeConversationFn, runAlertsScanFn, resolveCoachAlertFn,
@@ -1372,12 +1377,21 @@ function fmtDur(s: number) {
 }
 function LigacoesTab() {
   const qc = useQueryClient();
+  const [range, setRange] = useState<PerfRange>("day");
+  const [refDate, setRefDate] = useState<Date>(new Date());
   const [days, setDays] = useState(7);
   const [sellerFilter, setSellerFilter] = useState("");
   const [q, setQ] = useState("");
+
+  const bounds = useMemo(() => {
+    // Alinha ao fuso BR (UTC-3) como o restante do dashboard
+    const iso = new Date(refDate.getTime() - 3 * 3600_000).toISOString().slice(0, 10);
+    return rangeBoundsFor(range, iso);
+  }, [range, refDate]);
+
   const { data: calls, isLoading } = useQuery({
-    queryKey: ["ccpbx-calls"],
-    queryFn: () => listCcpbxCallsFn({ data: { limit: 200 } }),
+    queryKey: ["ccpbx-calls", bounds.startDate, bounds.endDate],
+    queryFn: () => listCcpbxCallsFn({ data: { limit: 1000, from: `${bounds.startDate}T00:00:00.000Z`, to: `${bounds.endDate}T23:59:59.999Z` } }),
   });
   const syncMut = useMutation({
     mutationFn: () => syncCcpbxCallsFn({ data: { days } }),
@@ -1427,10 +1441,12 @@ function LigacoesTab() {
   const analyzed = list.filter(c => c.score != null).length;
   const avgScore = analyzed > 0 ? list.reduce((a, c) => a + (c.score ?? 0), 0) / analyzed : null;
 
+  const periodLabel = range === "day" ? "Dia" : range === "week" ? "Semana" : "Mês";
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard icon={<Phone className="h-4 w-4 text-indigo-600" />} label="Ligações" value={String(list.length)} />
+        <KpiCard icon={<Phone className="h-4 w-4 text-indigo-600" />} label={`Ligações (${periodLabel.toLowerCase()})`} value={String(list.length)} />
         <KpiCard icon={<Clock className="h-4 w-4 text-amber-600" />} label="Tempo total" value={fmtDur(totalDur)} />
         <KpiCard icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} label="Analisadas" value={String(analyzed)} />
         <KpiCard icon={<Award className="h-4 w-4 text-fuchsia-600" />} label="Nota média" value={avgScore == null ? "—" : avgScore.toFixed(1)} valueClass={scoreColor(avgScore)} />
@@ -1440,16 +1456,51 @@ function LigacoesTab() {
         <CardHeader className="pb-3">
           <div className="flex items-center gap-3 flex-wrap">
             <CardTitle className="text-base">Ligações do CCPBX</CardTitle>
-            <div className="ml-auto flex items-center gap-2">
-              <Label className="text-xs">Dias:</Label>
+            <div className="ml-auto flex items-center gap-2 flex-wrap">
+              <div className="inline-flex rounded-lg border p-1 bg-card">
+                {(["day", "week", "month"] as PerfRange[]).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRange(r)}
+                    className={cn(
+                      "px-3 py-1 text-xs rounded-md transition",
+                      range === r ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {r === "day" ? "Dia" : r === "week" ? "Semana" : "Mês"}
+                  </button>
+                ))}
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 gap-1 text-xs">
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                    {format(refDate, "dd/MM/yyyy", { locale: ptBR })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={refDate}
+                    onSelect={(d) => d && setRefDate(d)}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              <div className="hidden sm:block h-6 w-px bg-border mx-1" />
+              <Label className="text-xs hidden sm:inline">Sync:</Label>
               <Input type="number" min={1} max={90} className="h-8 w-20" value={days} onChange={(e) => setDays(Math.max(1, Math.min(90, Number(e.target.value) || 7)))} />
               <Button size="sm" onClick={() => syncMut.mutate()} disabled={syncMut.isPending}>
-                <RefreshCw className={`h-4 w-4 mr-1 ${syncMut.isPending ? "animate-spin" : ""}`} />
+                <RefreshCw className={cn("h-4 w-4 mr-1", syncMut.isPending && "animate-spin")} />
                 Sincronizar
               </Button>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap mt-3">
+            <Badge variant="secondary" className="text-[10px]">
+              {bounds.label}
+            </Badge>
             <select
               value={sellerFilter}
               onChange={(e) => setSellerFilter(e.target.value)}
@@ -1469,7 +1520,7 @@ function LigacoesTab() {
         </CardHeader>
         <CardContent>
           {isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> :
-            list.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma ligação encontrada com os filtros atuais.</p> :
+            list.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma ligação encontrada no período.</p> :
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-xs text-muted-foreground border-b">
@@ -1498,7 +1549,7 @@ function LigacoesTab() {
                       </td>
                       <td className="py-2 pr-2">{fmtDur(c.duration_sec)}</td>
                       <td className="py-2 pr-2 text-xs">{c.status ?? "—"}</td>
-                      <td className={`py-2 pr-2 font-semibold ${scoreColor(c.score)}`}>{c.score == null ? "—" : c.score.toFixed(1)}</td>
+                      <td className={cn("py-2 pr-2 font-semibold", scoreColor(c.score))}>{c.score == null ? "—" : c.score.toFixed(1)}</td>
                       <td className="py-2 pr-2 text-right">
                         <div className="flex justify-end items-center gap-1">
                           {c.recording_url && (
