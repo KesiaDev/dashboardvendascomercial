@@ -579,18 +579,37 @@ function FechamentoForm({ session }: { session: any }) {
                 <p className="text-sm text-muted-foreground">Nenhuma venda registrada hoje ainda.</p>
               )}
               {todaySales.map((s) => (
-                <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} />
-
+                <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })} />
               ))}
             </CardContent>
           </Card>
+
+          {/* Parcelas pendentes do mês */}
+          {pendingInstallments.length > 0 && (
+            <Card className="border-yellow-800/40 bg-yellow-950/10">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-yellow-400" />
+                  Parcelas pendentes ({pendingInstallments.length})
+                </CardTitle>
+                <CardDescription>
+                  Parcelas agendadas cujo pagamento ainda não foi confirmado. Marque como paga assim que o cliente pagar.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {pendingInstallments.map((s) => (
+                  <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })} />
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Vendas do mês */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Vendas do mês</CardTitle>
               <CardDescription>
-                {sales.length} venda(s) · {moneyEur(monthTotal)}
+                {paidSales.length} confirmada(s) · {moneyEur(monthTotal)}
               </CardDescription>
               <div className="mt-2 grid grid-cols-2 gap-2 text-center text-xs">
                 <div className="rounded-md bg-emerald-950/30 p-2">
@@ -608,7 +627,7 @@ function FechamentoForm({ session }: { session: any }) {
                 <p className="text-sm text-muted-foreground">Nenhuma venda registrada neste mês.</p>
               )}
               {sales.map((s) => (
-                <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} />
+                <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })} />
               ))}
             </CardContent>
           </Card>
