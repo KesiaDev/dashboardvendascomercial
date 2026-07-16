@@ -1184,7 +1184,7 @@ function PerformanceTab() {
       {/* Team KPIs */}
       {perf && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 auto-rows-fr">
-          <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads novos (${rangeLabel})`} value={String(perf.team.leadsNovos)} />
+          <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads novos no período (${rangeLabel})`} value={String(perf.team.leadsNovos)} />
           <KpiCard icon={<MessageSquare className="h-3 w-3" />} label="Atendimentos" value={String(perf.team.atendimentos)} />
           <KpiCard icon={<CheckCircle2 className="h-3 w-3" />} label="Vendas" value={String(perf.team.vendas)} />
           <KpiCard icon={<TrendingUp className="h-3 w-3" />} label="Faturamento" value={fmtEUR(perf.team.faturamento)} />
@@ -1203,7 +1203,7 @@ function PerformanceTab() {
           {perf.team.leadPorVenda != null && (
             <> · Leads por venda: <span className="font-medium text-foreground">{perf.team.leadPorVenda.toFixed(1)}</span></>
           )}
-          <> · Fonte de leads: <span className="font-medium">Pipeline Comercial V3</span></>
+          <> · Fonte (leads novos criados no período): <span className="font-medium">Pipeline Comercial V3</span></>
         </div>
       )}
 
@@ -1251,7 +1251,7 @@ function PerformanceTab() {
                   <tr className="border-b">
                     <th className="text-left py-2 pl-1">#</th>
                     <th className="text-left">Vendedor</th>
-                    <th className="text-right">Leads</th>
+                    <th className="text-right" title="Leads novos no período filtrado">Leads</th>
                     <th className="text-right">Atend.</th>
                     <th className="text-right">Vendas</th>
                     <th className="text-right">Faturamento</th>
@@ -1321,7 +1321,7 @@ function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-3">
       <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-44 min-w-full" role="img" aria-label="Leads, atendimentos e vendas por dia">
+        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-44 min-w-full" role="img" aria-label="Leads novos, atendimentos e vendas por dia">
           <line x1="0" x2={chartWidth} y1={chartHeight - bottom} y2={chartHeight - bottom} className="stroke-border" strokeWidth="1" />
           {daily.map((d, i) => {
             const cx = groupWidth * i + groupWidth / 2;
@@ -1333,7 +1333,7 @@ function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
             ];
             return (
               <g key={d.date}>
-                <title>{`${d.date} · ${d.leads} leads / ${d.atendimentos} atend / ${d.vendas} vendas`}</title>
+                <title>{`${d.date} · ${d.leads} leads novos / ${d.atendimentos} atend / ${d.vendas} vendas`}</title>
                 {bars.map((b) => {
                   const h = b.v > 0 ? Math.max(6, scaleY(b.v)) : 0;
                   return (
