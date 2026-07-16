@@ -195,7 +195,7 @@ export const syncCcpbxCallsFn = createServerFn({ method: "POST" })
   });
 
 export const listCcpbxCallsFn = createServerFn({ method: "POST" })
-  .inputValidator((d: { limit?: number; agentEmail?: string } = {}) => d)
+  .inputValidator((d: { limit?: number; agentEmail?: string; from?: string; to?: string } = {}) => d)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let q = supabaseAdmin
@@ -204,6 +204,8 @@ export const listCcpbxCallsFn = createServerFn({ method: "POST" })
       .order("started_at", { ascending: false })
       .limit(Math.min(1000, data.limit ?? 200));
     if (data.agentEmail) q = q.eq("agent_email", data.agentEmail);
+    if (data.from) q = q.gte("started_at", data.from);
+    if (data.to) q = q.lte("started_at", data.to);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     return rows as CallRow[];
