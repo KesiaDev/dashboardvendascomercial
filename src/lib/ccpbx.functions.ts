@@ -201,7 +201,7 @@ export const listCcpbxCallsFn = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let q = supabaseAdmin
       .from("coach_calls")
-      .select("id,ccpbx_id,started_at,duration_sec,direction,from_number,to_number,agent_user,agent_name,agent_email,deal_id,contact_name,status,recording_url,transcript,score,analyzed_at")
+      .select("id,ccpbx_id,started_at,duration_sec,direction,from_number,to_number,agent_user,agent_name,agent_email,deal_id,contact_name,status,recording_url,transcript,score,analyzed_at,analysis")
       .order("started_at", { ascending: false })
       .limit(Math.min(1000, data.limit ?? 200));
     if (data.agentEmail) q = q.eq("agent_email", data.agentEmail);
