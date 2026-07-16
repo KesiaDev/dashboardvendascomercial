@@ -127,9 +127,17 @@ export const syncClintMessagesFn = createServerFn({ method: "POST" })
       contactId = lookup.contactId;
     }
     if (!contactId) {
-      throw new Error(
-        `Contato Clint não encontrado. Tentativas: ${allAttempts.join(", ")}. Erros: ${JSON.stringify(allErrors)}`,
+      console.warn(
+        `[Clint sync] contato não encontrado para conv=${conv.id} email=${conv.contact_email} phone=${phone}. Tentativas: ${allAttempts.join(", ")}`,
       );
+      return {
+        synced: 0,
+        skipped: true,
+        reason: "contact_not_found",
+        email: conv.contact_email,
+        attempts: allAttempts,
+        errors: allErrors,
+      };
     }
     console.log(`[Clint sync] usando contactId=${contactId}`);
 
