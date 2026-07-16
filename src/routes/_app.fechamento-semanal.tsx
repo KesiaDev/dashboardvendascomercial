@@ -17,6 +17,7 @@ import {
   ChevronLeft, ChevronRight, Trophy, TrendingUp, TrendingDown,
   CalendarDays, Flame, Star, ShoppingBag, ArrowRight, Users, Target, Clock, Inbox,
 } from "lucide-react";
+import { isRenewalProduct } from "@/lib/product-groups";
 
 export const Route = createFileRoute("/_app/fechamento-semanal")({
   component: FechamentoSemanal,
@@ -170,6 +171,10 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
   const weekTotal = weekSales.reduce((s,x)=>s+Number(x.value_eur),0);
   const prevTotal = prevSales.reduce((s,x)=>s+Number(x.value_eur),0);
   const pctVsPrev = prevTotal>0 ? Math.round(((weekTotal-prevTotal)/prevTotal)*100) : null;
+  const weekNovas = weekSales.filter(s=>!isRenewalProduct(s.product));
+  const weekRenov = weekSales.filter(s=>isRenewalProduct(s.product));
+  const weekNovasTotal = weekNovas.reduce((s,x)=>s+Number(x.value_eur),0);
+  const weekRenovTotal = weekRenov.reduce((s,x)=>s+Number(x.value_eur),0);
 
   const dailyData = useMemo(() => Array.from({length:7},(_,i)=>{
     const date = addDays(start,i);
@@ -236,6 +241,16 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
           <p className="text-xs text-muted-foreground">Total da semana</p>
           <p className="text-2xl font-bold tabular-nums mt-1 text-violet-500">{fmtEur(weekTotal)}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{weekSales.length} venda{weekSales.length!==1?"s":""}</p>
+          <div className="mt-2 grid grid-cols-2 gap-1 text-[10px]">
+            <div className="rounded bg-emerald-950/30 px-1.5 py-1">
+              <div className="font-bold text-emerald-400 tabular-nums">{fmtEur(weekNovasTotal)}</div>
+              <div className="text-muted-foreground">Novas · {weekNovas.length}</div>
+            </div>
+            <div className="rounded bg-blue-950/30 px-1.5 py-1">
+              <div className="font-bold text-blue-400 tabular-nums">{fmtEur(weekRenovTotal)}</div>
+              <div className="text-muted-foreground">Renov · {weekRenov.length}</div>
+            </div>
+          </div>
         </CardContent></Card>
 
         <Card style={{borderLeftWidth:4,borderLeftStyle:"solid",borderLeftColor:pctVsPrev===null?"#64748b":pctVsPrev>=0?"#10b981":"#ef4444"}}><CardContent className="pt-5 pb-4">
@@ -563,6 +578,10 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
   },[allSales,yearMonth,maxWeek]);
 
   const monthTotal = monthSales.reduce((s,x)=>s+Number(x.value_eur),0);
+  const monthNovas = monthSales.filter(s=>!isRenewalProduct(s.product));
+  const monthRenov = monthSales.filter(s=>isRenewalProduct(s.product));
+  const monthNovasTotal = monthNovas.reduce((s,x)=>s+Number(x.value_eur),0);
+  const monthRenovTotal = monthRenov.reduce((s,x)=>s+Number(x.value_eur),0);
 
   const sellerRanking: SellerStat[] = useMemo(()=>{
     const map: Record<string,SellerStat>={};
@@ -603,6 +622,16 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
           <p className="text-xs text-muted-foreground">Total do mês</p>
           <p className="text-2xl font-bold tabular-nums mt-1 text-violet-500">{fmtEur(monthTotal)}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{monthSales.length} vendas</p>
+          <div className="mt-2 grid grid-cols-2 gap-1 text-[10px]">
+            <div className="rounded bg-emerald-950/30 px-1.5 py-1">
+              <div className="font-bold text-emerald-400 tabular-nums">{fmtEur(monthNovasTotal)}</div>
+              <div className="text-muted-foreground">Novas · {monthNovas.length}</div>
+            </div>
+            <div className="rounded bg-blue-950/30 px-1.5 py-1">
+              <div className="font-bold text-blue-400 tabular-nums">{fmtEur(monthRenovTotal)}</div>
+              <div className="text-muted-foreground">Renov · {monthRenov.length}</div>
+            </div>
+          </div>
         </CardContent></Card>
 
         <Card className="border-l-4 border-orange-500"><CardContent className="pt-5 pb-4">

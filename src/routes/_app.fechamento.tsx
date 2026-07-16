@@ -18,6 +18,7 @@ import {
   type HotmartMatch,
   type ManualSale,
 } from "@/lib/manual-sales.functions";
+import { isRenewalProduct } from "@/lib/product-groups";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -294,6 +295,16 @@ function FechamentoForm({ session }: { session: any }) {
   const monthTotal = sales.reduce((acc, s) => acc + Number(s.value_eur), 0);
   const formTotal = items.reduce((acc, it) => acc + (Number(it.value.replace(",", ".")) || 0), 0);
 
+  // Separação Novas vs Renovações (renovações não contam como venda nova)
+  const todayNovas = todaySales.filter((s) => !isRenewalProduct(s.product));
+  const todayRenov = todaySales.filter((s) => isRenewalProduct(s.product));
+  const todayNovasTotal = todayNovas.reduce((a, s) => a + Number(s.value_eur), 0);
+  const todayRenovTotal = todayRenov.reduce((a, s) => a + Number(s.value_eur), 0);
+  const monthNovas = sales.filter((s) => !isRenewalProduct(s.product));
+  const monthRenov = sales.filter((s) => isRenewalProduct(s.product));
+  const monthNovasTotal = monthNovas.reduce((a, s) => a + Number(s.value_eur), 0);
+  const monthRenovTotal = monthRenov.reduce((a, s) => a + Number(s.value_eur), 0);
+
   const pendingCount = sales.filter((s) => s.confirmation_status === "pendente").length;
   const confirmedCount = sales.filter((s) => s.confirmation_status === "confirmado_hotmart" || s.confirmation_status === "confirmado_wise").length;
   const mismatchCount = sales.filter((s) => s.affiliate_mismatch).length;
@@ -514,6 +525,16 @@ function FechamentoForm({ session }: { session: any }) {
               <CardDescription>
                 {todaySales.length} venda(s) · {moneyEur(todayTotal)}
               </CardDescription>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-center text-xs">
+                <div className="rounded-md bg-emerald-950/30 p-2">
+                  <p className="font-bold text-emerald-400 tabular-nums">{moneyEur(todayNovasTotal)}</p>
+                  <p className="text-muted-foreground">Novas ({todayNovas.length})</p>
+                </div>
+                <div className="rounded-md bg-blue-950/30 p-2">
+                  <p className="font-bold text-blue-400 tabular-nums">{moneyEur(todayRenovTotal)}</p>
+                  <p className="text-muted-foreground">Renovações ({todayRenov.length})</p>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-2">
               {todaySales.length === 0 && (
@@ -533,6 +554,16 @@ function FechamentoForm({ session }: { session: any }) {
               <CardDescription>
                 {sales.length} venda(s) · {moneyEur(monthTotal)}
               </CardDescription>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-center text-xs">
+                <div className="rounded-md bg-emerald-950/30 p-2">
+                  <p className="font-bold text-emerald-400 tabular-nums">{moneyEur(monthNovasTotal)}</p>
+                  <p className="text-muted-foreground">Novas ({monthNovas.length})</p>
+                </div>
+                <div className="rounded-md bg-blue-950/30 p-2">
+                  <p className="font-bold text-blue-400 tabular-nums">{moneyEur(monthRenovTotal)}</p>
+                  <p className="text-muted-foreground">Renovações ({monthRenov.length})</p>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-2">
               {sales.length === 0 && (
