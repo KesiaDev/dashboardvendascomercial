@@ -424,7 +424,27 @@ function FechamentoForm({ session }: { session: any }) {
                         />
                         {/* Lookup em tempo real */}
                         <EmailLookup email={it.clientEmail} saleDate={saleDate} />
+
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label className="text-xs">Parcelamento</Label>
+                        <Select
+                          value={it.installments}
+                          onValueChange={(v) => updateItem(i, { installments: v as "1" | "2" | "3" })}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">À vista (1x)</SelectItem>
+                            <SelectItem value="2">2x — agenda +1 parcela no próximo mês</SelectItem>
+                            <SelectItem value="3">3x — agenda +2 parcelas nos próximos meses</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {it.installments !== "1" && it.value && (
+                          <p className="text-xs text-muted-foreground">
+                            Serão criadas <b>{Number(it.installments) - 1}</b> parcela(s) futura(s) de {moneyEur(Number(it.value.replace(",", ".")) || 0)} pendentes de pagamento.
+                          </p>
+                        )}
                       </div>
+
 
                       {/* Roleta e bônus semanal — visíveis só para admin (cálculo definido depois) */}
                       {isAdmin && (
