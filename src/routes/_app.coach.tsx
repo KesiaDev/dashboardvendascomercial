@@ -1383,6 +1383,7 @@ function LigacoesTab() {
   const [days, setDays] = useState(7);
   const [sellerFilter, setSellerFilter] = useState("");
   const [q, setQ] = useState("");
+  const [selected, setSelected] = useState<CallRow | null>(null);
 
   const bounds = useMemo(() => {
     // Alinha ao fuso BR (UTC-3) como o restante do dashboard
