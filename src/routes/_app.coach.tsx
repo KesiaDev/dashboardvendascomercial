@@ -1384,7 +1384,8 @@ function LigacoesTab() {
   const [q, setQ] = useState("");
 
   const bounds = useMemo(() => {
-    const iso = refDate.toISOString().slice(0, 10);
+    // Alinha ao fuso BR (UTC-3) como o restante do dashboard
+    const iso = new Date(refDate.getTime() - 3 * 3600_000).toISOString().slice(0, 10);
     return rangeBoundsFor(range, iso);
   }, [range, refDate]);
 
