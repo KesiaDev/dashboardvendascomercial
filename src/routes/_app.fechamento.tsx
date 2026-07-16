@@ -236,6 +236,7 @@ function FechamentoForm({ session }: { session: any }) {
               notes: notes || undefined,
               roleta_type: it.roleta || null,
               bonus_semanal_eur: it.bonus ? (Number(it.bonus) as 30 | 60) : null,
+              installment_total: Number(it.installments),
             },
           })
         )
