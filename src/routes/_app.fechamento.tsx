@@ -195,8 +195,9 @@ function FechamentoForm({ session }: { session: any }) {
     clientEmail: string;
     roleta: "" | "mentoria" | "accelerator";
     bonus: "" | "30" | "60";
+    installments: "1" | "2" | "3";
   };
-  const emptyItem = (): Item => ({ product: "", value: "", clientName: "", clientEmail: "", roleta: "", bonus: "" });
+  const emptyItem = (): Item => ({ product: "", value: "", clientName: "", clientEmail: "", roleta: "", bonus: "", installments: "1" });
   const [items, setItems] = useState<Item[]>([emptyItem()]);
 
   const updateItem = (i: number, patch: Partial<Item>) =>
