@@ -1523,6 +1523,102 @@ export type Database = {
         }
         Relationships: []
       }
+      seller_agenda: {
+        Row: {
+          clint_deal_id: string | null
+          created_at: string
+          created_by: string | null
+          duration_min: number
+          id: string
+          lead_email: string | null
+          lead_name: string
+          lead_phone: string | null
+          meeting_link: string | null
+          meeting_type: string
+          notes: string | null
+          scheduled_at: string
+          seller_email: string
+          seller_name: string | null
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          clint_deal_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_min?: number
+          id?: string
+          lead_email?: string | null
+          lead_name: string
+          lead_phone?: string | null
+          meeting_link?: string | null
+          meeting_type?: string
+          notes?: string | null
+          scheduled_at: string
+          seller_email: string
+          seller_name?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          clint_deal_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_min?: number
+          id?: string
+          lead_email?: string | null
+          lead_name?: string
+          lead_phone?: string | null
+          meeting_link?: string | null
+          meeting_type?: string
+          notes?: string | null
+          scheduled_at?: string
+          seller_email?: string
+          seller_name?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      seller_ai_agent_prompts: {
+        Row: {
+          active: boolean
+          agent_name: string
+          clint_pipeline_id: string | null
+          created_at: string
+          id: string
+          prompt: string
+          seller_email: string
+          seller_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          agent_name?: string
+          clint_pipeline_id?: string | null
+          created_at?: string
+          id?: string
+          prompt: string
+          seller_email: string
+          seller_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          agent_name?: string
+          clint_pipeline_id?: string | null
+          created_at?: string
+          id?: string
+          prompt?: string
+          seller_email?: string
+          seller_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
