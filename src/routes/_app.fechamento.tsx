@@ -686,13 +686,16 @@ function FechamentoForm({ session }: { session: any }) {
 
 // ── Card de venda individual ─────────────────────────────────────────────────
 
-function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm }: {
+function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm, onMarkPaid }: {
   sale: SaleRow;
   isAdmin: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onConfirm: () => void;
+  onMarkPaid: (paid: boolean) => void;
 }) {
+  const isInstallment = sale.installment_total > 1;
+  const isPendingInst = isInstallment && !sale.installment_paid;
   return (
     <div className="rounded-lg border border-border/50 bg-card/50 p-3 text-sm space-y-2">
       <div className="flex items-start justify-between gap-2">
