@@ -697,7 +697,7 @@ function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm, onMarkPaid }: {
   const isInstallment = sale.installment_total > 1;
   const isPendingInst = isInstallment && !sale.installment_paid;
   return (
-    <div className="rounded-lg border border-border/50 bg-card/50 p-3 text-sm space-y-2">
+    <div className={cn("rounded-lg border p-3 text-sm space-y-2", isPendingInst ? "border-yellow-800/50 bg-yellow-950/20" : "border-border/50 bg-card/50")}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
