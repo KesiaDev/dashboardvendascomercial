@@ -1321,7 +1321,7 @@ function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-3">
       <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-44 min-w-full" role="img" aria-label="Leads, atendimentos e vendas por dia">
+        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-44 min-w-full" role="img" aria-label="Leads novos, atendimentos e vendas por dia">
           <line x1="0" x2={chartWidth} y1={chartHeight - bottom} y2={chartHeight - bottom} className="stroke-border" strokeWidth="1" />
           {daily.map((d, i) => {
             const cx = groupWidth * i + groupWidth / 2;
@@ -1333,7 +1333,7 @@ function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
             ];
             return (
               <g key={d.date}>
-                <title>{`${d.date} · ${d.leads} leads / ${d.atendimentos} atend / ${d.vendas} vendas`}</title>
+                <title>{`${d.date} · ${d.leads} leads novos / ${d.atendimentos} atend / ${d.vendas} vendas`}</title>
                 {bars.map((b) => {
                   const h = b.v > 0 ? Math.max(6, scaleY(b.v)) : 0;
                   return (
