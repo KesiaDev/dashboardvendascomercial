@@ -332,10 +332,10 @@ export const markInstallmentPaidFn = createServerFn({ method: "POST" })
 // ── Listar vendas ─────────────────────────────────────────────────────────────
 
 const SALE_COLS =
-  "id,seller_name,product,funnel,value_eur,client_name,client_email,sale_date,notes,created_at,created_by,created_by_email,confirmation_status,confirmed_hotmart_sale_id,confirmed_hotmart_valor_brl,confirmed_wise_id,roleta_type,bonus_semanal_eur,affiliate_mismatch,hotmart_nome_afiliado";
+  "id,seller_name,product,funnel,value_eur,client_name,client_email,sale_date,notes,created_at,created_by,created_by_email,confirmation_status,confirmed_hotmart_sale_id,confirmed_hotmart_valor_brl,confirmed_wise_id,roleta_type,bonus_semanal_eur,affiliate_mismatch,hotmart_nome_afiliado,installment_number,installment_total,parent_sale_id,installment_paid,installment_paid_at";
 
 const SALE_COLS_ADMIN =
-  "id,seller_name,product,funnel,value_eur,client_name,client_email,sale_date,notes,created_at,created_by_email,confirmation_status,confirmed_hotmart_sale_id,confirmed_hotmart_valor_brl,confirmed_wise_id,roleta_type,bonus_semanal_eur,affiliate_mismatch,hotmart_nome_afiliado";
+  "id,seller_name,product,funnel,value_eur,client_name,client_email,sale_date,notes,created_at,created_by_email,confirmation_status,confirmed_hotmart_sale_id,confirmed_hotmart_valor_brl,confirmed_wise_id,roleta_type,bonus_semanal_eur,affiliate_mismatch,hotmart_nome_afiliado,installment_number,installment_total,parent_sale_id,installment_paid,installment_paid_at";
 
 export const listManualSales = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
