@@ -64,25 +64,45 @@ function eachDay(startISO: string, endISO: string): string[] {
  *  - week: semana comercial (S{n}) baseada em SEASON_START, 7 dias
  *  - month: mês calendário corrente
  */
-function rangeBounds(range: PerfRange): { startDate: string; endDate: string; label: string } {
-  const today = todayBR();
+export function rangeBoundsFor(
+  range: PerfRange,
+  refDateISO?: string,
+): { startDate: string; endDate: string; label: string } {
+  const ref = refDateISO || todayBR();
   if (range === "day") {
-    return { startDate: today, endDate: today, label: `Hoje (${today.slice(8)}/${today.slice(5,7)})` };
+    return { startDate: ref, endDate: ref, label: `${ref.slice(8)}/${ref.slice(5, 7)}` };
   }
   if (range === "week") {
     const season = new Date(SEASON_START + "T12:00:00Z");
-    const now = new Date(today + "T12:00:00Z");
+    const now = new Date(ref + "T12:00:00Z");
     const idx = Math.max(0, Math.floor((now.getTime() - season.getTime()) / (7 * 86_400_000)));
     const startDate = addDays(SEASON_START, idx * 7);
     const endDate = addDays(startDate, 6);
-    return { startDate, endDate, label: `Semana S${idx + 1} (${startDate.slice(8)}/${startDate.slice(5,7)}–${endDate.slice(8)}/${endDate.slice(5,7)})` };
+    return {
+      startDate,
+      endDate,
+      label: `S${idx + 1} (${startDate.slice(8)}/${startDate.slice(5, 7)}–${endDate.slice(8)}/${endDate.slice(5, 7)})`,
+    };
   }
   // month = calendário
-  const [y, m] = today.split("-").map(Number);
-  const startDate = `${y}-${String(m).padStart(2,"0")}-01`;
+  const [y, m] = ref.split("-").map(Number);
+  const startDate = `${y}-${String(m).padStart(2, "0")}-01`;
   const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  const endDate = `${y}-${String(m).padStart(2,"0")}-${String(lastDay).padStart(2,"0")}`;
-  return { startDate, endDate, label: `${MONTHS_PT[m-1]} ${y}` };
+  const endDate = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  return { startDate, endDate, label: `${MONTHS_PT[m - 1]} ${y}` };
+}
+
+function rangeBounds(range: PerfRange): { startDate: string; endDate: string; label: string } {
+  const today = todayBR();
+  if (range === "day") {
+    return { ...rangeBoundsFor(range, today), label: `Hoje (${today.slice(8)}/${today.slice(5, 7)})` };
+  }
+  if (range === "week") {
+    const { startDate, endDate } = rangeBoundsFor(range, today);
+    const idx = Math.max(0, Math.floor((new Date(today + "T12:00:00Z").getTime() - new Date(SEASON_START + "T12:00:00Z").getTime()) / (7 * 86_400_000)));
+    return { startDate, endDate, label: `Semana S${idx + 1} (${startDate.slice(8)}/${startDate.slice(5, 7)}–${endDate.slice(8)}/${endDate.slice(5, 7)})` };
+  }
+  return rangeBoundsFor(range, today);
 }
 
 // Mapeia emails corporativos e variantes para o nome canônico — evita
