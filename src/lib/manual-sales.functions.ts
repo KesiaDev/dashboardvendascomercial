@@ -70,6 +70,12 @@ export type ManualSale = {
   bonus_semanal_eur: BonusSemanalEur | null;
   affiliate_mismatch: boolean;
   hotmart_nome_afiliado: string | null;
+  // Parcelamento (até 3x)
+  installment_number: number;
+  installment_total: number;
+  parent_sale_id: string | null;
+  installment_paid: boolean;
+  installment_paid_at: string | null;
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -212,6 +218,7 @@ export const createManualSale = createServerFn({ method: "POST" })
     notes?: string;
     roleta_type?: RoletaType | null;
     bonus_semanal_eur?: BonusSemanalEur | null;
+    installment_total?: number;
   }) => {
     if (!d.seller_name || !d.product || !d.funnel) throw new Error("Campos obrigatórios faltando");
     if (!d.client_email || !d.client_email.includes("@")) throw new Error("E-mail do cliente obrigatório");
@@ -221,7 +228,9 @@ export const createManualSale = createServerFn({ method: "POST" })
       throw new Error("roleta_type inválido");
     if (d.bonus_semanal_eur != null && d.bonus_semanal_eur !== 30 && d.bonus_semanal_eur !== 60)
       throw new Error("bonus_semanal_eur deve ser 30 ou 60");
-    return { ...d, client_email: normEmail(d.client_email) };
+    const inst = d.installment_total ?? 1;
+    if (![1, 2, 3].includes(inst)) throw new Error("Parcelas deve ser 1, 2 ou 3");
+    return { ...d, installment_total: inst, client_email: normEmail(d.client_email) };
   })
   .handler(async ({ data, context }) => {
     const { supabase, userId, claims } = context;
@@ -234,40 +243,99 @@ export const createManualSale = createServerFn({ method: "POST" })
       ? isAffiliateMismatch(data.seller_name, hotmartMatch.nome_afiliado)
       : false;
 
-    const { data: row, error } = await supabase
+    const base = {
+      created_by: userId,
+      created_by_email: (claims as any)?.email ?? "—",
+      seller_name: data.seller_name,
+      product: data.product,
+      funnel: data.funnel,
+      value_eur: data.value_eur,
+      client_name: data.client_name ?? null,
+      client_email: data.client_email,
+      notes: data.notes ?? null,
+      roleta_type: data.roleta_type ?? null,
+      bonus_semanal_eur: data.bonus_semanal_eur ?? null,
+      installment_total: data.installment_total,
+    };
+
+    // Parcela 1 — venda "pai", já paga, tenta confirmar no Hotmart
+    const { data: parent, error } = await supabase
       .from("manual_sales")
       .insert({
-        created_by: userId,
-        created_by_email: (claims as any)?.email ?? "—",
-        seller_name: data.seller_name,
-        product: data.product,
-        funnel: data.funnel,
-        value_eur: data.value_eur,
-        client_name: data.client_name ?? null,
-        client_email: data.client_email,
+        ...base,
         sale_date: data.sale_date,
-        notes: data.notes ?? null,
         confirmation_status: confirmationStatus,
         confirmed_hotmart_sale_id: hotmartMatch?.id ?? null,
         confirmed_hotmart_valor_brl: hotmartMatch?.faturamento_liquido_brl ?? null,
-        roleta_type: data.roleta_type ?? null,
-        bonus_semanal_eur: data.bonus_semanal_eur ?? null,
         affiliate_mismatch: affiliateMismatch,
         hotmart_nome_afiliado: hotmartMatch?.nome_afiliado ?? null,
+        installment_number: 1,
+        installment_paid: true,
+        installment_paid_at: new Date().toISOString(),
       })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
-    return { ok: true, id: row!.id, confirmation: confirmationStatus, hotmartMatch, affiliateMismatch };
+
+    // Parcelas 2..N — pendentes, agendadas +1, +2 meses
+    if (data.installment_total > 1) {
+      const [y, m, d] = data.sale_date.split("-").map(Number);
+      const rows = [] as any[];
+      for (let n = 2; n <= data.installment_total; n++) {
+        const due = new Date(y, m - 1 + (n - 1), d);
+        const dueIso = due.toISOString().slice(0, 10);
+        rows.push({
+          ...base,
+          sale_date: dueIso,
+          confirmation_status: "pendente",
+          affiliate_mismatch: false,
+          hotmart_nome_afiliado: null,
+          installment_number: n,
+          parent_sale_id: parent!.id,
+          installment_paid: false,
+        });
+      }
+      const { error: insErr } = await supabase.from("manual_sales").insert(rows);
+      if (insErr) throw new Error(insErr.message);
+    }
+
+    return {
+      ok: true,
+      id: parent!.id,
+      confirmation: confirmationStatus,
+      hotmartMatch,
+      affiliateMismatch,
+      installments: data.installment_total,
+    };
+  });
+
+// ── Marcar parcela como paga / pendente ──────────────────────────────────────
+
+export const markInstallmentPaidFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string; paid: boolean }) => {
+    if (!d.id) throw new Error("ID obrigatório");
+    return d;
+  })
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("manual_sales")
+      .update({
+        installment_paid: data.paid,
+        installment_paid_at: data.paid ? new Date().toISOString() : null,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 // ── Listar vendas ─────────────────────────────────────────────────────────────
 
 const SALE_COLS =
-  "id,seller_name,product,funnel,value_eur,client_name,client_email,sale_date,notes,created_at,created_by,created_by_email,confirmation_status,confirmed_hotmart_sale_id,confirmed_hotmart_valor_brl,confirmed_wise_id,roleta_type,bonus_semanal_eur,affiliate_mismatch,hotmart_nome_afiliado";
+  "id,seller_name,product,funnel,value_eur,client_name,client_email,sale_date,notes,created_at,created_by,created_by_email,confirmation_status,confirmed_hotmart_sale_id,confirmed_hotmart_valor_brl,confirmed_wise_id,roleta_type,bonus_semanal_eur,affiliate_mismatch,hotmart_nome_afiliado,installment_number,installment_total,parent_sale_id,installment_paid,installment_paid_at";
 
 const SALE_COLS_ADMIN =
-  "id,seller_name,product,funnel,value_eur,client_name,client_email,sale_date,notes,created_at,created_by_email,confirmation_status,confirmed_hotmart_sale_id,confirmed_hotmart_valor_brl,confirmed_wise_id,roleta_type,bonus_semanal_eur,affiliate_mismatch,hotmart_nome_afiliado";
+  "id,seller_name,product,funnel,value_eur,client_name,client_email,sale_date,notes,created_at,created_by_email,confirmation_status,confirmed_hotmart_sale_id,confirmed_hotmart_valor_brl,confirmed_wise_id,roleta_type,bonus_semanal_eur,affiliate_mismatch,hotmart_nome_afiliado,installment_number,installment_total,parent_sale_id,installment_paid,installment_paid_at";
 
 export const listManualSales = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

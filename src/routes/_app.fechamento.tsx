@@ -12,6 +12,7 @@ import {
   lookupByEmailFn,
   confirmManualSaleFn,
   reconfirmAllPendingFn,
+  markInstallmentPaidFn,
   PRODUCTS,
   FUNNELS,
   SELLERS,
@@ -36,7 +37,7 @@ import {
 import { toast } from "sonner";
 import {
   CheckCircle2, LogIn, LogOut, Pencil, Plus, Trash2, X,
-  Search, AlertCircle, RefreshCw, CheckCheck, AlertTriangle,
+  Search, AlertCircle, RefreshCw, CheckCheck, AlertTriangle, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -194,8 +195,9 @@ function FechamentoForm({ session }: { session: any }) {
     clientEmail: string;
     roleta: "" | "mentoria" | "accelerator";
     bonus: "" | "30" | "60";
+    installments: "1" | "2" | "3";
   };
-  const emptyItem = (): Item => ({ product: "", value: "", clientName: "", clientEmail: "", roleta: "", bonus: "" });
+  const emptyItem = (): Item => ({ product: "", value: "", clientName: "", clientEmail: "", roleta: "", bonus: "", installments: "1" });
   const [items, setItems] = useState<Item[]>([emptyItem()]);
 
   const updateItem = (i: number, patch: Partial<Item>) =>
@@ -234,6 +236,7 @@ function FechamentoForm({ session }: { session: any }) {
               notes: notes || undefined,
               roleta_type: it.roleta || null,
               bonus_semanal_eur: it.bonus ? (Number(it.bonus) as 30 | 60) : null,
+              installment_total: Number(it.installments),
             },
           })
         )
@@ -290,9 +293,22 @@ function FechamentoForm({ session }: { session: any }) {
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
 
-  const todaySales = sales.filter((s) => s.sale_date === today);
+  const markPaidMut = useMutation({
+    mutationFn: (d: { id: string; paid: boolean }) => markInstallmentPaidFn({ data: d }),
+    onSuccess: (_r, v) => {
+      toast.success(v.paid ? "Parcela marcada como paga ✅" : "Parcela reaberta");
+      qc.invalidateQueries({ queryKey: ["manual-sales"] });
+    },
+    onError: (e: any) => toast.error(String(e?.message ?? e)),
+  });
+
+  // Parcelas futuras não pagas NÃO entram no total até serem confirmadas
+  const paidSales = sales.filter((s) => s.installment_paid);
+  const pendingInstallments = sales.filter((s) => !s.installment_paid);
+
+  const todaySales = paidSales.filter((s) => s.sale_date === today);
   const todayTotal = todaySales.reduce((acc, s) => acc + Number(s.value_eur), 0);
-  const monthTotal = sales.reduce((acc, s) => acc + Number(s.value_eur), 0);
+  const monthTotal = paidSales.reduce((acc, s) => acc + Number(s.value_eur), 0);
   const formTotal = items.reduce((acc, it) => acc + (Number(it.value.replace(",", ".")) || 0), 0);
 
   // Separação Novas vs Renovações (renovações não contam como venda nova)
@@ -300,8 +316,8 @@ function FechamentoForm({ session }: { session: any }) {
   const todayRenov = todaySales.filter((s) => isRenewalProduct(s.product));
   const todayNovasTotal = todayNovas.reduce((a, s) => a + Number(s.value_eur), 0);
   const todayRenovTotal = todayRenov.reduce((a, s) => a + Number(s.value_eur), 0);
-  const monthNovas = sales.filter((s) => !isRenewalProduct(s.product));
-  const monthRenov = sales.filter((s) => isRenewalProduct(s.product));
+  const monthNovas = paidSales.filter((s) => !isRenewalProduct(s.product));
+  const monthRenov = paidSales.filter((s) => isRenewalProduct(s.product));
   const monthNovasTotal = monthNovas.reduce((a, s) => a + Number(s.value_eur), 0);
   const monthRenovTotal = monthRenov.reduce((a, s) => a + Number(s.value_eur), 0);
 
@@ -409,6 +425,28 @@ function FechamentoForm({ session }: { session: any }) {
                         {/* Lookup em tempo real */}
                         <EmailLookup email={it.clientEmail} saleDate={saleDate} />
                       </div>
+
+
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label className="text-xs">Parcelamento</Label>
+                        <Select
+                          value={it.installments}
+                          onValueChange={(v) => updateItem(i, { installments: v as "1" | "2" | "3" })}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">À vista (1x)</SelectItem>
+                            <SelectItem value="2">2x — agenda +1 parcela no próximo mês</SelectItem>
+                            <SelectItem value="3">3x — agenda +2 parcelas nos próximos meses</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {it.installments !== "1" && it.value && (
+                          <p className="text-xs text-muted-foreground">
+                            Serão criadas <b>{Number(it.installments) - 1}</b> parcela(s) futura(s) de {moneyEur(Number(it.value.replace(",", ".")) || 0)} pendentes de pagamento.
+                          </p>
+                        )}
+                      </div>
+
 
                       {/* Roleta e bônus semanal — visíveis só para admin (cálculo definido depois) */}
                       {isAdmin && (
@@ -541,18 +579,37 @@ function FechamentoForm({ session }: { session: any }) {
                 <p className="text-sm text-muted-foreground">Nenhuma venda registrada hoje ainda.</p>
               )}
               {todaySales.map((s) => (
-                <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} />
-
+                <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })} />
               ))}
             </CardContent>
           </Card>
+
+          {/* Parcelas pendentes do mês */}
+          {pendingInstallments.length > 0 && (
+            <Card className="border-yellow-800/40 bg-yellow-950/10">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-yellow-400" />
+                  Parcelas pendentes ({pendingInstallments.length})
+                </CardTitle>
+                <CardDescription>
+                  Parcelas agendadas cujo pagamento ainda não foi confirmado. Marque como paga assim que o cliente pagar.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {pendingInstallments.map((s) => (
+                  <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })} />
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Vendas do mês */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Vendas do mês</CardTitle>
               <CardDescription>
-                {sales.length} venda(s) · {moneyEur(monthTotal)}
+                {paidSales.length} confirmada(s) · {moneyEur(monthTotal)}
               </CardDescription>
               <div className="mt-2 grid grid-cols-2 gap-2 text-center text-xs">
                 <div className="rounded-md bg-emerald-950/30 p-2">
@@ -570,7 +627,7 @@ function FechamentoForm({ session }: { session: any }) {
                 <p className="text-sm text-muted-foreground">Nenhuma venda registrada neste mês.</p>
               )}
               {sales.map((s) => (
-                <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} />
+                <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })} />
               ))}
             </CardContent>
           </Card>
@@ -629,21 +686,30 @@ function FechamentoForm({ session }: { session: any }) {
 
 // ── Card de venda individual ─────────────────────────────────────────────────
 
-function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm }: {
+function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm, onMarkPaid }: {
   sale: SaleRow;
   isAdmin: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onConfirm: () => void;
+  onMarkPaid: (paid: boolean) => void;
 }) {
+  const isInstallment = sale.installment_total > 1;
+  const isPendingInst = isInstallment && !sale.installment_paid;
   return (
-    <div className="rounded-lg border border-border/50 bg-card/50 p-3 text-sm space-y-2">
+    <div className={cn("rounded-lg border p-3 text-sm space-y-2", isPendingInst ? "border-yellow-800/50 bg-yellow-950/20" : "border-border/50 bg-card/50")}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold">{normalizeSeller(sale.seller_name).split(" ")[0]}</span>
             <span className="tabular-nums font-bold">{moneyEur(Number(sale.value_eur))}</span>
-            <ConfirmBadge status={sale.confirmation_status} />
+            {isInstallment && (
+              <Badge className={cn("text-xs gap-1", isPendingInst ? "bg-yellow-600/20 text-yellow-300 border-yellow-600/40" : "bg-emerald-600/20 text-emerald-300 border-emerald-600/40")}>
+                {isPendingInst ? <Clock className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                Parcela {sale.installment_number}/{sale.installment_total}{isPendingInst ? " · pendente" : " · paga"}
+              </Badge>
+            )}
+            {!isPendingInst && <ConfirmBadge status={sale.confirmation_status} />}
             {sale.affiliate_mismatch && (
               <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30 text-xs gap-1">
                 <AlertTriangle className="h-3 w-3" />Afiliado ≠
@@ -687,6 +753,16 @@ function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm }: {
         </div>
       </div>
       <div className="flex gap-1 flex-wrap">
+        {isInstallment && (
+          <Button
+            variant={isPendingInst ? "default" : "ghost"}
+            size="sm"
+            className={cn("h-7 px-2", isPendingInst && "bg-emerald-600 hover:bg-emerald-700 text-white")}
+            onClick={() => onMarkPaid(!sale.installment_paid)}
+          >
+            {isPendingInst ? <><CheckCircle2 className="mr-1 h-3 w-3" /> Marcar pago</> : <><Clock className="mr-1 h-3 w-3" /> Reabrir</>}
+          </Button>
+        )}
         <Button variant="ghost" size="sm" className="h-7 px-2" onClick={onEdit}>
           <Pencil className="mr-1 h-3 w-3" /> Editar
         </Button>
