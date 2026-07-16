@@ -31,6 +31,7 @@ import { Route as AppCoachRouteImport } from './routes/_app.coach'
 import { Route as AppCampanhaRouteImport } from './routes/_app.campanha'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
+import { Route as AppAgendaRouteImport } from './routes/_app.agenda'
 import { Route as ApiPublicHotmartRawRouteImport } from './routes/api/public/hotmart-raw'
 import { Route as ApiPublicHotmartDebugRouteImport } from './routes/api/public/hotmart-debug'
 import { Route as ApiHotmartWebhookRouteImport } from './routes/api/hotmart/webhook'
@@ -149,6 +150,11 @@ const AppAgenteRoute = AppAgenteRouteImport.update({
   path: '/agente',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAgendaRoute = AppAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
+  getParentRoute: () => AppRoute,
+} as any)
 const ApiPublicHotmartRawRoute = ApiPublicHotmartRawRouteImport.update({
   id: '/api/public/hotmart-raw',
   path: '/api/public/hotmart-raw',
@@ -193,6 +199,7 @@ const ApiPublicSyncCcpbxRoute = ApiPublicSyncCcpbxRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/agenda': typeof AppAgendaRoute
   '/agente': typeof AppAgenteRoute
   '/areas': typeof AppAreasRoute
   '/campanha': typeof AppCampanhaRoute
@@ -223,6 +230,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
+  '/agenda': typeof AppAgendaRoute
   '/agente': typeof AppAgenteRoute
   '/areas': typeof AppAreasRoute
   '/campanha': typeof AppCampanhaRoute
@@ -256,6 +264,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/_app/agenda': typeof AppAgendaRoute
   '/_app/agente': typeof AppAgenteRoute
   '/_app/areas': typeof AppAreasRoute
   '/_app/campanha': typeof AppCampanhaRoute
@@ -290,6 +299,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/agenda'
     | '/agente'
     | '/areas'
     | '/campanha'
@@ -320,6 +330,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
+    | '/agenda'
     | '/agente'
     | '/areas'
     | '/campanha'
@@ -352,6 +363,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/auth'
+    | '/_app/agenda'
     | '/_app/agente'
     | '/_app/areas'
     | '/_app/campanha'
@@ -550,6 +562,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgenteRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/agenda': {
+      id: '/_app/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AppAgendaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/public/hotmart-raw': {
       id: '/api/public/hotmart-raw'
       path: '/api/public/hotmart-raw'
@@ -622,6 +641,7 @@ const AppCoachRouteWithChildren = AppCoachRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAgendaRoute: typeof AppAgendaRoute
   AppAgenteRoute: typeof AppAgenteRoute
   AppAreasRoute: typeof AppAreasRoute
   AppCampanhaRoute: typeof AppCampanhaRoute
@@ -644,6 +664,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAgendaRoute: AppAgendaRoute,
   AppAgenteRoute: AppAgenteRoute,
   AppAreasRoute: AppAreasRoute,
   AppCampanhaRoute: AppCampanhaRoute,
