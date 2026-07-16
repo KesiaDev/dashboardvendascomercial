@@ -294,6 +294,16 @@ function FechamentoForm({ session }: { session: any }) {
   const monthTotal = sales.reduce((acc, s) => acc + Number(s.value_eur), 0);
   const formTotal = items.reduce((acc, it) => acc + (Number(it.value.replace(",", ".")) || 0), 0);
 
+  // Separação Novas vs Renovações (renovações não contam como venda nova)
+  const todayNovas = todaySales.filter((s) => !isRenewalProduct(s.product));
+  const todayRenov = todaySales.filter((s) => isRenewalProduct(s.product));
+  const todayNovasTotal = todayNovas.reduce((a, s) => a + Number(s.value_eur), 0);
+  const todayRenovTotal = todayRenov.reduce((a, s) => a + Number(s.value_eur), 0);
+  const monthNovas = sales.filter((s) => !isRenewalProduct(s.product));
+  const monthRenov = sales.filter((s) => isRenewalProduct(s.product));
+  const monthNovasTotal = monthNovas.reduce((a, s) => a + Number(s.value_eur), 0);
+  const monthRenovTotal = monthRenov.reduce((a, s) => a + Number(s.value_eur), 0);
+
   const pendingCount = sales.filter((s) => s.confirmation_status === "pendente").length;
   const confirmedCount = sales.filter((s) => s.confirmation_status === "confirmado_hotmart" || s.confirmation_status === "confirmado_wise").length;
   const mismatchCount = sales.filter((s) => s.affiliate_mismatch).length;
