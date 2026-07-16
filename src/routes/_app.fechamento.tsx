@@ -424,6 +424,8 @@ function FechamentoForm({ session }: { session: any }) {
                         />
                         {/* Lookup em tempo real */}
                         <EmailLookup email={it.clientEmail} saleDate={saleDate} />
+                      </div>
+
 
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label className="text-xs">Parcelamento</Label>
