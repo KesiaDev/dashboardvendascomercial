@@ -703,7 +703,13 @@ function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm, onMarkPaid }: {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold">{normalizeSeller(sale.seller_name).split(" ")[0]}</span>
             <span className="tabular-nums font-bold">{moneyEur(Number(sale.value_eur))}</span>
-            <ConfirmBadge status={sale.confirmation_status} />
+            {isInstallment && (
+              <Badge className={cn("text-xs gap-1", isPendingInst ? "bg-yellow-600/20 text-yellow-300 border-yellow-600/40" : "bg-emerald-600/20 text-emerald-300 border-emerald-600/40")}>
+                {isPendingInst ? <Clock className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                Parcela {sale.installment_number}/{sale.installment_total}{isPendingInst ? " · pendente" : " · paga"}
+              </Badge>
+            )}
+            {!isPendingInst && <ConfirmBadge status={sale.confirmation_status} />}
             {sale.affiliate_mismatch && (
               <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30 text-xs gap-1">
                 <AlertTriangle className="h-3 w-3" />Afiliado ≠
