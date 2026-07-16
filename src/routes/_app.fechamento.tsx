@@ -12,6 +12,7 @@ import {
   lookupByEmailFn,
   confirmManualSaleFn,
   reconfirmAllPendingFn,
+  markInstallmentPaidFn,
   PRODUCTS,
   FUNNELS,
   SELLERS,
