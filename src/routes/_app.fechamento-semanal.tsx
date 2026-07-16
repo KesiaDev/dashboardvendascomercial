@@ -15,8 +15,9 @@ import {
 } from "recharts";
 import {
   ChevronLeft, ChevronRight, Trophy, TrendingUp, TrendingDown,
-  CalendarDays, Flame, Star, ShoppingBag, ArrowRight, Users, Target, Clock, Inbox,
+  CalendarDays, Flame, Star, ShoppingBag, ArrowRight, Users, Target, Clock, Inbox, RefreshCw,
 } from "lucide-react";
+import { isRenewalProduct } from "@/lib/product-groups";
 
 export const Route = createFileRoute("/_app/fechamento-semanal")({
   component: FechamentoSemanal,
