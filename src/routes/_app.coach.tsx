@@ -1557,6 +1557,11 @@ function LigacoesTab() {
                           {c.recording_url && (
                             <a href={c.recording_url} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:underline">áudio</a>
                           )}
+                          {c.analysis && (
+                            <Button size="sm" variant="outline" onClick={() => setSelected(c)}>
+                              Ver análise
+                            </Button>
+                          )}
                           <Button size="sm" variant="ghost" disabled={analyzeMut.isPending} onClick={() => analyzeMut.mutate(c.id)}>
                             <Sparkles className="h-3 w-3 mr-1" />
                             {c.analyzed_at ? "Reanalisar" : "Analisar"}
