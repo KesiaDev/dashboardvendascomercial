@@ -17,6 +17,7 @@ const ALL_NAV_ITEMS = [
   { to: "/",                    label: "Visão Geral",        icon: BarChart3,        adminOnly: true },
   { to: "/fechamento",          label: "Fechamento",         icon: ClipboardCheck,   adminOnly: false },
   { to: "/fechamento-semanal",  label: "Fechamento Semanal", icon: CalendarDays,     adminOnly: false },
+  { to: "/agenda",              label: "Agenda do Vendedor", icon: CalendarClock,    adminOnly: false },
   { to: "/ranking",             label: "Ranking",            icon: Trophy,           adminOnly: true },
   { to: "/resultados",          label: "Resultados",         icon: TrendingUp,       adminOnly: true },
   { to: "/vendas-reais",        label: "Vendas Reais",       icon: TrendingUpIcon,   adminOnly: true },
