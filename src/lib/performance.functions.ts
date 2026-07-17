@@ -155,11 +155,15 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       .lte("sale_date", endDate)
       .limit(10000);
 
-    // 2. Conversas com atividade no período (somente Pipeline Comercial V3
-    //    — evita inflar "atendimentos" com WhatsApp de outros funis)
+    // 2. Conversas com atividade no período (somente Pipeline Comercial V3).
+    //    ATENÇÃO: todos os vendedores atendem em todos os dispositivos WhatsApp
+    //    (Comercial 01/02/03, Cobrança 01). Isso gera múltiplas "conversas" para
+    //    o MESMO lead — uma por dispositivo. Precisamos deduplicar por contato
+    //    (clint_contact_id) para não inflar atendimentos, e atribuir o
+    //    atendimento ao vendedor que abriu a conversa primeiro (first_message_at).
     const { data: convs } = await supabaseAdmin
       .from("coach_conversations")
-      .select("id,seller_email,seller_name,last_message_at,clint_contact_id,origin_name")
+      .select("id,seller_email,seller_name,first_message_at,last_message_at,clint_contact_id,origin_name")
       .eq("origin_name", "PIPELINE_COMERCIAL-V3")
       .gte("last_message_at", startTS)
       .lte("last_message_at", endTS)
@@ -180,7 +184,54 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     const scoreByConv = new Map<string, number>();
     for (const a of analyses) if (a.score_geral != null) scoreByConv.set(a.conversation_id, a.score_geral);
 
-    // Acumulador — chaveado por nome limpo do vendedor (manual_sales só tem name)
+    // ─── Dedup por contato (1 lead atendido = 1 atendimento) ─────────────
+    // Bucket = clint_contact_id (fallback: id da conversa quando não houver
+    // contato vinculado). Vendedor "dono" do atendimento = quem tem o
+    // first_message_at mais antigo. Notas IA são agregadas por contato
+    // (média simples das conversas com análise).
+    type Bucket = {
+      contactKey: string;
+      sellerEmail: string | null;
+      sellerName: string | null;
+      firstAt: string | null;
+      lastAt: string | null;
+      convIds: string[];
+      scoreSum: number;
+      scoreN: number;
+    };
+    const buckets = new Map<string, Bucket>();
+    for (const c of convs ?? []) {
+      if (!c.seller_email && !c.seller_name) continue;
+      if (isExcludedSeller(c.seller_name)) continue;
+      const key = c.clint_contact_id ? `c:${c.clint_contact_id}` : `conv:${c.id}`;
+      const fa = c.first_message_at ?? c.last_message_at ?? null;
+      const la = c.last_message_at ?? c.first_message_at ?? null;
+      let b = buckets.get(key);
+      if (!b) {
+        b = {
+          contactKey: key,
+          sellerEmail: c.seller_email ?? null,
+          sellerName: c.seller_name ?? null,
+          firstAt: fa, lastAt: la,
+          convIds: [c.id], scoreSum: 0, scoreN: 0,
+        };
+        buckets.set(key, b);
+      } else {
+        const currentFirst = b.firstAt ?? "9999";
+        const candidateFirst = fa ?? "9999";
+        if (candidateFirst < currentFirst) {
+          b.sellerEmail = c.seller_email ?? b.sellerEmail;
+          b.sellerName = c.seller_name ?? b.sellerName;
+          b.firstAt = fa;
+        }
+        if ((la ?? "") > (b.lastAt ?? "")) b.lastAt = la;
+        b.convIds.push(c.id);
+      }
+      const sc = scoreByConv.get(c.id);
+      if (sc != null) { b.scoreSum += sc; b.scoreN += 1; }
+    }
+
+    // Acumulador — chaveado por nome limpo do vendedor
     type Acc = SellerPerf & { _scoreSum: number; _scoreN: number };
     const sellerMap = new Map<string, Acc>();
     const ensure = (email: string | null, name: string | null): Acc => {
@@ -196,7 +247,6 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
           leadsNovos: 0, conversaoLead: 0,
           _scoreSum: 0, _scoreN: 0,
         };
-
         sellerMap.set(key, cur);
       } else if (!cur.email && email) {
         cur.email = email;
@@ -212,24 +262,26 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       acc.faturamento += Number(s.value_eur ?? 0);
     }
 
-    // Atendimentos + notas IA
-    for (const c of convs ?? []) {
-      if (!c.seller_email && !c.seller_name) continue;
-      if (isExcludedSeller(c.seller_name)) continue;
-      const acc = ensure(c.seller_email, c.seller_name);
+    // Atendimentos + notas IA — 1 por contato único, atribuído ao dono
+    for (const b of buckets.values()) {
+      const acc = ensure(b.sellerEmail, b.sellerName);
       acc.atendimentos += 1;
-      const sc = scoreByConv.get(c.id);
-      if (sc != null) { acc._scoreSum += sc; acc._scoreN += 1; acc.analisesCount += 1; }
+      if (b.scoreN > 0) {
+        const avg = b.scoreSum / b.scoreN;
+        acc._scoreSum += avg; acc._scoreN += 1; acc.analisesCount += 1;
+      }
     }
 
-    // Série diária (todos os dias do período — sem gaps)
+    // Série diária — atendimentos = contatos únicos por dia (usa first_message_at
+    // do bucket para não repetir o mesmo contato em vários dias).
     const dailyMap = new Map<string, { atendimentos: number; vendas: number; faturamento: number; leads: number }>();
     for (const day of eachDay(startDate, endDate)) {
       dailyMap.set(day, { atendimentos: 0, vendas: 0, faturamento: 0, leads: 0 });
     }
-    for (const c of convs ?? []) {
-      if (!c.last_message_at) continue;
-      const k = new Date(c.last_message_at).toISOString().slice(0, 10);
+    for (const b of buckets.values()) {
+      const ref = b.firstAt ?? b.lastAt;
+      if (!ref) continue;
+      const k = new Date(ref).toISOString().slice(0, 10);
       const cur = dailyMap.get(k); if (cur) cur.atendimentos += 1;
     }
     for (const s of sales ?? []) {
