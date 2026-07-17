@@ -34,6 +34,7 @@ import { Route as AppAgenteRouteImport } from './routes/_app.agente'
 import { Route as AppAgendaRouteImport } from './routes/_app.agenda'
 import { Route as ApiPublicHotmartRawRouteImport } from './routes/api/public/hotmart-raw'
 import { Route as ApiPublicHotmartDebugRouteImport } from './routes/api/public/hotmart-debug'
+import { Route as ApiPublicBackfillV3RouteImport } from './routes/api/public/backfill-v3'
 import { Route as ApiHotmartWebhookRouteImport } from './routes/api/hotmart/webhook'
 import { Route as ApiClintWebhookRouteImport } from './routes/api/clint/webhook'
 import { Route as AppCoachIdRouteImport } from './routes/_app.coach.$id'
@@ -165,6 +166,11 @@ const ApiPublicHotmartDebugRoute = ApiPublicHotmartDebugRouteImport.update({
   path: '/api/public/hotmart-debug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicBackfillV3Route = ApiPublicBackfillV3RouteImport.update({
+  id: '/api/public/backfill-v3',
+  path: '/api/public/backfill-v3',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHotmartWebhookRoute = ApiHotmartWebhookRouteImport.update({
   id: '/api/hotmart/webhook',
   path: '/api/hotmart/webhook',
@@ -222,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/coach/$id': typeof AppCoachIdRoute
   '/api/clint/webhook': typeof ApiClintWebhookRoute
   '/api/hotmart/webhook': typeof ApiHotmartWebhookRoute
+  '/api/public/backfill-v3': typeof ApiPublicBackfillV3Route
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
@@ -254,6 +261,7 @@ export interface FileRoutesByTo {
   '/coach/$id': typeof AppCoachIdRoute
   '/api/clint/webhook': typeof ApiClintWebhookRoute
   '/api/hotmart/webhook': typeof ApiHotmartWebhookRoute
+  '/api/public/backfill-v3': typeof ApiPublicBackfillV3Route
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
@@ -288,6 +296,7 @@ export interface FileRoutesById {
   '/_app/coach/$id': typeof AppCoachIdRoute
   '/api/clint/webhook': typeof ApiClintWebhookRoute
   '/api/hotmart/webhook': typeof ApiHotmartWebhookRoute
+  '/api/public/backfill-v3': typeof ApiPublicBackfillV3Route
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
@@ -322,6 +331,7 @@ export interface FileRouteTypes {
     | '/coach/$id'
     | '/api/clint/webhook'
     | '/api/hotmart/webhook'
+    | '/api/public/backfill-v3'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
     | '/api/public/sync/ccpbx'
@@ -354,6 +364,7 @@ export interface FileRouteTypes {
     | '/coach/$id'
     | '/api/clint/webhook'
     | '/api/hotmart/webhook'
+    | '/api/public/backfill-v3'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
     | '/api/public/sync/ccpbx'
@@ -387,6 +398,7 @@ export interface FileRouteTypes {
     | '/_app/coach/$id'
     | '/api/clint/webhook'
     | '/api/hotmart/webhook'
+    | '/api/public/backfill-v3'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
     | '/api/public/sync/ccpbx'
@@ -399,6 +411,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   ApiClintWebhookRoute: typeof ApiClintWebhookRoute
   ApiHotmartWebhookRoute: typeof ApiHotmartWebhookRoute
+  ApiPublicBackfillV3Route: typeof ApiPublicBackfillV3Route
   ApiPublicHotmartDebugRoute: typeof ApiPublicHotmartDebugRoute
   ApiPublicHotmartRawRoute: typeof ApiPublicHotmartRawRoute
   ApiPublicSyncCcpbxRoute: typeof ApiPublicSyncCcpbxRoute
@@ -583,6 +596,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHotmartDebugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/backfill-v3': {
+      id: '/api/public/backfill-v3'
+      path: '/api/public/backfill-v3'
+      fullPath: '/api/public/backfill-v3'
+      preLoaderRoute: typeof ApiPublicBackfillV3RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/hotmart/webhook': {
       id: '/api/hotmart/webhook'
       path: '/api/hotmart/webhook'
@@ -703,6 +723,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   ApiClintWebhookRoute: ApiClintWebhookRoute,
   ApiHotmartWebhookRoute: ApiHotmartWebhookRoute,
+  ApiPublicBackfillV3Route: ApiPublicBackfillV3Route,
   ApiPublicHotmartDebugRoute: ApiPublicHotmartDebugRoute,
   ApiPublicHotmartRawRoute: ApiPublicHotmartRawRoute,
   ApiPublicSyncCcpbxRoute: ApiPublicSyncCcpbxRoute,
