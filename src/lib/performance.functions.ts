@@ -140,10 +140,10 @@ function normalizeSeller(raw: string | null | undefined): string {
 }
 
 export const fetchPerformanceFn = createServerFn({ method: "POST" })
-  .inputValidator((d: { range: PerfRange }) => d)
+  .inputValidator((d: { range: PerfRange; refDate?: string }) => d)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { startDate, endDate, label } = rangeBounds(data.range);
+    const { startDate, endDate, label } = rangeBounds(data.range, data.refDate);
 
     // Timestamps para tabelas com coluna timestamptz
     const startTS = `${startDate}T00:00:00.000Z`;
