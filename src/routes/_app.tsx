@@ -1,6 +1,6 @@
 import { Link, Outlet, createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BarChart3, ClipboardCheck, CalendarDays, CalendarClock, Trophy, TrendingUp, DollarSign, Menu, TrendingUpIcon, GitMerge, Sparkles, Share2, LogOut, Users } from "lucide-react";
+import { ClipboardCheck, CalendarDays, CalendarClock, Trophy, DollarSign, Menu, Sparkles, Share2, LogOut, Users } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -14,15 +14,11 @@ export const Route = createFileRoute("/_app")({
 });
 
 const ALL_NAV_ITEMS = [
-  { to: "/",                    label: "Visão Geral",        icon: BarChart3,        adminOnly: true },
   { to: "/fechamento",          label: "Fechamento",         icon: ClipboardCheck,   adminOnly: false },
   { to: "/fechamento-semanal",  label: "Fechamento Semanal", icon: CalendarDays,     adminOnly: false },
   { to: "/agenda",              label: "Agenda do Vendedor", icon: CalendarClock,    adminOnly: false },
   { to: "/ranking",             label: "Ranking",            icon: Trophy,           adminOnly: true },
-  { to: "/resultados",          label: "Resultados",         icon: TrendingUp,       adminOnly: true },
-  { to: "/vendas-reais",        label: "Vendas Reais",       icon: TrendingUpIcon,   adminOnly: true },
   { to: "/comissionamento",     label: "Comissionamento",    icon: DollarSign,       adminOnly: true },
-  { to: "/funis",               label: "Funis",              icon: GitMerge,         adminOnly: true },
   { to: "/coach",               label: "Análise Comercial",  icon: Sparkles,         adminOnly: true },
   { to: "/indicacoes",          label: "Indicações",         icon: Share2,           adminOnly: true },
   { to: "/usuarios",            label: "Usuários",           icon: Users,            adminOnly: true },
@@ -105,7 +101,6 @@ function AppLayout() {
                     <Link
                       key={to}
                       to={to}
-                      activeOptions={{ exact: to === "/" }}
                       onClick={() => setOpen(false)}
                       className="inline-flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground [&.active]:bg-secondary [&.active]:text-foreground"
                     >
