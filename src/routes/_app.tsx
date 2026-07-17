@@ -101,7 +101,6 @@ function AppLayout() {
                     <Link
                       key={to}
                       to={to}
-                      activeOptions={{ exact: to === "/" }}
                       onClick={() => setOpen(false)}
                       className="inline-flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground [&.active]:bg-secondary [&.active]:text-foreground"
                     >
