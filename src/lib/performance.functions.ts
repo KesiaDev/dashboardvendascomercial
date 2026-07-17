@@ -149,13 +149,16 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     const startTS = `${startDate}T00:00:00.000Z`;
     const endTS   = `${endDate}T23:59:59.999Z`;
 
-    // 1. Vendas reais (fonte de verdade: manual_sales, EUR)
-    const { data: sales } = await supabaseAdmin
+    // 1. Vendas reais (fonte de verdade: manual_sales, EUR).
+    //    Performance conta apenas VENDAS NOVAS — renovações são
+    //    contabilizadas em outro fluxo e não devem inflar leads→vendas.
+    const { data: salesRaw } = await supabaseAdmin
       .from("manual_sales")
-      .select("id,seller_name,value_eur,sale_date,created_by_email")
+      .select("id,seller_name,value_eur,sale_date,created_by_email,categoria_produto")
       .gte("sale_date", startDate)
       .lte("sale_date", endDate)
       .limit(10000);
+    const sales = (salesRaw ?? []).filter((s: any) => s.categoria_produto !== "RENOVACAO");
 
     // 2. Conversas com atividade no período (somente Pipeline Comercial V3).
     //    ATENÇÃO: todos os vendedores atendem em todos os dispositivos WhatsApp
