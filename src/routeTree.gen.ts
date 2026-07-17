@@ -19,6 +19,7 @@ import { Route as AppUsuariosRouteImport } from './routes/_app.usuarios'
 import { Route as AppResultadosRouteImport } from './routes/_app.resultados'
 import { Route as AppRankingRouteImport } from './routes/_app.ranking'
 import { Route as AppProdutividadeRouteImport } from './routes/_app.produtividade'
+import { Route as AppMetasComercialRouteImport } from './routes/_app.metas-comercial'
 import { Route as AppIndicacoesRouteImport } from './routes/_app.indicacoes'
 import { Route as AppImportRouteImport } from './routes/_app.import'
 import { Route as AppFunisRouteImport } from './routes/_app.funis'
@@ -89,6 +90,11 @@ const AppRankingRoute = AppRankingRouteImport.update({
 const AppProdutividadeRoute = AppProdutividadeRouteImport.update({
   id: '/produtividade',
   path: '/produtividade',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMetasComercialRoute = AppMetasComercialRouteImport.update({
+  id: '/metas-comercial',
+  path: '/metas-comercial',
   getParentRoute: () => AppRoute,
 } as any)
 const AppIndicacoesRoute = AppIndicacoesRouteImport.update({
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/funis': typeof AppFunisRoute
   '/import': typeof AppImportRoute
   '/indicacoes': typeof AppIndicacoesRoute
+  '/metas-comercial': typeof AppMetasComercialRoute
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
   '/resultados': typeof AppResultadosRoute
@@ -250,6 +257,7 @@ export interface FileRoutesByTo {
   '/funis': typeof AppFunisRoute
   '/import': typeof AppImportRoute
   '/indicacoes': typeof AppIndicacoesRoute
+  '/metas-comercial': typeof AppMetasComercialRoute
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
   '/resultados': typeof AppResultadosRoute
@@ -285,6 +293,7 @@ export interface FileRoutesById {
   '/_app/funis': typeof AppFunisRoute
   '/_app/import': typeof AppImportRoute
   '/_app/indicacoes': typeof AppIndicacoesRoute
+  '/_app/metas-comercial': typeof AppMetasComercialRoute
   '/_app/produtividade': typeof AppProdutividadeRoute
   '/_app/ranking': typeof AppRankingRoute
   '/_app/resultados': typeof AppResultadosRoute
@@ -321,6 +330,7 @@ export interface FileRouteTypes {
     | '/funis'
     | '/import'
     | '/indicacoes'
+    | '/metas-comercial'
     | '/produtividade'
     | '/ranking'
     | '/resultados'
@@ -353,6 +363,7 @@ export interface FileRouteTypes {
     | '/funis'
     | '/import'
     | '/indicacoes'
+    | '/metas-comercial'
     | '/produtividade'
     | '/ranking'
     | '/resultados'
@@ -387,6 +398,7 @@ export interface FileRouteTypes {
     | '/_app/funis'
     | '/_app/import'
     | '/_app/indicacoes'
+    | '/_app/metas-comercial'
     | '/_app/produtividade'
     | '/_app/ranking'
     | '/_app/resultados'
@@ -489,6 +501,13 @@ declare module '@tanstack/react-router' {
       path: '/produtividade'
       fullPath: '/produtividade'
       preLoaderRoute: typeof AppProdutividadeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/metas-comercial': {
+      id: '/_app/metas-comercial'
+      path: '/metas-comercial'
+      fullPath: '/metas-comercial'
+      preLoaderRoute: typeof AppMetasComercialRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/indicacoes': {
@@ -674,6 +693,7 @@ interface AppRouteChildren {
   AppFunisRoute: typeof AppFunisRoute
   AppImportRoute: typeof AppImportRoute
   AppIndicacoesRoute: typeof AppIndicacoesRoute
+  AppMetasComercialRoute: typeof AppMetasComercialRoute
   AppProdutividadeRoute: typeof AppProdutividadeRoute
   AppRankingRoute: typeof AppRankingRoute
   AppResultadosRoute: typeof AppResultadosRoute
@@ -697,6 +717,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFunisRoute: AppFunisRoute,
   AppImportRoute: AppImportRoute,
   AppIndicacoesRoute: AppIndicacoesRoute,
+  AppMetasComercialRoute: AppMetasComercialRoute,
   AppProdutividadeRoute: AppProdutividadeRoute,
   AppRankingRoute: AppRankingRoute,
   AppResultadosRoute: AppResultadosRoute,
