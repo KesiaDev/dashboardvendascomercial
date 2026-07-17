@@ -1187,48 +1187,61 @@ function PerformanceTab() {
         </div>
       </div>
 
-      {/* Team KPIs */}
-      {perf && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 auto-rows-fr">
-          <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads V3 no período (${rangeLabel})`} value={String(perf.team.leadsNovos)} />
-          <KpiCard
-            icon={<MessageSquare className="h-3 w-3" />}
-            label="Atendimentos (V3)"
-            value={String(perf.team.atendimentos)}
-          />
-          <KpiCard
-            icon={<Users className="h-3 w-3" />}
-            label="Leads V3 sem 1º atendimento"
-            value={String(perf.team.leadsSemAtendimento)}
-            valueClass={perf.team.leadsSemAtendimento > 0 ? "text-amber-600" : "text-emerald-600"}
-          />
-          <KpiCard icon={<CheckCircle2 className="h-3 w-3" />} label="Vendas" value={String(perf.team.vendas)} />
-          <KpiCard icon={<TrendingUp className="h-3 w-3" />} label="Faturamento" value={fmtEUR(perf.team.faturamento)} />
-          <KpiCard
-            icon={<Target className="h-3 w-3" />}
-            label="Conv. lead→venda"
-            value={fmtPct(perf.team.conversaoLead)}
-            valueClass="text-emerald-600"
-          />
-          <KpiCard icon={<Sparkles className="h-3 w-3" />} label="Nota IA média" value={perf.team.notaMedia != null ? perf.team.notaMedia.toFixed(1) : "—"} valueClass={scoreColor(perf.team.notaMedia)} />
-        </div>
-
-      )}
-      {perf && (
-        <div className="text-[11px] text-muted-foreground -mt-2 px-1 space-y-1">
-          <div>
-            Cobertura de atendimento V3: <span className="font-medium text-foreground">{fmtPct(perf.team.coberturaAtendimento)}</span>
-            {" · "}Taxa atendimento→venda: <span className="font-medium text-foreground">{fmtPct(perf.team.taxaConversao)}</span>
-            {perf.team.leadPorVenda != null && (
-              <> · Leads por venda: <span className="font-medium text-foreground">{perf.team.leadPorVenda.toFixed(1)}</span></>
+      {/* Team KPIs — atendimentos ocultos até 01/08/2026 (backfill de histórico em andamento) */}
+      {perf && (() => {
+        const showAttendance = (perf.periodStart ?? "") >= "2026-08-01";
+        return (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 auto-rows-fr">
+              <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads V3 no período (${rangeLabel})`} value={String(perf.team.leadsNovos)} />
+              {showAttendance && (
+                <KpiCard
+                  icon={<MessageSquare className="h-3 w-3" />}
+                  label="Atendimentos (V3)"
+                  value={String(perf.team.atendimentos)}
+                />
+              )}
+              {showAttendance && (
+                <KpiCard
+                  icon={<Users className="h-3 w-3" />}
+                  label="Leads V3 sem 1º atendimento"
+                  value={String(perf.team.leadsSemAtendimento)}
+                  valueClass={perf.team.leadsSemAtendimento > 0 ? "text-amber-600" : "text-emerald-600"}
+                />
+              )}
+              <KpiCard icon={<CheckCircle2 className="h-3 w-3" />} label="Vendas" value={String(perf.team.vendas)} />
+              <KpiCard icon={<TrendingUp className="h-3 w-3" />} label="Faturamento" value={fmtEUR(perf.team.faturamento)} />
+              <KpiCard
+                icon={<Target className="h-3 w-3" />}
+                label="Conv. lead→venda"
+                value={fmtPct(perf.team.conversaoLead)}
+                valueClass="text-emerald-600"
+              />
+              <KpiCard icon={<Sparkles className="h-3 w-3" />} label="Nota IA média" value={perf.team.notaMedia != null ? perf.team.notaMedia.toFixed(1) : "—"} valueClass={scoreColor(perf.team.notaMedia)} />
+            </div>
+            {showAttendance ? (
+              <div className="text-[11px] text-muted-foreground -mt-2 px-1 space-y-1">
+                <div>
+                  Cobertura de atendimento V3: <span className="font-medium text-foreground">{fmtPct(perf.team.coberturaAtendimento)}</span>
+                  {" · "}Taxa atendimento→venda: <span className="font-medium text-foreground">{fmtPct(perf.team.taxaConversao)}</span>
+                  {perf.team.leadPorVenda != null && (
+                    <> · Leads por venda: <span className="font-medium text-foreground">{perf.team.leadPorVenda.toFixed(1)}</span></>
+                  )}
+                </div>
+                <div>
+                  <span className="font-medium">Atendimentos</span> = conversas de WhatsApp do Pipeline Comercial V3 com atividade no período.{" "}
+                  <span className="font-medium">Sem 1º atendimento</span> = leads V3 do período cujo contato ainda não recebeu nenhuma mensagem do vendedor.
+                </div>
+              </div>
+            ) : (
+              <div className="text-[11px] text-muted-foreground -mt-2 px-1">
+                Métricas de atendimento ocultas até 01/08/2026 enquanto concluímos o backfill do histórico de conversas.
+              </div>
             )}
-          </div>
-          <div>
-            <span className="font-medium">Atendimentos</span> = conversas de WhatsApp do Pipeline Comercial V3 com atividade no período.{" "}
-            <span className="font-medium">Sem 1º atendimento</span> = leads V3 do período cujo contato ainda não recebeu nenhuma mensagem do vendedor.
-          </div>
-        </div>
-      )}
+          </>
+        );
+      })()}
+
 
 
       {/* Feedback IA */}
