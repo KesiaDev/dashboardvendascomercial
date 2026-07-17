@@ -627,12 +627,17 @@ export const listCoachConversationsFn = createServerFn({ method: "GET" }).handle
     .select("*").order("last_message_at", { ascending: false, nullsFirst: false }).limit(500);
   if (error) throw new Error(error.message);
   const ids = (convs ?? []).map((c: any) => c.id);
-  const { data: analyses } = ids.length
-    ? await db.from("coach_analyses").select("*").in("conversation_id", ids)
-    : { data: [] as CoachAnalysis[] };
+  // PostgREST .in() estoura o limite de URL com centenas de UUIDs → particiona
+  const analyses: CoachAnalysis[] = [];
+  for (let i = 0; i < ids.length; i += 200) {
+    const chunk = ids.slice(i, i + 200);
+    const { data } = await db.from("coach_analyses").select("*").in("conversation_id", chunk);
+    if (data?.length) analyses.push(...(data as CoachAnalysis[]));
+  }
   const byConv = new Map<string, CoachAnalysis>();
-  for (const a of (analyses ?? []) as CoachAnalysis[]) byConv.set(a.conversation_id, a);
+  for (const a of analyses) byConv.set(a.conversation_id, a);
   return (convs ?? []).map((c: any) => ({ ...c, analysis: byConv.get(c.id) ?? null }));
+
 });
 
 export const getCoachConversationFn = createServerFn({ method: "GET" })
