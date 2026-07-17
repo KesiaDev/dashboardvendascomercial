@@ -362,6 +362,10 @@ function Conversas() {
     }
   };
 
+  const [bulk, setBulk] = useState<{ running: boolean; done: number; total: number; mode: "" | "analyze" | "sync" }>({ running: false, done: 0, total: 0, mode: "" });
+  const bulkCancelRef = useRef(false);
+
+
   const autoSyncedRef = useRef(false);
   useEffect(() => {
     if (autoSyncedRef.current || !convs.length) return;
