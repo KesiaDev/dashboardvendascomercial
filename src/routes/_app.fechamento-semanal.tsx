@@ -510,48 +510,56 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
       </div>
 
       {/* KPIs do mês */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-violet-500"><CardContent className="pt-5 pb-4">
-          <p className="text-xs text-muted-foreground">Total do mês</p>
-          <p className="text-2xl font-bold tabular-nums mt-1 text-violet-500">{fmtEur(monthTotal)}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{monthSales.length} vendas</p>
-          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-md bg-success/15 p-2">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 items-stretch">
+        <Card className="border-l-4 border-violet-500 h-full"><CardContent className="p-4 flex flex-col justify-between h-full gap-2">
+          <div>
+            <p className="text-xs text-muted-foreground">Total do mês</p>
+            <p className="text-2xl font-bold tabular-nums mt-1 text-violet-500">{fmtEur(monthTotal)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{monthSales.length} vendas</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-md bg-success/15 p-1.5">
               <div className="font-bold text-success tabular-nums">{fmtEur(monthNovasTotal)}</div>
               <div className="text-success/80">Novas · {monthNovas.length}</div>
             </div>
-            <div className="rounded-md bg-primary/15 p-2">
+            <div className="rounded-md bg-primary/15 p-1.5">
               <div className="font-bold text-primary tabular-nums">{fmtEur(monthRenovTotal)}</div>
               <div className="text-primary/80">Renov · {monthRenov.length}</div>
             </div>
           </div>
         </CardContent></Card>
 
-        <Card className="border-l-4 border-orange-500"><CardContent className="pt-5 pb-4">
+        <Card className="border-l-4 border-orange-500 h-full"><CardContent className="p-4 flex flex-col h-full">
           <p className="text-xs text-muted-foreground">Melhor semana</p>
-          {bestWeek&&bestWeek.total>0?(<>
-            <p className="text-2xl font-bold mt-1 text-orange-500">S{bestWeek.idx+1}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{fmtEur(bestWeek.total)} · {bestWeek.count} vendas</p>
-          </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
+          <div className="flex-1 flex flex-col justify-center">
+            {bestWeek&&bestWeek.total>0?(<>
+              <p className="text-2xl font-bold mt-1 text-orange-500">S{bestWeek.idx+1}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{fmtEur(bestWeek.total)} · {bestWeek.count} vendas</p>
+            </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
+          </div>
         </CardContent></Card>
 
-        <Card style={{borderLeftWidth:4,borderLeftStyle:"solid",borderLeftColor:sellerRanking[0]?sellerColor(sellerRanking[0].name):"#64748b"}}><CardContent className="pt-5 pb-4">
+        <Card className="h-full" style={{borderLeftWidth:4,borderLeftStyle:"solid",borderLeftColor:sellerRanking[0]?sellerColor(sellerRanking[0].name):"#64748b"}}><CardContent className="p-4 flex flex-col h-full">
           <p className="text-xs text-muted-foreground">Líder do mês</p>
-          {sellerRanking[0]?(<>
-            <div className="flex items-center gap-2 mt-1">
-              <SellerAvatar name={sellerRanking[0].name} size={30} ring="ring-2" />
-              <p className="text-lg font-bold truncate" style={{color:sellerColor(sellerRanking[0].name)}}>{sellerRanking[0].name.split(" ")[0]}</p>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">{fmtEur(sellerRanking[0].total)} · {sellerRanking[0].count} vendas</p>
-          </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
+          <div className="flex-1 flex flex-col justify-center">
+            {sellerRanking[0]?(<>
+              <div className="flex items-center gap-2 mt-1">
+                <SellerAvatar name={sellerRanking[0].name} size={30} ring="ring-2" />
+                <p className="text-lg font-bold truncate" style={{color:sellerColor(sellerRanking[0].name)}}>{sellerRanking[0].name.split(" ")[0]}</p>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">{fmtEur(sellerRanking[0].total)} · {sellerRanking[0].count} vendas</p>
+            </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
+          </div>
         </CardContent></Card>
 
-        <Card className="border-l-4 border-amber-500"><CardContent className="pt-5 pb-4">
+        <Card className="border-l-4 border-amber-500 h-full"><CardContent className="p-4 flex flex-col h-full">
           <p className="text-xs text-muted-foreground">Produto top</p>
-          {topProduct?(<>
-            <p className="text-base font-bold mt-1 leading-tight line-clamp-2">{topProduct.name}</p>
-            <p className="text-xs text-muted-foreground mt-0.5"><span className="text-amber-500 font-semibold">{topProduct.count}x</span> · {fmtEur(topProduct.total)}</p>
-          </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
+          <div className="flex-1 flex flex-col justify-center">
+            {topProduct?(<>
+              <p className="text-base font-bold mt-1 leading-tight line-clamp-2">{topProduct.name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5"><span className="text-amber-500 font-semibold">{topProduct.count}x</span> · {fmtEur(topProduct.total)}</p>
+            </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
+          </div>
         </CardContent></Card>
       </div>
 
