@@ -459,7 +459,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
 
   // Semanas que têm vendas neste mês (ou começam neste mês)
   const weekData = useMemo(()=>{
-    return Array.from({length:maxWeek+1},(_,i)=>{
+    const raw = Array.from({length:maxWeek+1},(_,i)=>{
       const {start,end}=weekRange(i);
       // inclui semana se algum dia dela cai no mês
       if (isoMonth(start)!==yearMonth && isoMonth(end)!==yearMonth) return null;
@@ -469,8 +469,10 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
       const map: Record<string,number>={};
       for (const s of sales) map[s.seller_name]=(map[s.seller_name]??0)+Number(s.value_eur);
       const top=Object.entries(map).sort((a,b)=>b[1]-a[1])[0];
-      return {idx:i,start,end,total,count:sales.length,topSeller:top?.[0]??null,label:`S${i+1+WEEK_LABEL_OFFSET}`};
-    }).filter(Boolean) as NonNullable<ReturnType<typeof weekRange>&{idx:number;total:number;count:number;topSeller:string|null;label:string}>[];
+      return {idx:i,start,end,total,count:sales.length,topSeller:top?.[0]??null};
+    }).filter(Boolean) as {idx:number;start:string;end:string;total:number;count:number;topSeller:string|null}[];
+    // Rótulo por mês: S1, S2, S3... (ordem dentro do mês selecionado)
+    return raw.map((w,i)=>({...w,monthOrder:i+1,label:`S${i+1}`}));
   },[allSales,yearMonth,maxWeek]);
 
   const monthTotal = monthSales.reduce((s,x)=>s+Number(x.value_eur),0);
@@ -533,7 +535,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
           <p className="text-xs text-muted-foreground">Melhor semana</p>
           <div className="flex-1 flex flex-col justify-center">
             {bestWeek&&bestWeek.total>0?(<>
-              <p className="text-2xl font-bold mt-1 text-orange-500">S{bestWeek.idx+1+WEEK_LABEL_OFFSET}</p>
+              <p className="text-2xl font-bold mt-1 text-orange-500">{bestWeek.label}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{fmtEur(bestWeek.total)} · {bestWeek.count} vendas</p>
             </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
           </div>
@@ -628,7 +630,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
                     return (
                       <tr key={w.idx} className={`border-t transition-colors
                         ${isBest?"border-l-2 border-l-orange-500 border-border/50 bg-orange-500/5":"border-border/40"}`}>
-                        <td className="px-4 py-2 font-medium"><span className="flex items-center gap-1.5">S{w.idx+1+WEEK_LABEL_OFFSET}{isBest&&<Flame className="h-3.5 w-3.5 text-orange-500"/>}</span></td>
+                        <td className="px-4 py-2 font-medium"><span className="flex items-center gap-1.5">{w.label}{isBest&&<Flame className="h-3.5 w-3.5 text-orange-500"/>}</span></td>
                         <td className="px-3 py-2 text-muted-foreground tabular-nums">{fmtDate(w.start)} – {fmtDate(w.end)}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{w.count}</td>
                         <td className={`px-3 py-2 text-right tabular-nums font-medium ${isBest?"text-orange-500":""}`}>{fmtEur(w.total)}</td>
