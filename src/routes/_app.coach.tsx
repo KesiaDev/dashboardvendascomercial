@@ -61,7 +61,7 @@ const SELLER_NAME_MAP: { match: string[]; name: string }[] = [
   { name: "Rita Bandeira",    match: ["ritabandeira", "rita bandeira", "rita"] },
 ];
 function displaySellerName(nameOrEmail: string | null | undefined): string {
-  const raw = (nameOrEmail ?? "").trim();
+  const raw = (nameOrEmail ?? "").trim().replace(/\s+/g, " ");
   if (!raw) return "—";
   const lower = raw.toLowerCase();
   for (const { match, name } of SELLER_NAME_MAP) {
