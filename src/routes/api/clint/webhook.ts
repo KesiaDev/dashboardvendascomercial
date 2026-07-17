@@ -6,7 +6,17 @@ function parseMeetingDatetime(str: string): Date | null {
   if (!match) return null;
   const [, dayStr, monthStr, hourStr, minStr] = match;
   const year = new Date().getFullYear();
-  // Europe/Lisbon: UTC+1 in summer
+  // Europe/Lisbon: UTC+1 in summer → subtract 1h for UTC
+  return new Date(Date.UTC(year, parseInt(monthStr, 10) - 1, parseInt(dayStr, 10), parseInt(hourStr, 10) - 1, parseInt(minStr, 10)));
+}
+
+function parseAgendaTag(content: string): Date | null {
+  // [AGENDA:22/07:14:00] — emitted by Clint native AI agent when meeting is confirmed
+  const match = content.match(/\[AGENDA:(\d{1,2})\/(\d{1,2}):(\d{2}):(\d{2})\]/);
+  if (!match) return null;
+  const [, dayStr, monthStr, hourStr, minStr] = match;
+  const year = new Date().getFullYear();
+  // Europe/Lisbon: UTC+1 in summer → subtract 1h for UTC
   return new Date(Date.UTC(year, parseInt(monthStr, 10) - 1, parseInt(dayStr, 10), parseInt(hourStr, 10) - 1, parseInt(minStr, 10)));
 }
 
@@ -439,6 +449,26 @@ async function processWebhookEvent(
       seller_id: sellerEmail ?? sellerName ?? null,
       lead_phone: contactPhone,
     });
+
+    // Detect [AGENDA:DD/MM:HH:MM] from Clint native AI outbound messages
+    if (direction === "outbound" && msgContent) {
+      const scheduledAt = parseAgendaTag(msgContent);
+      if (scheduledAt) {
+        const agendaTag = msgContent.match(/\[AGENDA:[^\]]+\]/)?.[0] ?? null;
+        await db.from("seller_agenda").insert({
+          seller_email: sellerEmail ?? "kesia@llmidiaco.com",
+          lead_name: contactName ?? "Lead",
+          lead_phone: contactPhone,
+          scheduled_at: scheduledAt.toISOString(),
+          duration_min: 20,
+          meeting_type: "consultoria",
+          source: "agente_ia",
+          clint_deal_id: resolvedDealId,
+          status: "agendado",
+          notes: agendaTag,
+        });
+      }
+    }
   }
 
   return {
