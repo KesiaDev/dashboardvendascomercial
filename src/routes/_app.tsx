@@ -1,6 +1,6 @@
 import { Link, Outlet, createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BarChart3, ClipboardCheck, CalendarDays, CalendarClock, Trophy, TrendingUp, DollarSign, Menu, TrendingUpIcon, GitMerge, Sparkles, Share2, LogOut, Users } from "lucide-react";
+import { ClipboardCheck, CalendarDays, CalendarClock, Trophy, DollarSign, Menu, Sparkles, Share2, LogOut, Users } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
