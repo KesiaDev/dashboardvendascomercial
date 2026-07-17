@@ -76,17 +76,9 @@ async function runBackfill() {
         skipped++;
         continue;
       }
-
-      // Skip if already have any conversation for this deal
-      const { data: existingConv } = await db
-        .from("coach_conversations")
-        .select("id")
-        .eq("deal_id", deal.id)
-        .maybeSingle();
-      if (existingConv) {
-        skipped++;
-        continue;
-      }
+      // Note: do NOT skip by deal_id — the webhook may have already stored a
+      // post-13/07 conversation for this deal; we still want to import the
+      // earlier chat(s) (different chat.id) that pre-date the webhook.
 
       // Fetch chats for contact
       const chatsResp = await clintGet(
