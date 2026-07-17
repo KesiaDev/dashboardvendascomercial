@@ -171,16 +171,20 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
 
 
     // 3. Análises Coach IA (somente para conversas do período)
+    //    ATENÇÃO: PostgREST tem limite de URL (~8KB) — .in() com centenas de
+    //    UUIDs estoura silenciosamente e retorna vazio. Precisamos particionar.
     const convIds = (convs ?? []).map((c: any) => c.id);
     let analyses: any[] = [];
-    if (convIds.length) {
+    for (let i = 0; i < convIds.length; i += 200) {
+      const chunk = convIds.slice(i, i + 200);
       const { data: a } = await supabaseAdmin
         .from("coach_analyses")
         .select("conversation_id,score_geral")
-        .in("conversation_id", convIds)
+        .in("conversation_id", chunk)
         .eq("status", "ok");
-      analyses = a ?? [];
+      if (a?.length) analyses.push(...a);
     }
+
     const scoreByConv = new Map<string, number>();
     for (const a of analyses) if (a.score_geral != null) scoreByConv.set(a.conversation_id, a.score_geral);
 
