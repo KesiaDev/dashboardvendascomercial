@@ -362,6 +362,10 @@ function Conversas() {
     }
   };
 
+  const [bulk, setBulk] = useState<{ running: boolean; done: number; total: number; mode: "" | "analyze" | "sync" }>({ running: false, done: 0, total: 0, mode: "" });
+  const bulkCancelRef = useRef(false);
+
+
   const autoSyncedRef = useRef(false);
   useEffect(() => {
     if (autoSyncedRef.current || !convs.length) return;
@@ -421,6 +425,74 @@ function Conversas() {
         )}
         <span className="text-xs text-muted-foreground ml-auto">{filtered.length} de {convs.length}</span>
       </div>
+
+      <div className="flex flex-wrap gap-2 items-center">
+        <Button
+          size="sm"
+          variant="default"
+          disabled={bulk.running || filtered.length === 0}
+          onClick={async () => {
+            const list = filtered as any[];
+            if (!list.length) return;
+            if (!confirm(`Analisar ${list.length} conversa(s) filtrada(s)? Isto pode demorar.`)) return;
+            bulkCancelRef.current = false;
+            setBulk({ running: true, done: 0, total: list.length, mode: "analyze" });
+            let ok = 0, fail = 0;
+            for (let i = 0; i < list.length; i++) {
+              if (bulkCancelRef.current) break;
+              try {
+                await analyzeConversationFn({ data: { conversationId: list[i].id, force: true } });
+                ok++;
+              } catch { fail++; }
+              setBulk((b) => ({ ...b, done: i + 1 }));
+            }
+            setBulk({ running: false, done: 0, total: 0, mode: "" });
+            qc.invalidateQueries({ queryKey: ["coach-convs"] });
+            qc.invalidateQueries({ queryKey: ["coach-alerts"] });
+            qc.invalidateQueries({ queryKey: ["coach-weekly"] });
+            toast.success(`Análise concluída: ${ok} ok · ${fail} falhas`);
+          }}
+        >
+          <Sparkles className={"h-3.5 w-3.5 mr-1 " + (bulk.running && bulk.mode === "analyze" ? "animate-pulse" : "")} />
+          Analisar todas ({filtered.length})
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={bulk.running || filtered.length === 0}
+          onClick={async () => {
+            const list = filtered as any[];
+            if (!list.length) return;
+            if (!confirm(`Sincronizar mensagens de ${list.length} conversa(s)?`)) return;
+            bulkCancelRef.current = false;
+            setBulk({ running: true, done: 0, total: list.length, mode: "sync" });
+            let ok = 0, fail = 0;
+            for (let i = 0; i < list.length; i++) {
+              if (bulkCancelRef.current) break;
+              const r = await syncOne(list[i].id, true);
+              if (r) ok++; else fail++;
+              setBulk((b) => ({ ...b, done: i + 1 }));
+            }
+            setBulk({ running: false, done: 0, total: 0, mode: "" });
+            qc.invalidateQueries({ queryKey: ["coach-convs"] });
+            toast.success(`Sync concluído: ${ok} ok · ${fail} falhas`);
+          }}
+        >
+          <RefreshCw className={"h-3.5 w-3.5 mr-1 " + (bulk.running && bulk.mode === "sync" ? "animate-spin" : "")} />
+          Sincronizar todas
+        </Button>
+        {bulk.running && (
+          <>
+            <span className="text-xs text-muted-foreground">
+              {bulk.mode === "analyze" ? "Analisando" : "Sincronizando"} {bulk.done}/{bulk.total}…
+            </span>
+            <Button size="sm" variant="ghost" onClick={() => { bulkCancelRef.current = true; }}>
+              Cancelar
+            </Button>
+          </>
+        )}
+      </div>
+
 
 
       {isLoading && <p className="text-sm text-muted-foreground">A carregar…</p>}
