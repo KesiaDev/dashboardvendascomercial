@@ -1134,14 +1134,18 @@ function PerformanceTab() {
   const [scope, setScope] = useState<"team" | "seller">("team");
   const [sellerKey, setSellerKey] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string>("");
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const [refDate, setRefDate] = useState<string>(todayISO);
+
+  const effectiveRefDate = range === "day" ? refDate : undefined;
 
   const { data: perf, isLoading } = useQuery({
-    queryKey: ["coach-perf", range],
-    queryFn: () => fetchPerformanceFn({ data: { range } }),
+    queryKey: ["coach-perf", range, effectiveRefDate ?? "today"],
+    queryFn: () => fetchPerformanceFn({ data: { range, refDate: effectiveRefDate } }),
   });
 
   const fbMutation = useMutation({
-    mutationFn: () => generatePerformanceFeedbackFn({ data: { range, scope, sellerKey: sellerKey ?? undefined } }),
+    mutationFn: () => generatePerformanceFeedbackFn({ data: { range, scope, sellerKey: sellerKey ?? undefined, refDate: effectiveRefDate } }),
     onSuccess: (r) => setFeedback((r as any).text ?? ""),
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
