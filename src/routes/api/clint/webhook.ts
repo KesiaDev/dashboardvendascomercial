@@ -260,12 +260,12 @@ async function processWebhookEvent(
         .insert({
           clint_conversation_id: clintConvId,
           clint_contact_id: contactId,
-          deal_id: dealId,
+          deal_id: resolvedDealId,
           seller_name: sellerName,
           seller_email: sellerEmail,
           contact_name: contactName,
           contact_email: contactEmail,
-          origin_name: originName,
+          origin_name: resolvedOriginName,
           stage,
           source: "clint",
           first_message_at: now,
@@ -283,7 +283,7 @@ async function processWebhookEvent(
           last_message_at: hasMessageContent ? now : undefined,
           message_count: hasMessageContent ? (existing.message_count ?? 0) + 1 : undefined,
           seller_name: sellerName ?? undefined,
-          deal_id: dealId ?? undefined,
+          deal_id: resolvedDealId ?? undefined,
           stage: stage ?? undefined,
         })
         .eq("clint_conversation_id", clintConvId);
@@ -309,12 +309,12 @@ async function processWebhookEvent(
       const { data: newConv, error: ie } = await db
         .from("coach_conversations")
         .insert({
-          deal_id: dealId,
+          deal_id: resolvedDealId,
           seller_name: sellerName,
           seller_email: sellerEmail,
           contact_name: contactName,
           contact_email: contactEmail,
-          origin_name: originName,
+          origin_name: resolvedOriginName,
           stage,
           source: "clint",
           first_message_at: now,
@@ -355,7 +355,7 @@ async function processWebhookEvent(
           seller_email: sellerEmail,
           contact_name: contactName,
           contact_email: contactEmail,
-          origin_name: originName,
+          origin_name: resolvedOriginName,
           stage,
           source: "clint",
           first_message_at: now,
