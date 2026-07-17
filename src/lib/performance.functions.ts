@@ -95,17 +95,19 @@ export function rangeBoundsFor(
   return { startDate, endDate, label: `${MONTHS_PT[m - 1]} ${y}` };
 }
 
-function rangeBounds(range: PerfRange): { startDate: string; endDate: string; label: string } {
+function rangeBounds(range: PerfRange, refDateISO?: string): { startDate: string; endDate: string; label: string } {
   const today = todayBR();
+  const ref = refDateISO || today;
   if (range === "day") {
-    return { ...rangeBoundsFor(range, today), label: `Hoje (${today.slice(8)}/${today.slice(5, 7)})` };
+    const isToday = ref === today;
+    return { ...rangeBoundsFor(range, ref), label: `${isToday ? "Hoje " : ""}(${ref.slice(8)}/${ref.slice(5, 7)})` };
   }
   if (range === "week") {
-    const { startDate, endDate } = rangeBoundsFor(range, today);
-    const idx = Math.max(0, Math.floor((new Date(today + "T12:00:00Z").getTime() - new Date(SEASON_START + "T12:00:00Z").getTime()) / (7 * 86_400_000)));
+    const { startDate, endDate } = rangeBoundsFor(range, ref);
+    const idx = Math.max(0, Math.floor((new Date(ref + "T12:00:00Z").getTime() - new Date(SEASON_START + "T12:00:00Z").getTime()) / (7 * 86_400_000)));
     return { startDate, endDate, label: `Semana S${idx + 1} (${startDate.slice(8)}/${startDate.slice(5, 7)}–${endDate.slice(8)}/${endDate.slice(5, 7)})` };
   }
-  return rangeBoundsFor(range, today);
+  return rangeBoundsFor(range, ref);
 }
 
 // Mapeia emails corporativos e variantes para o nome canônico — evita
@@ -138,10 +140,10 @@ function normalizeSeller(raw: string | null | undefined): string {
 }
 
 export const fetchPerformanceFn = createServerFn({ method: "POST" })
-  .inputValidator((d: { range: PerfRange }) => d)
+  .inputValidator((d: { range: PerfRange; refDate?: string }) => d)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { startDate, endDate, label } = rangeBounds(data.range);
+    const { startDate, endDate, label } = rangeBounds(data.range, data.refDate);
 
     // Timestamps para tabelas com coluna timestamptz
     const startTS = `${startDate}T00:00:00.000Z`;
@@ -406,12 +408,12 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
   });
 
 export const generatePerformanceFeedbackFn = createServerFn({ method: "POST" })
-  .inputValidator((d: { range: PerfRange; scope: "team" | "seller"; sellerKey?: string }) => d)
+  .inputValidator((d: { range: PerfRange; scope: "team" | "seller"; sellerKey?: string; refDate?: string }) => d)
   .handler(async ({ data }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("LOVABLE_API_KEY não configurada");
 
-    const perf = await fetchPerformanceFn({ data: { range: data.range } });
+    const perf = await fetchPerformanceFn({ data: { range: data.range, refDate: data.refDate } });
     const rangeLabel = perf.periodLabel;
 
     let ctx: any;

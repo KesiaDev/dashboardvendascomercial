@@ -1134,14 +1134,18 @@ function PerformanceTab() {
   const [scope, setScope] = useState<"team" | "seller">("team");
   const [sellerKey, setSellerKey] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string>("");
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const [refDate, setRefDate] = useState<string>(todayISO);
+
+  const effectiveRefDate = range === "day" ? refDate : undefined;
 
   const { data: perf, isLoading } = useQuery({
-    queryKey: ["coach-perf", range],
-    queryFn: () => fetchPerformanceFn({ data: { range } }),
+    queryKey: ["coach-perf", range, effectiveRefDate ?? "today"],
+    queryFn: () => fetchPerformanceFn({ data: { range, refDate: effectiveRefDate } }),
   });
 
   const fbMutation = useMutation({
-    mutationFn: () => generatePerformanceFeedbackFn({ data: { range, scope, sellerKey: sellerKey ?? undefined } }),
+    mutationFn: () => generatePerformanceFeedbackFn({ data: { range, scope, sellerKey: sellerKey ?? undefined, refDate: effectiveRefDate } }),
     onSuccess: (r) => setFeedback((r as any).text ?? ""),
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
@@ -1166,6 +1170,15 @@ function PerformanceTab() {
             </button>
           ))}
         </div>
+        {range === "day" && (
+          <input
+            type="date"
+            value={refDate}
+            max={todayISO}
+            onChange={(e) => setRefDate(e.target.value || todayISO)}
+            className="text-xs border rounded-md px-2 py-1 bg-background"
+          />
+        )}
         <div className="ml-auto flex items-center gap-2">
           <div className="inline-flex rounded-lg border p-1 bg-card">
             <button
