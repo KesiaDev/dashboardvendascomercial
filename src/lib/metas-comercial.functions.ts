@@ -119,18 +119,31 @@ export const updateMetaComercialFn = createServerFn({ method: "POST" })
     if (!isAdmin) throw new Error("Forbidden");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
+    const { data: existing } = await supabaseAdmin
       .from("bi_targets")
-      .upsert(
-        {
-          granularidade: "anual",
-          periodo: PERIODO,
-          indicador: data.key,
-          valor: data.valor,
-          fonte: "manual",
-        },
-        { onConflict: "granularidade,periodo,channel_id,product_id,indicador" },
-      );
-    if (error) throw new Error(error.message);
+      .select("id")
+      .eq("granularidade", "anual")
+      .eq("periodo", PERIODO)
+      .eq("indicador", data.key)
+      .is("channel_id", null)
+      .is("product_id", null)
+      .maybeSingle();
+
+    if (existing?.id) {
+      const { error } = await supabaseAdmin
+        .from("bi_targets")
+        .update({ valor: data.valor, fonte: "manual" })
+        .eq("id", existing.id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabaseAdmin.from("bi_targets").insert({
+        granularidade: "anual",
+        periodo: PERIODO,
+        indicador: data.key,
+        valor: data.valor,
+        fonte: "manual",
+      });
+      if (error) throw new Error(error.message);
+    }
     return { ok: true };
   });
