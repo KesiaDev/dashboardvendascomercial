@@ -1170,6 +1170,15 @@ function PerformanceTab() {
             </button>
           ))}
         </div>
+        {range === "day" && (
+          <input
+            type="date"
+            value={refDate}
+            max={todayISO}
+            onChange={(e) => setRefDate(e.target.value || todayISO)}
+            className="text-xs border rounded-md px-2 py-1 bg-background"
+          />
+        )}
         <div className="ml-auto flex items-center gap-2">
           <div className="inline-flex rounded-lg border p-1 bg-card">
             <button
