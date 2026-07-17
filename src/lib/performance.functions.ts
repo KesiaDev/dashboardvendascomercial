@@ -408,12 +408,12 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
   });
 
 export const generatePerformanceFeedbackFn = createServerFn({ method: "POST" })
-  .inputValidator((d: { range: PerfRange; scope: "team" | "seller"; sellerKey?: string }) => d)
+  .inputValidator((d: { range: PerfRange; scope: "team" | "seller"; sellerKey?: string; refDate?: string }) => d)
   .handler(async ({ data }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("LOVABLE_API_KEY não configurada");
 
-    const perf = await fetchPerformanceFn({ data: { range: data.range } });
+    const perf = await fetchPerformanceFn({ data: { range: data.range, refDate: data.refDate } });
     const rangeLabel = perf.periodLabel;
 
     let ctx: any;
