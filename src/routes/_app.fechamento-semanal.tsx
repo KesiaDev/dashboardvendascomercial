@@ -459,7 +459,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
 
   // Semanas que têm vendas neste mês (ou começam neste mês)
   const weekData = useMemo(()=>{
-    return Array.from({length:maxWeek+1},(_,i)=>{
+    const raw = Array.from({length:maxWeek+1},(_,i)=>{
       const {start,end}=weekRange(i);
       // inclui semana se algum dia dela cai no mês
       if (isoMonth(start)!==yearMonth && isoMonth(end)!==yearMonth) return null;
@@ -469,8 +469,10 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
       const map: Record<string,number>={};
       for (const s of sales) map[s.seller_name]=(map[s.seller_name]??0)+Number(s.value_eur);
       const top=Object.entries(map).sort((a,b)=>b[1]-a[1])[0];
-      return {idx:i,start,end,total,count:sales.length,topSeller:top?.[0]??null,label:`S${i+1+WEEK_LABEL_OFFSET}`};
-    }).filter(Boolean) as NonNullable<ReturnType<typeof weekRange>&{idx:number;total:number;count:number;topSeller:string|null;label:string}>[];
+      return {idx:i,start,end,total,count:sales.length,topSeller:top?.[0]??null};
+    }).filter(Boolean) as {idx:number;start:string;end:string;total:number;count:number;topSeller:string|null}[];
+    // Rótulo por mês: S1, S2, S3... (ordem dentro do mês selecionado)
+    return raw.map((w,i)=>({...w,monthOrder:i+1,label:`S${i+1}`}));
   },[allSales,yearMonth,maxWeek]);
 
   const monthTotal = monthSales.reduce((s,x)=>s+Number(x.value_eur),0);
