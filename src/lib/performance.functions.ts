@@ -155,13 +155,16 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       .lte("sale_date", endDate)
       .limit(10000);
 
-    // 2. Conversas com atividade no período
+    // 2. Conversas com atividade no período (somente Pipeline Comercial V3
+    //    — evita inflar "atendimentos" com WhatsApp de outros funis)
     const { data: convs } = await supabaseAdmin
       .from("coach_conversations")
-      .select("id,seller_email,seller_name,last_message_at")
+      .select("id,seller_email,seller_name,last_message_at,clint_contact_id,origin_name")
+      .eq("origin_name", "PIPELINE_COMERCIAL-V3")
       .gte("last_message_at", startTS)
       .lte("last_message_at", endTS)
       .limit(5000);
+
 
     // 3. Análises Coach IA (somente para conversas do período)
     const convIds = (convs ?? []).map((c: any) => c.id);
