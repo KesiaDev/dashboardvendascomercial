@@ -235,48 +235,56 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
       </div>
 
       {/* KPIs */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-violet-500"><CardContent className="pt-5 pb-4">
-          <p className="text-xs text-muted-foreground">Total da semana</p>
-          <p className="text-2xl font-bold tabular-nums mt-1 text-violet-500">{fmtEur(weekTotal)}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{weekSales.length} venda{weekSales.length!==1?"s":""}</p>
-          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-md bg-success/15 p-2">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 items-stretch">
+        <Card className="border-l-4 border-violet-500 h-full"><CardContent className="p-4 flex flex-col justify-between h-full gap-2">
+          <div>
+            <p className="text-xs text-muted-foreground">Total da semana</p>
+            <p className="text-2xl font-bold tabular-nums mt-1 text-violet-500">{fmtEur(weekTotal)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{weekSales.length} venda{weekSales.length!==1?"s":""}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-md bg-success/15 p-1.5">
               <div className="font-bold text-success tabular-nums">{fmtEur(weekNovasTotal)}</div>
               <div className="text-success/80">Novas · {weekNovas.length}</div>
             </div>
-            <div className="rounded-md bg-primary/15 p-2">
+            <div className="rounded-md bg-primary/15 p-1.5">
               <div className="font-bold text-primary tabular-nums">{fmtEur(weekRenovTotal)}</div>
               <div className="text-primary/80">Renov · {weekRenov.length}</div>
             </div>
           </div>
         </CardContent></Card>
 
-        <Card style={{borderLeftWidth:4,borderLeftStyle:"solid",borderLeftColor:pctVsPrev===null?"#64748b":pctVsPrev>=0?"#10b981":"#ef4444"}}><CardContent className="pt-5 pb-4">
+        <Card className="h-full" style={{borderLeftWidth:4,borderLeftStyle:"solid",borderLeftColor:pctVsPrev===null?"#64748b":pctVsPrev>=0?"#10b981":"#ef4444"}}><CardContent className="p-4 flex flex-col h-full">
           <p className="text-xs text-muted-foreground">vs. Semana anterior</p>
-          {pctVsPrev!==null?(
-            <div className="flex items-center gap-2 mt-1">
-              <p className={`text-2xl font-bold ${pctVsPrev>=0?"text-emerald-500":"text-red-500"}`}>{pctVsPrev>=0?"+":""}{pctVsPrev}%</p>
-              {pctVsPrev>=0?<TrendingUp className="h-5 w-5 text-emerald-500"/>:<TrendingDown className="h-5 w-5 text-red-500"/>}
-            </div>
-          ):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
-          <p className="text-xs text-muted-foreground mt-0.5">anterior: {fmtEur(prevTotal)}</p>
+          <div className="flex-1 flex flex-col justify-center">
+            {pctVsPrev!==null?(
+              <div className="flex items-center gap-2 mt-1">
+                <p className={`text-2xl font-bold ${pctVsPrev>=0?"text-emerald-500":"text-red-500"}`}>{pctVsPrev>=0?"+":""}{pctVsPrev}%</p>
+                {pctVsPrev>=0?<TrendingUp className="h-5 w-5 text-emerald-500"/>:<TrendingDown className="h-5 w-5 text-red-500"/>}
+              </div>
+            ):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
+            <p className="text-xs text-muted-foreground mt-0.5">anterior: {fmtEur(prevTotal)}</p>
+          </div>
         </CardContent></Card>
 
-        <Card className="border-l-4 border-emerald-500"><CardContent className="pt-5 pb-4">
+        <Card className="border-l-4 border-emerald-500 h-full"><CardContent className="p-4 flex flex-col h-full">
           <p className="text-xs text-muted-foreground">Melhor dia</p>
-          {bestDay&&bestDay.total>0?(<>
-            <p className="text-xl font-bold mt-1 text-emerald-500">{bestDay.label}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{fmtEur(bestDay.total)} · {bestDay.count} vendas</p>
-          </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
+          <div className="flex-1 flex flex-col justify-center">
+            {bestDay&&bestDay.total>0?(<>
+              <p className="text-xl font-bold mt-1 text-emerald-500">{bestDay.label}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{fmtEur(bestDay.total)} · {bestDay.count} vendas</p>
+            </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
+          </div>
         </CardContent></Card>
 
-        <Card className="border-l-4 border-amber-500"><CardContent className="pt-5 pb-4">
+        <Card className="border-l-4 border-amber-500 h-full"><CardContent className="p-4 flex flex-col h-full">
           <p className="text-xs text-muted-foreground">Produto top</p>
-          {topProduct?(<>
-            <p className="text-base font-bold mt-1 leading-tight line-clamp-2">{topProduct.name}</p>
-            <p className="text-xs text-muted-foreground mt-0.5"><span className="text-amber-500 font-semibold">{topProduct.count}x</span> · {fmtEur(topProduct.total)}</p>
-          </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
+          <div className="flex-1 flex flex-col justify-center">
+            {topProduct?(<>
+              <p className="text-base font-bold mt-1 leading-tight line-clamp-2">{topProduct.name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5"><span className="text-amber-500 font-semibold">{topProduct.count}x</span> · {fmtEur(topProduct.total)}</p>
+            </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
+          </div>
         </CardContent></Card>
       </div>
 
