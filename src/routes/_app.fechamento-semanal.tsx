@@ -535,7 +535,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
           <p className="text-xs text-muted-foreground">Melhor semana</p>
           <div className="flex-1 flex flex-col justify-center">
             {bestWeek&&bestWeek.total>0?(<>
-              <p className="text-2xl font-bold mt-1 text-orange-500">S{bestWeek.idx+1+WEEK_LABEL_OFFSET}</p>
+              <p className="text-2xl font-bold mt-1 text-orange-500">{bestWeek.label}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{fmtEur(bestWeek.total)} · {bestWeek.count} vendas</p>
             </>):<p className="text-2xl font-bold text-muted-foreground mt-1">—</p>}
           </div>
