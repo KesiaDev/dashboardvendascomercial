@@ -1210,7 +1210,9 @@ function PerformanceTab() {
             value={fmtPct(perf.team.conversaoLead)}
             valueClass="text-emerald-600"
           />
+          <KpiCard icon={<Sparkles className="h-3 w-3" />} label="Nota IA média" value={perf.team.notaMedia != null ? perf.team.notaMedia.toFixed(1) : "—"} valueClass={scoreColor(perf.team.notaMedia)} />
         </div>
+
       )}
       {perf && (
         <div className="text-[11px] text-muted-foreground -mt-2 px-1 space-y-1">
