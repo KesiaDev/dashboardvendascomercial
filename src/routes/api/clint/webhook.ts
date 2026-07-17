@@ -1,5 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+function parseMeetingDatetime(str: string): Date | null {
+  // "Terça-feira 22/07 às 14h00" or "Segunda 21/07 às 09h00"
+  const match = str.match(/(\d{1,2})\/(\d{1,2})\s+às\s+(\d{1,2})h(\d{2})/);
+  if (!match) return null;
+  const [, dayStr, monthStr, hourStr, minStr] = match;
+  const year = new Date().getFullYear();
+  // Europe/Lisbon: UTC+1 in summer
+  return new Date(Date.UTC(year, parseInt(monthStr, 10) - 1, parseInt(dayStr, 10), parseInt(hourStr, 10) - 1, parseInt(minStr, 10)));
+}
+
 function detectEventType(body: Record<string, unknown>): string {
   const top =
     (body.event as string) ??
@@ -246,6 +256,28 @@ async function processWebhookEvent(
   }
 
 
+
+  // Detect meeting confirmed by AI agent (n8n posts stage_change with meeting_datetime)
+  if (isStageEvent && stage && /reuni[aã]o/i.test(stage)) {
+    const meetingDatetimeStr = (data.meeting_datetime as string) ?? null;
+    if (meetingDatetimeStr) {
+      const scheduledAt = parseMeetingDatetime(meetingDatetimeStr);
+      if (scheduledAt) {
+        await db.from("seller_agenda").insert({
+          seller_email: sellerEmail ?? "kesia@llmidiaco.com",
+          lead_name: contactName ?? "Lead",
+          lead_phone: contactPhone,
+          scheduled_at: scheduledAt.toISOString(),
+          duration_min: 30,
+          meeting_type: "consultoria",
+          source: "agente_ia",
+          clint_deal_id: resolvedDealId,
+          status: "agendado",
+          notes: meetingDatetimeStr,
+        });
+      }
+    }
+  }
 
   if (clintConvId) {
     const { data: existing } = await db
