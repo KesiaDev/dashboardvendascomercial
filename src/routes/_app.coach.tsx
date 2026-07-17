@@ -240,15 +240,17 @@ function VisaoGeral() {
   const bySeller = new Map<string, { name: string; count: number; sum: number; wins: number }>();
   for (const c of analyzed) {
     const a: any = c.analysis;
-    const name = (c as any).seller_name ?? (c as any).seller_email ?? "—";
-    const cur = bySeller.get(name) ?? { name, count: 0, sum: 0, wins: 0 };
+    const raw = (c as any).seller_name ?? (c as any).seller_email ?? "—";
+    const canonical = displaySellerName(raw);
+    const cur = bySeller.get(canonical) ?? { name: canonical, count: 0, sum: 0, wins: 0 };
     cur.count += 1; cur.sum += Number(a.score_geral ?? 0);
     if (a.tentou_fechar) cur.wins += 1;
-    bySeller.set(name, cur);
+    bySeller.set(canonical, cur);
   }
   const ranking = Array.from(bySeller.values())
     .map((s) => ({ ...s, avg: Number((s.sum / s.count).toFixed(1)) }))
     .sort((a, b) => b.avg - a.avg);
+
 
   const objCount = new Map<string, number>();
   for (const c of analyzed) {
