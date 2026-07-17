@@ -35,9 +35,12 @@ export type PerfResult = {
     leadsNovos: number;
     leadPorVenda: number | null;
     conversaoLead: number;
+    leadsSemAtendimento: number;
+    coberturaAtendimento: number; // (leadsNovos - leadsSemAtendimento) / leadsNovos
   };
   daily: { date: string; atendimentos: number; vendas: number; faturamento: number; leads: number }[];
 };
+
 
 // ─── Datas (referência: SEASON_START da planilha de fechamento) ─────────────
 const SEASON_START = "2026-06-01"; // Segunda-feira, início da temporada
