@@ -320,12 +320,13 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
 
     // "Leads V3 sem 1º atendimento": leads V3 do período cujo contato nunca
     // recebeu uma mensagem outbound (vendedor) em nenhuma conversa do Coach.
+    // Pulamos o cálculo (caro) enquanto o KPI está oculto (até 01/08/2026),
+    // pois o backfill do histórico ainda não terminou.
     let leadsSemAtendimento = 0;
-    if (leadContactIds.length) {
-      // conversas do V3 desses contatos
+    const computeSemAtendimento = startDate >= "2026-08-01";
+    if (computeSemAtendimento && leadContactIds.length) {
       const uniqueContacts = Array.from(new Set(leadContactIds));
       const attendedContacts = new Set<string>();
-      // Postgrest limita IN em ~1000; particiona
       for (let i = 0; i < uniqueContacts.length; i += 500) {
         const chunk = uniqueContacts.slice(i, i + 500);
         const { data: convRows } = await supabaseAdmin
@@ -336,7 +337,6 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         if (!convIdList.length) continue;
         const convToContact = new Map<string, string>();
         for (const r of convRows ?? []) convToContact.set((r as any).id, (r as any).clint_contact_id);
-        // mensagens outbound em qualquer momento (=  vendedor já falou com o lead)
         for (let j = 0; j < convIdList.length; j += 500) {
           const cchunk = convIdList.slice(j, j + 500);
           const { data: msgs } = await supabaseAdmin
@@ -352,12 +352,12 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         }
       }
       const semContato = uniqueContacts.filter((c) => !attendedContacts.has(c)).length;
-      const semContactId = leadsNovos - leadContactIds.length; // leads sem contact_id → sem atendimento
+      const semContactId = leadsNovos - leadContactIds.length;
       leadsSemAtendimento = semContato + Math.max(0, semContactId);
-
-    } else {
+    } else if (computeSemAtendimento) {
       leadsSemAtendimento = leadsNovos;
     }
+
 
     const sellers: SellerPerf[] = Array.from(sellerMap.values())
       .map((s) => ({
