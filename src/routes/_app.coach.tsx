@@ -1189,7 +1189,7 @@ function PerformanceTab() {
 
       {/* Team KPIs */}
       {perf && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 auto-rows-fr">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 auto-rows-fr">
           <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads V3 no período (${rangeLabel})`} value={String(perf.team.leadsNovos)} />
           <KpiCard
             icon={<MessageSquare className="h-3 w-3" />}
