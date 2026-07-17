@@ -164,7 +164,20 @@ function KpiCard({ icon, label, value, valueClass = "" }: { icon: React.ReactNod
 
 function WeeklyChart({ stats }: { stats: WeeklyStats[] }) {
   const weeks = [...new Set(stats.map((s) => s.week_start))].sort((a, b) => b.localeCompare(a)).slice(0, 6);
-  const sellers = [...new Set(stats.map((s) => s.seller_name ?? s.seller_email ?? "—"))];
+  // Dedup por nome canônico (mesmo vendedor pode aparecer como email + variantes)
+  type Agg = { sum: number; n: number };
+  const byCanonical = new Map<string, Map<string, Agg>>(); // canonical → week → agg
+  for (const s of stats) {
+    const canonical = displaySellerName(s.seller_name ?? s.seller_email ?? "—");
+    let weekMap = byCanonical.get(canonical);
+    if (!weekMap) { weekMap = new Map(); byCanonical.set(canonical, weekMap); }
+    const w = s.week_start;
+    const cur = weekMap.get(w) ?? { sum: 0, n: 0 };
+    const score = Number(s.avg_score ?? 0);
+    cur.sum += score; cur.n += 1;
+    weekMap.set(w, cur);
+  }
+  const sellers = Array.from(byCanonical.keys()).sort();
   if (!weeks.length || !sellers.length) return null;
 
   return (
@@ -183,17 +196,14 @@ function WeeklyChart({ stats }: { stats: WeeklyStats[] }) {
         <tbody>
           {sellers.map((seller) => (
             <tr key={seller}>
-              <td className="py-1 pr-3 font-medium truncate max-w-[160px]">{displaySellerName(seller)}</td>
+              <td className="py-1 pr-3 font-medium truncate max-w-[160px]">{seller}</td>
               {weeks.map((w) => {
-                const entry = stats.find(
-                  (s) => (s.seller_name ?? s.seller_email ?? "—") === seller && s.week_start === w,
-                );
+                const agg = byCanonical.get(seller)?.get(w);
+                const avg = agg && agg.n > 0 ? agg.sum / agg.n : null;
                 return (
                   <td key={w} className="px-2 text-center">
-                    {entry ? (
-                      <span className={"font-bold " + scoreColor(entry.avg_score)}>
-                        {Number(entry.avg_score ?? 0).toFixed(1)}
-                      </span>
+                    {avg != null ? (
+                      <span className={"font-bold " + scoreColor(avg)}>{avg.toFixed(1)}</span>
                     ) : (
                       <span className="text-muted-foreground/40">—</span>
                     )}
@@ -207,6 +217,7 @@ function WeeklyChart({ stats }: { stats: WeeklyStats[] }) {
     </div>
   );
 }
+
 
 function VisaoGeral() {
   const { data: convs = [] } = useQuery({ queryKey: ["coach-convs"], queryFn: () => listCoachConversationsFn() });
@@ -229,15 +240,17 @@ function VisaoGeral() {
   const bySeller = new Map<string, { name: string; count: number; sum: number; wins: number }>();
   for (const c of analyzed) {
     const a: any = c.analysis;
-    const name = (c as any).seller_name ?? (c as any).seller_email ?? "—";
-    const cur = bySeller.get(name) ?? { name, count: 0, sum: 0, wins: 0 };
+    const raw = (c as any).seller_name ?? (c as any).seller_email ?? "—";
+    const canonical = displaySellerName(raw);
+    const cur = bySeller.get(canonical) ?? { name: canonical, count: 0, sum: 0, wins: 0 };
     cur.count += 1; cur.sum += Number(a.score_geral ?? 0);
     if (a.tentou_fechar) cur.wins += 1;
-    bySeller.set(name, cur);
+    bySeller.set(canonical, cur);
   }
   const ranking = Array.from(bySeller.values())
     .map((s) => ({ ...s, avg: Number((s.sum / s.count).toFixed(1)) }))
     .sort((a, b) => b.avg - a.avg);
+
 
   const objCount = new Map<string, number>();
   for (const c of analyzed) {
