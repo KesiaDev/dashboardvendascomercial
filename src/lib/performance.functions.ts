@@ -35,9 +35,12 @@ export type PerfResult = {
     leadsNovos: number;
     leadPorVenda: number | null;
     conversaoLead: number;
+    leadsSemAtendimento: number;
+    coberturaAtendimento: number; // (leadsNovos - leadsSemAtendimento) / leadsNovos
   };
   daily: { date: string; atendimentos: number; vendas: number; faturamento: number; leads: number }[];
 };
+
 
 // ─── Datas (referência: SEASON_START da planilha de fechamento) ─────────────
 const SEASON_START = "2026-06-01"; // Segunda-feira, início da temporada
@@ -152,13 +155,16 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       .lte("sale_date", endDate)
       .limit(10000);
 
-    // 2. Conversas com atividade no período
+    // 2. Conversas com atividade no período (somente Pipeline Comercial V3
+    //    — evita inflar "atendimentos" com WhatsApp de outros funis)
     const { data: convs } = await supabaseAdmin
       .from("coach_conversations")
-      .select("id,seller_email,seller_name,last_message_at")
+      .select("id,seller_email,seller_name,last_message_at,clint_contact_id,origin_name")
+      .eq("origin_name", "PIPELINE_COMERCIAL-V3")
       .gte("last_message_at", startTS)
       .lte("last_message_at", endTS)
       .limit(5000);
+
 
     // 3. Análises Coach IA (somente para conversas do período)
     const convIds = (convs ?? []).map((c: any) => c.id);
@@ -235,15 +241,17 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     // Leads novos — Pipeline Comercial V3 (origin_name = PIPELINE_COMERCIAL-V3)
     const { data: leads } = await supabaseAdmin
       .from("clint_deals")
-      .select("id,created_at,user_email,user_name")
+      .select("id,contact_id,created_at,user_email,user_name")
       .eq("origin_name", "PIPELINE_COMERCIAL-V3")
       .gte("created_at", startTS)
       .lte("created_at", endTS)
       .limit(20000);
     let leadsNovos = 0;
+    const leadContactIds: string[] = [];
     for (const l of leads ?? []) {
       if (!l.created_at) continue;
       leadsNovos += 1;
+      if (l.contact_id) leadContactIds.push(String(l.contact_id));
       const k = new Date(l.created_at).toISOString().slice(0, 10);
       const cur = dailyMap.get(k); if (cur) cur.leads += 1;
       // atribui lead ao vendedor (não cria linha nova se não houver vendedor)
@@ -252,6 +260,47 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         const acc = ensure(l.user_email, l.user_name);
         acc.leadsNovos += 1;
       }
+    }
+
+    // "Leads V3 sem 1º atendimento": leads V3 do período cujo contato nunca
+    // recebeu uma mensagem outbound (vendedor) em nenhuma conversa do Coach.
+    let leadsSemAtendimento = 0;
+    if (leadContactIds.length) {
+      // conversas do V3 desses contatos
+      const uniqueContacts = Array.from(new Set(leadContactIds));
+      const attendedContacts = new Set<string>();
+      // Postgrest limita IN em ~1000; particiona
+      for (let i = 0; i < uniqueContacts.length; i += 500) {
+        const chunk = uniqueContacts.slice(i, i + 500);
+        const { data: convRows } = await supabaseAdmin
+          .from("coach_conversations")
+          .select("id,clint_contact_id")
+          .in("clint_contact_id", chunk);
+        const convIdList = (convRows ?? []).map((r: any) => r.id);
+        if (!convIdList.length) continue;
+        const convToContact = new Map<string, string>();
+        for (const r of convRows ?? []) convToContact.set((r as any).id, (r as any).clint_contact_id);
+        // mensagens outbound em qualquer momento (=  vendedor já falou com o lead)
+        for (let j = 0; j < convIdList.length; j += 500) {
+          const cchunk = convIdList.slice(j, j + 500);
+          const { data: msgs } = await supabaseAdmin
+            .from("coach_messages")
+            .select("conversation_id")
+            .eq("direction", "outbound")
+            .in("conversation_id", cchunk)
+            .limit(50000);
+          for (const m of msgs ?? []) {
+            const cid = convToContact.get((m as any).conversation_id);
+            if (cid) attendedContacts.add(cid);
+          }
+        }
+      }
+      const semContato = uniqueContacts.filter((c) => !attendedContacts.has(c)).length;
+      const semContactId = leadsNovos - leadContactIds.length; // leads sem contact_id → sem atendimento
+      leadsSemAtendimento = semContato + Math.max(0, semContactId);
+
+    } else {
+      leadsSemAtendimento = leadsNovos;
     }
 
     const sellers: SellerPerf[] = Array.from(sellerMap.values())
@@ -289,7 +338,10 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         leadsNovos,
         leadPorVenda: teamVd > 0 ? leadsNovos / teamVd : null,
         conversaoLead: leadsNovos > 0 ? teamVd / leadsNovos : 0,
+        leadsSemAtendimento,
+        coberturaAtendimento: leadsNovos > 0 ? (leadsNovos - leadsSemAtendimento) / leadsNovos : 0,
       },
+
       daily: Array.from(dailyMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([date, v]) => ({ date, ...v })),

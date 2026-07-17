@@ -225,6 +225,28 @@ async function processWebhookEvent(
   const now = new Date().toISOString();
   let conversationId: string | null = null;
 
+  // Resolve deal_id + origin_name via contact_id quando o payload não trouxe
+  // (garante que "Atendimentos" possa ser filtrado por Pipeline Comercial V3)
+  let resolvedDealId: string | null = dealId;
+  let resolvedOriginName: string | null = originName;
+  if ((!resolvedDealId || !resolvedOriginName) && contactId) {
+    const { data: matches } = await db
+      .from("clint_deals")
+      .select("id,origin_name,created_at")
+      .eq("contact_id", contactId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    const list = (matches ?? []) as Array<{ id: string; origin_name: string | null; created_at: string | null }>;
+    const preferred =
+      list.find((d) => d.origin_name === "PIPELINE_COMERCIAL-V3") ?? list[0] ?? null;
+    if (preferred) {
+      resolvedDealId = resolvedDealId ?? preferred.id;
+      resolvedOriginName = resolvedOriginName ?? preferred.origin_name;
+    }
+  }
+
+
+
   if (clintConvId) {
     const { data: existing } = await db
       .from("coach_conversations")
@@ -238,12 +260,12 @@ async function processWebhookEvent(
         .insert({
           clint_conversation_id: clintConvId,
           clint_contact_id: contactId,
-          deal_id: dealId,
+          deal_id: resolvedDealId,
           seller_name: sellerName,
           seller_email: sellerEmail,
           contact_name: contactName,
           contact_email: contactEmail,
-          origin_name: originName,
+          origin_name: resolvedOriginName,
           stage,
           source: "clint",
           first_message_at: now,
@@ -261,7 +283,7 @@ async function processWebhookEvent(
           last_message_at: hasMessageContent ? now : undefined,
           message_count: hasMessageContent ? (existing.message_count ?? 0) + 1 : undefined,
           seller_name: sellerName ?? undefined,
-          deal_id: dealId ?? undefined,
+          deal_id: resolvedDealId ?? undefined,
           stage: stage ?? undefined,
         })
         .eq("clint_conversation_id", clintConvId);
@@ -287,12 +309,12 @@ async function processWebhookEvent(
       const { data: newConv, error: ie } = await db
         .from("coach_conversations")
         .insert({
-          deal_id: dealId,
+          deal_id: resolvedDealId,
           seller_name: sellerName,
           seller_email: sellerEmail,
           contact_name: contactName,
           contact_email: contactEmail,
-          origin_name: originName,
+          origin_name: resolvedOriginName,
           stage,
           source: "clint",
           first_message_at: now,
@@ -333,7 +355,7 @@ async function processWebhookEvent(
           seller_email: sellerEmail,
           contact_name: contactName,
           contact_email: contactEmail,
-          origin_name: originName,
+          origin_name: resolvedOriginName,
           stage,
           source: "clint",
           first_message_at: now,
