@@ -628,7 +628,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
                     return (
                       <tr key={w.idx} className={`border-t transition-colors
                         ${isBest?"border-l-2 border-l-orange-500 border-border/50 bg-orange-500/5":"border-border/40"}`}>
-                        <td className="px-4 py-2 font-medium"><span className="flex items-center gap-1.5">S{w.idx+1}{isBest&&<Flame className="h-3.5 w-3.5 text-orange-500"/>}</span></td>
+                        <td className="px-4 py-2 font-medium"><span className="flex items-center gap-1.5">S{w.idx+1+WEEK_LABEL_OFFSET}{isBest&&<Flame className="h-3.5 w-3.5 text-orange-500"/>}</span></td>
                         <td className="px-3 py-2 text-muted-foreground tabular-nums">{fmtDate(w.start)} – {fmtDate(w.end)}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{w.count}</td>
                         <td className={`px-3 py-2 text-right tabular-nums font-medium ${isBest?"text-orange-500":""}`}>{fmtEur(w.total)}</td>
