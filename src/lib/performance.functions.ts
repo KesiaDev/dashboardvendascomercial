@@ -295,11 +295,10 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
           }
         }
       }
-      leadsSemAtendimento = uniqueContacts.filter((c) => !attendedContacts.has(c)).length;
-      // leads sem contact_id contam como "sem atendimento" também
-      leadsSemAtendimento += leadContactIds.length - uniqueContacts.length > 0
-        ? 0
-        : (leadsNovos - leadContactIds.length);
+      const semContato = uniqueContacts.filter((c) => !attendedContacts.has(c)).length;
+      const semContactId = leadsNovos - leadContactIds.length; // leads sem contact_id → sem atendimento
+      leadsSemAtendimento = semContato + Math.max(0, semContactId);
+
     } else {
       leadsSemAtendimento = leadsNovos;
     }
