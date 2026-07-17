@@ -225,6 +225,28 @@ async function processWebhookEvent(
   const now = new Date().toISOString();
   let conversationId: string | null = null;
 
+  // Resolve deal_id + origin_name via contact_id quando o payload não trouxe
+  // (garante que "Atendimentos" possa ser filtrado por Pipeline Comercial V3)
+  let resolvedDealId: string | null = dealId;
+  let resolvedOriginName: string | null = originName;
+  if ((!resolvedDealId || !resolvedOriginName) && contactId) {
+    const { data: matches } = await db
+      .from("clint_deals")
+      .select("id,origin_name,created_at")
+      .eq("contact_id", contactId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    const list = (matches ?? []) as Array<{ id: string; origin_name: string | null; created_at: string | null }>;
+    const preferred =
+      list.find((d) => d.origin_name === "PIPELINE_COMERCIAL-V3") ?? list[0] ?? null;
+    if (preferred) {
+      resolvedDealId = resolvedDealId ?? preferred.id;
+      resolvedOriginName = resolvedOriginName ?? preferred.origin_name;
+    }
+  }
+
+
+
   if (clintConvId) {
     const { data: existing } = await db
       .from("coach_conversations")
