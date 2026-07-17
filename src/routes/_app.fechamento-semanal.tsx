@@ -240,14 +240,14 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
           <p className="text-xs text-muted-foreground">Total da semana</p>
           <p className="text-2xl font-bold tabular-nums mt-1 text-violet-500">{fmtEur(weekTotal)}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{weekSales.length} venda{weekSales.length!==1?"s":""}</p>
-          <div className="mt-2 grid grid-cols-2 gap-1 text-[10px]">
-            <div className="rounded bg-emerald-950/30 px-1.5 py-1">
-              <div className="font-bold text-emerald-400 tabular-nums">{fmtEur(weekNovasTotal)}</div>
-              <div className="text-muted-foreground">Novas · {weekNovas.length}</div>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-md bg-success/15 p-2">
+              <div className="font-bold text-success tabular-nums">{fmtEur(weekNovasTotal)}</div>
+              <div className="text-success/80">Novas · {weekNovas.length}</div>
             </div>
-            <div className="rounded bg-blue-950/30 px-1.5 py-1">
-              <div className="font-bold text-blue-400 tabular-nums">{fmtEur(weekRenovTotal)}</div>
-              <div className="text-muted-foreground">Renov · {weekRenov.length}</div>
+            <div className="rounded-md bg-primary/15 p-2">
+              <div className="font-bold text-primary tabular-nums">{fmtEur(weekRenovTotal)}</div>
+              <div className="text-primary/80">Renov · {weekRenov.length}</div>
             </div>
           </div>
         </CardContent></Card>
@@ -507,14 +507,14 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
           <p className="text-xs text-muted-foreground">Total do mês</p>
           <p className="text-2xl font-bold tabular-nums mt-1 text-violet-500">{fmtEur(monthTotal)}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{monthSales.length} vendas</p>
-          <div className="mt-2 grid grid-cols-2 gap-1 text-[10px]">
-            <div className="rounded bg-emerald-950/30 px-1.5 py-1">
-              <div className="font-bold text-emerald-400 tabular-nums">{fmtEur(monthNovasTotal)}</div>
-              <div className="text-muted-foreground">Novas · {monthNovas.length}</div>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-md bg-success/15 p-2">
+              <div className="font-bold text-success tabular-nums">{fmtEur(monthNovasTotal)}</div>
+              <div className="text-success/80">Novas · {monthNovas.length}</div>
             </div>
-            <div className="rounded bg-blue-950/30 px-1.5 py-1">
-              <div className="font-bold text-blue-400 tabular-nums">{fmtEur(monthRenovTotal)}</div>
-              <div className="text-muted-foreground">Renov · {monthRenov.length}</div>
+            <div className="rounded-md bg-primary/15 p-2">
+              <div className="font-bold text-primary tabular-nums">{fmtEur(monthRenovTotal)}</div>
+              <div className="text-primary/80">Renov · {monthRenov.length}</div>
             </div>
           </div>
         </CardContent></Card>

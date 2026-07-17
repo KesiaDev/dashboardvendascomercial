@@ -564,13 +564,13 @@ function FechamentoForm({ session }: { session: any }) {
                 {todaySales.length} venda(s) · {moneyEur(todayTotal)}
               </CardDescription>
               <div className="mt-2 grid grid-cols-2 gap-2 text-center text-xs">
-                <div className="rounded-md bg-emerald-950/30 p-2">
-                  <p className="font-bold text-emerald-400 tabular-nums">{moneyEur(todayNovasTotal)}</p>
-                  <p className="text-muted-foreground">Novas ({todayNovas.length})</p>
+                <div className="rounded-md bg-success/15 p-2">
+                  <p className="font-bold text-success tabular-nums">{moneyEur(todayNovasTotal)}</p>
+                  <p className="text-success/80">Novas ({todayNovas.length})</p>
                 </div>
-                <div className="rounded-md bg-blue-950/30 p-2">
-                  <p className="font-bold text-blue-400 tabular-nums">{moneyEur(todayRenovTotal)}</p>
-                  <p className="text-muted-foreground">Renovações ({todayRenov.length})</p>
+                <div className="rounded-md bg-primary/15 p-2">
+                  <p className="font-bold text-primary tabular-nums">{moneyEur(todayRenovTotal)}</p>
+                  <p className="text-primary/80">Renovações ({todayRenov.length})</p>
                 </div>
               </div>
             </CardHeader>
@@ -612,13 +612,13 @@ function FechamentoForm({ session }: { session: any }) {
                 {paidSales.length} confirmada(s) · {moneyEur(monthTotal)}
               </CardDescription>
               <div className="mt-2 grid grid-cols-2 gap-2 text-center text-xs">
-                <div className="rounded-md bg-emerald-950/30 p-2">
-                  <p className="font-bold text-emerald-400 tabular-nums">{moneyEur(monthNovasTotal)}</p>
-                  <p className="text-muted-foreground">Novas ({monthNovas.length})</p>
+                <div className="rounded-md bg-success/15 p-2">
+                  <p className="font-bold text-success tabular-nums">{moneyEur(monthNovasTotal)}</p>
+                  <p className="text-success/80">Novas ({monthNovas.length})</p>
                 </div>
-                <div className="rounded-md bg-blue-950/30 p-2">
-                  <p className="font-bold text-blue-400 tabular-nums">{moneyEur(monthRenovTotal)}</p>
-                  <p className="text-muted-foreground">Renovações ({monthRenov.length})</p>
+                <div className="rounded-md bg-primary/15 p-2">
+                  <p className="font-bold text-primary tabular-nums">{moneyEur(monthRenovTotal)}</p>
+                  <p className="text-primary/80">Renovações ({monthRenov.length})</p>
                 </div>
               </div>
             </CardHeader>
