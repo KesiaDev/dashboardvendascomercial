@@ -14,15 +14,11 @@ export const Route = createFileRoute("/_app")({
 });
 
 const ALL_NAV_ITEMS = [
-  { to: "/",                    label: "Visão Geral",        icon: BarChart3,        adminOnly: true },
   { to: "/fechamento",          label: "Fechamento",         icon: ClipboardCheck,   adminOnly: false },
   { to: "/fechamento-semanal",  label: "Fechamento Semanal", icon: CalendarDays,     adminOnly: false },
   { to: "/agenda",              label: "Agenda do Vendedor", icon: CalendarClock,    adminOnly: false },
   { to: "/ranking",             label: "Ranking",            icon: Trophy,           adminOnly: true },
-  { to: "/resultados",          label: "Resultados",         icon: TrendingUp,       adminOnly: true },
-  { to: "/vendas-reais",        label: "Vendas Reais",       icon: TrendingUpIcon,   adminOnly: true },
   { to: "/comissionamento",     label: "Comissionamento",    icon: DollarSign,       adminOnly: true },
-  { to: "/funis",               label: "Funis",              icon: GitMerge,         adminOnly: true },
   { to: "/coach",               label: "Análise Comercial",  icon: Sparkles,         adminOnly: true },
   { to: "/indicacoes",          label: "Indicações",         icon: Share2,           adminOnly: true },
   { to: "/usuarios",            label: "Usuários",           icon: Users,            adminOnly: true },
