@@ -149,49 +149,62 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     const startTS = `${startDate}T00:00:00.000Z`;
     const endTS   = `${endDate}T23:59:59.999Z`;
 
-    // 1. Vendas reais (fonte de verdade: manual_sales, EUR).
-    //    Performance conta apenas VENDAS NOVAS — renovações são
-    //    contabilizadas em outro fluxo e não devem inflar leads→vendas.
-    const { data: salesRaw } = await supabaseAdmin
-      .from("manual_sales")
-      .select("id,seller_name,value_eur,sale_date,created_by_email,categoria_produto")
-      .gte("sale_date", startDate)
-      .lte("sale_date", endDate)
-      .limit(10000);
-    const sales = (salesRaw ?? []).filter((s: any) => s.categoria_produto !== "RENOVACAO");
+    // 1-3. Paralelizamos as três queries independentes (vendas, conversas do
+    //      período e leads V3) — antes rodavam em série, o que na visão Mensal
+    //      somava 3 round-trips + N chunks de análise = carga lenta demais.
+    const [salesRes, convsRes, leadsRes] = await Promise.all([
+      supabaseAdmin
+        .from("manual_sales")
+        .select("id,seller_name,value_eur,sale_date,created_by_email,categoria_produto")
+        .gte("sale_date", startDate)
+        .lte("sale_date", endDate)
+        .limit(10000),
+      supabaseAdmin
+        .from("coach_conversations")
+        .select("id,seller_email,seller_name,first_message_at,last_message_at,clint_contact_id,origin_name")
+        .eq("origin_name", "PIPELINE_COMERCIAL-V3")
+        .gte("last_message_at", startTS)
+        .lte("last_message_at", endTS)
+        .limit(5000),
+      supabaseAdmin
+        .from("clint_deals")
+        .select("id,contact_id,created_at,user_email,user_name")
+        .eq("origin_name", "PIPELINE_COMERCIAL-V3")
+        .gte("created_at", startTS)
+        .lte("created_at", endTS)
+        .limit(20000),
+    ]);
 
-    // 2. Conversas com atividade no período (somente Pipeline Comercial V3).
-    //    ATENÇÃO: todos os vendedores atendem em todos os dispositivos WhatsApp
-    //    (Comercial 01/02/03, Cobrança 01). Isso gera múltiplas "conversas" para
-    //    o MESMO lead — uma por dispositivo. Precisamos deduplicar por contato
-    //    (clint_contact_id) para não inflar atendimentos, e atribuir o
-    //    atendimento ao vendedor que abriu a conversa primeiro (first_message_at).
-    const { data: convs } = await supabaseAdmin
-      .from("coach_conversations")
-      .select("id,seller_email,seller_name,first_message_at,last_message_at,clint_contact_id,origin_name")
-      .eq("origin_name", "PIPELINE_COMERCIAL-V3")
-      .gte("last_message_at", startTS)
-      .lte("last_message_at", endTS)
-      .limit(5000);
+    // Fail-loud: se qualquer query base falhar, jogamos o erro para o cliente
+    // exibir "Erro ao carregar" em vez de renderizar KPIs zerados silenciosos.
+    if (salesRes.error) throw new Error(`manual_sales: ${salesRes.error.message}`);
+    if (convsRes.error) throw new Error(`coach_conversations: ${convsRes.error.message}`);
+    if (leadsRes.error) throw new Error(`clint_deals: ${leadsRes.error.message}`);
 
+    const sales = (salesRes.data ?? []).filter((s: any) => s.categoria_produto !== "RENOVACAO");
+    const convs = convsRes.data ?? [];
+    const leads = leadsRes.data ?? [];
 
-    // 3. Análises Coach IA (somente para conversas do período)
-    //    ATENÇÃO: PostgREST tem limite de URL (~8KB) — .in() com centenas de
-    //    UUIDs estoura silenciosamente e retorna vazio. Precisamos particionar.
-    const convIds = (convs ?? []).map((c: any) => c.id);
-    let analyses: any[] = [];
-    for (let i = 0; i < convIds.length; i += 200) {
-      const chunk = convIds.slice(i, i + 200);
-      const { data: a } = await supabaseAdmin
-        .from("coach_analyses")
-        .select("conversation_id,score_geral")
-        .in("conversation_id", chunk)
-        .eq("status", "ok");
-      if (a?.length) analyses.push(...a);
-    }
+    // 4. Análises Coach IA (chunked em paralelo — evita limite de URL do PostgREST)
+    const convIds = convs.map((c: any) => c.id);
+    const analysisChunks: string[][] = [];
+    for (let i = 0; i < convIds.length; i += 200) analysisChunks.push(convIds.slice(i, i + 200));
+    const analysisResults = await Promise.all(
+      analysisChunks.map((chunk) =>
+        supabaseAdmin
+          .from("coach_analyses")
+          .select("conversation_id,score_geral")
+          .in("conversation_id", chunk)
+          .eq("status", "ok"),
+      ),
+    );
+    const analyses: any[] = [];
+    for (const r of analysisResults) if (r.data?.length) analyses.push(...r.data);
 
     const scoreByConv = new Map<string, number>();
     for (const a of analyses) if (a.score_geral != null) scoreByConv.set(a.conversation_id, a.score_geral);
+
+
 
     // ─── Dedup por contato (1 lead atendido = 1 atendimento) ─────────────
     // Bucket = clint_contact_id (fallback: id da conversa quando não houver
