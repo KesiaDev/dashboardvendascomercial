@@ -23,6 +23,7 @@ import { Route as AppMetasComercialRouteImport } from './routes/_app.metas-comer
 import { Route as AppIndicacoesRouteImport } from './routes/_app.indicacoes'
 import { Route as AppImportRouteImport } from './routes/_app.import'
 import { Route as AppFunisRouteImport } from './routes/_app.funis'
+import { Route as AppFeriasRouteImport } from './routes/_app.ferias'
 import { Route as AppFechamentoSemanalRouteImport } from './routes/_app.fechamento-semanal'
 import { Route as AppFechamentoRouteImport } from './routes/_app.fechamento'
 import { Route as AppExecutivoRouteImport } from './routes/_app.executivo'
@@ -110,6 +111,11 @@ const AppImportRoute = AppImportRouteImport.update({
 const AppFunisRoute = AppFunisRouteImport.update({
   id: '/funis',
   path: '/funis',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFeriasRoute = AppFeriasRouteImport.update({
+  id: '/ferias',
+  path: '/ferias',
   getParentRoute: () => AppRoute,
 } as any)
 const AppFechamentoSemanalRoute = AppFechamentoSemanalRouteImport.update({
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/executivo': typeof AppExecutivoRoute
   '/fechamento': typeof AppFechamentoRoute
   '/fechamento-semanal': typeof AppFechamentoSemanalRoute
+  '/ferias': typeof AppFeriasRoute
   '/funis': typeof AppFunisRoute
   '/import': typeof AppImportRoute
   '/indicacoes': typeof AppIndicacoesRoute
@@ -254,6 +261,7 @@ export interface FileRoutesByTo {
   '/executivo': typeof AppExecutivoRoute
   '/fechamento': typeof AppFechamentoRoute
   '/fechamento-semanal': typeof AppFechamentoSemanalRoute
+  '/ferias': typeof AppFeriasRoute
   '/funis': typeof AppFunisRoute
   '/import': typeof AppImportRoute
   '/indicacoes': typeof AppIndicacoesRoute
@@ -290,6 +298,7 @@ export interface FileRoutesById {
   '/_app/executivo': typeof AppExecutivoRoute
   '/_app/fechamento': typeof AppFechamentoRoute
   '/_app/fechamento-semanal': typeof AppFechamentoSemanalRoute
+  '/_app/ferias': typeof AppFeriasRoute
   '/_app/funis': typeof AppFunisRoute
   '/_app/import': typeof AppImportRoute
   '/_app/indicacoes': typeof AppIndicacoesRoute
@@ -327,6 +336,7 @@ export interface FileRouteTypes {
     | '/executivo'
     | '/fechamento'
     | '/fechamento-semanal'
+    | '/ferias'
     | '/funis'
     | '/import'
     | '/indicacoes'
@@ -360,6 +370,7 @@ export interface FileRouteTypes {
     | '/executivo'
     | '/fechamento'
     | '/fechamento-semanal'
+    | '/ferias'
     | '/funis'
     | '/import'
     | '/indicacoes'
@@ -395,6 +406,7 @@ export interface FileRouteTypes {
     | '/_app/executivo'
     | '/_app/fechamento'
     | '/_app/fechamento-semanal'
+    | '/_app/ferias'
     | '/_app/funis'
     | '/_app/import'
     | '/_app/indicacoes'
@@ -529,6 +541,13 @@ declare module '@tanstack/react-router' {
       path: '/funis'
       fullPath: '/funis'
       preLoaderRoute: typeof AppFunisRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ferias': {
+      id: '/_app/ferias'
+      path: '/ferias'
+      fullPath: '/ferias'
+      preLoaderRoute: typeof AppFeriasRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/fechamento-semanal': {
@@ -690,6 +709,7 @@ interface AppRouteChildren {
   AppExecutivoRoute: typeof AppExecutivoRoute
   AppFechamentoRoute: typeof AppFechamentoRoute
   AppFechamentoSemanalRoute: typeof AppFechamentoSemanalRoute
+  AppFeriasRoute: typeof AppFeriasRoute
   AppFunisRoute: typeof AppFunisRoute
   AppImportRoute: typeof AppImportRoute
   AppIndicacoesRoute: typeof AppIndicacoesRoute
@@ -714,6 +734,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppExecutivoRoute: AppExecutivoRoute,
   AppFechamentoRoute: AppFechamentoRoute,
   AppFechamentoSemanalRoute: AppFechamentoSemanalRoute,
+  AppFeriasRoute: AppFeriasRoute,
   AppFunisRoute: AppFunisRoute,
   AppImportRoute: AppImportRoute,
   AppIndicacoesRoute: AppIndicacoesRoute,
