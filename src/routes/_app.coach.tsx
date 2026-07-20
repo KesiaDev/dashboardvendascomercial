@@ -1296,21 +1296,45 @@ function PerformanceTab() {
         <div className="text-xs text-muted-foreground">Atualizando dados…</div>
       )}
 
-      {/* Team KPIs — atendimentos ocultos até 01/08/2026 (backfill de histórico em andamento) */}
+      {/* KPIs — respeitam o filtro Equipe / Por vendedor */}
       {perf && (() => {
         const showAttendance = (perf.periodStart ?? "") >= "2026-08-01";
+        const selected = scope === "seller" && sellerKey
+          ? perf.sellers.find((s) => s.key === sellerKey) ?? null
+          : null;
+        const isSeller = !!selected;
+        const view = selected
+          ? {
+              leadsNovos: selected.leadsNovos,
+              atendimentos: selected.atendimentos,
+              leadsSemAtendimento: 0,
+              vendas: selected.vendas,
+              faturamento: selected.faturamento,
+              conversaoLead: selected.conversaoLead,
+              taxaConversao: selected.taxaConversao,
+              leadPorVenda: selected.vendas > 0 ? selected.leadsNovos / selected.vendas : null,
+              coberturaAtendimento: selected.leadsNovos > 0 ? selected.atendimentos / selected.leadsNovos : 0,
+              notaMedia: selected.notaMedia,
+            }
+          : perf.team;
+        const scopeLabel = isSeller ? selected!.name : rangeLabel;
         return (
           <>
+            {isSeller && (
+              <div className="text-xs text-muted-foreground -mb-1">
+                Mostrando apenas: <span className="font-medium text-foreground">{selected!.name}</span>
+              </div>
+            )}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 auto-rows-fr">
-              <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads V3 no período (${rangeLabel})`} value={String(perf.team.leadsNovos)} />
+              <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads V3 (${isSeller ? scopeLabel : rangeLabel})`} value={String(view.leadsNovos)} />
               {showAttendance && (
                 <KpiCard
                   icon={<MessageSquare className="h-3 w-3" />}
                   label="Atendimentos (V3)"
-                  value={String(perf.team.atendimentos)}
+                  value={String(view.atendimentos)}
                 />
               )}
-              {showAttendance && (
+              {showAttendance && !isSeller && (
                 <KpiCard
                   icon={<Users className="h-3 w-3" />}
                   label="Leads V3 sem 1º atendimento"
@@ -1318,28 +1342,24 @@ function PerformanceTab() {
                   valueClass={perf.team.leadsSemAtendimento > 0 ? "text-amber-600" : "text-emerald-600"}
                 />
               )}
-              <KpiCard icon={<CheckCircle2 className="h-3 w-3" />} label="Vendas" value={String(perf.team.vendas)} />
-              <KpiCard icon={<TrendingUp className="h-3 w-3" />} label="Faturamento" value={fmtEUR(perf.team.faturamento)} />
+              <KpiCard icon={<CheckCircle2 className="h-3 w-3" />} label="Vendas" value={String(view.vendas)} />
+              <KpiCard icon={<TrendingUp className="h-3 w-3" />} label="Faturamento" value={fmtEUR(view.faturamento)} />
               <KpiCard
                 icon={<Target className="h-3 w-3" />}
                 label="Conv. lead→venda"
-                value={fmtPct(perf.team.conversaoLead)}
+                value={fmtPct(view.conversaoLead)}
                 valueClass="text-emerald-600"
               />
-              <KpiCard icon={<Sparkles className="h-3 w-3" />} label="Nota IA média" value={perf.team.notaMedia != null ? perf.team.notaMedia.toFixed(1) : "—"} valueClass={scoreColor(perf.team.notaMedia)} />
+              <KpiCard icon={<Sparkles className="h-3 w-3" />} label="Nota IA média" value={view.notaMedia != null ? view.notaMedia.toFixed(1) : "—"} valueClass={scoreColor(view.notaMedia)} />
             </div>
             {showAttendance ? (
               <div className="text-[11px] text-muted-foreground -mt-2 px-1 space-y-1">
                 <div>
-                  Cobertura de atendimento V3: <span className="font-medium text-foreground">{fmtPct(perf.team.coberturaAtendimento)}</span>
-                  {" · "}Taxa atendimento→venda: <span className="font-medium text-foreground">{fmtPct(perf.team.taxaConversao)}</span>
-                  {perf.team.leadPorVenda != null && (
-                    <> · Leads por venda: <span className="font-medium text-foreground">{perf.team.leadPorVenda.toFixed(1)}</span></>
+                  {!isSeller && (<>Cobertura de atendimento V3: <span className="font-medium text-foreground">{fmtPct(view.coberturaAtendimento)}</span>{" · "}</>)}
+                  Taxa atendimento→venda: <span className="font-medium text-foreground">{fmtPct(view.taxaConversao)}</span>
+                  {view.leadPorVenda != null && (
+                    <> · Leads por venda: <span className="font-medium text-foreground">{view.leadPorVenda.toFixed(1)}</span></>
                   )}
-                </div>
-                <div>
-                  <span className="font-medium">Atendimentos</span> = conversas de WhatsApp do Pipeline Comercial V3 com atividade no período.{" "}
-                  <span className="font-medium">Sem 1º atendimento</span> = leads V3 do período cujo contato ainda não recebeu nenhuma mensagem do vendedor.
                 </div>
               </div>
             ) : (
@@ -1350,6 +1370,7 @@ function PerformanceTab() {
           </>
         );
       })()}
+
 
 
 
@@ -1408,7 +1429,7 @@ function PerformanceTab() {
                   </tr>
                 </thead>
                 <tbody>
-                  {perf.sellers.map((s, i) => (
+                  {(scope === "seller" && sellerKey ? perf.sellers.filter((s) => s.key === sellerKey) : perf.sellers).map((s, i) => (
                     <tr key={s.key} className="border-b last:border-0 hover:bg-muted/30">
                       <td className="py-2 pl-1 text-xs text-muted-foreground">{i + 1}º</td>
                       <td>
