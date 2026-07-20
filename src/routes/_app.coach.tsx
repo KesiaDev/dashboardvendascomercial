@@ -1211,9 +1211,11 @@ function PerformanceTab() {
 
   const effectiveRefDate = range === "day" ? refDate : undefined;
 
-  const { data: perf, isLoading } = useQuery({
+  const { data: perf, isLoading, isFetching, error: perfError } = useQuery({
     queryKey: ["coach-perf", range, effectiveRefDate ?? "today"],
     queryFn: () => fetchPerformanceFn({ data: { range, refDate: effectiveRefDate } }),
+    placeholderData: (prev) => prev, // mantém os KPIs visíveis durante refetch (evita "zerar")
+    staleTime: 60_000,
   });
 
   const fbMutation = useMutation({
