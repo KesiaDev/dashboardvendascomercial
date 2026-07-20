@@ -17,6 +17,7 @@ const ALL_NAV_ITEMS = [
   { to: "/fechamento",          label: "Fechamento",         icon: ClipboardCheck,   adminOnly: false },
   { to: "/fechamento-semanal",  label: "Fechamento Semanal", icon: CalendarDays,     adminOnly: false },
   { to: "/agenda",              label: "Agenda do Vendedor", icon: CalendarClock,    adminOnly: false },
+  { to: "/ferias",              label: "Férias da Equipe",   icon: Plane,            adminOnly: false },
   { to: "/ranking",             label: "Ranking",            icon: Trophy,           adminOnly: true },
   { to: "/metas-comercial",     label: "Metas Comercial",    icon: Target,           adminOnly: true },
   { to: "/comissionamento",     label: "Comissionamento",    icon: DollarSign,       adminOnly: true },
