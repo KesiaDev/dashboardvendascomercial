@@ -1350,7 +1350,7 @@ function PerformanceTab() {
                 value={fmtPct(view.conversaoLead)}
                 valueClass="text-emerald-600"
               />
-              <KpiCard icon={<Sparkles className="h-3 w-3" />} label="Nota IA média" value={view.notaMedia != null ? view.notaMedia.toFixed(1) : "—"} valueClass={scoreColor(view.notaMedia)} />
+              <KpiCard icon={<Sparkles className="h-3 w-3" />} label="Nota média" value={view.notaMedia != null ? view.notaMedia.toFixed(1) : "—"} valueClass={scoreColor(view.notaMedia)} />
             </div>
             {showAttendance ? (
               <div className="text-[11px] text-muted-foreground -mt-2 px-1 space-y-1">
@@ -1433,7 +1433,7 @@ function PerformanceTab() {
                     <th className="text-right">Faturamento</th>
                     <th className="text-right" title="Vendas ÷ Leads">Conv. Lead</th>
                     <th className="text-right" title="Vendas ÷ Atendimentos">Conv. Atend.</th>
-                    <th className="text-right">Nota IA</th>
+                    <th className="text-right">Nota média</th>
                     <th></th>
                   </tr>
                 </thead>
