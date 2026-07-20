@@ -1287,6 +1287,15 @@ function PerformanceTab() {
         </div>
       </div>
 
+      {perfError && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          Erro ao carregar performance: {String((perfError as any)?.message ?? perfError)}
+        </div>
+      )}
+      {isFetching && perf && (
+        <div className="text-xs text-muted-foreground">Atualizando dados…</div>
+      )}
+
       {/* Team KPIs — atendimentos ocultos até 01/08/2026 (backfill de histórico em andamento) */}
       {perf && (() => {
         const showAttendance = (perf.periodStart ?? "") >= "2026-08-01";
