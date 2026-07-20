@@ -1429,7 +1429,7 @@ function PerformanceTab() {
                   </tr>
                 </thead>
                 <tbody>
-                  {perf.sellers.map((s, i) => (
+                  {(scope === "seller" && sellerKey ? perf.sellers.filter((s) => s.key === sellerKey) : perf.sellers).map((s, i) => (
                     <tr key={s.key} className="border-b last:border-0 hover:bg-muted/30">
                       <td className="py-2 pl-1 text-xs text-muted-foreground">{i + 1}º</td>
                       <td>
