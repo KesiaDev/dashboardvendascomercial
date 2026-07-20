@@ -1642,6 +1642,45 @@ export type Database = {
         }
         Relationships: []
       }
+      seller_vacations: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          notes: string | null
+          seller_email: string
+          seller_name: string | null
+          start_date: string
+          status: string
+          updated_at: string
+          vacation_type: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          notes?: string | null
+          seller_email: string
+          seller_name?: string | null
+          start_date: string
+          status?: string
+          updated_at?: string
+          vacation_type?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          notes?: string | null
+          seller_email?: string
+          seller_name?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+          vacation_type?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
