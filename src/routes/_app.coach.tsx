@@ -1377,16 +1377,25 @@ function PerformanceTab() {
       {/* Feedback IA */}
       {feedback && (
         <Card className="border-fuchsia-500/30 bg-fuchsia-500/5">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-fuchsia-500" />
-              Feedback do Coach IA · {scope === "team" ? "equipe" : perf?.sellers.find((s) => s.key === sellerKey)?.name} · {rangeLabel}
+              Mensagem WhatsApp · {scope === "team" ? "equipe" : perf?.sellers.find((s) => s.key === sellerKey)?.name} · {rangeLabel}
             </CardTitle>
+            <div className="flex gap-1">
+              <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(feedback); toast.success("Copiado! Cole no WhatsApp 📋"); }}>
+                Copiar
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(feedback)}`, "_blank")}>
+                Abrir WhatsApp
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-sm whitespace-pre-wrap leading-relaxed">{feedback}</div>
+            <div className="text-sm whitespace-pre-wrap leading-relaxed font-sans">{feedback}</div>
           </CardContent>
         </Card>
+
       )}
 
       {/* Daily mini-chart */}
