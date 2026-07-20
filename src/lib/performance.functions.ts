@@ -312,17 +312,10 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       if (cur) { cur.vendas += 1; cur.faturamento += Number(s.value_eur ?? 0); }
     }
 
-    // Leads novos — Pipeline Comercial V3 (origin_name = PIPELINE_COMERCIAL-V3)
-    const { data: leads } = await supabaseAdmin
-      .from("clint_deals")
-      .select("id,contact_id,created_at,user_email,user_name")
-      .eq("origin_name", "PIPELINE_COMERCIAL-V3")
-      .gte("created_at", startTS)
-      .lte("created_at", endTS)
-      .limit(20000);
+    // Leads novos — Pipeline Comercial V3 (já buscado em paralelo acima)
     let leadsNovos = 0;
     const leadContactIds: string[] = [];
-    for (const l of leads ?? []) {
+    for (const l of leads) {
       if (!l.created_at) continue;
       leadsNovos += 1;
       if (l.contact_id) leadContactIds.push(String(l.contact_id));
