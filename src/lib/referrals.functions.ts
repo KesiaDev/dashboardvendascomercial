@@ -127,10 +127,7 @@ Uma coisa que faz muita diferença por cá: os nossos melhores alunos quase semp
 
 Conheces 3 a 5 pessoas (amigos, sócios, clientes ou pessoas do teu networking) que também pudessem beneficiar das nossas mentorias e formações?
 
-Se sim, envia-me por favor:
-• Nome
-• WhatsApp
-• Um contexto rápido (o que faz / porque faria sentido)
+Se sim, envia-me por favor o nome, o WhatsApp e um contexto rápido sobre o que fazem e porque faria sentido uma conversa.
 
 Prometo tratar cada indicação com o mesmo cuidado com que te tratei — sem pressão, apenas uma conversa de valor.
 
@@ -145,10 +142,7 @@ Uma coisa que faz muita diferença aqui: os nossos melhores alunos quase sempre 
 
 Você conhece 3 a 5 pessoas (amigos, sócios, clientes ou pessoas do seu networking) que também poderiam se beneficiar das nossas mentorias e formações?
 
-Se sim, me envia por favor:
-• Nome
-• WhatsApp
-• Um contexto rápido (o que faz / por que faria sentido)
+Se sim, me envia por favor o nome, o WhatsApp e um contexto rápido sobre o que fazem e por que faria sentido uma conversa.
 
 Prometo tratar cada indicação com o mesmo cuidado que tratei você — sem pressão, apenas uma conversa de valor.
 
