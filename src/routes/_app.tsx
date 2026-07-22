@@ -60,7 +60,8 @@ function AppLayout() {
   useEffect(() => {
     if (status !== "ready") return;
     if (admin) return;
-    if (!ALLOWED_NON_ADMIN_ROUTES.includes(pathname)) {
+    const allowed = ALLOWED_NON_ADMIN_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
+    if (!allowed) {
       navigate({ to: "/fechamento", replace: true });
     }
   }, [status, admin, pathname, navigate]);
