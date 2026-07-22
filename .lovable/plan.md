@@ -1,103 +1,59 @@
-# Coach Comercial com IA
+# Arena Comercial IA
 
-Módulo novo, nativo ao Dashcomercial, para avaliar conversas de vendas com IA e devolver insights à liderança.
+Simulador de vendas por chat (estilo WhatsApp) com clientes gerados por IA, missão diária, XP/ligas, avaliação automática e coach. Vou entregar em fases para evitar um monolito difícil de validar.
 
-## ⚠️ Ponto crítico a validar antes do código
+## Fase 1 — MVP jogável (esta entrega)
 
-A API pública da Clint (`/v1` — usada hoje) expõe `users`, `origins`, `stages` e `deals`. **Não confirmei endpoint de mensagens/conversas de WhatsApp** — testes rápidos em `/v1/messages` e `/v1/conversations` deram 404. Antes de codar a Fase 2, preciso de uma destas duas coisas:
+Escopo mínimo que já entrega valor real e é a base de tudo:
 
-- **Opção A (preferida):** você me confirma se no painel Clint existe **API de mensagens** ou **Webhook de nova mensagem** (Configurações → Integrações → API/Webhooks). Se sim, uso.
-- **Opção B (fallback):** se a Clint não expõe mensagens externamente, ativamos o webhook Clint→nosso endpoint por deal (evento "novo lead", "estágio mudou") + campo manual para colar/anexar a conversa quando a liderança pedir análise pontual.
+1. **Menu lateral** novo item "Arena Comercial IA" (`/arena`), acessível para admins + vendedores whitelisted (mesma regra de `ALLOWED_SELLER_EMAILS`).
+2. **Dashboard da Arena** (`/arena`):
+   - Cards: Nível, XP, Liga, Sequência (dias), Simulações, Taxa de sucesso, Nota média
+   - Missão diária (gerada 1x/dia por vendedor)
+   - Botão "Iniciar simulação" (usa a missão) e "Simulação livre" (dificuldade escolhida)
+   - Histórico das últimas simulações com nota
+3. **Motor de cenários**: geração de cliente virtual (persona completa — nome, perfil DISC, dores, objeções, canal, humor inicial, dificuldade Bronze→Lenda) via Lovable AI (`google/gemini-3-flash-preview`). Persona serializada em JSON e nunca repetida por vendedor.
+4. **Chat da simulação** (`/arena/sim/$id`):
+   - UI estilo WhatsApp (bolhas, timestamp, "digitando…", delays realistas por perfil)
+   - Conversa livre, sem botões nem opções pré-definidas
+   - IA mantém memória completa da conversa e do que já foi dito
+   - Estado emocional evolui (Animado, Neutro, Desconfiado, Irritado, Ocupado, Frustrado, Interessado, Seguro) baseado nas mensagens do vendedor
+   - Botão "Encerrar" → dispara avaliação
+5. **Avaliação automática** (Gemini): nota 0–100 + notas por competência (Rapport, Empatia, Escuta ativa, Descoberta, Objeções, Fechamento, CTA, Clareza, Tempo de resposta), 3 pontos fortes, 5 melhorias, resumo.
+6. **Replay comentado**: cada mensagem do vendedor recebe comentário curto da IA (✅/⚠️/❌).
+7. **XP e Liga**: XP calculado da nota + eventos (venda +120, agendou +70, tratou objeção +30, pergunta aberta +15, resposta rápida +20). Liga derivada do XP acumulado (Bronze/Prata/Ouro/Diamante/Elite/Lenda).
 
-Sigo com a Fase 1 (fundação + análise IA) enquanto isso — ela não depende dessa resposta.
+## Fase 2 — Adaptativo e social (próxima entrega, se aprovar Fase 1)
 
-## Fases
+- Coach IA cruza avaliações e sugere exercícios / vídeos da Universidade Comercial
+- Adaptativo: gerador de cenários lê competências fracas do vendedor e ataca essas lacunas
+- Conquistas / medalhas
+- Painel do Gestor (ranking, mapa de calor de competências, evolução, comparação)
+- Multiplayer (2 vendedores, mesmo cliente) e Torneios / Temporadas
+- Base de conhecimento: aprender padrões de `coach_conversations` reais (sem copiar literalmente) para enriquecer objeções
 
-### Fase 1 — Fundação (esta entrega)
+## Dados (Fase 1)
 
-**Schema (via `supabase--migration`):**
+Novas tabelas Supabase, todas com RLS por `auth.uid()` + admin bypass via `has_role`:
 
-```text
-coach_conversations
-  id uuid pk, deal_id text (fk clint_deals), seller_email text,
-  seller_name text, contact_name text, contact_email text,
-  origin_name text, stage text, deal_value numeric,
-  source text ('clint'|'manual_upload'|'webhook'),
-  first_message_at timestamptz, last_message_at timestamptz,
-  message_count int, raw_transcript text, created_at, updated_at
+- `arena_personas` — id, seller_user_id, persona (jsonb), difficulty, product, channel, created_at
+- `arena_simulations` — id, seller_user_id, persona_id, status (open/finished), started_at, ended_at, score, xp_earned, evaluation (jsonb), mission_id
+- `arena_messages` — id, simulation_id, role (seller/client), body, sent_at, ai_comment (jsonb nullable), emotion_after
+- `arena_missions` — id, seller_user_id, date, spec (jsonb), completed_simulation_id
+- `arena_progress` — seller_user_id (pk), xp, league, streak_days, last_played_date
 
-coach_messages
-  id uuid pk, conversation_id uuid fk, sent_at timestamptz,
-  direction text ('inbound'|'outbound'), sender_name text, body text
+Uploads (.docx/.pdf do Luciano Larrossa / MGT): vou parsear e usar como **contexto de produto** no prompt da IA quando o cenário for "Mentoria Gestor de Tráfego" — assim o cliente virtual conhece o produto real. Guardados em `arena_knowledge` (texto extraído).
 
-coach_analyses
-  id uuid pk, conversation_id uuid fk unique,
-  score_geral numeric(3,1), prob_fecho int, sentimento text,
-  nivel_interesse text, tempo_medio_resposta_min int,
-  qualidade int, clareza int, empatia int, rapport int,
-  descoberta int, conducao int, tentou_fechar boolean,
-  objecoes jsonb, oportunidades_perdidas jsonb,
-  sugestoes jsonb, proxima_acao text, sugestao_resposta text,
-  resumo text, model text, analyzed_at timestamptz
+## Detalhes técnicos
 
-coach_meetings         -- placeholder para Fase 3 (Meet/Fireflies)
-coach_meeting_analyses -- idem
+- Server functions em `src/lib/arena.functions.ts` (`createServerFn` + `requireSupabaseAuth`): `getArenaDashboard`, `generateDailyMission`, `startSimulation`, `sendArenaMessage` (chama Gemini com histórico + persona + emoção), `finishSimulation` (avalia + XP + comentários replay), `listSimulations`, `getSimulation`.
+- Rotas: `src/routes/_app.arena.tsx` (dashboard) e `src/routes/_app.arena.sim.$id.tsx` (chat + replay).
+- IA via Lovable AI Gateway (`LOVABLE_API_KEY` já existe), modelo `google/gemini-3-flash-preview`. Sem chave nova.
+- UI: shadcn + Tailwind, alinhada ao restante (dark-friendly). Chat com bolhas verdes/cinza estilo WhatsApp, header com avatar do "cliente", indicador de humor discreto.
+- Uploads processados 1x com `document--parse_document` e salvos em `arena_knowledge` no momento do primeiro deploy.
 
-coach_alerts
-  id uuid pk, deal_id text, conversation_id uuid, seller_email text,
-  type text ('lead_quente_sem_resposta'|'follow_up_esquecido'|
-            'intencao_compra'|'conversa_parada'|'risco_perda'|
-            'nota_baixa'), severity text, message text,
-  resolved boolean default false, created_at
+## Fora do escopo desta fase
 
-coach_config
-  id uuid pk, nota_minima int default 6,
-  horas_lead_quente int default 4, dias_sem_resposta int default 3
-```
+Multiplayer, torneios, painel gestor completo, conquistas visuais, adaptativo por lacuna, integração com Universidade Comercial — ficam para Fase 2 para manter esta entrega revisável.
 
-Todas com RLS: `authenticated` vê tudo (uso interno da liderança), `service_role` full.
-
-**Pipeline de análise (server functions):**
-
-- `src/lib/coach.functions.ts`
-  - `analyzeConversation({ conversationId })` — monta transcript, chama Lovable AI (`google/gemini-3.5-flash`) com JSON schema estrito das 17 métricas, grava em `coach_analyses`.
-  - `runAlertsScan()` — cron leve que aplica as regras de `coach_config` e insere `coach_alerts`.
-  - `uploadConversation({ dealId, transcript })` — permite colar conversa manualmente (útil enquanto Fase 2 não está pronta).
-
-**UI (`src/routes/_app.coach.tsx` + sub-rotas):**
-
-- Aba lateral nova "Coach IA" (mesmo padrão dos outros itens do menu).
-- Home do módulo: cards KPI (nota média equipa, % conversas com tentativa de fecho, tempo médio resposta, conversas em risco), ranking vendedores por qualidade, top objeções, top motivos de perda, gráfico evolução da nota semanal.
-- Filtros: período (mesmo componente do funil), vendedor, origem, faixa de nota.
-- Lista de conversas com nota, sentimento, prob. fecho, última msg, status alerta.
-- Detalhe (`/coach/$conversationId`): resumo IA, radar de competências, timeline mensagens, objeções, próxima ação, sugestão de resposta.
-- Painel "Alertas" com filtros por tipo/severidade e ação "marcar como tratado".
-- Config (só admin `kesia@llmidia.com`): nota mínima, thresholds de alerta.
-
-### Fase 2 — Ingestão automática da Clint (depende da resposta acima)
-
-- Se Clint expõe API de mensagens → sync horário em `src/routes/api/public/sync.clint-messages.ts` popula `coach_conversations`/`coach_messages` e dispara `analyzeConversation` para conversas novas ou com msgs novas.
-- Se só tiver webhook → endpoint `src/routes/api/public/webhook.clint.ts` com verificação de assinatura, mesmo destino.
-- Deduplicação por `(deal_id, sent_at, body_hash)`.
-
-### Fase 3 — Reuniões (depois)
-
-- Placeholder de upload de transcrição (colar texto ou .txt).
-- Quando você definir Meet/Fireflies, ligo o conector.
-
-## Regras de qualidade
-
-- IA nunca inventa: se a conversa tem <3 mensagens, análise devolve `insufficient_data` em vez de nota chutada.
-- Toda análise guarda o `model` usado + `analyzed_at` para auditoria.
-- Reanálise só roda se `last_message_at > analyzed_at`.
-- Todo texto de UI em PT-PT/PT-BR consistente com o resto do app.
-
-## Não escopo (para não inflar)
-
-- Reunião via Meet/Zoom automática (Fase 3).
-- Envio automático de resposta ao cliente (só sugere, nunca envia).
-- Treino personalizado do modelo — usamos prompt engineering + Lovable AI.
-
-## Entregável desta rodada
-
-Fase 1 completa: schema + `coach.functions.ts` + rota `/coach` com home, lista, detalhe, alertas e config. Upload manual funcionando. Deixo Fase 2 destravada assim que você me confirmar A ou B lá em cima.
+Confirma que posso seguir com a Fase 1 assim descrita?
