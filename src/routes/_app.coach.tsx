@@ -85,9 +85,20 @@ function scoreColor(n: number | null | undefined) {
 }
 
 function CoachPage() {
-  const [tab, setTab] = useState("visao");
+  const [user, setUser] = useState<{ email: string | null; user_metadata?: any } | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user ? { email: data.user.email ?? null, user_metadata: data.user.user_metadata } : null);
+    });
+  }, []);
+  const isAdmin = isAdminUser(user);
+  const sellerNameGuess = user?.email ? displaySellerName(user.email) : null;
+  const userInfo: CoachUserInfo = { isAdmin, email: user?.email ?? null, sellerNameGuess };
+
+  const [tab, setTab] = useState(isAdmin ? "visao" : "performance");
+  useEffect(() => { if (!isAdmin) setTab("performance"); }, [isAdmin]);
   const qc = useQueryClient();
-  const { data: cfg } = useQuery({ queryKey: ["coach-config"], queryFn: () => getCoachConfigFn() });
+  const { data: cfg } = useQuery({ queryKey: ["coach-config"], queryFn: () => getCoachConfigFn(), enabled: isAdmin });
 
   const autoEnabled = cfg?.auto_analysis ?? true;
   const analysisIntervalMs = (cfg?.analysis_interval_hours ?? 1) * 60 * 60 * 1000;
@@ -95,14 +106,15 @@ function CoachPage() {
   const analysisTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    if (!isAdmin) return;
     scanTimerRef.current = setInterval(async () => {
       try { await runAlertsScanFn(); qc.invalidateQueries({ queryKey: ["coach-alerts"] }); } catch {}
     }, 5 * 60 * 1000);
     return () => { if (scanTimerRef.current) clearInterval(scanTimerRef.current); };
-  }, [qc]);
+  }, [qc, isAdmin]);
 
   useEffect(() => {
-    if (!autoEnabled) return;
+    if (!isAdmin || !autoEnabled) return;
     const runAnalysis = async () => {
       try {
         const r = await runAutoAnalysisFn();
@@ -115,18 +127,21 @@ function CoachPage() {
     runAnalysis();
     analysisTimerRef.current = setInterval(runAnalysis, analysisIntervalMs);
     return () => { if (analysisTimerRef.current) clearInterval(analysisTimerRef.current); };
-  }, [autoEnabled, analysisIntervalMs, qc]);
+  }, [autoEnabled, analysisIntervalMs, qc, isAdmin]);
 
   return (
+    <CoachUserCtx.Provider value={userInfo}>
     <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
       <div className="flex items-center gap-3">
         <Sparkles className="h-6 w-6 text-muted-foreground" />
         <div>
           <h1 className="text-xl md:text-2xl font-bold">Análise Comercial</h1>
-          <p className="text-xs text-muted-foreground">Análise inteligente das conversas dos vendedores</p>
+          <p className="text-xs text-muted-foreground">
+            {isAdmin ? "Análise inteligente das conversas dos vendedores" : `Sua visão pessoal${sellerNameGuess ? " · " + sellerNameGuess : ""}`}
+          </p>
         </div>
 
-        {autoEnabled && (
+        {isAdmin && autoEnabled && (
           <Badge variant="outline" className="ml-auto text-[10px] text-emerald-600 border-emerald-500/40">
             ● auto-análise ativa
           </Badge>
@@ -135,25 +150,26 @@ function CoachPage() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="w-full flex-wrap h-auto">
-          <TabsTrigger value="visao"><TrendingUp className="h-4 w-4 mr-1" />Visão geral</TabsTrigger>
-          <TabsTrigger value="conversas"><MessageSquare className="h-4 w-4 mr-1" />Conversas</TabsTrigger>
+          {isAdmin && <TabsTrigger value="visao"><TrendingUp className="h-4 w-4 mr-1" />Visão geral</TabsTrigger>}
           <TabsTrigger value="performance"><Award className="h-4 w-4 mr-1" />Performance</TabsTrigger>
-          <TabsTrigger value="alertas"><AlertTriangle className="h-4 w-4 mr-1" />Alertas</TabsTrigger>
+          <TabsTrigger value="conversas"><MessageSquare className="h-4 w-4 mr-1" />Conversas</TabsTrigger>
           <TabsTrigger value="ligacoes"><Phone className="h-4 w-4 mr-1" />Ligações</TabsTrigger>
-          <TabsTrigger value="upload"><Upload className="h-4 w-4 mr-1" />Nova análise</TabsTrigger>
-          <TabsTrigger value="config"><Settings className="h-4 w-4 mr-1" />Config</TabsTrigger>
-          <TabsTrigger value="integracao"><Zap className="h-4 w-4 mr-1" />Integração Clint</TabsTrigger>
+          {isAdmin && <TabsTrigger value="alertas"><AlertTriangle className="h-4 w-4 mr-1" />Alertas</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="upload"><Upload className="h-4 w-4 mr-1" />Nova análise</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="config"><Settings className="h-4 w-4 mr-1" />Config</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="integracao"><Zap className="h-4 w-4 mr-1" />Integração Clint</TabsTrigger>}
         </TabsList>
-        <TabsContent value="visao"><VisaoGeral /></TabsContent>
-        <TabsContent value="conversas"><Conversas /></TabsContent>
+        {isAdmin && <TabsContent value="visao"><VisaoGeral /></TabsContent>}
         <TabsContent value="performance"><PerformanceTab /></TabsContent>
-        <TabsContent value="alertas"><Alertas /></TabsContent>
+        <TabsContent value="conversas"><Conversas /></TabsContent>
         <TabsContent value="ligacoes"><LigacoesTab /></TabsContent>
-        <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>
-        <TabsContent value="config"><ConfigTab /></TabsContent>
-        <TabsContent value="integracao"><IntegracaoClint /></TabsContent>
+        {isAdmin && <TabsContent value="alertas"><Alertas /></TabsContent>}
+        {isAdmin && <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>}
+        {isAdmin && <TabsContent value="config"><ConfigTab /></TabsContent>}
+        {isAdmin && <TabsContent value="integracao"><IntegracaoClint /></TabsContent>}
       </Tabs>
     </div>
+    </CoachUserCtx.Provider>
   );
 }
 
