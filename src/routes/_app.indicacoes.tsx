@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import {
   listReferralsFn, createReferralFn, updateReferralStatusFn,
-  deleteReferralFn, buildReferralMessage, REFERRAL_STATUSES, type ReferralStatus,
+  deleteReferralFn, buildReferralMessage, buildReferralMessageNaoFechou,
+  REFERRAL_STATUSES, type ReferralStatus,
 } from "@/lib/referrals.functions";
 import { SELLERS, PRODUCTS } from "@/lib/manual-sales.functions";
 
