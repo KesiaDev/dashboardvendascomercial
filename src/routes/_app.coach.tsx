@@ -34,10 +34,16 @@ import {
 } from "@/lib/coach.functions";
 import { getHotmartWebhookTokenFn } from "@/lib/hotmart-webhook.functions";
 import { syncCcpbxCallsFn, listCcpbxCallsFn, analyzeCallFn, type CallRow } from "@/lib/ccpbx.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { isAdminUser } from "@/lib/auth";
 
 export const Route = createFileRoute("/_app/coach")({
   component: CoachPage,
 });
+
+type CoachUserInfo = { isAdmin: boolean; email: string | null; sellerNameGuess: string | null };
+const CoachUserCtx = React.createContext<CoachUserInfo>({ isAdmin: true, email: null, sellerNameGuess: null });
+const useCoachUser = () => React.useContext(CoachUserCtx);
 
 function fmtDate(iso: string | null | undefined) {
   if (!iso) return "—";
@@ -79,9 +85,20 @@ function scoreColor(n: number | null | undefined) {
 }
 
 function CoachPage() {
-  const [tab, setTab] = useState("visao");
+  const [user, setUser] = useState<{ email: string | null; user_metadata?: any } | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user ? { email: data.user.email ?? null, user_metadata: data.user.user_metadata } : null);
+    });
+  }, []);
+  const isAdmin = isAdminUser(user);
+  const sellerNameGuess = user?.email ? displaySellerName(user.email) : null;
+  const userInfo: CoachUserInfo = { isAdmin, email: user?.email ?? null, sellerNameGuess };
+
+  const [tab, setTab] = useState(isAdmin ? "visao" : "performance");
+  useEffect(() => { if (!isAdmin) setTab("performance"); }, [isAdmin]);
   const qc = useQueryClient();
-  const { data: cfg } = useQuery({ queryKey: ["coach-config"], queryFn: () => getCoachConfigFn() });
+  const { data: cfg } = useQuery({ queryKey: ["coach-config"], queryFn: () => getCoachConfigFn(), enabled: isAdmin });
 
   const autoEnabled = cfg?.auto_analysis ?? true;
   const analysisIntervalMs = (cfg?.analysis_interval_hours ?? 1) * 60 * 60 * 1000;
@@ -89,14 +106,15 @@ function CoachPage() {
   const analysisTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    if (!isAdmin) return;
     scanTimerRef.current = setInterval(async () => {
       try { await runAlertsScanFn(); qc.invalidateQueries({ queryKey: ["coach-alerts"] }); } catch {}
     }, 5 * 60 * 1000);
     return () => { if (scanTimerRef.current) clearInterval(scanTimerRef.current); };
-  }, [qc]);
+  }, [qc, isAdmin]);
 
   useEffect(() => {
-    if (!autoEnabled) return;
+    if (!isAdmin || !autoEnabled) return;
     const runAnalysis = async () => {
       try {
         const r = await runAutoAnalysisFn();
@@ -109,18 +127,21 @@ function CoachPage() {
     runAnalysis();
     analysisTimerRef.current = setInterval(runAnalysis, analysisIntervalMs);
     return () => { if (analysisTimerRef.current) clearInterval(analysisTimerRef.current); };
-  }, [autoEnabled, analysisIntervalMs, qc]);
+  }, [autoEnabled, analysisIntervalMs, qc, isAdmin]);
 
   return (
+    <CoachUserCtx.Provider value={userInfo}>
     <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
       <div className="flex items-center gap-3">
         <Sparkles className="h-6 w-6 text-muted-foreground" />
         <div>
           <h1 className="text-xl md:text-2xl font-bold">Análise Comercial</h1>
-          <p className="text-xs text-muted-foreground">Análise inteligente das conversas dos vendedores</p>
+          <p className="text-xs text-muted-foreground">
+            {isAdmin ? "Análise inteligente das conversas dos vendedores" : `Sua visão pessoal${sellerNameGuess ? " · " + sellerNameGuess : ""}`}
+          </p>
         </div>
 
-        {autoEnabled && (
+        {isAdmin && autoEnabled && (
           <Badge variant="outline" className="ml-auto text-[10px] text-emerald-600 border-emerald-500/40">
             ● auto-análise ativa
           </Badge>
@@ -129,25 +150,26 @@ function CoachPage() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="w-full flex-wrap h-auto">
-          <TabsTrigger value="visao"><TrendingUp className="h-4 w-4 mr-1" />Visão geral</TabsTrigger>
-          <TabsTrigger value="conversas"><MessageSquare className="h-4 w-4 mr-1" />Conversas</TabsTrigger>
+          {isAdmin && <TabsTrigger value="visao"><TrendingUp className="h-4 w-4 mr-1" />Visão geral</TabsTrigger>}
           <TabsTrigger value="performance"><Award className="h-4 w-4 mr-1" />Performance</TabsTrigger>
-          <TabsTrigger value="alertas"><AlertTriangle className="h-4 w-4 mr-1" />Alertas</TabsTrigger>
+          <TabsTrigger value="conversas"><MessageSquare className="h-4 w-4 mr-1" />Conversas</TabsTrigger>
           <TabsTrigger value="ligacoes"><Phone className="h-4 w-4 mr-1" />Ligações</TabsTrigger>
-          <TabsTrigger value="upload"><Upload className="h-4 w-4 mr-1" />Nova análise</TabsTrigger>
-          <TabsTrigger value="config"><Settings className="h-4 w-4 mr-1" />Config</TabsTrigger>
-          <TabsTrigger value="integracao"><Zap className="h-4 w-4 mr-1" />Integração Clint</TabsTrigger>
+          {isAdmin && <TabsTrigger value="alertas"><AlertTriangle className="h-4 w-4 mr-1" />Alertas</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="upload"><Upload className="h-4 w-4 mr-1" />Nova análise</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="config"><Settings className="h-4 w-4 mr-1" />Config</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="integracao"><Zap className="h-4 w-4 mr-1" />Integração Clint</TabsTrigger>}
         </TabsList>
-        <TabsContent value="visao"><VisaoGeral /></TabsContent>
-        <TabsContent value="conversas"><Conversas /></TabsContent>
+        {isAdmin && <TabsContent value="visao"><VisaoGeral /></TabsContent>}
         <TabsContent value="performance"><PerformanceTab /></TabsContent>
-        <TabsContent value="alertas"><Alertas /></TabsContent>
+        <TabsContent value="conversas"><Conversas /></TabsContent>
         <TabsContent value="ligacoes"><LigacoesTab /></TabsContent>
-        <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>
-        <TabsContent value="config"><ConfigTab /></TabsContent>
-        <TabsContent value="integracao"><IntegracaoClint /></TabsContent>
+        {isAdmin && <TabsContent value="alertas"><Alertas /></TabsContent>}
+        {isAdmin && <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>}
+        {isAdmin && <TabsContent value="config"><ConfigTab /></TabsContent>}
+        {isAdmin && <TabsContent value="integracao"><IntegracaoClint /></TabsContent>}
       </Tabs>
     </div>
+    </CoachUserCtx.Provider>
   );
 }
 
@@ -320,6 +342,7 @@ function VisaoGeral() {
 }
 
 function Conversas() {
+  const { isAdmin, sellerNameGuess } = useCoachUser();
   const qc = useQueryClient();
   const { data: convs = [], isLoading } = useQuery({ queryKey: ["coach-convs"], queryFn: () => listCoachConversationsFn() });
   const [q, setQ] = useState("");
@@ -387,7 +410,12 @@ function Conversas() {
 
   const filtered = useMemo(() => {
     let list = convs;
-    if (sellerFilter) {
+    if (!isAdmin && sellerNameGuess) {
+      const target = sellerNameGuess.toLowerCase();
+      list = list.filter((c: any) =>
+        displaySellerName(c.seller_name ?? c.seller_email ?? "").toLowerCase() === target
+      );
+    } else if (sellerFilter) {
       list = list.filter((c: any) => (c.seller_email ?? c.seller_name ?? "") === sellerFilter);
     }
     if (q) {
@@ -402,22 +430,24 @@ function Conversas() {
       list = list.filter((c: any) => (c.analysis?.score_geral ?? 0) >= m);
     }
     return list;
-  }, [convs, q, minScore, sellerFilter]);
+  }, [convs, q, minScore, sellerFilter, isAdmin, sellerNameGuess]);
 
   return (
     <div className="space-y-3 mt-4">
-      <TeamInsightsPanel />
+      {isAdmin && <TeamInsightsPanel />}
       <div className="flex flex-wrap gap-2 items-center">
-        <select
-          value={sellerFilter}
-          onChange={(e) => setSellerFilter(e.target.value)}
-          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-        >
-          <option value="">Todos os vendedores</option>
-          {sellerOptions.map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </select>
+        {isAdmin && (
+          <select
+            value={sellerFilter}
+            onChange={(e) => setSellerFilter(e.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          >
+            <option value="">Todos os vendedores</option>
+            {sellerOptions.map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+        )}
         <Input placeholder="Buscar por vendedor, cliente, deal…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
         <Input placeholder="Nota mínima" type="number" min={0} max={10} value={minScore} onChange={(e) => setMinScore(e.target.value)} className="max-w-[120px]" />
         {(sellerFilter || q || minScore) && (
@@ -426,6 +456,7 @@ function Conversas() {
         <span className="text-xs text-muted-foreground ml-auto">{filtered.length} de {convs.length}</span>
       </div>
 
+      {isAdmin && (
       <div className="flex flex-wrap gap-2 items-center">
         <Button
           size="sm"
@@ -492,6 +523,7 @@ function Conversas() {
           </>
         )}
       </div>
+      )}
 
 
 
@@ -1202,8 +1234,9 @@ function SellerAvatar({ name, size = 32 }: { name: string; size?: number }) {
 }
 
 function PerformanceTab() {
+  const { isAdmin, sellerNameGuess } = useCoachUser();
   const [range, setRange] = useState<PerfRange>("week");
-  const [scope, setScope] = useState<"team" | "seller">("team");
+  const [scope, setScope] = useState<"team" | "seller">(isAdmin ? "team" : "seller");
   const [sellerKey, setSellerKey] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string>("");
   const todayISO = new Date().toISOString().slice(0, 10);
@@ -1214,9 +1247,21 @@ function PerformanceTab() {
   const { data: perf, isLoading, isFetching, error: perfError } = useQuery({
     queryKey: ["coach-perf", range, effectiveRefDate ?? "today"],
     queryFn: () => fetchPerformanceFn({ data: { range, refDate: effectiveRefDate } }),
-    placeholderData: (prev) => prev, // mantém os KPIs visíveis durante refetch (evita "zerar")
+    placeholderData: (prev) => prev,
     staleTime: 60_000,
   });
+
+  // Auto-locka o vendedor logado para não-admins
+  useEffect(() => {
+    if (isAdmin || !perf || sellerKey) return;
+    const target = sellerNameGuess?.toLowerCase();
+    if (!target) return;
+    const match = perf.sellers.find(
+      (s) => displaySellerName(s.name).toLowerCase() === target
+        || displaySellerName(s.email ?? "").toLowerCase() === target
+    );
+    if (match) { setScope("seller"); setSellerKey(match.key); }
+  }, [isAdmin, perf, sellerNameGuess, sellerKey]);
 
   const fbMutation = useMutation({
     mutationFn: () => generatePerformanceFeedbackFn({ data: { range, scope, sellerKey: sellerKey ?? undefined, refDate: effectiveRefDate } }),
@@ -1254,17 +1299,19 @@ function PerformanceTab() {
           />
         )}
         <div className="ml-auto flex items-center gap-2">
-          <div className="inline-flex rounded-lg border p-1 bg-card">
-            <button
-              onClick={() => { setScope("team"); setSellerKey(null); }}
-              className={"px-3 py-1 text-xs rounded-md " + (scope === "team" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
-            >Equipe</button>
-            <button
-              onClick={() => setScope("seller")}
-              className={"px-3 py-1 text-xs rounded-md " + (scope === "seller" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
-            >Por vendedor</button>
-          </div>
-          {scope === "seller" && perf && (
+          {isAdmin && (
+            <div className="inline-flex rounded-lg border p-1 bg-card">
+              <button
+                onClick={() => { setScope("team"); setSellerKey(null); }}
+                className={"px-3 py-1 text-xs rounded-md " + (scope === "team" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
+              >Equipe</button>
+              <button
+                onClick={() => setScope("seller")}
+                className={"px-3 py-1 text-xs rounded-md " + (scope === "seller" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
+              >Por vendedor</button>
+            </div>
+          )}
+          {isAdmin && scope === "seller" && perf && (
             <select
               className="text-xs border rounded-md px-2 py-1 bg-background"
               value={sellerKey ?? ""}
@@ -1276,14 +1323,16 @@ function PerformanceTab() {
               ))}
             </select>
           )}
-          <Button
-            size="sm"
-            onClick={() => fbMutation.mutate()}
-            disabled={fbMutation.isPending || (scope === "seller" && !sellerKey)}
-          >
-            <Sparkles className="h-4 w-4 mr-1" />
-            {fbMutation.isPending ? "Gerando..." : "Gerar feedback IA"}
-          </Button>
+          {isAdmin && (
+            <Button
+              size="sm"
+              onClick={() => fbMutation.mutate()}
+              disabled={fbMutation.isPending || (scope === "seller" && !sellerKey)}
+            >
+              <Sparkles className="h-4 w-4 mr-1" />
+              {fbMutation.isPending ? "Gerando..." : "Gerar feedback IA"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1434,7 +1483,7 @@ function PerformanceTab() {
                     <th className="text-right" title="Vendas ÷ Leads">Conv. Lead</th>
                     <th className="text-right" title="Vendas ÷ Atendimentos">Conv. Atend.</th>
                     <th className="text-right">Nota média</th>
-                    <th></th>
+                    {isAdmin && <th></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -1460,15 +1509,17 @@ function PerformanceTab() {
                         {s.notaMedia != null ? s.notaMedia.toFixed(1) : "—"}
                       </td>
 
-                      <td className="text-right">
-                        <button
-                          onClick={() => { setScope("seller"); setSellerKey(s.key); fbMutation.mutate(); }}
-                          className="text-[10px] text-fuchsia-600 hover:underline"
-                          title="Gerar feedback IA para este vendedor"
-                        >
-                          <Sparkles className="h-3 w-3 inline" /> IA
-                        </button>
-                      </td>
+                      {isAdmin && (
+                        <td className="text-right">
+                          <button
+                            onClick={() => { setScope("seller"); setSellerKey(s.key); fbMutation.mutate(); }}
+                            className="text-[10px] text-fuchsia-600 hover:underline"
+                            title="Gerar feedback IA para este vendedor"
+                          >
+                            <Sparkles className="h-3 w-3 inline" /> IA
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -1547,6 +1598,7 @@ function fmtDur(s: number) {
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 function LigacoesTab() {
+  const { isAdmin, sellerNameGuess } = useCoachUser();
   const qc = useQueryClient();
   const [range, setRange] = useState<PerfRange>("day");
   const [refDate, setRefDate] = useState<Date>(new Date());
@@ -1595,7 +1647,12 @@ function LigacoesTab() {
 
   const list = useMemo(() => {
     let l = allCalls;
-    if (sellerFilter) {
+    if (!isAdmin && sellerNameGuess) {
+      const target = sellerNameGuess.toLowerCase();
+      l = l.filter((c) =>
+        displaySellerName(c.agent_name ?? c.agent_email ?? c.agent_user ?? "").toLowerCase() === target
+      );
+    } else if (sellerFilter) {
       l = l.filter((c) => (c.agent_email ?? c.agent_name ?? c.agent_user ?? "") === sellerFilter);
     }
     if (q) {
@@ -1607,7 +1664,7 @@ function LigacoesTab() {
         (c.to_number ?? "").toLowerCase().includes(s));
     }
     return l;
-  }, [allCalls, sellerFilter, q]);
+  }, [allCalls, sellerFilter, q, isAdmin, sellerNameGuess]);
 
   const totalDur = list.reduce((a, c) => a + (c.duration_sec ?? 0), 0);
   const analyzed = list.filter(c => c.score != null).length;
@@ -1673,16 +1730,18 @@ function LigacoesTab() {
             <Badge variant="secondary" className="text-[10px]">
               {bounds.label}
             </Badge>
-            <select
-              value={sellerFilter}
-              onChange={(e) => setSellerFilter(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-            >
-              <option value="">Todos os vendedores</option>
-              {sellerOptions.map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
+            {isAdmin && (
+              <select
+                value={sellerFilter}
+                onChange={(e) => setSellerFilter(e.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+              >
+                <option value="">Todos os vendedores</option>
+                {sellerOptions.map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+            )}
             <Input placeholder="Buscar por agente, contato, número…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs h-9" />
             {(sellerFilter || q) && (
               <Button size="sm" variant="ghost" onClick={() => { setSellerFilter(""); setQ(""); }}>Limpar</Button>

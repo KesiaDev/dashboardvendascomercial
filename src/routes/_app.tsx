@@ -21,8 +21,8 @@ const ALL_NAV_ITEMS = [
   { to: "/ranking",             label: "Ranking",            icon: Trophy,           adminOnly: true },
   { to: "/metas-comercial",     label: "Metas Comercial",    icon: Target,           adminOnly: true },
   { to: "/comissionamento",     label: "Comissionamento",    icon: DollarSign,       adminOnly: true },
-  { to: "/coach",               label: "Análise Comercial",  icon: Sparkles,         adminOnly: true },
-  { to: "/indicacoes",          label: "Indicações",         icon: Share2,           adminOnly: true },
+  { to: "/coach",               label: "Análise Comercial",  icon: Sparkles,         adminOnly: false },
+  { to: "/indicacoes",          label: "Indicações",         icon: Share2,           adminOnly: false },
   { to: "/usuarios",            label: "Usuários",           icon: Users,            adminOnly: true },
 ] as const;
 

@@ -17,4 +17,4 @@ export function isAdminUser(user: MaybeUser): boolean {
   return role === "admin";
 }
 
-export const ALLOWED_NON_ADMIN_ROUTES = ["/fechamento", "/fechamento-semanal", "/agenda", "/ferias"];
+export const ALLOWED_NON_ADMIN_ROUTES = ["/fechamento", "/fechamento-semanal", "/agenda", "/ferias", "/indicacoes", "/coach"];
