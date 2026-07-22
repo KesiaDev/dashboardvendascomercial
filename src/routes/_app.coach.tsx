@@ -1647,7 +1647,12 @@ function LigacoesTab() {
 
   const list = useMemo(() => {
     let l = allCalls;
-    if (sellerFilter) {
+    if (!isAdmin && sellerNameGuess) {
+      const target = sellerNameGuess.toLowerCase();
+      l = l.filter((c) =>
+        displaySellerName(c.agent_name ?? c.agent_email ?? c.agent_user ?? "").toLowerCase() === target
+      );
+    } else if (sellerFilter) {
       l = l.filter((c) => (c.agent_email ?? c.agent_name ?? c.agent_user ?? "") === sellerFilter);
     }
     if (q) {
@@ -1659,7 +1664,7 @@ function LigacoesTab() {
         (c.to_number ?? "").toLowerCase().includes(s));
     }
     return l;
-  }, [allCalls, sellerFilter, q]);
+  }, [allCalls, sellerFilter, q, isAdmin, sellerNameGuess]);
 
   const totalDur = list.reduce((a, c) => a + (c.duration_sec ?? 0), 0);
   const analyzed = list.filter(c => c.score != null).length;
