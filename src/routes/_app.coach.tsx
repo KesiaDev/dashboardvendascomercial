@@ -1289,17 +1289,19 @@ function PerformanceTab() {
           />
         )}
         <div className="ml-auto flex items-center gap-2">
-          <div className="inline-flex rounded-lg border p-1 bg-card">
-            <button
-              onClick={() => { setScope("team"); setSellerKey(null); }}
-              className={"px-3 py-1 text-xs rounded-md " + (scope === "team" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
-            >Equipe</button>
-            <button
-              onClick={() => setScope("seller")}
-              className={"px-3 py-1 text-xs rounded-md " + (scope === "seller" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
-            >Por vendedor</button>
-          </div>
-          {scope === "seller" && perf && (
+          {isAdmin && (
+            <div className="inline-flex rounded-lg border p-1 bg-card">
+              <button
+                onClick={() => { setScope("team"); setSellerKey(null); }}
+                className={"px-3 py-1 text-xs rounded-md " + (scope === "team" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
+              >Equipe</button>
+              <button
+                onClick={() => setScope("seller")}
+                className={"px-3 py-1 text-xs rounded-md " + (scope === "seller" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
+              >Por vendedor</button>
+            </div>
+          )}
+          {isAdmin && scope === "seller" && perf && (
             <select
               className="text-xs border rounded-md px-2 py-1 bg-background"
               value={sellerKey ?? ""}
@@ -1311,14 +1313,16 @@ function PerformanceTab() {
               ))}
             </select>
           )}
-          <Button
-            size="sm"
-            onClick={() => fbMutation.mutate()}
-            disabled={fbMutation.isPending || (scope === "seller" && !sellerKey)}
-          >
-            <Sparkles className="h-4 w-4 mr-1" />
-            {fbMutation.isPending ? "Gerando..." : "Gerar feedback IA"}
-          </Button>
+          {isAdmin && (
+            <Button
+              size="sm"
+              onClick={() => fbMutation.mutate()}
+              disabled={fbMutation.isPending || (scope === "seller" && !sellerKey)}
+            >
+              <Sparkles className="h-4 w-4 mr-1" />
+              {fbMutation.isPending ? "Gerando..." : "Gerar feedback IA"}
+            </Button>
+          )}
         </div>
       </div>
 
