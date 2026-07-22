@@ -149,7 +149,7 @@ function ArenaDashboard() {
               <Play className="h-4 w-4 mr-1" />Iniciar simulação livre
             </Button>
             {data.openSim && (
-              <Button variant="outline" onClick={() => navigate({ to: "/arena/sim/$id", params: { id: data.openSim.id } })}>
+              <Button variant="outline" onClick={() => navigate({ to: "/arena/sim/$id", params: { id: data.openSim!.id } })}>
                 Retomar simulação aberta
               </Button>
             )}
