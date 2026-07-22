@@ -1473,7 +1473,7 @@ function PerformanceTab() {
                     <th className="text-right" title="Vendas ÷ Leads">Conv. Lead</th>
                     <th className="text-right" title="Vendas ÷ Atendimentos">Conv. Atend.</th>
                     <th className="text-right">Nota média</th>
-                    <th></th>
+                    {isAdmin && <th></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -1499,17 +1499,17 @@ function PerformanceTab() {
                         {s.notaMedia != null ? s.notaMedia.toFixed(1) : "—"}
                       </td>
 
-                      <td className="text-right">
-                        <button
-                          onClick={() => { setScope("seller"); setSellerKey(s.key); fbMutation.mutate(); }}
-                          className="text-[10px] text-fuchsia-600 hover:underline"
-                          title="Gerar feedback IA para este vendedor"
-                        >
-                          <Sparkles className="h-3 w-3 inline" /> IA
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                      {isAdmin && (
+                        <td className="text-right">
+                          <button
+                            onClick={() => { setScope("seller"); setSellerKey(s.key); fbMutation.mutate(); }}
+                            className="text-[10px] text-fuchsia-600 hover:underline"
+                            title="Gerar feedback IA para este vendedor"
+                          >
+                            <Sparkles className="h-3 w-3 inline" /> IA
+                          </button>
+                        </td>
+                      )}
                 </tbody>
               </table>
             )}
