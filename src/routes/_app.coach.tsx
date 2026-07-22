@@ -456,6 +456,7 @@ function Conversas() {
         <span className="text-xs text-muted-foreground ml-auto">{filtered.length} de {convs.length}</span>
       </div>
 
+      {isAdmin && (
       <div className="flex flex-wrap gap-2 items-center">
         <Button
           size="sm"
