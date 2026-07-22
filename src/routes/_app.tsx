@@ -1,6 +1,6 @@
 import { Link, Outlet, createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ClipboardCheck, CalendarDays, CalendarClock, Trophy, DollarSign, Menu, Sparkles, Share2, LogOut, Users, Target, Plane } from "lucide-react";
+import { ClipboardCheck, CalendarDays, CalendarClock, Trophy, DollarSign, Menu, Sparkles, Share2, LogOut, Users, Target, Plane, Swords } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -22,6 +22,7 @@ const ALL_NAV_ITEMS = [
   { to: "/metas-comercial",     label: "Metas Comercial",    icon: Target,           adminOnly: true },
   { to: "/comissionamento",     label: "Comissionamento",    icon: DollarSign,       adminOnly: true },
   { to: "/coach",               label: "Análise Comercial",  icon: Sparkles,         adminOnly: false },
+  { to: "/arena",               label: "Arena Comercial IA", icon: Swords,           adminOnly: false },
   { to: "/indicacoes",          label: "Indicações",         icon: Share2,           adminOnly: false },
   { to: "/usuarios",            label: "Usuários",           icon: Users,            adminOnly: true },
 ] as const;
