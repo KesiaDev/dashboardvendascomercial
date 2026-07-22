@@ -342,6 +342,7 @@ function VisaoGeral() {
 }
 
 function Conversas() {
+  const { isAdmin, sellerNameGuess } = useCoachUser();
   const qc = useQueryClient();
   const { data: convs = [], isLoading } = useQuery({ queryKey: ["coach-convs"], queryFn: () => listCoachConversationsFn() });
   const [q, setQ] = useState("");
