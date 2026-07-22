@@ -34,10 +34,16 @@ import {
 } from "@/lib/coach.functions";
 import { getHotmartWebhookTokenFn } from "@/lib/hotmart-webhook.functions";
 import { syncCcpbxCallsFn, listCcpbxCallsFn, analyzeCallFn, type CallRow } from "@/lib/ccpbx.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { isAdminUser } from "@/lib/auth";
 
 export const Route = createFileRoute("/_app/coach")({
   component: CoachPage,
 });
+
+type CoachUserInfo = { isAdmin: boolean; email: string | null; sellerNameGuess: string | null };
+const CoachUserCtx = React.createContext<CoachUserInfo>({ isAdmin: true, email: null, sellerNameGuess: null });
+const useCoachUser = () => React.useContext(CoachUserCtx);
 
 function fmtDate(iso: string | null | undefined) {
   if (!iso) return "—";
