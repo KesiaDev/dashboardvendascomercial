@@ -17,7 +17,7 @@ export function isAdminUser(user: MaybeUser): boolean {
   return role === "admin";
 }
 
-export const ALLOWED_NON_ADMIN_ROUTES = ["/fechamento", "/fechamento-semanal", "/agenda", "/ferias", "/indicacoes", "/coach"];
+export const ALLOWED_NON_ADMIN_ROUTES = ["/fechamento", "/fechamento-semanal", "/agenda", "/ferias", "/indicacoes", "/coach", "/arena"];
 
 // Vendedores autorizados a ver a visão individual de Performance/Conversas/Ligações no Coach.
 // Qualquer outro utilizador não-admin vê essas abas vazias.
