@@ -42,8 +42,8 @@ export const Route = createFileRoute("/_app/coach")({
   component: CoachPage,
 });
 
-type CoachUserInfo = { isAdmin: boolean; email: string | null; sellerNameGuess: string | null };
-const CoachUserCtx = React.createContext<CoachUserInfo>({ isAdmin: true, email: null, sellerNameGuess: null });
+type CoachUserInfo = { isAdmin: boolean; email: string | null; sellerNameGuess: string | null; isAllowedSeller: boolean };
+const CoachUserCtx = React.createContext<CoachUserInfo>({ isAdmin: true, email: null, sellerNameGuess: null, isAllowedSeller: false });
 const useCoachUser = () => React.useContext(CoachUserCtx);
 
 function fmtDate(iso: string | null | undefined) {
