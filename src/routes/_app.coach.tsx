@@ -94,7 +94,8 @@ function CoachPage() {
   }, []);
   const isAdmin = isAdminUser(user);
   const sellerNameGuess = user?.email ? displaySellerName(user.email) : null;
-  const userInfo: CoachUserInfo = { isAdmin, email: user?.email ?? null, sellerNameGuess };
+  const isAllowedSeller = isAllowedSellerEmail(user?.email);
+  const userInfo: CoachUserInfo = { isAdmin, email: user?.email ?? null, sellerNameGuess, isAllowedSeller };
 
   const [tab, setTab] = useState(isAdmin ? "visao" : "performance");
   useEffect(() => { if (!isAdmin) setTab("performance"); }, [isAdmin]);
