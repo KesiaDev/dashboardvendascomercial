@@ -1510,6 +1510,8 @@ function PerformanceTab() {
                           </button>
                         </td>
                       )}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             )}
