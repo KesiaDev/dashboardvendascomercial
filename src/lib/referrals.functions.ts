@@ -165,10 +165,7 @@ Entretanto, posso pedir-te um favor rápido? Boa parte das pessoas que ajudamos 
 
 Conheces 3 a 5 pessoas (amigos, sócios, clientes ou pessoas do teu networking) que estejam a querer crescer com marketing, vendas ou tráfego e que fizessem sentido para uma conversa como a que tivemos?
 
-Se sim, envia-me por favor:
-• Nome
-• WhatsApp
-• Um contexto rápido (o que faz / porque achas que faz sentido)
+Se sim, envia-me por favor o nome, o WhatsApp e um contexto rápido sobre o que fazem e porque achas que faz sentido uma conversa.
 
 Prometo tratar cada indicação com o mesmo cuidado e sem pressão nenhuma — é só uma conversa de valor, igual à nossa.
 
@@ -183,10 +180,7 @@ Enquanto isso, posso te pedir um favor rápido? Boa parte das pessoas que a gent
 
 Você conhece 3 a 5 pessoas (amigos, sócios, clientes ou pessoas do seu networking) que estejam buscando crescer com marketing, vendas ou tráfego e que fariam sentido pra uma conversa como a que tivemos?
 
-Se sim, me manda por favor:
-• Nome
-• WhatsApp
-• Um contexto rápido (o que faz / por que acha que faz sentido)
+Se sim, me manda por favor o nome, o WhatsApp e um contexto rápido sobre o que fazem e por que acha que faz sentido uma conversa.
 
 Prometo tratar cada indicação com o mesmo cuidado e sem pressão nenhuma — é só uma conversa de valor, igual à nossa.
 
