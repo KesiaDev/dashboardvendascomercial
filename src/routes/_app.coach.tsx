@@ -436,16 +436,18 @@ function Conversas() {
     <div className="space-y-3 mt-4">
       {isAdmin && <TeamInsightsPanel />}
       <div className="flex flex-wrap gap-2 items-center">
-        <select
-          value={sellerFilter}
-          onChange={(e) => setSellerFilter(e.target.value)}
-          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-        >
-          <option value="">Todos os vendedores</option>
-          {sellerOptions.map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </select>
+        {isAdmin && (
+          <select
+            value={sellerFilter}
+            onChange={(e) => setSellerFilter(e.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          >
+            <option value="">Todos os vendedores</option>
+            {sellerOptions.map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+        )}
         <Input placeholder="Buscar por vendedor, cliente, deal…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
         <Input placeholder="Nota mínima" type="number" min={0} max={10} value={minScore} onChange={(e) => setMinScore(e.target.value)} className="max-w-[120px]" />
         {(sellerFilter || q || minScore) && (
