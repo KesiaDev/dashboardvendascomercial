@@ -403,19 +403,40 @@ function ReferralsTable({
 function MensagemPadraoCard() {
   const [clientName, setClientName] = useState("");
   const [sellerName, setSellerName] = useState("");
+  const [locale, setLocale] = useState<"pt-BR" | "pt-PT">("pt-BR");
   const msgComprou = buildReferralMessage({
     clientName: clientName || "[nome do cliente]",
     sellerName: sellerName || "[seu nome]",
+    locale,
   });
   const msgNaoFechou = buildReferralMessageNaoFechou({
     clientName: clientName || "[nome do cliente]",
     sellerName: sellerName || "[seu nome]",
+    locale,
   });
 
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader><CardTitle className="text-base">Personalizar</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <CardTitle className="text-base">Personalizar</CardTitle>
+          <div className="inline-flex rounded-md border p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setLocale("pt-BR")}
+              className={`px-2.5 py-1 rounded-sm transition ${locale === "pt-BR" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+            >
+              🇧🇷 PT-BR
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocale("pt-PT")}
+              className={`px-2.5 py-1 rounded-sm transition ${locale === "pt-PT" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+            >
+              🇵🇹 PT-PT
+            </button>
+          </div>
+        </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           <div className="grid gap-1.5">
             <Label>Nome do cliente</Label>
@@ -432,6 +453,7 @@ function MensagemPadraoCard() {
           </div>
           <p className="md:col-span-2 text-xs text-muted-foreground">
             Enviar nas primeiras 24–48h após o fechamento (ou após o "não") — quando a conversa ainda está fresca.
+            Use PT-PT para clientes de Portugal.
           </p>
         </CardContent>
       </Card>
@@ -439,14 +461,14 @@ function MensagemPadraoCard() {
       <div className="grid gap-4 md:grid-cols-2">
         <MensagemBlock
           title="Cliente que fechou"
-          badge="Comprou"
+          badge={locale === "pt-PT" ? "Comprou · PT-PT" : "Comprou · PT-BR"}
           badgeClass="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
           description="Envie logo após o fechamento, quando a energia do cliente está no pico."
           message={msgComprou}
         />
         <MensagemBlock
           title="Cliente que não fechou"
-          badge="Não comprou"
+          badge={locale === "pt-PT" ? "Não comprou · PT-PT" : "Não comprou · PT-BR"}
           badgeClass="bg-amber-500/15 text-amber-700 dark:text-amber-400"
           description="Envie 24–48h após o 'não', agradecendo a conversa e pedindo indicações."
           message={msgNaoFechou}
@@ -455,6 +477,7 @@ function MensagemPadraoCard() {
     </div>
   );
 }
+
 
 function MensagemBlock({
   title, badge, badgeClass, description, message,
