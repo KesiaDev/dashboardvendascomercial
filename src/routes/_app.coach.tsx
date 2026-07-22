@@ -1598,6 +1598,7 @@ function fmtDur(s: number) {
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 function LigacoesTab() {
+  const { isAdmin, sellerNameGuess } = useCoachUser();
   const qc = useQueryClient();
   const [range, setRange] = useState<PerfRange>("day");
   const [refDate, setRefDate] = useState<Date>(new Date());
