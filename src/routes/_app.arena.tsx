@@ -63,7 +63,7 @@ function ArenaDashboard() {
           <Swords className="h-6 w-6 text-fuchsia-500" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Arena Comercial IA</h1>
+          <h1 className="text-2xl font-bold">Arena Comercial</h1>
           <p className="text-xs text-muted-foreground">Simulador profissional de vendas com clientes gerados por IA</p>
         </div>
       </div>
