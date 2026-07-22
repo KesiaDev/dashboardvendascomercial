@@ -1224,8 +1224,9 @@ function SellerAvatar({ name, size = 32 }: { name: string; size?: number }) {
 }
 
 function PerformanceTab() {
+  const { isAdmin, sellerNameGuess } = useCoachUser();
   const [range, setRange] = useState<PerfRange>("week");
-  const [scope, setScope] = useState<"team" | "seller">("team");
+  const [scope, setScope] = useState<"team" | "seller">(isAdmin ? "team" : "seller");
   const [sellerKey, setSellerKey] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string>("");
   const todayISO = new Date().toISOString().slice(0, 10);
@@ -1236,9 +1237,21 @@ function PerformanceTab() {
   const { data: perf, isLoading, isFetching, error: perfError } = useQuery({
     queryKey: ["coach-perf", range, effectiveRefDate ?? "today"],
     queryFn: () => fetchPerformanceFn({ data: { range, refDate: effectiveRefDate } }),
-    placeholderData: (prev) => prev, // mantém os KPIs visíveis durante refetch (evita "zerar")
+    placeholderData: (prev) => prev,
     staleTime: 60_000,
   });
+
+  // Auto-locka o vendedor logado para não-admins
+  useEffect(() => {
+    if (isAdmin || !perf || sellerKey) return;
+    const target = sellerNameGuess?.toLowerCase();
+    if (!target) return;
+    const match = perf.sellers.find(
+      (s) => displaySellerName(s.name).toLowerCase() === target
+        || displaySellerName(s.email ?? "").toLowerCase() === target
+    );
+    if (match) { setScope("seller"); setSellerKey(match.key); }
+  }, [isAdmin, perf, sellerNameGuess, sellerKey]);
 
   const fbMutation = useMutation({
     mutationFn: () => generatePerformanceFeedbackFn({ data: { range, scope, sellerKey: sellerKey ?? undefined, refDate: effectiveRefDate } }),
