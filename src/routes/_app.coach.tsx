@@ -46,6 +46,14 @@ type CoachUserInfo = { isAdmin: boolean; email: string | null; sellerNameGuess: 
 const CoachUserCtx = React.createContext<CoachUserInfo>({ isAdmin: true, email: null, sellerNameGuess: null, isAllowedSeller: false });
 const useCoachUser = () => React.useContext(CoachUserCtx);
 
+function SemAcessoIndividual() {
+  return (
+    <div className="py-16 text-center text-sm text-muted-foreground">
+      Sem visão individual disponível para este utilizador.
+    </div>
+  );
+}
+
 function fmtDate(iso: string | null | undefined) {
   if (!iso) return "—";
   const d = new Date(iso);
