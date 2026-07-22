@@ -35,15 +35,24 @@ import {
 import { getHotmartWebhookTokenFn } from "@/lib/hotmart-webhook.functions";
 import { syncCcpbxCallsFn, listCcpbxCallsFn, analyzeCallFn, type CallRow } from "@/lib/ccpbx.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { isAdminUser } from "@/lib/auth";
+import { isAdminUser, isAllowedSellerEmail } from "@/lib/auth";
+
 
 export const Route = createFileRoute("/_app/coach")({
   component: CoachPage,
 });
 
-type CoachUserInfo = { isAdmin: boolean; email: string | null; sellerNameGuess: string | null };
-const CoachUserCtx = React.createContext<CoachUserInfo>({ isAdmin: true, email: null, sellerNameGuess: null });
+type CoachUserInfo = { isAdmin: boolean; email: string | null; sellerNameGuess: string | null; isAllowedSeller: boolean };
+const CoachUserCtx = React.createContext<CoachUserInfo>({ isAdmin: true, email: null, sellerNameGuess: null, isAllowedSeller: false });
 const useCoachUser = () => React.useContext(CoachUserCtx);
+
+function SemAcessoIndividual() {
+  return (
+    <div className="py-16 text-center text-sm text-muted-foreground">
+      Sem visão individual disponível para este utilizador.
+    </div>
+  );
+}
 
 function fmtDate(iso: string | null | undefined) {
   if (!iso) return "—";
@@ -93,7 +102,8 @@ function CoachPage() {
   }, []);
   const isAdmin = isAdminUser(user);
   const sellerNameGuess = user?.email ? displaySellerName(user.email) : null;
-  const userInfo: CoachUserInfo = { isAdmin, email: user?.email ?? null, sellerNameGuess };
+  const isAllowedSeller = isAllowedSellerEmail(user?.email);
+  const userInfo: CoachUserInfo = { isAdmin, email: user?.email ?? null, sellerNameGuess, isAllowedSeller };
 
   const [tab, setTab] = useState(isAdmin ? "visao" : "performance");
   useEffect(() => { if (!isAdmin) setTab("performance"); }, [isAdmin]);
@@ -160,9 +170,9 @@ function CoachPage() {
           {isAdmin && <TabsTrigger value="integracao"><Zap className="h-4 w-4 mr-1" />Integração Clint</TabsTrigger>}
         </TabsList>
         {isAdmin && <TabsContent value="visao"><VisaoGeral /></TabsContent>}
-        <TabsContent value="performance"><PerformanceTab /></TabsContent>
-        <TabsContent value="conversas"><Conversas /></TabsContent>
-        <TabsContent value="ligacoes"><LigacoesTab /></TabsContent>
+        <TabsContent value="performance">{isAdmin || isAllowedSeller ? <PerformanceTab /> : <SemAcessoIndividual />}</TabsContent>
+        <TabsContent value="conversas">{isAdmin || isAllowedSeller ? <Conversas /> : <SemAcessoIndividual />}</TabsContent>
+        <TabsContent value="ligacoes">{isAdmin || isAllowedSeller ? <LigacoesTab /> : <SemAcessoIndividual />}</TabsContent>
         {isAdmin && <TabsContent value="alertas"><Alertas /></TabsContent>}
         {isAdmin && <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>}
         {isAdmin && <TabsContent value="config"><ConfigTab /></TabsContent>}

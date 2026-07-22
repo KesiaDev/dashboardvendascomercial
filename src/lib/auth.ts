@@ -18,3 +18,18 @@ export function isAdminUser(user: MaybeUser): boolean {
 }
 
 export const ALLOWED_NON_ADMIN_ROUTES = ["/fechamento", "/fechamento-semanal", "/agenda", "/ferias", "/indicacoes", "/coach"];
+
+// Vendedores autorizados a ver a visão individual de Performance/Conversas/Ligações no Coach.
+// Qualquer outro utilizador não-admin vê essas abas vazias.
+export const ALLOWED_SELLER_EMAILS = [
+  "ritasbandeira@gmail.com",
+  "gp5230158@gmail.com",
+  "fabio.nadal19@gmail.com",
+  "luanaguimaraes.moc@gmail.com",
+  "jpessoa20@hotmail.com",
+];
+
+export function isAllowedSellerEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return ALLOWED_SELLER_EMAILS.includes(email.trim().toLowerCase());
+}
