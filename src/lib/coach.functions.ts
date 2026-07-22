@@ -344,14 +344,17 @@ function parseTranscript(text: string, sellerName?: string) {
 }
 
 function avgResponseTimeMin(msgs: { sent_at: string; direction: string }[]): number | null {
-  let sum = 0; let n = 0;
-  for (let i = 1; i < msgs.length; i++) {
-    if (msgs[i].direction === "outbound" && msgs[i - 1].direction === "inbound") {
-      const d = new Date(msgs[i].sent_at).getTime() - new Date(msgs[i - 1].sent_at).getTime();
-      if (d > 0 && d < 1000 * 60 * 60 * 48) { sum += d / 60000; n++; }
-    }
-  }
-  return n > 0 ? Math.round(sum / n) : null;
+  // Tempo médio de resposta = intervalo entre a primeira mensagem do lead
+  // (inbound) e a primeira resposta do vendedor (outbound) que vem depois.
+  const firstInbound = msgs.find((m) => m.direction === "inbound");
+  if (!firstInbound) return null;
+  const firstOutboundAfter = msgs.find(
+    (m) => m.direction === "outbound" && new Date(m.sent_at) > new Date(firstInbound.sent_at),
+  );
+  if (!firstOutboundAfter) return null;
+  const d = new Date(firstOutboundAfter.sent_at).getTime() - new Date(firstInbound.sent_at).getTime();
+  if (d <= 0 || d >= 1000 * 60 * 60 * 48) return null;
+  return Math.round(d / 60000);
 }
 
 export const uploadConversationFn = createServerFn({ method: "POST" })
