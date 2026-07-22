@@ -410,7 +410,12 @@ function Conversas() {
 
   const filtered = useMemo(() => {
     let list = convs;
-    if (sellerFilter) {
+    if (!isAdmin && sellerNameGuess) {
+      const target = sellerNameGuess.toLowerCase();
+      list = list.filter((c: any) =>
+        displaySellerName(c.seller_name ?? c.seller_email ?? "").toLowerCase() === target
+      );
+    } else if (sellerFilter) {
       list = list.filter((c: any) => (c.seller_email ?? c.seller_name ?? "") === sellerFilter);
     }
     if (q) {
@@ -425,11 +430,11 @@ function Conversas() {
       list = list.filter((c: any) => (c.analysis?.score_geral ?? 0) >= m);
     }
     return list;
-  }, [convs, q, minScore, sellerFilter]);
+  }, [convs, q, minScore, sellerFilter, isAdmin, sellerNameGuess]);
 
   return (
     <div className="space-y-3 mt-4">
-      <TeamInsightsPanel />
+      {isAdmin && <TeamInsightsPanel />}
       <div className="flex flex-wrap gap-2 items-center">
         <select
           value={sellerFilter}
