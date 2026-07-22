@@ -14,6 +14,205 @@ export type Database = {
   }
   public: {
     Tables: {
+      arena_knowledge: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          product: string
+          source: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          product: string
+          source: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          product?: string
+          source?: string
+        }
+        Relationships: []
+      }
+      arena_messages: {
+        Row: {
+          ai_comment: Json | null
+          body: string
+          emotion_after: string | null
+          id: string
+          role: string
+          sent_at: string
+          simulation_id: string
+        }
+        Insert: {
+          ai_comment?: Json | null
+          body: string
+          emotion_after?: string | null
+          id?: string
+          role: string
+          sent_at?: string
+          simulation_id: string
+        }
+        Update: {
+          ai_comment?: Json | null
+          body?: string
+          emotion_after?: string | null
+          id?: string
+          role?: string
+          sent_at?: string
+          simulation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_messages_simulation_id_fkey"
+            columns: ["simulation_id"]
+            isOneToOne: false
+            referencedRelation: "arena_simulations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      arena_missions: {
+        Row: {
+          completed_simulation_id: string | null
+          created_at: string
+          id: string
+          mission_date: string
+          seller_user_id: string
+          spec: Json
+        }
+        Insert: {
+          completed_simulation_id?: string | null
+          created_at?: string
+          id?: string
+          mission_date: string
+          seller_user_id: string
+          spec: Json
+        }
+        Update: {
+          completed_simulation_id?: string | null
+          created_at?: string
+          id?: string
+          mission_date?: string
+          seller_user_id?: string
+          spec?: Json
+        }
+        Relationships: []
+      }
+      arena_personas: {
+        Row: {
+          channel: string
+          created_at: string
+          difficulty: string
+          id: string
+          persona: Json
+          product: string
+          seller_user_id: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          difficulty: string
+          id?: string
+          persona: Json
+          product: string
+          seller_user_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          difficulty?: string
+          id?: string
+          persona?: Json
+          product?: string
+          seller_user_id?: string
+        }
+        Relationships: []
+      }
+      arena_progress: {
+        Row: {
+          last_played_date: string | null
+          league: string
+          seller_user_id: string
+          streak_days: number
+          updated_at: string
+          xp: number
+        }
+        Insert: {
+          last_played_date?: string | null
+          league?: string
+          seller_user_id: string
+          streak_days?: number
+          updated_at?: string
+          xp?: number
+        }
+        Update: {
+          last_played_date?: string | null
+          league?: string
+          seller_user_id?: string
+          streak_days?: number
+          updated_at?: string
+          xp?: number
+        }
+        Relationships: []
+      }
+      arena_simulations: {
+        Row: {
+          current_emotion: string
+          ended_at: string | null
+          evaluation: Json | null
+          id: string
+          mission_id: string | null
+          outcome: string | null
+          persona_id: string
+          score: number | null
+          seller_user_id: string
+          started_at: string
+          status: string
+          xp_earned: number
+        }
+        Insert: {
+          current_emotion?: string
+          ended_at?: string | null
+          evaluation?: Json | null
+          id?: string
+          mission_id?: string | null
+          outcome?: string | null
+          persona_id: string
+          score?: number | null
+          seller_user_id: string
+          started_at?: string
+          status?: string
+          xp_earned?: number
+        }
+        Update: {
+          current_emotion?: string
+          ended_at?: string | null
+          evaluation?: Json | null
+          id?: string
+          mission_id?: string | null
+          outcome?: string | null
+          persona_id?: string
+          score?: number | null
+          seller_user_id?: string
+          started_at?: string
+          status?: string
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_simulations_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "arena_personas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bi_channels: {
         Row: {
           clint_group_names: string[]

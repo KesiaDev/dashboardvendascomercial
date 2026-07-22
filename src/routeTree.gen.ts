@@ -31,6 +31,7 @@ import { Route as AppComissionamentoRouteImport } from './routes/_app.comissiona
 import { Route as AppComercialRouteImport } from './routes/_app.comercial'
 import { Route as AppCoachRouteImport } from './routes/_app.coach'
 import { Route as AppCampanhaRouteImport } from './routes/_app.campanha'
+import { Route as AppArenaRouteImport } from './routes/_app.arena'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
 import { Route as AppAgendaRouteImport } from './routes/_app.agenda'
@@ -43,6 +44,7 @@ import { Route as AppCoachIdRouteImport } from './routes/_app.coach.$id'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
 import { Route as ApiPublicSyncHotmartRouteImport } from './routes/api/public/sync.hotmart'
 import { Route as ApiPublicSyncCcpbxRouteImport } from './routes/api/public/sync.ccpbx'
+import { Route as AppArenaSimIdRouteImport } from './routes/_app.arena.sim.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -153,6 +155,11 @@ const AppCampanhaRoute = AppCampanhaRouteImport.update({
   path: '/campanha',
   getParentRoute: () => AppRoute,
 } as any)
+const AppArenaRoute = AppArenaRouteImport.update({
+  id: '/arena',
+  path: '/arena',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAreasRoute = AppAreasRouteImport.update({
   id: '/areas',
   path: '/areas',
@@ -213,6 +220,11 @@ const ApiPublicSyncCcpbxRoute = ApiPublicSyncCcpbxRouteImport.update({
   path: '/api/public/sync/ccpbx',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppArenaSimIdRoute = AppArenaSimIdRouteImport.update({
+  id: '/sim/$id',
+  path: '/sim/$id',
+  getParentRoute: () => AppArenaRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -220,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AppAgendaRoute
   '/agente': typeof AppAgenteRoute
   '/areas': typeof AppAreasRoute
+  '/arena': typeof AppArenaRouteWithChildren
   '/campanha': typeof AppCampanhaRoute
   '/coach': typeof AppCoachRouteWithChildren
   '/comercial': typeof AppComercialRoute
@@ -245,6 +258,7 @@ export interface FileRoutesByFullPath {
   '/api/public/backfill-v3': typeof ApiPublicBackfillV3Route
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
+  '/arena/sim/$id': typeof AppArenaSimIdRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
@@ -254,6 +268,7 @@ export interface FileRoutesByTo {
   '/agenda': typeof AppAgendaRoute
   '/agente': typeof AppAgenteRoute
   '/areas': typeof AppAreasRoute
+  '/arena': typeof AppArenaRouteWithChildren
   '/campanha': typeof AppCampanhaRoute
   '/coach': typeof AppCoachRouteWithChildren
   '/comercial': typeof AppComercialRoute
@@ -280,6 +295,7 @@ export interface FileRoutesByTo {
   '/api/public/backfill-v3': typeof ApiPublicBackfillV3Route
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
+  '/arena/sim/$id': typeof AppArenaSimIdRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
@@ -291,6 +307,7 @@ export interface FileRoutesById {
   '/_app/agenda': typeof AppAgendaRoute
   '/_app/agente': typeof AppAgenteRoute
   '/_app/areas': typeof AppAreasRoute
+  '/_app/arena': typeof AppArenaRouteWithChildren
   '/_app/campanha': typeof AppCampanhaRoute
   '/_app/coach': typeof AppCoachRouteWithChildren
   '/_app/comercial': typeof AppComercialRoute
@@ -317,6 +334,7 @@ export interface FileRoutesById {
   '/api/public/backfill-v3': typeof ApiPublicBackfillV3Route
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
+  '/_app/arena/sim/$id': typeof AppArenaSimIdRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
@@ -329,6 +347,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/agente'
     | '/areas'
+    | '/arena'
     | '/campanha'
     | '/coach'
     | '/comercial'
@@ -354,6 +373,7 @@ export interface FileRouteTypes {
     | '/api/public/backfill-v3'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
+    | '/arena/sim/$id'
     | '/api/public/sync/ccpbx'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
@@ -363,6 +383,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/agente'
     | '/areas'
+    | '/arena'
     | '/campanha'
     | '/coach'
     | '/comercial'
@@ -389,6 +410,7 @@ export interface FileRouteTypes {
     | '/api/public/backfill-v3'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
+    | '/arena/sim/$id'
     | '/api/public/sync/ccpbx'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
@@ -399,6 +421,7 @@ export interface FileRouteTypes {
     | '/_app/agenda'
     | '/_app/agente'
     | '/_app/areas'
+    | '/_app/arena'
     | '/_app/campanha'
     | '/_app/coach'
     | '/_app/comercial'
@@ -425,6 +448,7 @@ export interface FileRouteTypes {
     | '/api/public/backfill-v3'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
+    | '/_app/arena/sim/$id'
     | '/api/public/sync/ccpbx'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
@@ -599,6 +623,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCampanhaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/arena': {
+      id: '/_app/arena'
+      path: '/arena'
+      fullPath: '/arena'
+      preLoaderRoute: typeof AppArenaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/areas': {
       id: '/_app/areas'
       path: '/areas'
@@ -683,8 +714,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSyncCcpbxRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/arena/sim/$id': {
+      id: '/_app/arena/sim/$id'
+      path: '/sim/$id'
+      fullPath: '/arena/sim/$id'
+      preLoaderRoute: typeof AppArenaSimIdRouteImport
+      parentRoute: typeof AppArenaRoute
+    }
   }
 }
+
+interface AppArenaRouteChildren {
+  AppArenaSimIdRoute: typeof AppArenaSimIdRoute
+}
+
+const AppArenaRouteChildren: AppArenaRouteChildren = {
+  AppArenaSimIdRoute: AppArenaSimIdRoute,
+}
+
+const AppArenaRouteWithChildren = AppArenaRoute._addFileChildren(
+  AppArenaRouteChildren,
+)
 
 interface AppCoachRouteChildren {
   AppCoachIdRoute: typeof AppCoachIdRoute
@@ -702,6 +752,7 @@ interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
   AppAgenteRoute: typeof AppAgenteRoute
   AppAreasRoute: typeof AppAreasRoute
+  AppArenaRoute: typeof AppArenaRouteWithChildren
   AppCampanhaRoute: typeof AppCampanhaRoute
   AppCoachRoute: typeof AppCoachRouteWithChildren
   AppComercialRoute: typeof AppComercialRoute
@@ -727,6 +778,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAgendaRoute: AppAgendaRoute,
   AppAgenteRoute: AppAgenteRoute,
   AppAreasRoute: AppAreasRoute,
+  AppArenaRoute: AppArenaRouteWithChildren,
   AppCampanhaRoute: AppCampanhaRoute,
   AppCoachRoute: AppCoachRouteWithChildren,
   AppComercialRoute: AppComercialRoute,
@@ -775,13 +827,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
