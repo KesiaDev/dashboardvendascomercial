@@ -162,9 +162,9 @@ function CoachPage() {
           {isAdmin && <TabsTrigger value="integracao"><Zap className="h-4 w-4 mr-1" />Integração Clint</TabsTrigger>}
         </TabsList>
         {isAdmin && <TabsContent value="visao"><VisaoGeral /></TabsContent>}
-        <TabsContent value="performance"><PerformanceTab /></TabsContent>
-        <TabsContent value="conversas"><Conversas /></TabsContent>
-        <TabsContent value="ligacoes"><LigacoesTab /></TabsContent>
+        <TabsContent value="performance">{isAdmin || isAllowedSeller ? <PerformanceTab /> : <SemAcessoIndividual />}</TabsContent>
+        <TabsContent value="conversas">{isAdmin || isAllowedSeller ? <Conversas /> : <SemAcessoIndividual />}</TabsContent>
+        <TabsContent value="ligacoes">{isAdmin || isAllowedSeller ? <LigacoesTab /> : <SemAcessoIndividual />}</TabsContent>
         {isAdmin && <TabsContent value="alertas"><Alertas /></TabsContent>}
         {isAdmin && <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>}
         {isAdmin && <TabsContent value="config"><ConfigTab /></TabsContent>}
