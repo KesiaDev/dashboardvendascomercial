@@ -133,3 +133,27 @@ Prometo tratar cada indicação com o mesmo cuidado que tratei você — sem pre
 Obrigado pela confiança!
 ${params.sellerName}`;
 }
+
+export function buildReferralMessageNaoFechou(params: {
+  clientName: string;
+  sellerName: string;
+}) {
+  const first = params.clientName.trim().split(/\s+/)[0] || params.clientName;
+  return `Oi ${first}, tudo bem? 🙌
+
+Passando aqui só pra agradecer de verdade pela sua abertura na nossa conversa. Sei que agora não foi o momento certo pra seguir com a gente — e tá tudo bem, cada um tem o seu tempo. Fica o convite em aberto pra quando fizer sentido: vou estar por aqui.
+
+Enquanto isso, posso te pedir um favor rápido? Boa parte das pessoas que a gente ajuda a destravar o negócio chegou por indicação de alguém que enxergou valor no nosso trabalho — mesmo sem ter fechado na hora.
+
+Você conhece 3 a 5 pessoas (amigos, sócios, clientes ou pessoas do seu networking) que estejam buscando crescer com marketing, vendas ou tráfego e que fariam sentido pra uma conversa como a que tivemos?
+
+Se sim, me manda por favor:
+• Nome
+• WhatsApp
+• Um contexto rápido (o que faz / por que acha que faz sentido)
+
+Prometo tratar cada indicação com o mesmo cuidado e sem pressão nenhuma — é só uma conversa de valor, igual à nossa.
+
+Muito obrigado pela força! 🚀
+${params.sellerName}`;
+}

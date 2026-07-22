@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import {
   listReferralsFn, createReferralFn, updateReferralStatusFn,
-  deleteReferralFn, buildReferralMessage, REFERRAL_STATUSES, type ReferralStatus,
+  deleteReferralFn, buildReferralMessage, buildReferralMessageNaoFechou,
+  REFERRAL_STATUSES, type ReferralStatus,
 } from "@/lib/referrals.functions";
 import { SELLERS, PRODUCTS } from "@/lib/manual-sales.functions";
 
@@ -402,16 +403,20 @@ function ReferralsTable({
 function MensagemPadraoCard() {
   const [clientName, setClientName] = useState("");
   const [sellerName, setSellerName] = useState("");
-  const msg = buildReferralMessage({
+  const msgComprou = buildReferralMessage({
+    clientName: clientName || "[nome do cliente]",
+    sellerName: sellerName || "[seu nome]",
+  });
+  const msgNaoFechou = buildReferralMessageNaoFechou({
     clientName: clientName || "[nome do cliente]",
     sellerName: sellerName || "[seu nome]",
   });
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="space-y-4">
       <Card>
         <CardHeader><CardTitle className="text-base">Personalizar</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="grid gap-3 md:grid-cols-2">
           <div className="grid gap-1.5">
             <Label>Nome do cliente</Label>
             <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Ex.: Marina" />
@@ -425,28 +430,56 @@ function MensagemPadraoCard() {
               </SelectContent>
             </Select>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Melhor momento para enviar: nas primeiras 24–48h após o fechamento, quando a energia do cliente ainda está alta.
+          <p className="md:col-span-2 text-xs text-muted-foreground">
+            Enviar nas primeiras 24–48h após o fechamento (ou após o "não") — quando a conversa ainda está fresca.
           </p>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" /> Mensagem
-          </CardTitle>
-          <Button
-            variant="outline" size="sm"
-            onClick={() => { navigator.clipboard.writeText(msg); toast.success("Copiado"); }}
-          >
-            <Copy className="mr-2 h-3 w-3" /> Copiar
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <pre className="whitespace-pre-wrap rounded-md bg-muted p-4 text-sm">{msg}</pre>
-        </CardContent>
-      </Card>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <MensagemBlock
+          title="Cliente que fechou"
+          badge="Comprou"
+          badgeClass="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+          description="Envie logo após o fechamento, quando a energia do cliente está no pico."
+          message={msgComprou}
+        />
+        <MensagemBlock
+          title="Cliente que não fechou"
+          badge="Não comprou"
+          badgeClass="bg-amber-500/15 text-amber-700 dark:text-amber-400"
+          description="Envie 24–48h após o 'não', agradecendo a conversa e pedindo indicações."
+          message={msgNaoFechou}
+        />
+      </div>
     </div>
+  );
+}
+
+function MensagemBlock({
+  title, badge, badgeClass, description, message,
+}: { title: string; badge: string; badgeClass: string; description: string; message: string }) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <div className="space-y-1">
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" /> {title}
+          </CardTitle>
+          <Badge variant="secondary" className={badgeClass}>{badge}</Badge>
+        </div>
+        <Button
+          variant="outline" size="sm"
+          onClick={() => { navigator.clipboard.writeText(message); toast.success("Copiado"); }}
+        >
+          <Copy className="mr-2 h-3 w-3" /> Copiar
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">{description}</p>
+        <pre className="whitespace-pre-wrap rounded-md bg-muted p-4 text-sm">{message}</pre>
+      </CardContent>
+    </Card>
   );
 }
 
