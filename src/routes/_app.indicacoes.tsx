@@ -114,7 +114,6 @@ function ReferralsPage() {
           <TabsTrigger value="lista">Indicações</TabsTrigger>
           <TabsTrigger value="ranking">Ranking por vendedor</TabsTrigger>
           <TabsTrigger value="mensagem">Mensagem padrão</TabsTrigger>
-          <TabsTrigger value="como">Como funciona</TabsTrigger>
         </TabsList>
 
         <TabsContent value="lista" className="mt-6">
@@ -158,10 +157,6 @@ function ReferralsPage() {
 
         <TabsContent value="mensagem" className="mt-6">
           <MensagemPadraoCard />
-        </TabsContent>
-
-        <TabsContent value="como" className="mt-6">
-          <ComoFuncionaCard />
         </TabsContent>
       </Tabs>
     </div>
@@ -506,44 +501,3 @@ function MensagemBlock({
   );
 }
 
-function ComoFuncionaCard() {
-  return (
-    <Card>
-      <CardHeader><CardTitle>Como funciona o programa</CardTitle></CardHeader>
-      <CardContent className="space-y-4 text-sm">
-        <div>
-          <p className="font-semibold">1. Após cada venda fechada</p>
-          <p className="text-muted-foreground">
-            O vendedor envia a mensagem padrão pelo WhatsApp pedindo 3 a 5 nomes ao cliente novo.
-          </p>
-        </div>
-        <div>
-          <p className="font-semibold">2. Cadastrar aqui</p>
-          <p className="text-muted-foreground">
-            Cada nome recebido vira uma indicação em "Nova indicação" — com contato, produto de interesse e contexto.
-          </p>
-        </div>
-        <div>
-          <p className="font-semibold">3. Novo funil (não obrigatório)</p>
-          <p className="text-muted-foreground">
-            As indicações formam um funil próprio: Novo → Contactado → Em negociação → Convertido / Perdido.
-            Assim medimos a taxa real de conversão da fonte "indicação".
-          </p>
-        </div>
-        <div>
-          <p className="font-semibold">4. Recompensa</p>
-          <p className="text-muted-foreground">
-            A definir. Sugestões para você escolher depois: (a) % em cash sobre a venda convertida,
-            (b) desconto na próxima renovação, (c) bônus não-monetário (mentoria extra, acesso VIP).
-          </p>
-        </div>
-        <div>
-          <p className="font-semibold">5. Métricas acompanhadas</p>
-          <p className="text-muted-foreground">
-            Nº de indicações por vendedor, taxa de conversão do funil, receita gerada e ranking mensal.
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
