@@ -44,6 +44,7 @@ import { Route as AppCoachIdRouteImport } from './routes/_app.coach.$id'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
 import { Route as ApiPublicSyncHotmartRouteImport } from './routes/api/public/sync.hotmart'
 import { Route as ApiPublicSyncCcpbxRouteImport } from './routes/api/public/sync.ccpbx'
+import { Route as ApiPublicAgendaBookRouteImport } from './routes/api/public/agenda.book'
 import { Route as AppArenaSimIdRouteImport } from './routes/_app.arena.sim.$id'
 
 const AuthRoute = AuthRouteImport.update({
@@ -220,6 +221,11 @@ const ApiPublicSyncCcpbxRoute = ApiPublicSyncCcpbxRouteImport.update({
   path: '/api/public/sync/ccpbx',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAgendaBookRoute = ApiPublicAgendaBookRouteImport.update({
+  id: '/api/public/agenda/book',
+  path: '/api/public/agenda/book',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppArenaSimIdRoute = AppArenaSimIdRouteImport.update({
   id: '/sim/$id',
   path: '/sim/$id',
@@ -259,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/arena/sim/$id': typeof AppArenaSimIdRoute
+  '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
@@ -296,6 +303,7 @@ export interface FileRoutesByTo {
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/arena/sim/$id': typeof AppArenaSimIdRoute
+  '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
@@ -335,6 +343,7 @@ export interface FileRoutesById {
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/_app/arena/sim/$id': typeof AppArenaSimIdRoute
+  '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
@@ -374,6 +383,7 @@ export interface FileRouteTypes {
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
     | '/arena/sim/$id'
+    | '/api/public/agenda/book'
     | '/api/public/sync/ccpbx'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
@@ -411,6 +421,7 @@ export interface FileRouteTypes {
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
     | '/arena/sim/$id'
+    | '/api/public/agenda/book'
     | '/api/public/sync/ccpbx'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
@@ -449,6 +460,7 @@ export interface FileRouteTypes {
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-raw'
     | '/_app/arena/sim/$id'
+    | '/api/public/agenda/book'
     | '/api/public/sync/ccpbx'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
@@ -462,6 +474,7 @@ export interface RootRouteChildren {
   ApiPublicBackfillV3Route: typeof ApiPublicBackfillV3Route
   ApiPublicHotmartDebugRoute: typeof ApiPublicHotmartDebugRoute
   ApiPublicHotmartRawRoute: typeof ApiPublicHotmartRawRoute
+  ApiPublicAgendaBookRoute: typeof ApiPublicAgendaBookRoute
   ApiPublicSyncCcpbxRoute: typeof ApiPublicSyncCcpbxRoute
   ApiPublicSyncHotmartRoute: typeof ApiPublicSyncHotmartRoute
   ApiPublicSyncTriggerRoute: typeof ApiPublicSyncTriggerRoute
@@ -714,6 +727,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSyncCcpbxRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/agenda/book': {
+      id: '/api/public/agenda/book'
+      path: '/api/public/agenda/book'
+      fullPath: '/api/public/agenda/book'
+      preLoaderRoute: typeof ApiPublicAgendaBookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/arena/sim/$id': {
       id: '/_app/arena/sim/$id'
       path: '/sim/$id'
@@ -820,6 +840,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicBackfillV3Route: ApiPublicBackfillV3Route,
   ApiPublicHotmartDebugRoute: ApiPublicHotmartDebugRoute,
   ApiPublicHotmartRawRoute: ApiPublicHotmartRawRoute,
+  ApiPublicAgendaBookRoute: ApiPublicAgendaBookRoute,
   ApiPublicSyncCcpbxRoute: ApiPublicSyncCcpbxRoute,
   ApiPublicSyncHotmartRoute: ApiPublicSyncHotmartRoute,
   ApiPublicSyncTriggerRoute: ApiPublicSyncTriggerRoute,
@@ -827,13 +848,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
