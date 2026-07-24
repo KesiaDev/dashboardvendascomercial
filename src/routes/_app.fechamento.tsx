@@ -187,6 +187,7 @@ function FechamentoForm({ session }: { session: any }) {
   const [funnel, setFunnel] = useState<string>("");
   const [saleDate, setSaleDate] = useState(todayBR());
   const [notes, setNotes] = useState("");
+  const [sellerFilter, setSellerFilter] = useState<string>("todos");
 
   type Item = {
     product: string;
@@ -302,9 +303,15 @@ function FechamentoForm({ session }: { session: any }) {
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
 
+  // Filtro por vendedor (visível apenas para admin)
+  const activeSellerFilter = isAdmin && sellerFilter !== "todos" ? sellerFilter : null;
+  const salesFiltered = activeSellerFilter
+    ? sales.filter((s) => normalizeSeller(s.seller_name) === activeSellerFilter)
+    : sales;
+
   // Parcelas futuras não pagas NÃO entram no total até serem confirmadas
-  const paidSales = sales.filter((s) => s.installment_paid);
-  const pendingInstallments = sales.filter((s) => !s.installment_paid);
+  const paidSales = salesFiltered.filter((s) => s.installment_paid);
+  const pendingInstallments = salesFiltered.filter((s) => !s.installment_paid);
 
   const todaySales = paidSales.filter((s) => s.sale_date === today);
   const todayTotal = todaySales.reduce((acc, s) => acc + Number(s.value_eur), 0);
@@ -321,9 +328,9 @@ function FechamentoForm({ session }: { session: any }) {
   const monthNovasTotal = monthNovas.reduce((a, s) => a + Number(s.value_eur), 0);
   const monthRenovTotal = monthRenov.reduce((a, s) => a + Number(s.value_eur), 0);
 
-  const pendingCount = sales.filter((s) => s.confirmation_status === "pendente").length;
-  const confirmedCount = sales.filter((s) => s.confirmation_status === "confirmado_hotmart" || s.confirmation_status === "confirmado_wise").length;
-  const mismatchCount = sales.filter((s) => s.affiliate_mismatch).length;
+  const pendingCount = salesFiltered.filter((s) => s.confirmation_status === "pendente").length;
+  const confirmedCount = salesFiltered.filter((s) => s.confirmation_status === "confirmado_hotmart" || s.confirmation_status === "confirmado_wise").length;
+  const mismatchCount = salesFiltered.filter((s) => s.affiliate_mismatch).length;
 
 
   return (
@@ -512,6 +519,28 @@ function FechamentoForm({ session }: { session: any }) {
 
         {/* Coluna lateral */}
         <div className="space-y-4">
+          {/* Filtro por vendedor (admin) */}
+          {isAdmin && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Filtrar por vendedor</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Select value={sellerFilter} onValueChange={setSellerFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o vendedor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os vendedores</SelectItem>
+                    {SELLERS.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Resumo do mês */}
           <Card>
             <CardHeader className="pb-2">
@@ -528,7 +557,7 @@ function FechamentoForm({ session }: { session: any }) {
                   <p className="text-xs text-muted-foreground">Pendentes</p>
                 </div>
                 <div className="rounded-lg bg-secondary/50 p-2">
-                  <p className="text-lg font-bold">{sales.length}</p>
+                  <p className="text-lg font-bold">{salesFiltered.length}</p>
                   <p className="text-xs text-muted-foreground">Total</p>
                 </div>
               </div>
@@ -623,10 +652,10 @@ function FechamentoForm({ session }: { session: any }) {
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              {sales.length === 0 && (
+              {salesFiltered.length === 0 && (
                 <p className="text-sm text-muted-foreground">Nenhuma venda registrada neste mês.</p>
               )}
-              {sales.map((s) => (
+              {salesFiltered.map((s) => (
                 <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })} />
               ))}
             </CardContent>
