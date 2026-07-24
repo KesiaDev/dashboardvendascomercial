@@ -187,6 +187,7 @@ function FechamentoForm({ session }: { session: any }) {
   const [funnel, setFunnel] = useState<string>("");
   const [saleDate, setSaleDate] = useState(todayBR());
   const [notes, setNotes] = useState("");
+  const [sellerFilter, setSellerFilter] = useState<string>("todos");
 
   type Item = {
     product: string;
