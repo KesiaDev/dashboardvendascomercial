@@ -20,6 +20,7 @@ export const PRODUCTS = [
 
 export const FUNNELS = [
   "PIPELINE_COMERCIAL-V3",
+  "IGT23",
   "Master and Scale — LDP_03_MAS_MGT",
   "Funil - Sessão Estratégica",
   "SESSÃO ESTRATÉGICA",
