@@ -519,6 +519,28 @@ function FechamentoForm({ session }: { session: any }) {
 
         {/* Coluna lateral */}
         <div className="space-y-4">
+          {/* Filtro por vendedor (admin) */}
+          {isAdmin && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Filtrar por vendedor</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Select value={sellerFilter} onValueChange={setSellerFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o vendedor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os vendedores</SelectItem>
+                    {SELLERS.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Resumo do mês */}
           <Card>
             <CardHeader className="pb-2">
