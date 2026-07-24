@@ -303,9 +303,15 @@ function FechamentoForm({ session }: { session: any }) {
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
 
+  // Filtro por vendedor (visível apenas para admin)
+  const activeSellerFilter = isAdmin && sellerFilter !== "todos" ? sellerFilter : null;
+  const salesFiltered = activeSellerFilter
+    ? sales.filter((s) => normalizeSeller(s.seller_name) === activeSellerFilter)
+    : sales;
+
   // Parcelas futuras não pagas NÃO entram no total até serem confirmadas
-  const paidSales = sales.filter((s) => s.installment_paid);
-  const pendingInstallments = sales.filter((s) => !s.installment_paid);
+  const paidSales = salesFiltered.filter((s) => s.installment_paid);
+  const pendingInstallments = salesFiltered.filter((s) => !s.installment_paid);
 
   const todaySales = paidSales.filter((s) => s.sale_date === today);
   const todayTotal = todaySales.reduce((acc, s) => acc + Number(s.value_eur), 0);
@@ -322,9 +328,9 @@ function FechamentoForm({ session }: { session: any }) {
   const monthNovasTotal = monthNovas.reduce((a, s) => a + Number(s.value_eur), 0);
   const monthRenovTotal = monthRenov.reduce((a, s) => a + Number(s.value_eur), 0);
 
-  const pendingCount = sales.filter((s) => s.confirmation_status === "pendente").length;
-  const confirmedCount = sales.filter((s) => s.confirmation_status === "confirmado_hotmart" || s.confirmation_status === "confirmado_wise").length;
-  const mismatchCount = sales.filter((s) => s.affiliate_mismatch).length;
+  const pendingCount = salesFiltered.filter((s) => s.confirmation_status === "pendente").length;
+  const confirmedCount = salesFiltered.filter((s) => s.confirmation_status === "confirmado_hotmart" || s.confirmation_status === "confirmado_wise").length;
+  const mismatchCount = salesFiltered.filter((s) => s.affiliate_mismatch).length;
 
 
   return (
