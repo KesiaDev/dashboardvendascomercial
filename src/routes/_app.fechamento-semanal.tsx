@@ -34,6 +34,7 @@ function normalizeFunnelKey(raw: string): string {
   const k = (raw || "").trim();
   if (!k) return "— sem funil —";
   if (/sess[aã]o\s+estrat[eé]gica/i.test(k)) return "Sessão Estratégica";
+  if (/master\s+and\s+scale/i.test(k)) return "Master and Scale";
   return k;
 }
 
