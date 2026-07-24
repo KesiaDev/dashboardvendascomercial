@@ -14,9 +14,118 @@ import {
 } from "recharts";
 import {
   ChevronLeft, ChevronRight, Trophy, TrendingUp, TrendingDown,
-  CalendarDays, Flame, Star, ShoppingBag,
+  CalendarDays, Flame, Star, ShoppingBag, Filter,
 } from "lucide-react";
 import { isRenewalProduct } from "@/lib/product-groups";
+
+// ─── Breakdown por funil ──────────────────────────────────────────────────────
+
+type FunnelStat = {
+  funnel: string;
+  count: number;
+  total: number;
+  novasCount: number;
+  novasTotal: number;
+  renovCount: number;
+  renovTotal: number;
+};
+
+function aggregateByFunnel(sales: { funnel: string; product: string; value_eur: number | string }[]): FunnelStat[] {
+  const map: Record<string, FunnelStat> = {};
+  for (const s of sales) {
+    const key = s.funnel || "— sem funil —";
+    if (!map[key]) map[key] = { funnel: key, count: 0, total: 0, novasCount: 0, novasTotal: 0, renovCount: 0, renovTotal: 0 };
+    const v = Number(s.value_eur);
+    map[key].count++;
+    map[key].total += v;
+    if (isRenewalProduct(s.product)) {
+      map[key].renovCount++;
+      map[key].renovTotal += v;
+    } else {
+      map[key].novasCount++;
+      map[key].novasTotal += v;
+    }
+  }
+  return Object.values(map).sort((a, b) => b.total - a.total);
+}
+
+function FunnelBreakdownCard({
+  sales, title,
+}: { sales: { funnel: string; product: string; value_eur: number | string }[]; title: string }) {
+  const rows = useMemo(() => aggregateByFunnel(sales), [sales]);
+  const total = rows.reduce((s, r) => s + r.total, 0);
+  const count = rows.reduce((s, r) => s + r.count, 0);
+  const maxTotal = rows[0]?.total ?? 0;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+          <Filter className="h-4 w-4 text-muted-foreground"/>{title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        {rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground px-4 py-6">Nenhuma venda no período.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-t border-border bg-muted/40">
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Funil</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Qtd</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Novas</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Renov</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Total</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-[28%]">% do total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => {
+                  const pct = total > 0 ? (r.total / total) * 100 : 0;
+                  const barPct = maxTotal > 0 ? (r.total / maxTotal) * 100 : 0;
+                  return (
+                    <tr key={r.funnel} className="border-t border-border/40 hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-2 font-medium truncate max-w-[220px]">{r.funnel}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{r.count}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        <span className="text-success font-medium">{fmtEur(r.novasTotal)}</span>
+                        <span className="text-muted-foreground text-xs ml-1">·{r.novasCount}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        <span className="text-primary font-medium">{fmtEur(r.renovTotal)}</span>
+                        <span className="text-muted-foreground text-xs ml-1">·{r.renovCount}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums font-semibold">{fmtEur(r.total)}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                            <div className="h-full bg-violet-500" style={{ width: `${barPct}%` }}/>
+                          </div>
+                          <span className="text-xs text-muted-foreground tabular-nums w-10 text-right">{pct.toFixed(0)}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-border bg-muted/40 font-semibold">
+                  <td className="px-4 py-2">Total</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{count}</td>
+                  <td className="px-3 py-2"/>
+                  <td className="px-3 py-2"/>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmtEur(total)}</td>
+                  <td className="px-3 py-2"/>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export const Route = createFileRoute("/_app/fechamento-semanal")({
   component: FechamentoSemanal,
