@@ -439,6 +439,9 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
         </Card>
       </div>
 
+      {/* Vendas por funil */}
+      <FunnelBreakdownCard sales={weekSales} title={`Vendas por Funil — Semana ${weekIdx+1+WEEK_LABEL_OFFSET}`}/>
+
       {/* Tabela de vendas */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-1.5"><ShoppingBag className="h-4 w-4 text-muted-foreground"/>Vendas — Semana {weekIdx+1+WEEK_LABEL_OFFSET} · {fmtDate(start)} a {fmtDate(end)}</CardTitle></CardHeader>
