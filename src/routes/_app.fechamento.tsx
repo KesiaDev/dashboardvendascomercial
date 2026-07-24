@@ -652,10 +652,10 @@ function FechamentoForm({ session }: { session: any }) {
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              {sales.length === 0 && (
+              {salesFiltered.length === 0 && (
                 <p className="text-sm text-muted-foreground">Nenhuma venda registrada neste mês.</p>
               )}
-              {sales.map((s) => (
+              {salesFiltered.map((s) => (
                 <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })} />
               ))}
             </CardContent>
