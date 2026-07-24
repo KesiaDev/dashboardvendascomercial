@@ -557,7 +557,7 @@ function FechamentoForm({ session }: { session: any }) {
                   <p className="text-xs text-muted-foreground">Pendentes</p>
                 </div>
                 <div className="rounded-lg bg-secondary/50 p-2">
-                  <p className="text-lg font-bold">{sales.length}</p>
+                  <p className="text-lg font-bold">{salesFiltered.length}</p>
                   <p className="text-xs text-muted-foreground">Total</p>
                 </div>
               </div>
