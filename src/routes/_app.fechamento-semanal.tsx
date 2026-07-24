@@ -30,11 +30,19 @@ type FunnelStat = {
   renovTotal: number;
 };
 
+function normalizeFunnelKey(raw: string): string {
+  const k = (raw || "").trim();
+  if (!k) return "— sem funil —";
+  if (/sess[aã]o\s+estrat[eé]gica/i.test(k)) return "Sessão Estratégica";
+  return k;
+}
+
 function aggregateByFunnel(sales: { funnel: string; product: string; value_eur: number | string }[]): FunnelStat[] {
   const map: Record<string, FunnelStat> = {};
   for (const s of sales) {
-    const key = s.funnel || "— sem funil —";
+    const key = normalizeFunnelKey(s.funnel);
     if (!map[key]) map[key] = { funnel: key, count: 0, total: 0, novasCount: 0, novasTotal: 0, renovCount: 0, renovTotal: 0 };
+
     const v = Number(s.value_eur);
     map[key].count++;
     map[key].total += v;
