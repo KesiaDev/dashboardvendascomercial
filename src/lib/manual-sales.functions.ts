@@ -296,7 +296,10 @@ export const createManualSale = createServerFn({ method: "POST" })
           installment_paid: false,
         });
       }
-      const { error: insErr } = await supabase.from("manual_sales").insert(rows);
+      // Parcelas futuras violam a policy de INSERT (sale_date <= CURRENT_DATE),
+      // então usa o client admin — created_by continua sendo o userId real.
+      const admin = await adminDb();
+      const { error: insErr } = await admin.from("manual_sales").insert(rows);
       if (insErr) throw new Error(insErr.message);
     }
 
