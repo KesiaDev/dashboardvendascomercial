@@ -722,6 +722,9 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
         </Card>
       </div>
 
+      {/* Vendas por funil */}
+      <FunnelBreakdownCard sales={monthSales} title={`Vendas por Funil — ${monthLabel}`}/>
+
       {/* Tabela de semanas do mês */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Semanas de {monthLabel}</CardTitle></CardHeader>
