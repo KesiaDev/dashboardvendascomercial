@@ -1,4 +1,5 @@
 import { PRODUCT_GROUPS, mapProductToGroup } from "./product-groups";
+import { sellerFromSck } from "./sck-attribution";
 
 export type CommissionPeriod = {
   id: number;
@@ -54,6 +55,7 @@ export type SaleRow = {
   status: string;
   data_venda: string | null;
   nome_afiliado: string | null;
+  origem_checkout: string | null;
   faturamento_liquido_brl: number | null;
 };
 
@@ -61,28 +63,38 @@ export type SaleRow = {
 export type ManualSaleRow = {
   id: string;
   seller_name: string;
-  product: string; // nome original (ex: "Mentor Tráfego Pago 2.0 - AU")
+  product: string;
   value_eur: number;
   sale_date: string;
   confirmation_status: string;
-  confirmed_hotmart_valor_brl: number | null; // BRL real quando confirmado pelo Hotmart
+  confirmed_hotmart_valor_brl: number | null;
 };
 
 export type ProductLine = {
   produto_grupo: string;
   label: string;
-  // Hotmart BRL (por nome do afiliado)
   faturamento_hotmart: number;
-  // Fechamento/EUR convertido — confirmado_hotmart usa o BRL real; pendente usa EUR×cotacao
   faturamento_fechamento: number;
-  faturamento_fechamento_eur: number; // original em EUR (para exibição)
-  faturamento_fechamento_confirmado: number; // quantos tinham confirmed_hotmart_valor_brl
-  // bi_wise_payments (import CSV admin)
+  faturamento_fechamento_eur: number;
+  faturamento_fechamento_confirmado: number;
   faturamento_wise: number;
   rate_pct: number;
   manager_rate_pct: number;
   comissao_seller: number;
   comissao_manager: number;
+  // Split: parte da comissão do vendedor que o Hotmart já paga direto
+  comissao_seller_hotmart_split: number;
+  // Parte que a EMPRESA precisa pagar (fechamento + wise)
+  comissao_seller_a_pagar_empresa: number;
+};
+
+export type RoletaLine = {
+  week: number;
+  label: string;
+  totalSales: number; // vendas na semana (fonte usada)
+  winners: string[];  // vencedores (pode ter empate)
+  valorPorGanhador_brl: number;
+  valorPorGanhador_eur: number;
 };
 
 export type SellerCommission = {
@@ -92,13 +104,20 @@ export type SellerCommission = {
   // Totais
   faturamento_total_brl: number;
   comissao_seller_total: number;
+  comissao_seller_hotmart_split_total: number; // paga via Hotmart
+  comissao_seller_a_pagar_empresa_total: number; // paga pela empresa
   comissao_manager_total: number;
-  // Wise EUR (apenas para exibição)
   wise_eur: number;
-  // Fechamento EUR (apenas para exibição)
   fechamento_eur: number;
   bonuses: CommissionBonus[];
   bonus_total: number;
+  // Roleta ganha nesta comissão
+  roleta_ganho_brl: number;
+  roleta_ganho_eur: number;
+  // Auditoria SCK
+  hotmart_sales_by_affiliate: number;
+  hotmart_sales_by_sck: number;
+  // Total que a empresa vai pagar (exclui o split do Hotmart)
   total_a_pagar: number;
 };
 
@@ -107,6 +126,7 @@ export type CommissionSummary = {
   sellers: SellerCommission[];
   manager_total_brl: number;
   manager_bonuses: CommissionBonus[];
+  roleta: RoletaLine[];
 };
 
 function getProductLabel(pg: string): string {
@@ -131,11 +151,10 @@ export function calculateCommissions(
   const end = new Date(`${period.data_fim}T23:59:59`);
   const cotacao = period.cotacao_eur ?? 5.85;
 
-  // Índice: seller+produto → rates
   const rateIndex = new Map<string, CommissionRate>();
   for (const r of rates) rateIndex.set(`${r.seller_name}||${r.produto_grupo}`, r);
 
-  // Hotmart: filtra aprovadas no período
+  // Hotmart no período (aprovadas)
   const hotmartInPeriod = hotmartSales.filter((s) => {
     if (!s.data_venda || !isApproved(s.status)) return false;
     const d = new Date(s.data_venda);
@@ -149,43 +168,113 @@ export function calculateCommissions(
       affiliateToSeller.set(sc.hotmart_affiliate_name.toLowerCase(), sc.seller_name);
   }
 
-  // Wise: filtra pelo period_id
+  // Atribui cada venda Hotmart a um vendedor (afiliado primeiro, SCK fallback)
+  type AttributedSale = SaleRow & { _seller: string | null; _source: "afiliado" | "sck" | null };
+  const attributed: AttributedSale[] = hotmartInPeriod.map((s) => {
+    const byAff = s.nome_afiliado ? affiliateToSeller.get(s.nome_afiliado.toLowerCase()) ?? null : null;
+    if (byAff) return { ...s, _seller: byAff, _source: "afiliado" };
+    const bySck = sellerFromSck(s.origem_checkout);
+    if (bySck && sellers.some((sc) => sc.seller_name === bySck))
+      return { ...s, _seller: bySck, _source: "sck" };
+    return { ...s, _seller: null, _source: null };
+  });
+
   const wiseInPeriod = wisePayments.filter((w) => w.period_id === period.id);
 
-  // Manual (Fechamento): filtra pelo range de datas
   const manualInPeriod = manualSales.filter((m) => {
     if (!m.sale_date) return false;
     const d = new Date(m.sale_date);
     return d >= start && d <= end;
   });
 
+  // ── Roleta semanal ────────────────────────────────────────────────────────
+  // Regra: vencedor da semana leva pool_semanal; empate divide;
+  // semana sem vendas → pool acumula para a próxima.
+  const weeks = periodWeeks(period);
+  const salesCountByWeek: Record<number, Map<string, number>> = {};
+  for (const w of weeks) salesCountByWeek[w.week] = new Map();
+
+  // Conta vendas aprovadas do Hotmart (por vendedor atribuído) + manuais confirmadas
+  for (const s of attributed) {
+    if (!s._seller || !s.data_venda) continue;
+    const d = new Date(s.data_venda);
+    const w = weeks.find((x) => d >= x.start && d <= x.end);
+    if (!w) continue;
+    const m = salesCountByWeek[w.week];
+    m.set(s._seller, (m.get(s._seller) ?? 0) + 1);
+  }
+  for (const m of manualInPeriod) {
+    const d = new Date(m.sale_date);
+    const w = weeks.find((x) => d >= x.start && d <= x.end);
+    if (!w) continue;
+    const cnt = salesCountByWeek[w.week];
+    cnt.set(m.seller_name, (cnt.get(m.seller_name) ?? 0) + 1);
+  }
+
+  const poolSemanalBrl = (period.roleta_pool_brl ?? 0) / weeks.length;
+  const poolSemanalEur = (period.roleta_pool_eur ?? 0) / weeks.length;
+
+  const roleta: RoletaLine[] = [];
+  let carryBrl = 0;
+  let carryEur = 0;
+  const roletaBySeller = new Map<string, { brl: number; eur: number }>();
+
+  for (const w of weeks) {
+    const counts = salesCountByWeek[w.week];
+    const totalSales = Array.from(counts.values()).reduce((a, b) => a + b, 0);
+    const disputeBrl = poolSemanalBrl + carryBrl;
+    const disputeEur = poolSemanalEur + carryEur;
+    if (totalSales === 0) {
+      roleta.push({ week: w.week, label: w.label, totalSales: 0, winners: [], valorPorGanhador_brl: 0, valorPorGanhador_eur: 0 });
+      carryBrl = disputeBrl;
+      carryEur = disputeEur;
+      continue;
+    }
+    let max = 0;
+    for (const v of counts.values()) if (v > max) max = v;
+    const winners = Array.from(counts.entries()).filter(([, v]) => v === max).map(([k]) => k);
+    const perBrl = winners.length > 0 ? disputeBrl / winners.length : 0;
+    const perEur = winners.length > 0 ? disputeEur / winners.length : 0;
+    for (const wnr of winners) {
+      const cur = roletaBySeller.get(wnr) ?? { brl: 0, eur: 0 };
+      cur.brl += perBrl;
+      cur.eur += perEur;
+      roletaBySeller.set(wnr, cur);
+    }
+    roleta.push({
+      week: w.week,
+      label: w.label,
+      totalSales,
+      winners,
+      valorPorGanhador_brl: perBrl,
+      valorPorGanhador_eur: perEur,
+    });
+    carryBrl = 0;
+    carryEur = 0;
+  }
+
+  // ── Por vendedor ──────────────────────────────────────────────────────────
   const sellerResults: SellerCommission[] = [];
 
   for (const sc of sellers.filter((s) => s.is_active)) {
     const sellerRates = rates.filter((r) => r.seller_name === sc.seller_name);
-    // Todos os grupos de produto nos quais este vendedor tem taxa
     const productIds = [...new Set(sellerRates.map((r) => r.produto_grupo))];
 
-    // ── Fonte 1: Hotmart por nome do afiliado ──
-    const myHotmart = hotmartInPeriod.filter((s) => {
-      if (!s.nome_afiliado) return false;
-      return affiliateToSeller.get(s.nome_afiliado.toLowerCase()) === sc.seller_name;
-    });
+    // Hotmart atribuído a este vendedor
+    const myHotmart = attributed.filter((s) => s._seller === sc.seller_name);
+    const hotmart_sales_by_affiliate = myHotmart.filter((s) => s._source === "afiliado").length;
+    const hotmart_sales_by_sck = myHotmart.filter((s) => s._source === "sck").length;
 
-    // ── Fonte 2: manual_sales (Fechamento) por seller_name ──
     const myManual = manualInPeriod.filter((m) => m.seller_name === sc.seller_name);
     const fechamento_eur = myManual.reduce((s, m) => s + m.value_eur, 0);
 
-    // ── Fonte 3: bi_wise_payments por seller_name ──
     const myWise = wiseInPeriod.filter((w) => w.seller_name === sc.seller_name);
     const wise_eur = myWise.reduce((s, w) => s + w.valor_eur, 0);
 
-    // Agrupa manual por produto_grupo
     const manualByGroup = new Map<string, { brl: number; eur: number; confirmed: number }>();
     for (const m of myManual) {
       const pg = mapProductToGroup(m.product);
       const existing = manualByGroup.get(pg) ?? { brl: 0, eur: 0, confirmed: 0 };
-      // Usa BRL real do Hotmart se confirmado, senão converte pelo câmbio do período
       const brl = m.confirmed_hotmart_valor_brl ?? m.value_eur * cotacao;
       existing.brl += brl;
       existing.eur += m.value_eur;
@@ -193,16 +282,15 @@ export function calculateCommissions(
       manualByGroup.set(pg, existing);
     }
 
-    // Wise sem produto atribuído → soma no faturamento geral mas sem comissão por produto
     const wiseSemProduto = myWise
       .filter((w) => !w.produto_grupo)
       .reduce((s, w) => s + (w.valor_brl ?? w.valor_eur * w.cotacao_eur), 0);
 
-    // Todos os produtos relevantes (taxa + dados reais)
     const allProductIds = new Set([
       ...productIds,
       ...Array.from(manualByGroup.keys()),
       ...myWise.filter((w) => w.produto_grupo).map((w) => w.produto_grupo!),
+      ...myHotmart.map((s) => s.produto_grupo),
     ]);
 
     const byProduct: ProductLine[] = [];
@@ -224,6 +312,11 @@ export function calculateCommissions(
       const total_brl = fat_hotmart + manual.brl + fat_wise;
       if (total_brl === 0 && rpct === 0 && mpct === 0) continue;
 
+      const comissao_seller = (total_brl * rpct) / 100;
+      // Split: parte da comissão sobre Hotmart é paga pelo Hotmart (não pela empresa)
+      const comissao_seller_hotmart_split = (fat_hotmart * rpct) / 100;
+      const comissao_seller_a_pagar_empresa = comissao_seller - comissao_seller_hotmart_split;
+
       byProduct.push({
         produto_grupo: pg,
         label: getProductLabel(pg),
@@ -234,8 +327,10 @@ export function calculateCommissions(
         faturamento_wise: fat_wise,
         rate_pct: rpct,
         manager_rate_pct: mpct,
-        comissao_seller: (total_brl * rpct) / 100,
+        comissao_seller,
         comissao_manager: (total_brl * mpct) / 100,
+        comissao_seller_hotmart_split,
+        comissao_seller_a_pagar_empresa,
       });
     }
 
@@ -245,10 +340,15 @@ export function calculateCommissions(
     const bonus_total = sellerBonuses.reduce((s, b) => s + b.valor, 0);
 
     const comissao_seller_total = byProduct.reduce((s, p) => s + p.comissao_seller, 0);
+    const comissao_seller_hotmart_split_total = byProduct.reduce((s, p) => s + p.comissao_seller_hotmart_split, 0);
+    const comissao_seller_a_pagar_empresa_total = byProduct.reduce((s, p) => s + p.comissao_seller_a_pagar_empresa, 0);
     const comissao_manager_total = byProduct.reduce((s, p) => s + p.comissao_manager, 0);
+
     const faturamento_total_brl =
       byProduct.reduce((s, p) => s + p.faturamento_hotmart + p.faturamento_fechamento + p.faturamento_wise, 0) +
       wiseSemProduto;
+
+    const rGanho = roletaBySeller.get(sc.seller_name) ?? { brl: 0, eur: 0 };
 
     sellerResults.push({
       sellerName: sc.seller_name,
@@ -259,12 +359,19 @@ export function calculateCommissions(
       ),
       faturamento_total_brl,
       comissao_seller_total,
+      comissao_seller_hotmart_split_total,
+      comissao_seller_a_pagar_empresa_total,
       comissao_manager_total,
       wise_eur,
       fechamento_eur,
       bonuses: sellerBonuses,
       bonus_total,
-      total_a_pagar: comissao_seller_total + bonus_total,
+      roleta_ganho_brl: rGanho.brl,
+      roleta_ganho_eur: rGanho.eur,
+      hotmart_sales_by_affiliate,
+      hotmart_sales_by_sck,
+      // A empresa paga: (comissão sobre fechamento+wise) + bônus + roleta
+      total_a_pagar: comissao_seller_a_pagar_empresa_total + bonus_total + rGanho.brl,
     });
   }
 
@@ -278,6 +385,7 @@ export function calculateCommissions(
     sellers: sellerResults.sort((a, b) => b.comissao_seller_total - a.comissao_seller_total),
     manager_total_brl,
     manager_bonuses,
+    roleta,
   };
 }
 
@@ -322,9 +430,12 @@ export function countSalesBySellerWeek(
   return sellers
     .filter((s) => s.is_active)
     .map((sc) => {
-      const mySales = periodSales.filter(
-        (s) => s.nome_afiliado && affiliateToSeller.get(s.nome_afiliado.toLowerCase()) === sc.seller_name,
-      );
+      const mySales = periodSales.filter((s) => {
+        const byAff = s.nome_afiliado ? affiliateToSeller.get(s.nome_afiliado.toLowerCase()) : null;
+        if (byAff === sc.seller_name) return true;
+        const bySck = sellerFromSck(s.origem_checkout);
+        return bySck === sc.seller_name;
+      });
       const weekCounts = weeks.map(
         (w) => mySales.filter((s) => {
           const d = new Date(s.data_venda!);
