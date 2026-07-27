@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 const AUTH_URL = "https://api-sec-vlc.hotmart.com/security/oauth/token";
 const API_BASE = "https://developers.hotmart.com/payments/api/v1";
 
-export const Route = createFileRoute("/api/public/hotmart-debug")({
+export const Route = createFileRoute("/api/public/hotmart-probe")({
   server: {
     handlers: {
       GET: async () => {
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/public/hotmart-debug")({
         );
         const aj: any = await ar.json();
         const tok = aj.access_token;
-        if (!tok) return Response.json({ authStatus: ar.status, authBody: aj });
+        if (!tok) return Response.json({ auth: aj }, { status: 500 });
 
         const paths = [
           "sales/history?max_results=5",
@@ -25,19 +25,13 @@ export const Route = createFileRoute("/api/public/hotmart-debug")({
           "sales/commissions?max_results=5",
           "subscriptions?max_results=5",
         ];
-        const results: any[] = [];
+        const out: any[] = [];
         for (const p of paths) {
-          const r = await fetch(`${API_BASE}/${p}`, {
-            headers: {
-              Authorization: `Bearer ${tok}`,
-              Accept: "application/json",
-              "User-Agent": "DashcomercialLLMidia/1.0",
-            },
-          });
+          const r = await fetch(`${API_BASE}/${p}`, { headers: { Authorization: `Bearer ${tok}` } });
           const t = await r.text();
-          results.push({ path: p, status: r.status, body: t.slice(0, 400) });
+          out.push({ path: p, status: r.status, body: t.slice(0, 400) });
         }
-        return Response.json({ cidPrefix: cid.slice(0, 8), tokenScope: aj.scope ?? null, tokenType: aj.token_type ?? null, results });
+        return Response.json({ cidPrefix: cid.slice(0, 8), tokenScope: aj.scope ?? null, results: out });
       },
     },
   },
