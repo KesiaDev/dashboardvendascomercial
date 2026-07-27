@@ -1,59 +1,99 @@
-# Arena Comercial IA
+## Objetivo
+Deixar o módulo **Comissionamento** pronto para usar a partir de julho/2026, com:
+- Késia como gestora (Nadal vira vendedor comum).
+- Cálculo do que a **empresa paga** (excluindo a parte já retida pelo Hotmart no split).
+- Faturamento por **SCK** atribuído ao vendedor certo.
+- **Roleta semanal** automática pela contagem de vendas.
+- Vendas do **Hotmart** puxadas automaticamente (sync que já existe).
+- **Wise** continua importado manualmente por CSV.
 
-Simulador de vendas por chat (estilo WhatsApp) com clientes gerados por IA, missão diária, XP/ligas, avaliação automática e coach. Vou entregar em fases para evitar um monolito difícil de validar.
+---
 
-## Fase 1 — MVP jogável (esta entrega)
+## 1) Késia gestora, Nadal vendedor
 
-Escopo mínimo que já entrega valor real e é a base de tudo:
+Só ajustes de dados (o código já trata "Késia" como gestora e Nadal já é vendedor ativo):
+- Inserir `Késia` em `bi_seller_config` (não-ativa como vendedora — só existe para receber bônus/roleta como gestora, se preciso).
+- Manter as taxas do Nadal iguais aos outros (16,5% front, 10% high-ticket, 5% renovações, 1% de override para Késia sobre as vendas dele) — já está assim, só confirmo.
 
-1. **Menu lateral** novo item "Arena Comercial IA" (`/arena`), acessível para admins + vendedores whitelisted (mesma regra de `ALLOWED_SELLER_EMAILS`).
-2. **Dashboard da Arena** (`/arena`):
-   - Cards: Nível, XP, Liga, Sequência (dias), Simulações, Taxa de sucesso, Nota média
-   - Missão diária (gerada 1x/dia por vendedor)
-   - Botão "Iniciar simulação" (usa a missão) e "Simulação livre" (dificuldade escolhida)
-   - Histórico das últimas simulações com nota
-3. **Motor de cenários**: geração de cliente virtual (persona completa — nome, perfil DISC, dores, objeções, canal, humor inicial, dificuldade Bronze→Lenda) via Lovable AI (`google/gemini-3-flash-preview`). Persona serializada em JSON e nunca repetida por vendedor.
-4. **Chat da simulação** (`/arena/sim/$id`):
-   - UI estilo WhatsApp (bolhas, timestamp, "digitando…", delays realistas por perfil)
-   - Conversa livre, sem botões nem opções pré-definidas
-   - IA mantém memória completa da conversa e do que já foi dito
-   - Estado emocional evolui (Animado, Neutro, Desconfiado, Irritado, Ocupado, Frustrado, Interessado, Seguro) baseado nas mensagens do vendedor
-   - Botão "Encerrar" → dispara avaliação
-5. **Avaliação automática** (Gemini): nota 0–100 + notas por competência (Rapport, Empatia, Escuta ativa, Descoberta, Objeções, Fechamento, CTA, Clareza, Tempo de resposta), 3 pontos fortes, 5 melhorias, resumo.
-6. **Replay comentado**: cada mensagem do vendedor recebe comentário curto da IA (✅/⚠️/❌).
-7. **XP e Liga**: XP calculado da nota + eventos (venda +120, agendou +70, tratou objeção +30, pergunta aberta +15, resposta rápida +20). Liga derivada do XP acumulado (Bronze/Prata/Ouro/Diamante/Elite/Lenda).
+Nenhuma mudança de UI. A coluna já se chama **"% Késia"**.
 
-## Fase 2 — Adaptativo e social (próxima entrega, se aprovar Fase 1)
+---
 
-- Coach IA cruza avaliações e sugere exercícios / vídeos da Universidade Comercial
-- Adaptativo: gerador de cenários lê competências fracas do vendedor e ataca essas lacunas
-- Conquistas / medalhas
-- Painel do Gestor (ranking, mapa de calor de competências, evolução, comparação)
-- Multiplayer (2 vendedores, mesmo cliente) e Torneios / Temporadas
-- Base de conhecimento: aprender padrões de `coach_conversations` reais (sem copiar literalmente) para enriquecer objeções
+## 2) Cálculo "A pagar pela empresa"
 
-## Dados (Fase 1)
+Regra: no Hotmart, a comissão do vendedor é paga direto pelo Hotmart via split → **a empresa não paga essa parte de novo**. Wise (EUR) e SCK/manual ficam para a empresa pagar.
 
-Novas tabelas Supabase, todas com RLS por `auth.uid()` + admin bypass via `has_role`:
+Novos campos por vendedor no `SellerCommission`:
+- `comissao_hotmart_split` — comissão sobre `faturamento_hotmart` (paga pelo Hotmart).
+- `comissao_a_pagar_empresa` — comissão sobre `faturamento_fechamento + faturamento_wise` + bônus + roleta.
 
-- `arena_personas` — id, seller_user_id, persona (jsonb), difficulty, product, channel, created_at
-- `arena_simulations` — id, seller_user_id, persona_id, status (open/finished), started_at, ended_at, score, xp_earned, evaluation (jsonb), mission_id
-- `arena_messages` — id, simulation_id, role (seller/client), body, sent_at, ai_comment (jsonb nullable), emotion_after
-- `arena_missions` — id, seller_user_id, date, spec (jsonb), completed_simulation_id
-- `arena_progress` — seller_user_id (pk), xp, league, streak_days, last_played_date
+Na UI, na tabela detalhada por produto, adicionar uma coluna **"Pago via Hotmart"** e uma linha final **"A pagar pela empresa"** destacada.
 
-Uploads (.docx/.pdf do Luciano Larrossa / MGT): vou parsear e usar como **contexto de produto** no prompt da IA quando o cenário for "Mentoria Gestor de Tráfego" — assim o cliente virtual conhece o produto real. Guardados em `arena_knowledge` (texto extraído).
+O `total_a_pagar` global passa a ser `comissao_a_pagar_empresa + bônus + roleta`.
+
+---
+
+## 3) SCK do Hotmart → vendedor
+
+Hoje `bi_channels.sck_prefixes` só tem o produto (`mse`, `igt`, `ldp`, `fgrs`). O nome do vendedor está no **último segmento** do `origem_checkout` (ex.: `mse.gisele`, `igt21.joao`, `mse.nadal`).
+
+Nova função `sellerFromSck(origem_checkout)`:
+1. Split por `.` e `-`; pega o último token.
+2. Match case-insensitive contra os primeiros nomes dos vendedores ativos (gisele, joão/joao, luana, nadal, rita).
+3. Retorna o `seller_name` canônico ou `null`.
+
+No `calculateCommissions`, quando classificar vendas Hotmart:
+- Primeiro tenta pelo `nome_afiliado` (como hoje).
+- Se sem afiliado ou afiliado ≠ vendedor, tenta pelo SCK.
+- Se casar por SCK, entra em `faturamento_hotmart` do vendedor correto (mesma coluna, mesmo tratamento de split).
+
+Painel novo no card do vendedor: pequena legenda mostrando **"X vendas por afiliado · Y vendas por SCK"** para auditoria.
+
+---
+
+## 4) Roleta semanal automática
+
+Regra proposta (confirme se bate com a planilha):
+- Pool total do período dividido pelas 5 semanas → `pool_semanal = pool_total / 5`.
+- Em cada semana, ganha o vendedor com **mais vendas aprovadas** (Hotmart + manual, todas as fontes).
+- Empate → divide igualmente entre empatados.
+- Semana sem vendas → pool acumula para a semana seguinte.
+
+Implementação:
+- Nova função `calculateRoleta(period, sellers, sales, manualSales)` que retorna `{ sellerName, weekWins: number[], valor_brl, valor_eur }[]`.
+- No `SellerCommission`, adicionar `roleta_ganho_brl` e `roleta_ganho_eur`, somados no `total_a_pagar`.
+- UI: no bloco Roleta existente, mostrar quem ganhou cada semana com valor, em vez de só listar vendas.
+
+---
+
+## 5) Vendas automáticas Hotmart
+
+O sync já existe (`sync.hotmart`, webhook e endpoint `/api/public/sync.hotmart`). O que falta:
+- Rodar um **backfill inicial** de todas as vendas aprovadas do ano (2026) para popular `sales` de forma completa.
+- Confirmar que o `pg_cron` diário está ativo (se não estiver, ativo agora).
+
+Nenhuma mudança de credencial — já uso `HOTMART_CLIENT_ID/SECRET` que estão nos secrets.
+
+---
+
+## 6) Wise continua manual
+
+Sem mudanças. Você importa o CSV mensal pelo botão que já existe em Comissionamento → Wise.
+
+---
 
 ## Detalhes técnicos
 
-- Server functions em `src/lib/arena.functions.ts` (`createServerFn` + `requireSupabaseAuth`): `getArenaDashboard`, `generateDailyMission`, `startSimulation`, `sendArenaMessage` (chama Gemini com histórico + persona + emoção), `finishSimulation` (avalia + XP + comentários replay), `listSimulations`, `getSimulation`.
-- Rotas: `src/routes/_app.arena.tsx` (dashboard) e `src/routes/_app.arena.sim.$id.tsx` (chat + replay).
-- IA via Lovable AI Gateway (`LOVABLE_API_KEY` já existe), modelo `google/gemini-3-flash-preview`. Sem chave nova.
-- UI: shadcn + Tailwind, alinhada ao restante (dark-friendly). Chat com bolhas verdes/cinza estilo WhatsApp, header com avatar do "cliente", indicador de humor discreto.
-- Uploads processados 1x com `document--parse_document` e salvos em `arena_knowledge` no momento do primeiro deploy.
+- Arquivos alterados: `src/lib/commission.ts` (cálculo + tipos), `src/lib/commission.functions.ts` (buscas), `src/routes/_app.comissionamento.tsx` (UI colunas + roleta).
+- Novo helper `src/lib/sck-attribution.ts` com `sellerFromSck()`.
+- Migração para inserir `Késia` em `bi_seller_config` (is_active=false, moeda BRL) — só se você quiser que ela apareça na lista de gestores; sem isso o código atual já funciona.
+- Backfill Hotmart: chamada única a `/api/public/sync.hotmart` com range 2026-01-01→hoje.
+- Sem quebra do que já está no banco. O histórico de junho continua exibindo do mesmo jeito.
 
-## Fora do escopo desta fase
+---
 
-Multiplayer, torneios, painel gestor completo, conquistas visuais, adaptativo por lacuna, integração com Universidade Comercial — ficam para Fase 2 para manter esta entrega revisável.
+## Perguntas antes de codar
 
-Confirma que posso seguir com a Fase 1 assim descrita?
+1. **Roleta**: regra "vencedor da semana leva tudo, empate divide" está correta? Ou é proporcional às vendas de cada um na semana?
+2. **SCK ambíguo**: se o SCK for `mse.joao` mas o `nome_afiliado` for outro (ex.: Rita), quem ganha o crédito — afiliado ou SCK?
+3. **Backfill Hotmart**: puxar desde 01/01/2026 ou só desde 01/07/2026 (início do novo ciclo com você como gestora)?
