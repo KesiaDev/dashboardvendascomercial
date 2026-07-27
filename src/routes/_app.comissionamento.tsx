@@ -379,19 +379,26 @@ function Dashboard() {
       )}
 
       {/* ── Roleta ── */}
-      {summary && weekSales.length > 0 && (
+      {summary && (
         <Card>
           <CardHeader>
             <div className="flex items-start justify-between gap-4">
-              <CardTitle className="text-base">Roleta — vendas por semana</CardTitle>
+              <div>
+                <CardTitle className="text-base">Roleta — vencedores por semana</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Vencedor de cada semana leva o pool semanal · empate divide igual · semana sem
+                  vendas acumula para a seguinte
+                </p>
+              </div>
               {activePeriod && (
                 <div className="text-right text-xs text-muted-foreground">
-                  <span>Pool: {money(activePeriod.roleta_pool_brl ?? 0)} · {money(activePeriod.roleta_pool_eur ?? 0, "EUR")}</span>
+                  <div>Pool total: {money(activePeriod.roleta_pool_brl ?? 0)} · {money(activePeriod.roleta_pool_eur ?? 0, "EUR")}</div>
+                  <div>Pool semanal: {money((activePeriod.roleta_pool_brl ?? 0) / 5)} · {money((activePeriod.roleta_pool_eur ?? 0) / 5, "EUR")}</div>
                   <button
-                    className="ml-2 text-primary underline"
+                    className="mt-1 text-primary underline"
                     onClick={() => {
-                      const brl = prompt("Pool BRL:", String(activePeriod.roleta_pool_brl ?? 0));
-                      const eur = prompt("Pool EUR:", String(activePeriod.roleta_pool_eur ?? 0));
+                      const brl = prompt("Pool total BRL:", String(activePeriod.roleta_pool_brl ?? 0));
+                      const eur = prompt("Pool total EUR:", String(activePeriod.roleta_pool_eur ?? 0));
                       if (brl !== null && eur !== null) {
                         upsertPeriodMut.mutate({
                           ...activePeriod,
@@ -401,42 +408,96 @@ function Dashboard() {
                       }
                     }}
                   >
-                    editar
+                    editar pool
                   </button>
                 </div>
               )}
             </div>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
+          <CardContent className="overflow-x-auto space-y-4">
+            {/* Vencedores por semana */}
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
-                  <th className="py-2 pr-4">Vendedor</th>
-                  {weeks.map((w) => (
-                    <th key={w.week} className="py-2 pr-3 text-right">
-                      {w.label}
-                    </th>
-                  ))}
-                  <th className="py-2 text-right">Total</th>
+                  <th className="py-2 pr-3">Semana</th>
+                  <th className="py-2 pr-3 text-right">Vendas na semana</th>
+                  <th className="py-2 pr-3">Vencedor(es)</th>
+                  <th className="py-2 text-right">Prêmio por ganhador</th>
                 </tr>
               </thead>
               <tbody>
-                {weekSales.map((ws) => (
-                  <tr key={ws.sellerName} className="border-b border-border/40 last:border-0">
-                    <td className="py-1.5 pr-4 font-medium">{ws.sellerName}</td>
-                    {ws.weeks.map((c, i) => (
-                      <td key={i} className="py-1.5 pr-3 text-right tabular-nums">
-                        {c || "—"}
-                      </td>
-                    ))}
-                    <td className="py-1.5 text-right tabular-nums font-semibold">{ws.total}</td>
+                {summary.roleta.map((r) => (
+                  <tr key={r.week} className="border-b border-border/40 last:border-0">
+                    <td className="py-1.5 pr-3 font-medium">{r.label}</td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums">{r.totalSales || "—"}</td>
+                    <td className="py-1.5 pr-3">
+                      {r.winners.length > 0 ? (
+                        r.winners.map((w) => (
+                          <Badge key={w} variant="secondary" className="mr-1 text-xs">
+                            {w}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-muted-foreground text-xs">
+                          Sem vendas · pool acumula
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-1.5 text-right tabular-nums">
+                      {r.valorPorGanhador_brl > 0 || r.valorPorGanhador_eur > 0 ? (
+                        <>
+                          <div>{money(r.valorPorGanhador_brl)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {money(r.valorPorGanhador_eur, "EUR")}
+                          </div>
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {/* Contagem de vendas por vendedor por semana (auditoria) */}
+            {weekSales.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                  Contagem de vendas por vendedor
+                </p>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="py-2 pr-4">Vendedor</th>
+                      {weeks.map((w) => (
+                        <th key={w.week} className="py-2 pr-3 text-right">
+                          {w.label}
+                        </th>
+                      ))}
+                      <th className="py-2 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {weekSales.map((ws) => (
+                      <tr key={ws.sellerName} className="border-b border-border/40 last:border-0">
+                        <td className="py-1.5 pr-4 font-medium">{ws.sellerName}</td>
+                        {ws.weeks.map((c, i) => (
+                          <td key={i} className="py-1.5 pr-3 text-right tabular-nums">
+                            {c || "—"}
+                          </td>
+                        ))}
+                        <td className="py-1.5 text-right tabular-nums font-semibold">{ws.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
+
 
       {/* ── Vendedores ── */}
       {summary && (
