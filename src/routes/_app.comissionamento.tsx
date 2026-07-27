@@ -584,7 +584,12 @@ function Dashboard() {
                             <th className="px-3 py-2 text-right">Fechamento</th>
                             <th className="px-3 py-2 text-right">Wise</th>
                             <th className="px-3 py-2 text-right">% seller</th>
-                            <th className="px-3 py-2 text-right">Comissão</th>
+                            <th className="px-3 py-2 text-right" title="Pago pelo Hotmart via split">
+                              Split HM
+                            </th>
+                            <th className="px-3 py-2 text-right" title="Empresa paga (Fechamento + Wise)">
+                              A pagar empresa
+                            </th>
                             <th className="px-3 py-2 text-right">% Késia</th>
                             <th className="px-3 py-2 text-right">Minha parte</th>
                           </tr>
@@ -616,8 +621,11 @@ function Dashboard() {
                                 {p.faturamento_wise > 0 ? money(p.faturamento_wise) : "—"}
                               </td>
                               <td className="px-3 py-1.5 text-right">{pct(p.rate_pct)}</td>
-                              <td className="px-3 py-1.5 text-right tabular-nums font-medium">
-                                {money(p.comissao_seller)}
+                              <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
+                                {p.comissao_seller_hotmart_split > 0 ? money(p.comissao_seller_hotmart_split) : "—"}
+                              </td>
+                              <td className="px-3 py-1.5 text-right tabular-nums font-medium text-emerald-600">
+                                {p.comissao_seller_a_pagar_empresa > 0 ? money(p.comissao_seller_a_pagar_empresa) : "—"}
                               </td>
                               <td className="px-3 py-1.5 text-right">{pct(p.manager_rate_pct)}</td>
                               <td className="px-3 py-1.5 text-right tabular-nums text-primary">
@@ -629,8 +637,11 @@ function Dashboard() {
                             <td className="px-3 py-2" colSpan={5}>
                               Total
                             </td>
-                            <td className="px-3 py-2 text-right tabular-nums">
-                              {money(s.comissao_seller_total)}
+                            <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                              {money(s.comissao_seller_hotmart_split_total)}
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums text-emerald-600">
+                              {money(s.comissao_seller_a_pagar_empresa_total)}
                             </td>
                             <td />
                             <td className="px-3 py-2 text-right tabular-nums text-primary">
@@ -641,6 +652,7 @@ function Dashboard() {
                       </table>
                     </div>
                   )}
+
 
                   {s.byProduct.length === 0 && (
                     <p className="text-sm text-muted-foreground">
