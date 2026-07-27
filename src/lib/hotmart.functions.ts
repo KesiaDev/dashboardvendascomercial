@@ -164,17 +164,20 @@ async function fetchAllSales(startEpochMs: number, endEpochMs: number) {
   let pages = 0;
   // Hotmart /sales/history: start_date e end_date são timestamps em ms (epoch).
   do {
-    const params = new URLSearchParams();
-    params.set("start_date", String(startEpochMs));
-    params.set("end_date", String(endEpochMs));
-    params.set("max_results", "50");
-    if (pageToken) params.set("page_token", pageToken);
-    const url = `${API_BASE}/sales/history?${params.toString()}`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    let url = `${API_BASE}/sales/history?start_date=${startEpochMs}&end_date=${endEpochMs}&max_results=50`;
+    if (pageToken) url += `&page_token=${encodeURIComponent(pageToken)}`;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "User-Agent": "llmidia-dashcomercial/1.0",
+      },
+    });
     if (!res.ok) {
       const body = await res.text();
-      console.error("Hotmart fail url:", url, "status:", res.status, "body:", body);
-      throw new Error(`Hotmart /sales/history ${res.status} url=${url}: ${body}`);
+      console.error("Hotmart fail url:", url, "status:", res.status, "body:", body, "tokenLen:", token.length);
+      throw new Error(`Hotmart /sales/history ${res.status} url=${url}: ${body} tokenLen=${token.length}`);
     }
     const json = (await res.json()) as { items?: any[]; page_info?: { next_page_token?: string } };
     if (json.items?.length) all.push(...json.items);
