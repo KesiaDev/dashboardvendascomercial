@@ -17,13 +17,13 @@ async function adminDb() {
 async function getAccessToken(): Promise<string> {
   const clientId = process.env.HOTMART_CLIENT_ID;
   const clientSecret = process.env.HOTMART_CLIENT_SECRET;
-  const basic = process.env.HOTMART_BASIC_TOKEN;
-  if (!clientId || !clientSecret || !basic) {
+  if (!clientId || !clientSecret) {
     throw new Error("Credenciais Hotmart ausentes no backend.");
   }
-  const basicHeader = basic.trim().toLowerCase().startsWith("basic ")
-    ? basic.trim()
-    : `Basic ${basic.trim()}`;
+  // O token Basic é sempre base64(client_id:client_secret), conforme OAuth2 client_credentials.
+  // Garantimos que não dependa de um HOTMART_BASIC_TOKEN desatualizado/inconsistente.
+  const basicPayload = `${clientId}:${clientSecret}`;
+  const basicHeader = `Basic ${Buffer.from(basicPayload).toString("base64")}`;
 
   const url = `${AUTH_URL}?grant_type=client_credentials&client_id=${encodeURIComponent(
     clientId,
