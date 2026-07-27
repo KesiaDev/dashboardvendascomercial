@@ -171,13 +171,12 @@ async function fetchAllSales(startEpochMs: number, endEpochMs: number) {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/json",
-        "User-Agent": "llmidia-dashcomercial/1.0",
       },
     });
     if (!res.ok) {
       const body = await res.text();
-      console.error("Hotmart fail url:", url, "status:", res.status, "body:", body, "tokenLen:", token.length);
-      throw new Error(`Hotmart /sales/history ${res.status} url=${url}: ${body} tokenLen=${token.length}`);
+      console.error("Hotmart fail url:", url, "status:", res.status, "body:", body);
+      throw new Error(`Hotmart /sales/history ${res.status}: ${body}`);
     }
     const json = (await res.json()) as { items?: any[]; page_info?: { next_page_token?: string } };
     if (json.items?.length) all.push(...json.items);
