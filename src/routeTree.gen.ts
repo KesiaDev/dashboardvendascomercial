@@ -36,6 +36,7 @@ import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
 import { Route as AppAgendaRouteImport } from './routes/_app.agenda'
 import { Route as ApiPublicHotmartRawRouteImport } from './routes/api/public/hotmart-raw'
+import { Route as ApiPublicHotmartProbeRouteImport } from './routes/api/public/hotmart-probe'
 import { Route as ApiPublicHotmartDebugRouteImport } from './routes/api/public/hotmart-debug'
 import { Route as ApiPublicBackfillV3RouteImport } from './routes/api/public/backfill-v3'
 import { Route as ApiHotmartWebhookRouteImport } from './routes/api/hotmart/webhook'
@@ -181,6 +182,11 @@ const ApiPublicHotmartRawRoute = ApiPublicHotmartRawRouteImport.update({
   path: '/api/public/hotmart-raw',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHotmartProbeRoute = ApiPublicHotmartProbeRouteImport.update({
+  id: '/api/public/hotmart-probe',
+  path: '/api/public/hotmart-probe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHotmartDebugRoute = ApiPublicHotmartDebugRouteImport.update({
   id: '/api/public/hotmart-debug',
   path: '/api/public/hotmart-debug',
@@ -263,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/api/hotmart/webhook': typeof ApiHotmartWebhookRoute
   '/api/public/backfill-v3': typeof ApiPublicBackfillV3Route
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
+  '/api/public/hotmart-probe': typeof ApiPublicHotmartProbeRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/arena/sim/$id': typeof AppArenaSimIdRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
@@ -301,6 +308,7 @@ export interface FileRoutesByTo {
   '/api/hotmart/webhook': typeof ApiHotmartWebhookRoute
   '/api/public/backfill-v3': typeof ApiPublicBackfillV3Route
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
+  '/api/public/hotmart-probe': typeof ApiPublicHotmartProbeRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/arena/sim/$id': typeof AppArenaSimIdRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
@@ -341,6 +349,7 @@ export interface FileRoutesById {
   '/api/hotmart/webhook': typeof ApiHotmartWebhookRoute
   '/api/public/backfill-v3': typeof ApiPublicBackfillV3Route
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
+  '/api/public/hotmart-probe': typeof ApiPublicHotmartProbeRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/_app/arena/sim/$id': typeof AppArenaSimIdRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
@@ -381,6 +390,7 @@ export interface FileRouteTypes {
     | '/api/hotmart/webhook'
     | '/api/public/backfill-v3'
     | '/api/public/hotmart-debug'
+    | '/api/public/hotmart-probe'
     | '/api/public/hotmart-raw'
     | '/arena/sim/$id'
     | '/api/public/agenda/book'
@@ -419,6 +429,7 @@ export interface FileRouteTypes {
     | '/api/hotmart/webhook'
     | '/api/public/backfill-v3'
     | '/api/public/hotmart-debug'
+    | '/api/public/hotmart-probe'
     | '/api/public/hotmart-raw'
     | '/arena/sim/$id'
     | '/api/public/agenda/book'
@@ -458,6 +469,7 @@ export interface FileRouteTypes {
     | '/api/hotmart/webhook'
     | '/api/public/backfill-v3'
     | '/api/public/hotmart-debug'
+    | '/api/public/hotmart-probe'
     | '/api/public/hotmart-raw'
     | '/_app/arena/sim/$id'
     | '/api/public/agenda/book'
@@ -473,6 +485,7 @@ export interface RootRouteChildren {
   ApiHotmartWebhookRoute: typeof ApiHotmartWebhookRoute
   ApiPublicBackfillV3Route: typeof ApiPublicBackfillV3Route
   ApiPublicHotmartDebugRoute: typeof ApiPublicHotmartDebugRoute
+  ApiPublicHotmartProbeRoute: typeof ApiPublicHotmartProbeRoute
   ApiPublicHotmartRawRoute: typeof ApiPublicHotmartRawRoute
   ApiPublicAgendaBookRoute: typeof ApiPublicAgendaBookRoute
   ApiPublicSyncCcpbxRoute: typeof ApiPublicSyncCcpbxRoute
@@ -671,6 +684,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHotmartRawRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hotmart-probe': {
+      id: '/api/public/hotmart-probe'
+      path: '/api/public/hotmart-probe'
+      fullPath: '/api/public/hotmart-probe'
+      preLoaderRoute: typeof ApiPublicHotmartProbeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hotmart-debug': {
       id: '/api/public/hotmart-debug'
       path: '/api/public/hotmart-debug'
@@ -839,6 +859,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHotmartWebhookRoute: ApiHotmartWebhookRoute,
   ApiPublicBackfillV3Route: ApiPublicBackfillV3Route,
   ApiPublicHotmartDebugRoute: ApiPublicHotmartDebugRoute,
+  ApiPublicHotmartProbeRoute: ApiPublicHotmartProbeRoute,
   ApiPublicHotmartRawRoute: ApiPublicHotmartRawRoute,
   ApiPublicAgendaBookRoute: ApiPublicAgendaBookRoute,
   ApiPublicSyncCcpbxRoute: ApiPublicSyncCcpbxRoute,
