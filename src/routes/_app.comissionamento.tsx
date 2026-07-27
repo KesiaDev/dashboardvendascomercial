@@ -515,7 +515,7 @@ function Dashboard() {
                 }
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <Badge variant="outline">{s.sellerName}</Badge>
                     <span className="text-xs text-muted-foreground">
                       Fat. {money(s.faturamento_total_brl)}
@@ -530,11 +530,30 @@ function Dashboard() {
                         · Wise {money(s.wise_eur, "EUR")}
                       </span>
                     )}
+                    {(s.hotmart_sales_by_affiliate + s.hotmart_sales_by_sck) > 0 && (
+                      <span className="text-[11px] text-muted-foreground">
+                        · Hotmart: {s.hotmart_sales_by_affiliate} afiliado
+                        {s.hotmart_sales_by_sck > 0 && ` + ${s.hotmart_sales_by_sck} SCK`}
+                      </span>
+                    )}
+                    {s.roleta_ganho_brl > 0 && (
+                      <Badge variant="secondary" className="text-[11px]">
+                        Roleta {money(s.roleta_ganho_brl)}
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Vendedor recebe</p>
-                      <p className="font-semibold tabular-nums">{money(s.total_a_pagar)}</p>
+                      <p className="text-xs text-muted-foreground">Pago via Hotmart</p>
+                      <p className="font-medium tabular-nums text-muted-foreground">
+                        {money(s.comissao_seller_hotmart_split_total)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">A pagar pela empresa</p>
+                      <p className="font-semibold tabular-nums text-emerald-600">
+                        {money(s.total_a_pagar)}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Minha % adicional</p>
@@ -549,6 +568,7 @@ function Dashboard() {
                     )}
                   </div>
                 </div>
+
               </CardHeader>
 
               {expandedSeller === s.sellerName && (
