@@ -60,7 +60,7 @@ export const fetchAllSalesFn = createServerFn({ method: "GET" }).handler(async (
   return fetchAllPaged<any>(
     supabase,
     "sales",
-    "transacao,produto_grupo,produto_original,status,data_venda,email_cliente,faturamento_liquido_brl,nome_afiliado,origem_checkout",
+    "transacao,produto_grupo,produto_original,status,data_venda,email_cliente,faturamento_liquido_brl,preco_total,moeda_original,numero_parcela,nome_afiliado,origem_checkout",
     "transacao",
   );
 });
