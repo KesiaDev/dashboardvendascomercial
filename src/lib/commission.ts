@@ -1,5 +1,5 @@
 import { PRODUCT_GROUPS, mapProductToGroup } from "./product-groups";
-import { resolveSaleSeller } from "./sck-attribution";
+import { resolveSaleSeller, sellerFromAffiliate } from "./sck-attribution";
 
 export type CommissionPeriod = {
   id: number;
@@ -98,7 +98,19 @@ export type ManualSaleRow = {
   sale_date: string;
   confirmation_status: string;
   confirmed_hotmart_valor_brl: number | null;
+  client_email?: string | null;
+  client_name?: string | null;
 };
+
+/**
+ * Nome do vendedor gravado no Fechamento/Wise/Clint ("Gisele Pimentel",
+ * "João Pessoa", "FABIO NADAL...") → seller_name canônico do bi_seller_config.
+ */
+export function canonicalSeller(name: string | null | undefined): string | null {
+  if (!name) return null;
+  return sellerFromAffiliate(name) ?? name;
+}
+
 
 export type ProductLine = {
   produto_grupo: string;
@@ -210,13 +222,42 @@ export function calculateCommissions(
     return { ...s, _seller: seller, _source: source };
   });
 
-  const wiseInPeriod = wisePayments.filter((w) => w.period_id === period.id);
+  const manualInPeriod = manualSales
+    .filter((m) => {
+      if (!m.sale_date) return false;
+      const d = new Date(m.sale_date);
+      return d >= start && d <= end;
+    })
+    // normaliza "Gisele Pimentel" → "Gisele" para casar com bi_seller_config
+    .map((m) => ({ ...m, seller_name: canonicalSeller(m.seller_name) ?? m.seller_name }));
 
-  const manualInPeriod = manualSales.filter((m) => {
-    if (!m.sale_date) return false;
-    const d = new Date(m.sale_date);
-    return d >= start && d <= end;
-  });
+  // Wise: entra pelo period_id OU pela data de pagamento dentro do período.
+  // Quando a planilha não traz o vendedor, tentamos casar pelo e-mail/nome do
+  // cliente com o Fechamento do mesmo período.
+  const manualByEmail = new Map<string, string>();
+  const manualByClient = new Map<string, string>();
+  for (const m of manualInPeriod) {
+    if (m.client_email) manualByEmail.set(m.client_email.trim().toLowerCase(), m.seller_name);
+    if (m.client_name) manualByClient.set(m.client_name.trim().toLowerCase(), m.seller_name);
+  }
+
+  const wiseInPeriod = wisePayments
+    .filter((w) => {
+      if (w.period_id === period.id) return true;
+      if (w.period_id != null) return false;
+      if (!w.data_pagamento) return false;
+      const d = new Date(w.data_pagamento);
+      return d >= start && d <= end;
+    })
+    .map((w) => {
+      const direto = canonicalSeller(w.seller_name);
+      const porEmail = w.email_cliente ? manualByEmail.get(w.email_cliente.trim().toLowerCase()) : undefined;
+      const porNome = w.cliente ? manualByClient.get(w.cliente.trim().toLowerCase()) : undefined;
+      return { ...w, seller_name: direto ?? porEmail ?? porNome ?? null };
+    })
+    // Inadimplente não gera comissão — o vendedor só recebe quando o cliente paga.
+    .filter((w) => !w.inadimplente);
+
 
   // ── Roleta semanal ────────────────────────────────────────────────────────
   // Regra: vencedor da semana leva pool_semanal; empate divide;
