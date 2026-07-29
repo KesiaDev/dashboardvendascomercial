@@ -633,11 +633,17 @@ export type Database = {
           cotacao_eur: number
           data_pagamento: string
           descricao: string | null
+          email_cliente: string | null
           id: number
           importado_em: string | null
+          inadimplente: boolean
           period_id: number | null
           produto_grupo: string | null
           seller_name: string | null
+          sheet_tab: string | null
+          situacao: string | null
+          source: string
+          synced_at: string | null
           valor_brl: number | null
           valor_eur: number
         }
@@ -646,11 +652,17 @@ export type Database = {
           cotacao_eur?: number
           data_pagamento: string
           descricao?: string | null
+          email_cliente?: string | null
           id?: never
           importado_em?: string | null
+          inadimplente?: boolean
           period_id?: number | null
           produto_grupo?: string | null
           seller_name?: string | null
+          sheet_tab?: string | null
+          situacao?: string | null
+          source?: string
+          synced_at?: string | null
           valor_brl?: number | null
           valor_eur: number
         }
@@ -659,11 +671,17 @@ export type Database = {
           cotacao_eur?: number
           data_pagamento?: string
           descricao?: string | null
+          email_cliente?: string | null
           id?: never
           importado_em?: string | null
+          inadimplente?: boolean
           period_id?: number | null
           produto_grupo?: string | null
           seller_name?: string | null
+          sheet_tab?: string | null
+          situacao?: string | null
+          source?: string
+          synced_at?: string | null
           valor_brl?: number | null
           valor_eur?: number
         }

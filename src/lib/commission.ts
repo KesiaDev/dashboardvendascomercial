@@ -37,7 +37,14 @@ export type WisePayment = {
   seller_name: string | null;
   produto_grupo: string | null;
   period_id: number | null;
+  email_cliente?: string | null;
+  situacao?: string | null;
+  inadimplente?: boolean;
+  sheet_tab?: string | null;
+  source?: string | null;
+  synced_at?: string | null;
 };
+
 
 export type CommissionBonus = {
   id: number;
