@@ -88,6 +88,70 @@ export function hotmartBaseBrl(sale: SaleRow, cotacao: number): number {
   return moeda === "BRL" ? total : total * cotacao;
 }
 
+// ── Metas de faturamento (EUR) por nível ─────────────────────────────────────
+// N1: Luana · N3: Gisele, Rita, João, Nadal (padrão para novos vendedores)
+// Bônus é cumulativo: bater a super meta paga meta + super meta.
+export type MetaLevelConfig = {
+  level: "N1" | "N3";
+  meta_semanal_eur: number;
+  super_semanal_eur: number;
+  bonus_semanal_eur: number; // por faixa atingida
+  meta_mensal_eur: number;
+  super_mensal_eur: number;
+  bonus_mensal_eur: number; // por faixa atingida
+};
+
+export const META_LEVELS: Record<"N1" | "N3", MetaLevelConfig> = {
+  N1: {
+    level: "N1",
+    meta_semanal_eur: 900,
+    super_semanal_eur: 1600,
+    bonus_semanal_eur: 25,
+    meta_mensal_eur: 3600,
+    super_mensal_eur: 6400,
+    bonus_mensal_eur: 25,
+  },
+  N3: {
+    level: "N3",
+    meta_semanal_eur: 1200,
+    super_semanal_eur: 2100,
+    bonus_semanal_eur: 30,
+    meta_mensal_eur: 4800,
+    super_mensal_eur: 8400,
+    bonus_mensal_eur: 30,
+  },
+};
+
+const META_N1_SELLERS = ["luana"];
+
+export function metaLevelFor(sellerName: string): MetaLevelConfig {
+  const n = (sellerName ?? "").trim().toLowerCase();
+  return META_N1_SELLERS.some((s) => n.includes(s)) ? META_LEVELS.N1 : META_LEVELS.N3;
+}
+
+export type MetaWeekResult = {
+  week: number;
+  label: string;
+  faturamento_eur: number;
+  bateu_meta: boolean;
+  bateu_super: boolean;
+  bonus_eur: number;
+};
+
+export type MetaResult = {
+  level: "N1" | "N3";
+  config: MetaLevelConfig;
+  semanas: MetaWeekResult[];
+  bonus_semanal_total_eur: number;
+  faturamento_mensal_eur: number;
+  bateu_meta_mensal: boolean;
+  bateu_super_mensal: boolean;
+  bonus_mensal_eur: number;
+  bonus_total_eur: number;
+};
+
+
+
 
 // Venda do Fechamento (tabela manual_sales) — EUR, confirmada ou pendente
 export type ManualSaleRow = {
