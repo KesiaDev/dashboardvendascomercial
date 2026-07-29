@@ -409,6 +409,54 @@ export function calculateCommissions(
     const myWise = wiseInPeriod.filter((w) => w.seller_name === sc.seller_name);
     const wise_eur = myWise.reduce((s, w) => s + w.valor_eur, 0);
 
+    // ── Metas de faturamento (EUR) por semana comercial e no mês ────────────
+    const metaCfg = metaLevelFor(sc.seller_name);
+    const eurByWeek = new Map<number, number>();
+    const addEur = (dateStr: string | null | undefined, eur: number) => {
+      if (!dateStr || !eur) return;
+      const d = new Date(dateStr);
+      const w = weeks.find((x) => d >= x.start && d <= x.end);
+      if (!w) return;
+      eurByWeek.set(w.week, (eurByWeek.get(w.week) ?? 0) + eur);
+    };
+    for (const s of myHotmart) addEur(s.data_venda, hotmartBaseBrl(s, cotacao) / cotacao);
+    for (const m of myManual) addEur(m.sale_date, m.value_eur);
+    for (const w of myWise) addEur(w.data_pagamento, w.valor_eur);
+
+    const metaSemanas: MetaWeekResult[] = weeks.map((w) => {
+      const fat = eurByWeek.get(w.week) ?? 0;
+      const bateu = fat >= metaCfg.meta_semanal_eur;
+      const super_ = fat >= metaCfg.super_semanal_eur;
+      return {
+        week: w.week,
+        label: w.label,
+        faturamento_eur: fat,
+        bateu_meta: bateu,
+        bateu_super: super_,
+        bonus_eur:
+          (bateu ? metaCfg.bonus_semanal_eur : 0) + (super_ ? metaCfg.bonus_semanal_eur : 0),
+      };
+    });
+    const faturamento_mensal_eur = metaSemanas.reduce((s, w) => s + w.faturamento_eur, 0);
+    const bateuMensal = faturamento_mensal_eur >= metaCfg.meta_mensal_eur;
+    const bateuSuperMensal = faturamento_mensal_eur >= metaCfg.super_mensal_eur;
+    const bonusMensalEur =
+      (bateuMensal ? metaCfg.bonus_mensal_eur : 0) + (bateuSuperMensal ? metaCfg.bonus_mensal_eur : 0);
+    const bonusSemanalTotalEur = metaSemanas.reduce((s, w) => s + w.bonus_eur, 0);
+
+    const metas: MetaResult = {
+      level: metaCfg.level,
+      config: metaCfg,
+      semanas: metaSemanas,
+      bonus_semanal_total_eur: bonusSemanalTotalEur,
+      faturamento_mensal_eur,
+      bateu_meta_mensal: bateuMensal,
+      bateu_super_mensal: bateuSuperMensal,
+      bonus_mensal_eur: bonusMensalEur,
+      bonus_total_eur: bonusSemanalTotalEur + bonusMensalEur,
+    };
+
+
     const manualByGroup = new Map<string, { brl: number; eur: number; confirmed: number }>();
     for (const m of myManual) {
       const pg = mapProductToGroup(m.product);
