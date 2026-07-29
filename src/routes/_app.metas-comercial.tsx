@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Pencil, Target, TrendingUp, Award } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OkrBoard } from "@/components/okr-board";
 import { getMetasComercialFn, updateMetaComercialFn, type MetaKey } from "@/lib/metas-comercial.functions";
 
 export const Route = createFileRoute("/_app/metas-comercial")({
@@ -43,6 +45,17 @@ function MetasComercialPage() {
         </p>
       </div>
 
+      <Tabs defaultValue="metas">
+        <TabsList>
+          <TabsTrigger value="metas">Metas & KPIs</TabsTrigger>
+          <TabsTrigger value="okrs">OKRs</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="okrs" className="mt-4">
+          <OkrBoard />
+        </TabsContent>
+
+        <TabsContent value="metas" className="mt-4 space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
         <MetaCard
           title="Frontend"
@@ -119,6 +132,8 @@ function MetasComercialPage() {
           </p>
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
