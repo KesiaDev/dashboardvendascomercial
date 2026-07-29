@@ -103,7 +103,10 @@ export type ManualSaleRow = {
 export type ProductLine = {
   produto_grupo: string;
   label: string;
+  /** Hotmart com o AFILIADO do vendedor — comissão paga direto pelo Hotmart (split). */
   faturamento_hotmart: number;
+  /** Hotmart atribuído por SCK — comissão paga pela EMPRESA. */
+  faturamento_sck: number;
   faturamento_fechamento: number;
   faturamento_fechamento_eur: number;
   faturamento_fechamento_confirmado: number;
