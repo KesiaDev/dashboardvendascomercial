@@ -8,6 +8,9 @@ import { ChevronDown, ChevronRight, Target } from "lucide-react";
 function pct(n: number, d: number) {
   return d > 0 ? (n / d) * 100 : 0;
 }
+function fmtAprov(v: number) {
+  return v > 100 ? ">100%" : `${v.toFixed(1)}%`;
+}
 function pctColor(v: number) {
   if (v >= 30) return "text-emerald-500";
   if (v >= 15) return "text-amber-500";
@@ -126,7 +129,7 @@ export function ConversaoFunilCard({
                           {conv.toFixed(1)}%
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
-                          {aprov.toFixed(1)}%
+                          {fmtAprov(aprov)}
                         </td>
                       </tr>
                       {isOpen &&
@@ -145,7 +148,7 @@ export function ConversaoFunilCard({
                                 {sConv.toFixed(1)}%
                               </td>
                               <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
-                                {sAprov.toFixed(1)}%
+                                {fmtAprov(sAprov)}
                               </td>
                             </tr>
                           );
@@ -164,7 +167,7 @@ export function ConversaoFunilCard({
                     {pct(totals.won, totals.won + totals.lost).toFixed(1)}%
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
-                    {pct(totals.won, totals.leads).toFixed(1)}%
+                    {fmtAprov(pct(totals.won, totals.leads))}
                   </td>
                 </tr>
               </tfoot>
