@@ -109,8 +109,18 @@ export const syncWiseSheetFn = createServerFn({ method: "POST" })
       };
     });
 
-    const { error } = await db.from("bi_wise_payments").insert(rows);
+    // Deduplica dentro da própria planilha (índice único usa data+cliente+valor+descrição)
+    const seen = new Set<string>();
+    const unique = rows.filter((r) => {
+      const k = `${r.data_pagamento}|${r.cliente}|${r.valor_eur}|${r.descricao ?? ""}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+
+    const { error } = await db.from("bi_wise_payments").insert(unique);
     if (error) throw new Error(error.message);
+
 
 
     return {
