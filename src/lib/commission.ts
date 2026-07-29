@@ -1,5 +1,5 @@
 import { PRODUCT_GROUPS, mapProductToGroup } from "./product-groups";
-import { sellerFromSck } from "./sck-attribution";
+import { sellerFromSck, sellerFromAffiliate } from "./sck-attribution";
 
 export type CommissionPeriod = {
   id: number;
@@ -178,7 +178,9 @@ export function calculateCommissions(
   // Atribui cada venda Hotmart a um vendedor (afiliado primeiro, SCK fallback)
   type AttributedSale = SaleRow & { _seller: string | null; _source: "afiliado" | "sck" | null };
   const attributed: AttributedSale[] = hotmartInPeriod.map((s) => {
-    const byAff = s.nome_afiliado ? affiliateToSeller.get(s.nome_afiliado.toLowerCase()) ?? null : null;
+    const byAff =
+      (s.nome_afiliado ? affiliateToSeller.get(s.nome_afiliado.toLowerCase()) ?? null : null) ??
+      sellerFromAffiliate(s.nome_afiliado);
     if (byAff) return { ...s, _seller: byAff, _source: "afiliado" };
     const bySck = sellerFromSck(s.origem_checkout);
     if (bySck && sellers.some((sc) => sc.seller_name === bySck))
@@ -438,7 +440,9 @@ export function countSalesBySellerWeek(
     .filter((s) => s.is_active)
     .map((sc) => {
       const mySales = periodSales.filter((s) => {
-        const byAff = s.nome_afiliado ? affiliateToSeller.get(s.nome_afiliado.toLowerCase()) : null;
+        const byAff =
+          (s.nome_afiliado ? affiliateToSeller.get(s.nome_afiliado.toLowerCase()) ?? null : null) ??
+          sellerFromAffiliate(s.nome_afiliado);
         if (byAff === sc.seller_name) return true;
         const bySck = sellerFromSck(s.origem_checkout);
         return bySck === sc.seller_name;
