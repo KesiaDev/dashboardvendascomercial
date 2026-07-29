@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -105,9 +105,8 @@ export function ConversaoFunilCard({
                   const aprov = pct(f.won, f.leads);
                   const isOpen = openFunnels[f.funnel] ?? false;
                   return (
-                    <>
+                    <React.Fragment key={f.funnel}>
                       <tr
-                        key={f.funnel}
                         className="border-t border-border/40 bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer"
                         onClick={() => setOpenFunnels((o) => ({ ...o, [f.funnel]: !isOpen }))}
                       >
@@ -151,7 +150,7 @@ export function ConversaoFunilCard({
                             </tr>
                           );
                         })}
-                    </>
+                    </React.Fragment>
                   );
                 })}
               </tbody>
