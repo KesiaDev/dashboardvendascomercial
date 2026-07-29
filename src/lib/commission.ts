@@ -1,5 +1,5 @@
 import { PRODUCT_GROUPS, mapProductToGroup } from "./product-groups";
-import { sellerFromSck, sellerFromAffiliate } from "./sck-attribution";
+import { resolveSaleSeller } from "./sck-attribution";
 
 export type CommissionPeriod = {
   id: number;
@@ -435,14 +435,11 @@ export function countSalesBySellerWeek(
   return sellers
     .filter((s) => s.is_active)
     .map((sc) => {
-      const mySales = periodSales.filter((s) => {
-        const byAff =
-          affiliateToSeller.get((s.nome_afiliado ?? "").toLowerCase()) ??
-          sellerFromAffiliate(s.nome_afiliado);
-        if (byAff === sc.seller_name) return true;
-        const bySck = sellerFromSck(s.origem_checkout);
-        return bySck === sc.seller_name;
-      });
+      const mySales = periodSales.filter(
+        (s) =>
+          resolveSaleSeller(s.nome_afiliado, s.origem_checkout, affiliateToSeller).seller ===
+          sc.seller_name,
+      );
       const weekCounts = weeks.map(
         (w) => mySales.filter((s) => {
           const d = new Date(s.data_venda!);
