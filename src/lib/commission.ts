@@ -383,19 +383,19 @@ export function calculateCommissions(
     const comissao_seller_a_pagar_empresa_total = byProduct.reduce((s, p) => s + p.comissao_seller_a_pagar_empresa, 0);
     const comissao_manager_total = byProduct.reduce((s, p) => s + p.comissao_manager, 0);
 
+    const fatLine = (p: ProductLine) =>
+      p.faturamento_hotmart + p.faturamento_sck + p.faturamento_fechamento + p.faturamento_wise;
+
     const faturamento_total_brl =
-      byProduct.reduce((s, p) => s + p.faturamento_hotmart + p.faturamento_fechamento + p.faturamento_wise, 0) +
-      wiseSemProduto;
+      byProduct.reduce((s, p) => s + fatLine(p), 0) + wiseSemProduto;
 
     const rGanho = roletaBySeller.get(sc.seller_name) ?? { brl: 0, eur: 0 };
 
     sellerResults.push({
       sellerName: sc.seller_name,
       moeda: sc.moeda_padrao,
-      byProduct: byProduct.sort((a, b) =>
-        (b.faturamento_hotmart + b.faturamento_fechamento + b.faturamento_wise) -
-        (a.faturamento_hotmart + a.faturamento_fechamento + a.faturamento_wise)
-      ),
+      byProduct: byProduct.sort((a, b) => fatLine(b) - fatLine(a)),
+
       faturamento_total_brl,
       comissao_seller_total,
       comissao_seller_hotmart_split_total,
