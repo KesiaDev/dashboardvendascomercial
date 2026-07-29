@@ -31,3 +31,18 @@ export function sellerFromSck(origemCheckout: string | null | undefined): string
   }
   return null;
 }
+
+/**
+ * Resolve o vendedor a partir do campo "Nome do Afiliado" da Hotmart.
+ * A Hotmart devolve o nome completo/razão social (ex.: "FABIO NADAL GRIGOLO 08299996988",
+ * "Gisele Gagliano Pimentel", "LUANA GUIMARAES DIAS"), por isso o match é por token
+ * de nome e não por igualdade exata.
+ */
+export function sellerFromAffiliate(nomeAfiliado: string | null | undefined): string | null {
+  if (!nomeAfiliado) return null;
+  const tokens = stripAccents(nomeAfiliado.toLowerCase()).split(/[^a-z0-9]+/).filter(Boolean);
+  for (const t of tokens) {
+    if (SCK_NAME_MAP[t]) return SCK_NAME_MAP[t];
+  }
+  return null;
+}
