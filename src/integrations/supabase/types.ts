@@ -480,6 +480,71 @@ export type Database = {
           },
         ]
       }
+      bi_roleta_spins: {
+        Row: {
+          client_name: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          period_id: number | null
+          prize_label: string | null
+          prize_value_brl: number
+          prize_value_eur: number
+          product: string | null
+          seller_name: string
+          source: string
+          source_sale_id: string | null
+          spin_date: string
+          status: string
+          updated_at: string
+          wheel: string
+        }
+        Insert: {
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          period_id?: number | null
+          prize_label?: string | null
+          prize_value_brl?: number
+          prize_value_eur?: number
+          product?: string | null
+          seller_name: string
+          source?: string
+          source_sale_id?: string | null
+          spin_date: string
+          status?: string
+          updated_at?: string
+          wheel?: string
+        }
+        Update: {
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          period_id?: number | null
+          prize_label?: string | null
+          prize_value_brl?: number
+          prize_value_eur?: number
+          product?: string | null
+          seller_name?: string
+          source?: string
+          source_sale_id?: string | null
+          spin_date?: string
+          status?: string
+          updated_at?: string
+          wheel?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bi_roleta_spins_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "bi_commission_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bi_seller_config: {
         Row: {
           clint_user_name: string | null
