@@ -26,25 +26,36 @@ export const PRODUCT_GROUPS: ProductGroup[] = [
   { id: "outros", label: "Outros", color: "#64748b", categoria: "outro", parentId: null },
 ];
 
+function norm(s: string): string {
+  return (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
 export function mapProductToGroup(productName: string): string {
-  const name = (productName || "").toLowerCase().trim();
+  const name = norm(productName);
+  // "mentor", "mentoria", "mentor trafego pago 2.0 - au", "gestor de trafego"…
+  const isMentoria =
+    name.includes("mentor") || (name.includes("gestor") && name.includes("trafego"));
+  const isTM = name.includes("traffic master") || name.includes("trafico master");
+  const isRenov = name.includes("renova");
 
   // Renovações primeiro (mais específicas)
-  if (name.includes("accelerator") && name.includes("renova")) return "renov_acc";
-  if ((name.includes("traffic master") || name.includes("tráfico master")) && name.includes("renova")) return "renov_tm";
-  if (name.includes("mentoria") && name.includes("tráfego") && name.includes("renova")) return "renov_mentoria";
-  if (name.includes("formação") && name.includes("renova")) return "formacao_rs";
+  if (isRenov && name.includes("accelerator")) return "renov_acc";
+  if (isRenov && isTM) return "renov_tm";
+  if (isRenov && isMentoria) return "renov_mentoria";
+  if (isRenov && name.includes("formacao")) return "formacao_rs";
+  if (isRenov) return "renov_mentoria"; // "Renovação" genérica = mentoria
 
   // Produtos principais
-  if (name.includes("mentoria") && name.includes("tráfego")) return "gtp_au";
-  if (name.includes("formação") && name.includes("redes sociais")) return "formacao_rs";
+  if (name.includes("formacao") && name.includes("redes sociais")) return "formacao_rs";
   if (name.includes("accelerator")) return "accelerator";
   if (name.includes("estrategista") && name.includes("infoproduto")) return "estrategista";
   if (name.includes("master and scale") || name.includes("master and scala")) return "master_scale";
-  if (name.includes("traffic master") || name.includes("tráfico master")) return "traffic_master";
+  if (isTM) return "traffic_master";
+  if (isMentoria) return "gtp_au";
 
   return "outros";
 }
+
 
 /** Retorna true se o nome do produto (do fechamento manual ou Hotmart) for uma renovação. */
 export function isRenewalProduct(productName: string | null | undefined): boolean {
