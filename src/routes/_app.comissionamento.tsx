@@ -349,7 +349,7 @@ function Dashboard() {
                 </thead>
                 <tbody>
                   {summary.sellers.map((s) => {
-                    const fat_hotmart = s.byProduct.reduce((acc, p) => acc + p.faturamento_hotmart, 0);
+                    const fat_hotmart = s.byProduct.reduce((acc, p) => acc + p.faturamento_hotmart + p.faturamento_sck, 0);
                     const fat_fechamento = s.byProduct.reduce((acc, p) => acc + p.faturamento_fechamento, 0);
                     return (
                       <tr key={s.sellerName} className="border-b border-border/40 last:border-0">
