@@ -228,6 +228,8 @@ export function calculateCommissions(
   // Conta vendas aprovadas do Hotmart (por vendedor atribuído) + manuais confirmadas
   for (const s of attributed) {
     if (!s._seller || !s.data_venda) continue;
+    // Parcelas 2/3 não contam como nova venda na roleta
+    if ((s.numero_parcela ?? 1) > 1) continue;
     const d = new Date(s.data_venda);
     const w = weeks.find((x) => d >= x.start && d <= x.end);
     if (!w) continue;
