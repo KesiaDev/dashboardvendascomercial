@@ -504,6 +504,94 @@ function Dashboard() {
         </Card>
       )}
 
+      {/* ── Metas de faturamento (bônus automáticos) ── */}
+      {summary && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Metas de faturamento — bônus automáticos</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              N1 (Luana): semanal €900 (+€25) · super €1.600 (+€25) · mensal €3.600 (+€25) · super
+              €6.400 (+€25) — N3 (Gisele, Rita, João, Nadal): semanal €1.200 (+€30) · super €2.100
+              (+€30) · mensal €4.800 (+€30) · super €8.400 (+€30). Bônus é cumulativo e a base é o
+              faturamento cheio das vendas (Hotmart + Fechamento + Wise) na semana comercial.
+            </p>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-muted-foreground">
+                  <th className="py-2 pr-3">Vendedor</th>
+                  <th className="py-2 pr-3">Nível</th>
+                  {weeks.map((w) => (
+                    <th key={w.week} className="py-2 pr-3 text-right">
+                      {w.label}
+                    </th>
+                  ))}
+                  <th className="py-2 pr-3 text-right">Mês</th>
+                  <th className="py-2 text-right">Bônus metas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.sellers.map((s) => (
+                  <tr key={s.sellerName} className="border-b border-border/40 last:border-0">
+                    <td className="py-1.5 pr-3 font-medium">{s.sellerName}</td>
+                    <td className="py-1.5 pr-3">
+                      <Badge variant="outline" className="text-xs">
+                        {s.metas.level}
+                      </Badge>
+                    </td>
+                    {s.metas.semanas.map((w) => (
+                      <td key={w.week} className="py-1.5 pr-3 text-right tabular-nums">
+                        <div
+                          className={
+                            w.bateu_super
+                              ? "font-semibold text-emerald-600 dark:text-emerald-400"
+                              : w.bateu_meta
+                                ? "font-medium text-sky-600 dark:text-sky-400"
+                                : "text-muted-foreground"
+                          }
+                        >
+                          {money(w.faturamento_eur, "EUR")}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {w.bonus_eur > 0 ? `+${money(w.bonus_eur, "EUR")}` : "—"}
+                        </div>
+                      </td>
+                    ))}
+                    <td className="py-1.5 pr-3 text-right tabular-nums">
+                      <div
+                        className={
+                          s.metas.bateu_super_mensal
+                            ? "font-semibold text-emerald-600 dark:text-emerald-400"
+                            : s.metas.bateu_meta_mensal
+                              ? "font-medium text-sky-600 dark:text-sky-400"
+                              : "text-muted-foreground"
+                        }
+                      >
+                        {money(s.metas.faturamento_mensal_eur, "EUR")}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {s.metas.bonus_mensal_eur > 0
+                          ? `+${money(s.metas.bonus_mensal_eur, "EUR")}`
+                          : "—"}
+                      </div>
+                    </td>
+                    <td className="py-1.5 text-right tabular-nums font-semibold text-primary">
+                      {money(s.bonus_metas_eur, "EUR")}
+                      <div className="text-xs font-normal text-muted-foreground">
+                        {money(s.bonus_metas_brl)}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+
+
+
 
       {/* ── Vendedores ── */}
       {summary && (

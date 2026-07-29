@@ -88,6 +88,70 @@ export function hotmartBaseBrl(sale: SaleRow, cotacao: number): number {
   return moeda === "BRL" ? total : total * cotacao;
 }
 
+// ── Metas de faturamento (EUR) por nível ─────────────────────────────────────
+// N1: Luana · N3: Gisele, Rita, João, Nadal (padrão para novos vendedores)
+// Bônus é cumulativo: bater a super meta paga meta + super meta.
+export type MetaLevelConfig = {
+  level: "N1" | "N3";
+  meta_semanal_eur: number;
+  super_semanal_eur: number;
+  bonus_semanal_eur: number; // por faixa atingida
+  meta_mensal_eur: number;
+  super_mensal_eur: number;
+  bonus_mensal_eur: number; // por faixa atingida
+};
+
+export const META_LEVELS: Record<"N1" | "N3", MetaLevelConfig> = {
+  N1: {
+    level: "N1",
+    meta_semanal_eur: 900,
+    super_semanal_eur: 1600,
+    bonus_semanal_eur: 25,
+    meta_mensal_eur: 3600,
+    super_mensal_eur: 6400,
+    bonus_mensal_eur: 25,
+  },
+  N3: {
+    level: "N3",
+    meta_semanal_eur: 1200,
+    super_semanal_eur: 2100,
+    bonus_semanal_eur: 30,
+    meta_mensal_eur: 4800,
+    super_mensal_eur: 8400,
+    bonus_mensal_eur: 30,
+  },
+};
+
+const META_N1_SELLERS = ["luana"];
+
+export function metaLevelFor(sellerName: string): MetaLevelConfig {
+  const n = (sellerName ?? "").trim().toLowerCase();
+  return META_N1_SELLERS.some((s) => n.includes(s)) ? META_LEVELS.N1 : META_LEVELS.N3;
+}
+
+export type MetaWeekResult = {
+  week: number;
+  label: string;
+  faturamento_eur: number;
+  bateu_meta: boolean;
+  bateu_super: boolean;
+  bonus_eur: number;
+};
+
+export type MetaResult = {
+  level: "N1" | "N3";
+  config: MetaLevelConfig;
+  semanas: MetaWeekResult[];
+  bonus_semanal_total_eur: number;
+  faturamento_mensal_eur: number;
+  bateu_meta_mensal: boolean;
+  bateu_super_mensal: boolean;
+  bonus_mensal_eur: number;
+  bonus_total_eur: number;
+};
+
+
+
 
 // Venda do Fechamento (tabela manual_sales) — EUR, confirmada ou pendente
 export type ManualSaleRow = {
@@ -159,11 +223,17 @@ export type SellerCommission = {
   // Roleta ganha nesta comissão
   roleta_ganho_brl: number;
   roleta_ganho_eur: number;
+  // Metas de faturamento (bônus automáticos)
+  metas: MetaResult;
+  bonus_metas_eur: number;
+  bonus_metas_brl: number;
   // Auditoria SCK
   hotmart_sales_by_affiliate: number;
   hotmart_sales_by_sck: number;
   // Total que a empresa vai pagar (exclui o split do Hotmart)
   total_a_pagar: number;
+
+
 };
 
 export type CommissionSummary = {
@@ -345,6 +415,54 @@ export function calculateCommissions(
     const myWise = wiseInPeriod.filter((w) => w.seller_name === sc.seller_name);
     const wise_eur = myWise.reduce((s, w) => s + w.valor_eur, 0);
 
+    // ── Metas de faturamento (EUR) por semana comercial e no mês ────────────
+    const metaCfg = metaLevelFor(sc.seller_name);
+    const eurByWeek = new Map<number, number>();
+    const addEur = (dateStr: string | null | undefined, eur: number) => {
+      if (!dateStr || !eur) return;
+      const d = new Date(dateStr);
+      const w = weeks.find((x) => d >= x.start && d <= x.end);
+      if (!w) return;
+      eurByWeek.set(w.week, (eurByWeek.get(w.week) ?? 0) + eur);
+    };
+    for (const s of myHotmart) addEur(s.data_venda, hotmartBaseBrl(s, cotacao) / cotacao);
+    for (const m of myManual) addEur(m.sale_date, m.value_eur);
+    for (const w of myWise) addEur(w.data_pagamento, w.valor_eur);
+
+    const metaSemanas: MetaWeekResult[] = weeks.map((w) => {
+      const fat = eurByWeek.get(w.week) ?? 0;
+      const bateu = fat >= metaCfg.meta_semanal_eur;
+      const super_ = fat >= metaCfg.super_semanal_eur;
+      return {
+        week: w.week,
+        label: w.label,
+        faturamento_eur: fat,
+        bateu_meta: bateu,
+        bateu_super: super_,
+        bonus_eur:
+          (bateu ? metaCfg.bonus_semanal_eur : 0) + (super_ ? metaCfg.bonus_semanal_eur : 0),
+      };
+    });
+    const faturamento_mensal_eur = metaSemanas.reduce((s, w) => s + w.faturamento_eur, 0);
+    const bateuMensal = faturamento_mensal_eur >= metaCfg.meta_mensal_eur;
+    const bateuSuperMensal = faturamento_mensal_eur >= metaCfg.super_mensal_eur;
+    const bonusMensalEur =
+      (bateuMensal ? metaCfg.bonus_mensal_eur : 0) + (bateuSuperMensal ? metaCfg.bonus_mensal_eur : 0);
+    const bonusSemanalTotalEur = metaSemanas.reduce((s, w) => s + w.bonus_eur, 0);
+
+    const metas: MetaResult = {
+      level: metaCfg.level,
+      config: metaCfg,
+      semanas: metaSemanas,
+      bonus_semanal_total_eur: bonusSemanalTotalEur,
+      faturamento_mensal_eur,
+      bateu_meta_mensal: bateuMensal,
+      bateu_super_mensal: bateuSuperMensal,
+      bonus_mensal_eur: bonusMensalEur,
+      bonus_total_eur: bonusSemanalTotalEur + bonusMensalEur,
+    };
+
+
     const manualByGroup = new Map<string, { brl: number; eur: number; confirmed: number }>();
     for (const m of myManual) {
       const pg = mapProductToGroup(m.product);
@@ -450,10 +568,18 @@ export function calculateCommissions(
       bonus_total,
       roleta_ganho_brl: rGanho.brl,
       roleta_ganho_eur: rGanho.eur,
+      metas,
+      bonus_metas_eur: metas.bonus_total_eur,
+      bonus_metas_brl: metas.bonus_total_eur * cotacao,
       hotmart_sales_by_affiliate,
       hotmart_sales_by_sck,
-      // A empresa paga: (comissão sobre fechamento+wise) + bônus + roleta
-      total_a_pagar: comissao_seller_a_pagar_empresa_total + bonus_total + rGanho.brl,
+      // A empresa paga: (comissão sobre fechamento+wise) + bônus + roleta + metas
+      total_a_pagar:
+        comissao_seller_a_pagar_empresa_total +
+        bonus_total +
+        rGanho.brl +
+        metas.bonus_total_eur * cotacao,
+
     });
   }
 
