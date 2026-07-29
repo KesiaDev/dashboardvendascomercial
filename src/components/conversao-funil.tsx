@@ -8,20 +8,24 @@ import { ChevronDown, ChevronRight, Target } from "lucide-react";
 function pct(n: number, d: number) {
   return d > 0 ? (n / d) * 100 : 0;
 }
-function fmtAprov(v: number) {
+function fmtPct(v: number) {
   return v > 100 ? ">100%" : `${v.toFixed(1)}%`;
 }
+function fmtEur(v: number) {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+}
 function pctColor(v: number) {
-  if (v >= 30) return "text-emerald-500";
-  if (v >= 15) return "text-amber-500";
+  if (v >= 10) return "text-emerald-500";
+  if (v >= 4) return "text-amber-500";
   return "text-red-500";
 }
 
 type FunnelAgg = {
   funnel: string;
   leads: number;
-  won: number;
   lost: number;
+  vendas: number;
+  valor: number;
   sellers: ConversaoRow[];
 };
 
@@ -51,21 +55,30 @@ export function ConversaoFunilCard({
     for (const r of rows) {
       let f = map.get(r.funnel);
       if (!f) {
-        f = { funnel: r.funnel, leads: 0, won: 0, lost: 0, sellers: [] };
+        f = { funnel: r.funnel, leads: 0, lost: 0, vendas: 0, valor: 0, sellers: [] };
         map.set(r.funnel, f);
       }
       f.leads += r.leads;
-      f.won += r.won;
       f.lost += r.lost;
+      f.vendas += r.vendas;
+      f.valor += r.valor;
       f.sellers.push(r);
     }
-    for (const f of map.values()) f.sellers.sort((a, b) => b.won - a.won || b.leads - a.leads);
-    return Array.from(map.values()).sort((a, b) => b.won - a.won || b.leads - a.leads);
+    for (const f of map.values())
+      f.sellers.sort((a, b) => b.vendas - a.vendas || b.valor - a.valor || b.leads - a.leads);
+    return Array.from(map.values()).sort(
+      (a, b) => b.vendas - a.vendas || b.valor - a.valor || b.leads - a.leads,
+    );
   }, [data, hideNoSeller]);
 
   const totals = funnels.reduce(
-    (acc, f) => ({ leads: acc.leads + f.leads, won: acc.won + f.won, lost: acc.lost + f.lost }),
-    { leads: 0, won: 0, lost: 0 },
+    (acc, f) => ({
+      leads: acc.leads + f.leads,
+      lost: acc.lost + f.lost,
+      vendas: acc.vendas + f.vendas,
+      valor: acc.valor + f.valor,
+    }),
+    { leads: 0, lost: 0, vendas: 0, valor: 0 },
   );
 
   return (
@@ -88,7 +101,7 @@ export function ConversaoFunilCard({
         {isLoading ? (
           <p className="text-sm text-muted-foreground px-4 py-6">Carregando conversão…</p>
         ) : funnels.length === 0 ? (
-          <p className="text-sm text-muted-foreground px-4 py-6">Sem negócios no período.</p>
+          <p className="text-sm text-muted-foreground px-4 py-6">Sem dados no período.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -96,16 +109,15 @@ export function ConversaoFunilCard({
                 <tr className="border-t border-border bg-muted/40">
                   <th className="px-4 py-2 text-left font-medium text-muted-foreground">Funil / Vendedor</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Leads</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Ganhos</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Vendas</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Faturamento</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Perdidos</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Conversão</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Aproveit.</th>
                 </tr>
               </thead>
               <tbody>
                 {funnels.map((f) => {
-                  const conv = pct(f.won, f.won + f.lost);
-                  const aprov = pct(f.won, f.leads);
+                  const conv = pct(f.vendas, f.leads);
                   const isOpen = openFunnels[f.funnel] ?? false;
                   return (
                     <React.Fragment key={f.funnel}>
@@ -123,32 +135,27 @@ export function ConversaoFunilCard({
                           </span>
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">{f.leads}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-emerald-500 font-medium">{f.won}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-emerald-500 font-medium">{f.vendas}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmtEur(f.valor)}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{f.lost}</td>
                         <td className={`px-3 py-2 text-right tabular-nums font-semibold ${pctColor(conv)}`}>
-                          {conv.toFixed(1)}%
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
-                          {fmtAprov(aprov)}
+                          {f.leads > 0 ? fmtPct(conv) : "—"}
                         </td>
                       </tr>
                       {isOpen &&
                         f.sellers.map((s) => {
-                          const sConv = pct(s.won, s.won + s.lost);
-                          const sAprov = pct(s.won, s.leads);
+                          const sConv = pct(s.vendas, s.leads);
                           return (
                             <tr key={`${f.funnel}-${s.seller}`} className="border-t border-border/30 hover:bg-muted/10">
                               <td className="px-4 py-1.5 pl-10 text-muted-foreground truncate max-w-[260px]">
                                 {s.seller}
                               </td>
                               <td className="px-3 py-1.5 text-right tabular-nums">{s.leads}</td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-emerald-500">{s.won}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums text-emerald-500">{s.vendas}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums">{fmtEur(s.valor)}</td>
                               <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{s.lost}</td>
                               <td className={`px-3 py-1.5 text-right tabular-nums font-medium ${pctColor(sConv)}`}>
-                                {sConv.toFixed(1)}%
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
-                                {fmtAprov(sAprov)}
+                                {s.leads > 0 ? fmtPct(sConv) : "—"}
                               </td>
                             </tr>
                           );
@@ -161,20 +168,19 @@ export function ConversaoFunilCard({
                 <tr className="border-t-2 border-border bg-muted/40 font-semibold">
                   <td className="px-4 py-2">Total</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.leads}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{totals.won}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{totals.vendas}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmtEur(totals.valor)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.lost}</td>
                   <td className="px-3 py-2 text-right tabular-nums">
-                    {pct(totals.won, totals.won + totals.lost).toFixed(1)}%
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {fmtAprov(pct(totals.won, totals.leads))}
+                    {fmtPct(pct(totals.vendas, totals.leads))}
                   </td>
                 </tr>
               </tfoot>
             </table>
             <p className="text-xs text-muted-foreground px-4 py-2 border-t border-border/40">
-              Conversão = ganhos ÷ (ganhos + perdidos) no período · Aproveitamento = ganhos ÷ leads criados no período.
-              Fonte: pipelines da Clint.
+              Vendas e faturamento vêm do <strong>fechamento dos vendedores</strong> (1ª parcela), não dos "ganhos" da
+              Clint — que podem conter resultado de marketing no nome do vendedor. Leads e perdidos são dos pipelines da
+              Clint. Conversão = vendas ÷ leads do período.
             </p>
           </div>
         )}
