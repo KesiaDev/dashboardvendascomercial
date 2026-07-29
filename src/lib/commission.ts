@@ -330,9 +330,14 @@ export function calculateCommissions(
       const rpct = rate?.rate_pct ?? 0;
       const mpct = rate?.manager_rate_pct ?? 0;
 
+      // Base = valor total do produto (1ª parcela), como na planilha manual.
       const fat_hotmart = myHotmart
-        .filter((s) => s.produto_grupo === pg)
-        .reduce((s, sale) => s + (sale.faturamento_liquido_brl ?? 0), 0);
+        .filter((s) => s.produto_grupo === pg && s._source === "afiliado")
+        .reduce((s, sale) => s + hotmartBaseBrl(sale, cotacao), 0);
+
+      const fat_sck = myHotmart
+        .filter((s) => s.produto_grupo === pg && s._source === "sck")
+        .reduce((s, sale) => s + hotmartBaseBrl(sale, cotacao), 0);
 
       const manual = manualByGroup.get(pg) ?? { brl: 0, eur: 0, confirmed: 0 };
 
@@ -340,11 +345,12 @@ export function calculateCommissions(
         .filter((w) => w.produto_grupo === pg)
         .reduce((s, w) => s + (w.valor_brl ?? w.valor_eur * w.cotacao_eur), 0);
 
-      const total_brl = fat_hotmart + manual.brl + fat_wise;
+      const total_brl = fat_hotmart + fat_sck + manual.brl + fat_wise;
       if (total_brl === 0 && rpct === 0 && mpct === 0) continue;
 
       const comissao_seller = (total_brl * rpct) / 100;
-      // Split: parte da comissão sobre Hotmart é paga pelo Hotmart (não pela empresa)
+      // Split: só a venda com AFILIADO do vendedor é paga direto pelo Hotmart.
+      // SCK, Fechamento e Wise a EMPRESA paga.
       const comissao_seller_hotmart_split = (fat_hotmart * rpct) / 100;
       const comissao_seller_a_pagar_empresa = comissao_seller - comissao_seller_hotmart_split;
 
@@ -352,6 +358,7 @@ export function calculateCommissions(
         produto_grupo: pg,
         label: getProductLabel(pg),
         faturamento_hotmart: fat_hotmart,
+        faturamento_sck: fat_sck,
         faturamento_fechamento: manual.brl,
         faturamento_fechamento_eur: manual.eur,
         faturamento_fechamento_confirmado: manual.confirmed,
@@ -364,6 +371,7 @@ export function calculateCommissions(
         comissao_seller_a_pagar_empresa,
       });
     }
+
 
     const sellerBonuses = bonuses.filter(
       (b) => b.period_id === period.id && b.seller_name === sc.seller_name,
