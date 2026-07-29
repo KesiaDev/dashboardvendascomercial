@@ -22,6 +22,8 @@ import {
   type ManualSaleRow,
 } from "@/lib/commission";
 import { PRODUCT_GROUPS } from "@/lib/product-groups";
+import { WiseRecebimentosCard } from "@/components/wise-recebimentos";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
