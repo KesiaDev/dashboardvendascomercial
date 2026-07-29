@@ -413,6 +413,133 @@ export type Database = {
         }
         Relationships: []
       }
+      bi_okr_initiatives: {
+        Row: {
+          created_at: string
+          id: string
+          key_result_id: string
+          ordem: number
+          prazo: string | null
+          responsavel: string | null
+          status: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_result_id: string
+          ordem?: number
+          prazo?: string | null
+          responsavel?: string | null
+          status?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_result_id?: string
+          ordem?: number
+          prazo?: string | null
+          responsavel?: string | null
+          status?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bi_okr_initiatives_key_result_id_fkey"
+            columns: ["key_result_id"]
+            isOneToOne: false
+            referencedRelation: "bi_okr_key_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bi_okr_key_results: {
+        Row: {
+          created_at: string
+          id: string
+          meta: number | null
+          metrica: string | null
+          objective_id: string
+          ordem: number
+          progresso_manual: number | null
+          titulo: string
+          unidade: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          meta?: number | null
+          metrica?: string | null
+          objective_id: string
+          ordem?: number
+          progresso_manual?: number | null
+          titulo: string
+          unidade?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          meta?: number | null
+          metrica?: string | null
+          objective_id?: string
+          ordem?: number
+          progresso_manual?: number | null
+          titulo?: string
+          unidade?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bi_okr_key_results_objective_id_fkey"
+            columns: ["objective_id"]
+            isOneToOne: false
+            referencedRelation: "bi_okr_objectives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bi_okr_objectives: {
+        Row: {
+          ano: number
+          created_at: string
+          equipes: string | null
+          id: string
+          lider: string | null
+          ordem: number
+          titulo: string
+          trimestre: number
+          updated_at: string
+        }
+        Insert: {
+          ano: number
+          created_at?: string
+          equipes?: string | null
+          id?: string
+          lider?: string | null
+          ordem?: number
+          titulo: string
+          trimestre: number
+          updated_at?: string
+        }
+        Update: {
+          ano?: number
+          created_at?: string
+          equipes?: string | null
+          id?: string
+          lider?: string | null
+          ordem?: number
+          titulo?: string
+          trimestre?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bi_pipeline_areas: {
         Row: {
           area: string
