@@ -586,7 +586,12 @@ function Dashboard() {
                         <thead>
                           <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
                             <th className="px-3 py-2">Produto</th>
-                            <th className="px-3 py-2 text-right">Hotmart</th>
+                            <th className="px-3 py-2 text-right" title="Vendas com o afiliado do vendedor — Hotmart paga direto">
+                              Hotmart (afiliado)
+                            </th>
+                            <th className="px-3 py-2 text-right" title="Vendas atribuídas pelo SCK — empresa paga">
+                              Hotmart (SCK)
+                            </th>
                             <th className="px-3 py-2 text-right">Fechamento</th>
                             <th className="px-3 py-2 text-right">Wise</th>
                             <th className="px-3 py-2 text-right">% seller</th>
