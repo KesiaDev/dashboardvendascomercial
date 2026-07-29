@@ -17,6 +17,7 @@ import {
   CalendarDays, Flame, Star, ShoppingBag, Filter,
 } from "lucide-react";
 import { isRenewalProduct } from "@/lib/product-groups";
+import { ConversaoFunilCard } from "@/components/conversao-funil";
 
 // ─── Breakdown por funil ──────────────────────────────────────────────────────
 
@@ -451,6 +452,9 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
       {/* Vendas por funil */}
       <FunnelBreakdownCard sales={weekSales} title={`Vendas por Funil — Semana ${weekIdx+1+WEEK_LABEL_OFFSET}`}/>
 
+      {/* Conversão por vendedor × funil */}
+      <ConversaoFunilCard from={start} to={end} title={`Conversão por Vendedor × Funil — Semana ${weekIdx+1+WEEK_LABEL_OFFSET}`}/>
+
       {/* Tabela de vendas */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-1.5"><ShoppingBag className="h-4 w-4 text-muted-foreground"/>Vendas — Semana {weekIdx+1+WEEK_LABEL_OFFSET} · {fmtDate(start)} a {fmtDate(end)}</CardTitle></CardHeader>
@@ -596,6 +600,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
     return raw.map((w,i)=>({...w,monthOrder:i+1,label:`S${i+1}`}));
   },[allSales,yearMonth,maxWeek]);
 
+  const monthEndISO = new Date(Date.UTC(y, m, 0)).toISOString().slice(0,10);
   const monthTotal = monthSales.reduce((s,x)=>s+Number(x.value_eur),0);
   const monthNovas = monthSales.filter(s=>!isRenewalProduct(s.product));
   const monthRenov = monthSales.filter(s=>isRenewalProduct(s.product));
@@ -733,6 +738,9 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
 
       {/* Vendas por funil */}
       <FunnelBreakdownCard sales={monthSales} title={`Vendas por Funil — ${monthLabel}`}/>
+
+      {/* Conversão por vendedor × funil */}
+      <ConversaoFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Conversão por Vendedor × Funil — ${monthLabel}`}/>
 
       {/* Tabela de semanas do mês */}
       <Card>
