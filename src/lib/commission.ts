@@ -197,14 +197,34 @@ export type ProductLine = {
   comissao_seller_a_pagar_empresa: number;
 };
 
+// Um giro de roleta = uma venda nova elegível (renovação não gera giro).
+// Mentoria e Accelerator são roletas distintas, com prêmios distintos.
+export type RoletaSpin = {
+  id: string;
+  period_id: number | null;
+  seller_name: string;
+  spin_date: string;
+  wheel: string; // "mentoria" | "accelerator"
+  source: string; // fechamento | hotmart | wise | manual
+  source_sale_id: string | null;
+  client_name: string | null;
+  product: string | null;
+  prize_label: string | null;
+  prize_value_eur: number;
+  prize_value_brl: number;
+  status: string; // pendente | girada
+  notes: string | null;
+};
+
 export type RoletaLine = {
   week: number;
   label: string;
-  totalSales: number; // vendas na semana (fonte usada)
-  winners: string[];  // vencedores (pode ter empate)
-  valorPorGanhador_brl: number;
-  valorPorGanhador_eur: number;
+  spins: RoletaSpin[];
+  totalSpins: number;
+  premio_brl: number;
+  premio_eur: number;
 };
+
 
 export type SellerCommission = {
   sellerName: string;
