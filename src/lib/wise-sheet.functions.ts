@@ -109,14 +109,9 @@ export const syncWiseSheetFn = createServerFn({ method: "POST" })
       };
     });
 
-    const { error } = await db
-      .from("bi_wise_payments")
-      .upsert(rows, { onConflict: "data_pagamento,cliente,valor_eur", ignoreDuplicates: false });
-    if (error) {
-      // Fallback: índice de deduplicação usa expressão; insere ignorando conflitos.
-      const { error: insErr } = await db.from("bi_wise_payments").insert(rows);
-      if (insErr) throw new Error(insErr.message);
-    }
+    const { error } = await db.from("bi_wise_payments").insert(rows);
+    if (error) throw new Error(error.message);
+
 
     return {
       imported: rows.length,
