@@ -227,6 +227,12 @@ export type SellerCommission = {
   metas: MetaResult;
   bonus_metas_eur: number;
   bonus_metas_brl: number;
+  // Auditoria SCK
+  hotmart_sales_by_affiliate: number;
+  hotmart_sales_by_sck: number;
+  // Total que a empresa vai pagar (exclui o split do Hotmart)
+  total_a_pagar: number;
+
 
 };
 
