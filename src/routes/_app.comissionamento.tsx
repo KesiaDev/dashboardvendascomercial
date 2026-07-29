@@ -349,7 +349,7 @@ function Dashboard() {
                 </thead>
                 <tbody>
                   {summary.sellers.map((s) => {
-                    const fat_hotmart = s.byProduct.reduce((acc, p) => acc + p.faturamento_hotmart, 0);
+                    const fat_hotmart = s.byProduct.reduce((acc, p) => acc + p.faturamento_hotmart + p.faturamento_sck, 0);
                     const fat_fechamento = s.byProduct.reduce((acc, p) => acc + p.faturamento_fechamento, 0);
                     return (
                       <tr key={s.sellerName} className="border-b border-border/40 last:border-0">
@@ -586,7 +586,12 @@ function Dashboard() {
                         <thead>
                           <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
                             <th className="px-3 py-2">Produto</th>
-                            <th className="px-3 py-2 text-right">Hotmart</th>
+                            <th className="px-3 py-2 text-right" title="Vendas com o afiliado do vendedor — Hotmart paga direto">
+                              Hotmart (afiliado)
+                            </th>
+                            <th className="px-3 py-2 text-right" title="Vendas atribuídas pelo SCK — empresa paga">
+                              Hotmart (SCK)
+                            </th>
                             <th className="px-3 py-2 text-right">Fechamento</th>
                             <th className="px-3 py-2 text-right">Wise</th>
                             <th className="px-3 py-2 text-right">% seller</th>
@@ -609,6 +614,9 @@ function Dashboard() {
                               <td className="px-3 py-1.5 max-w-[140px] truncate">{p.label}</td>
                               <td className="px-3 py-1.5 text-right tabular-nums">
                                 {p.faturamento_hotmart > 0 ? money(p.faturamento_hotmart) : "—"}
+                              </td>
+                              <td className="px-3 py-1.5 text-right tabular-nums">
+                                {p.faturamento_sck > 0 ? money(p.faturamento_sck) : "—"}
                               </td>
                               <td className="px-3 py-1.5 text-right tabular-nums">
                                 {p.faturamento_fechamento > 0 ? (
@@ -640,7 +648,7 @@ function Dashboard() {
                             </tr>
                           ))}
                           <tr className="bg-muted/20 font-semibold">
-                            <td className="px-3 py-2" colSpan={5}>
+                            <td className="px-3 py-2" colSpan={6}>
                               Total
                             </td>
                             <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">

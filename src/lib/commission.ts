@@ -64,7 +64,30 @@ export type SaleRow = {
   nome_afiliado: string | null;
   origem_checkout: string | null;
   faturamento_liquido_brl: number | null;
+  /** Valor TOTAL do produto na moeda da oferta (base de comissão da planilha). */
+  preco_total?: number | null;
+  moeda_original?: string | null;
+  /** Só a 1ª parcela entra na base (evita contar a mesma venda 2x/3x). */
+  numero_parcela?: number | null;
 };
+
+/**
+ * Base de comissão de uma venda Hotmart, em BRL.
+ *
+ * Regra da planilha manual (validada com junho/26):
+ * - usa o VALOR TOTAL do produto (não o líquido recebido, que vem em USD do Hotmart);
+ * - conta só na 1ª parcela — parcelas 2/3 não geram nova comissão;
+ * - valores em EUR são convertidos pela cotação do período.
+ */
+export function hotmartBaseBrl(sale: SaleRow, cotacao: number): number {
+  const parcela = sale.numero_parcela ?? 1;
+  if (parcela > 1) return 0;
+  const total = sale.preco_total ?? null;
+  if (total == null || total === 0) return sale.faturamento_liquido_brl ?? 0;
+  const moeda = (sale.moeda_original ?? "EUR").toUpperCase();
+  return moeda === "BRL" ? total : total * cotacao;
+}
+
 
 // Venda do Fechamento (tabela manual_sales) — EUR, confirmada ou pendente
 export type ManualSaleRow = {
@@ -80,7 +103,10 @@ export type ManualSaleRow = {
 export type ProductLine = {
   produto_grupo: string;
   label: string;
+  /** Hotmart com o AFILIADO do vendedor — comissão paga direto pelo Hotmart (split). */
   faturamento_hotmart: number;
+  /** Hotmart atribuído por SCK — comissão paga pela EMPRESA. */
+  faturamento_sck: number;
   faturamento_fechamento: number;
   faturamento_fechamento_eur: number;
   faturamento_fechamento_confirmado: number;
@@ -202,6 +228,8 @@ export function calculateCommissions(
   // Conta vendas aprovadas do Hotmart (por vendedor atribuído) + manuais confirmadas
   for (const s of attributed) {
     if (!s._seller || !s.data_venda) continue;
+    // Parcelas 2/3 não contam como nova venda na roleta
+    if ((s.numero_parcela ?? 1) > 1) continue;
     const d = new Date(s.data_venda);
     const w = weeks.find((x) => d >= x.start && d <= x.end);
     if (!w) continue;
@@ -304,9 +332,14 @@ export function calculateCommissions(
       const rpct = rate?.rate_pct ?? 0;
       const mpct = rate?.manager_rate_pct ?? 0;
 
+      // Base = valor total do produto (1ª parcela), como na planilha manual.
       const fat_hotmart = myHotmart
-        .filter((s) => s.produto_grupo === pg)
-        .reduce((s, sale) => s + (sale.faturamento_liquido_brl ?? 0), 0);
+        .filter((s) => s.produto_grupo === pg && s._source === "afiliado")
+        .reduce((s, sale) => s + hotmartBaseBrl(sale, cotacao), 0);
+
+      const fat_sck = myHotmart
+        .filter((s) => s.produto_grupo === pg && s._source === "sck")
+        .reduce((s, sale) => s + hotmartBaseBrl(sale, cotacao), 0);
 
       const manual = manualByGroup.get(pg) ?? { brl: 0, eur: 0, confirmed: 0 };
 
@@ -314,11 +347,12 @@ export function calculateCommissions(
         .filter((w) => w.produto_grupo === pg)
         .reduce((s, w) => s + (w.valor_brl ?? w.valor_eur * w.cotacao_eur), 0);
 
-      const total_brl = fat_hotmart + manual.brl + fat_wise;
+      const total_brl = fat_hotmart + fat_sck + manual.brl + fat_wise;
       if (total_brl === 0 && rpct === 0 && mpct === 0) continue;
 
       const comissao_seller = (total_brl * rpct) / 100;
-      // Split: parte da comissão sobre Hotmart é paga pelo Hotmart (não pela empresa)
+      // Split: só a venda com AFILIADO do vendedor é paga direto pelo Hotmart.
+      // SCK, Fechamento e Wise a EMPRESA paga.
       const comissao_seller_hotmart_split = (fat_hotmart * rpct) / 100;
       const comissao_seller_a_pagar_empresa = comissao_seller - comissao_seller_hotmart_split;
 
@@ -326,6 +360,7 @@ export function calculateCommissions(
         produto_grupo: pg,
         label: getProductLabel(pg),
         faturamento_hotmart: fat_hotmart,
+        faturamento_sck: fat_sck,
         faturamento_fechamento: manual.brl,
         faturamento_fechamento_eur: manual.eur,
         faturamento_fechamento_confirmado: manual.confirmed,
@@ -339,6 +374,7 @@ export function calculateCommissions(
       });
     }
 
+
     const sellerBonuses = bonuses.filter(
       (b) => b.period_id === period.id && b.seller_name === sc.seller_name,
     );
@@ -349,19 +385,19 @@ export function calculateCommissions(
     const comissao_seller_a_pagar_empresa_total = byProduct.reduce((s, p) => s + p.comissao_seller_a_pagar_empresa, 0);
     const comissao_manager_total = byProduct.reduce((s, p) => s + p.comissao_manager, 0);
 
+    const fatLine = (p: ProductLine) =>
+      p.faturamento_hotmart + p.faturamento_sck + p.faturamento_fechamento + p.faturamento_wise;
+
     const faturamento_total_brl =
-      byProduct.reduce((s, p) => s + p.faturamento_hotmart + p.faturamento_fechamento + p.faturamento_wise, 0) +
-      wiseSemProduto;
+      byProduct.reduce((s, p) => s + fatLine(p), 0) + wiseSemProduto;
 
     const rGanho = roletaBySeller.get(sc.seller_name) ?? { brl: 0, eur: 0 };
 
     sellerResults.push({
       sellerName: sc.seller_name,
       moeda: sc.moeda_padrao,
-      byProduct: byProduct.sort((a, b) =>
-        (b.faturamento_hotmart + b.faturamento_fechamento + b.faturamento_wise) -
-        (a.faturamento_hotmart + a.faturamento_fechamento + a.faturamento_wise)
-      ),
+      byProduct: byProduct.sort((a, b) => fatLine(b) - fatLine(a)),
+
       faturamento_total_brl,
       comissao_seller_total,
       comissao_seller_hotmart_split_total,
