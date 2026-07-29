@@ -39,7 +39,7 @@ export const fetchWisePaymentsFn = createServerFn({ method: "GET" }).handler(asy
   const db = await admin();
   const { data, error } = await db
     .from("bi_wise_payments")
-    .select("id,data_pagamento,cliente,valor_eur,cotacao_eur,valor_brl,descricao,seller_name,produto_grupo,period_id")
+    .select("id,data_pagamento,cliente,valor_eur,cotacao_eur,valor_brl,descricao,seller_name,produto_grupo,period_id,email_cliente,situacao,inadimplente,sheet_tab,source,synced_at")
     .order("data_pagamento", { ascending: false });
   if (error) throw new Error(error.message);
   return data ?? [];
