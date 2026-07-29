@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      arena_cases: {
+        Row: {
+          channel: string
+          completed_simulation_id: string | null
+          context: string
+          created_at: string
+          difficulty: string
+          id: string
+          persona_hint: string
+          product: string
+          scope: string
+          seller_user_id: string
+          status: string
+          theme: string
+          title: string
+        }
+        Insert: {
+          channel: string
+          completed_simulation_id?: string | null
+          context: string
+          created_at?: string
+          difficulty?: string
+          id?: string
+          persona_hint: string
+          product: string
+          scope?: string
+          seller_user_id: string
+          status?: string
+          theme: string
+          title: string
+        }
+        Update: {
+          channel?: string
+          completed_simulation_id?: string | null
+          context?: string
+          created_at?: string
+          difficulty?: string
+          id?: string
+          persona_hint?: string
+          product?: string
+          scope?: string
+          seller_user_id?: string
+          status?: string
+          theme?: string
+          title?: string
+        }
+        Relationships: []
+      }
       arena_knowledge: {
         Row: {
           content: string
@@ -162,6 +210,7 @@ export type Database = {
       }
       arena_simulations: {
         Row: {
+          case_id: string | null
           current_emotion: string
           ended_at: string | null
           evaluation: Json | null
@@ -176,6 +225,7 @@ export type Database = {
           xp_earned: number
         }
         Insert: {
+          case_id?: string | null
           current_emotion?: string
           ended_at?: string | null
           evaluation?: Json | null
@@ -190,6 +240,7 @@ export type Database = {
           xp_earned?: number
         }
         Update: {
+          case_id?: string | null
           current_emotion?: string
           ended_at?: string | null
           evaluation?: Json | null
@@ -204,6 +255,13 @@ export type Database = {
           xp_earned?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "arena_simulations_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "arena_cases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "arena_simulations_persona_id_fkey"
             columns: ["persona_id"]
