@@ -1,5 +1,5 @@
 import { PRODUCT_GROUPS, mapProductToGroup } from "./product-groups";
-import { resolveSaleSeller } from "./sck-attribution";
+import { resolveSaleSeller, sellerFromAffiliate } from "./sck-attribution";
 
 export type CommissionPeriod = {
   id: number;
