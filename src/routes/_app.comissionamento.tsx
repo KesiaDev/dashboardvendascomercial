@@ -8,11 +8,14 @@ import {
   fetchWisePaymentsFn,
   fetchCommissionBonusesFn,
   fetchManualSalesForCommissionFn,
+  fetchRoletaSpinsFn,
   addCommissionBonusFn,
   deleteCommissionBonusFn,
   upsertCommissionRateFn,
   upsertCommissionPeriodFn,
+  type RoletaSpinRow,
 } from "@/lib/commission.functions";
+import { RoletaSpinsCard } from "@/components/roleta-spins";
 import { fetchAllSalesFn } from "@/lib/data.functions";
 import {
   calculateCommissions,
@@ -178,6 +181,11 @@ function Dashboard() {
     },
   });
 
+  const { data: roletaSpins = [] } = useQuery({
+    queryKey: ["roleta_spins"],
+    queryFn: async () => (await fetchRoletaSpinsFn()) as RoletaSpinRow[],
+  });
+
   const summary = useMemo(() => {
     if (!activePeriod || sellers.length === 0) return null;
     return calculateCommissions(
@@ -188,8 +196,9 @@ function Dashboard() {
       wisePayments,
       bonuses,
       manualSales,
+      roletaSpins,
     );
-  }, [activePeriod, sellers, rates, sales, wisePayments, bonuses, manualSales]);
+  }, [activePeriod, sellers, rates, sales, wisePayments, bonuses, manualSales, roletaSpins]);
 
   const weekSales = useMemo(() => {
     if (!activePeriod || sellers.length === 0) return [];
@@ -383,86 +392,61 @@ function Dashboard() {
 
 
 
-      {/* ── Roleta ── */}
+      {/* ── Roleta: 1 giro por venda ── */}
+      <RoletaSpinsCard
+        period={activePeriod}
+        sellerNames={sellers.map((s: any) => s.seller_name)}
+      />
 
+      {/* Resumo dos giros por semana comercial */}
       {summary && (
         <Card>
           <CardHeader>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <CardTitle className="text-base">Roleta — vencedores por semana</CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Vencedor de cada semana leva o pool semanal · empate divide igual · semana sem
-                  vendas acumula para a seguinte
-                </p>
-              </div>
-              {activePeriod && (
-                <div className="text-right text-xs text-muted-foreground">
-                  <div>Pool total: {money(activePeriod.roleta_pool_brl ?? 0)} · {money(activePeriod.roleta_pool_eur ?? 0, "EUR")}</div>
-                  <div>Pool semanal: {money((activePeriod.roleta_pool_brl ?? 0) / 5)} · {money((activePeriod.roleta_pool_eur ?? 0) / 5, "EUR")}</div>
-                  <button
-                    className="mt-1 text-primary underline"
-                    onClick={() => {
-                      const brl = prompt("Pool total BRL:", String(activePeriod.roleta_pool_brl ?? 0));
-                      const eur = prompt("Pool total EUR:", String(activePeriod.roleta_pool_eur ?? 0));
-                      if (brl !== null && eur !== null) {
-                        upsertPeriodMut.mutate({
-                          ...activePeriod,
-                          roleta_pool_brl: Number(brl),
-                          roleta_pool_eur: Number(eur),
-                        });
-                      }
-                    }}
-                  >
-                    editar pool
-                  </button>
-                </div>
-              )}
-            </div>
+            <CardTitle className="text-base">Giros e prêmios por semana</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto space-y-4">
-            {/* Vencedores por semana */}
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
                   <th className="py-2 pr-3">Semana</th>
-                  <th className="py-2 pr-3 text-right">Vendas na semana</th>
-                  <th className="py-2 pr-3">Vencedor(es)</th>
-                  <th className="py-2 text-right">Prêmio por ganhador</th>
+                  <th className="py-2 pr-3 text-right">Giros</th>
+                  <th className="py-2 pr-3">Vendedores</th>
+                  <th className="py-2 text-right">Prêmios</th>
                 </tr>
               </thead>
               <tbody>
-                {summary.roleta.map((r) => (
-                  <tr key={r.week} className="border-b border-border/40 last:border-0">
-                    <td className="py-1.5 pr-3 font-medium">{r.label}</td>
-                    <td className="py-1.5 pr-3 text-right tabular-nums">{r.totalSales || "—"}</td>
-                    <td className="py-1.5 pr-3">
-                      {r.winners.length > 0 ? (
-                        r.winners.map((w) => (
-                          <Badge key={w} variant="secondary" className="mr-1 text-xs">
-                            {w}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-muted-foreground text-xs">
-                          Sem vendas · pool acumula
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-1.5 text-right tabular-nums">
-                      {r.valorPorGanhador_brl > 0 || r.valorPorGanhador_eur > 0 ? (
-                        <>
-                          <div>{money(r.valorPorGanhador_brl)}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {money(r.valorPorGanhador_eur, "EUR")}
-                          </div>
-                        </>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {summary.roleta.map((r) => {
+                  const nomes = Array.from(new Set(r.spins.map((s) => s.seller_name)));
+                  return (
+                    <tr key={r.week} className="border-b border-border/40 last:border-0">
+                      <td className="py-1.5 pr-3 font-medium">{r.label}</td>
+                      <td className="py-1.5 pr-3 text-right tabular-nums">{r.totalSpins || "—"}</td>
+                      <td className="py-1.5 pr-3">
+                        {nomes.length > 0 ? (
+                          nomes.map((n) => (
+                            <Badge key={n} variant="secondary" className="mr-1 text-xs">
+                              {n}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Sem giros</span>
+                        )}
+                      </td>
+                      <td className="py-1.5 text-right tabular-nums">
+                        {r.premio_brl > 0 ? (
+                          <>
+                            <div>{money(r.premio_brl)}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {money(r.premio_eur, "EUR")}
+                            </div>
+                          </>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
@@ -503,6 +487,7 @@ function Dashboard() {
           </CardContent>
         </Card>
       )}
+
 
       {/* ── Metas de faturamento (bônus automáticos) ── */}
       {summary && (

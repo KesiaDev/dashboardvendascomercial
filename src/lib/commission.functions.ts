@@ -170,3 +170,135 @@ export const importWisePaymentsFn = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { imported: rows.length };
   });
+
+// ── Roleta: giros por venda ──────────────────────────────────────────────────
+// Regra: cada venda nova gera 1 giro. Renovação NÃO gera giro.
+// Mentoria e Accelerator são roletas diferentes (prêmios diferentes).
+// Vendas "por fora" (Wise / outro link) podem ser lançadas manualmente.
+
+export type RoletaSpinRow = {
+  id: string;
+  period_id: number | null;
+  seller_name: string;
+  spin_date: string;
+  wheel: string;
+  source: string;
+  source_sale_id: string | null;
+  client_name: string | null;
+  product: string | null;
+  prize_label: string | null;
+  prize_value_eur: number;
+  prize_value_brl: number;
+  status: string;
+  notes: string | null;
+};
+
+const SPIN_COLS =
+  "id,period_id,seller_name,spin_date,wheel,source,source_sale_id,client_name,product,prize_label,prize_value_eur,prize_value_brl,status,notes";
+
+export const fetchRoletaSpinsFn = createServerFn({ method: "GET" }).handler(async () => {
+  const db = await admin();
+  const { data, error } = await db
+    .from("bi_roleta_spins")
+    .select(SPIN_COLS)
+    .order("spin_date", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as RoletaSpinRow[];
+});
+
+type SpinInput = {
+  id?: string;
+  period_id: number | null;
+  seller_name: string;
+  spin_date: string;
+  wheel: string;
+  source?: string;
+  client_name?: string | null;
+  product?: string | null;
+  prize_label?: string | null;
+  prize_value_eur?: number;
+  prize_value_brl?: number;
+  status?: string;
+  notes?: string | null;
+};
+
+export const upsertRoletaSpinFn = createServerFn({ method: "POST" })
+  .inputValidator((d: SpinInput) => {
+    if (!d.seller_name?.trim()) throw new Error("Vendedor obrigatório");
+    if (!d.spin_date) throw new Error("Data obrigatória");
+    if (d.wheel !== "mentoria" && d.wheel !== "accelerator") throw new Error("Roleta inválida");
+    return d;
+  })
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { id, ...rest } = data;
+    const row = {
+      ...rest,
+      source: rest.source ?? "manual",
+      prize_value_eur: rest.prize_value_eur ?? 0,
+      prize_value_brl: rest.prize_value_brl ?? 0,
+      status: rest.status ?? "pendente",
+    };
+    if (id) {
+      const { error } = await db.from("bi_roleta_spins").update(row).eq("id", id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await db.from("bi_roleta_spins").insert(row);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+export const deleteRoletaSpinFn = createServerFn({ method: "POST" })
+  .inputValidator((d: { id: string }) => d)
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { error } = await db.from("bi_roleta_spins").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// Gera os giros pendentes a partir das vendas do Fechamento marcadas com roleta
+// (1ª parcela apenas, sem renovações), sem duplicar o que já existe.
+export const generateRoletaSpinsFn = createServerFn({ method: "POST" })
+  .inputValidator((d: { period_id: number; from: string; to: string }) => d)
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: sales, error } = await db
+      .from("manual_sales")
+      .select("id,seller_name,product,client_name,sale_date,roleta_type,installment_number,categoria_produto")
+      .not("roleta_type", "is", null)
+      .eq("installment_number", 1)
+      .gte("sale_date", data.from)
+      .lte("sale_date", data.to);
+    if (error) throw new Error(error.message);
+
+    const elegiveis = (sales ?? []).filter((s) => s.categoria_produto !== "RENOVACAO");
+    if (elegiveis.length === 0) return { created: 0 };
+
+    const { data: existing, error: e2 } = await db
+      .from("bi_roleta_spins")
+      .select("source_sale_id")
+      .in("source_sale_id", elegiveis.map((s) => s.id));
+    if (e2) throw new Error(e2.message);
+    const jaTem = new Set((existing ?? []).map((r) => r.source_sale_id));
+
+    const novos = elegiveis
+      .filter((s) => !jaTem.has(s.id))
+      .map((s) => ({
+        period_id: data.period_id,
+        seller_name: s.seller_name,
+        spin_date: s.sale_date,
+        wheel: s.roleta_type as string,
+        source: "fechamento",
+        source_sale_id: s.id,
+        client_name: s.client_name,
+        product: s.product,
+        status: "pendente",
+      }));
+    if (novos.length === 0) return { created: 0 };
+
+    const { error: e3 } = await db.from("bi_roleta_spins").insert(novos);
+    if (e3) throw new Error(e3.message);
+    return { created: novos.length };
+  });

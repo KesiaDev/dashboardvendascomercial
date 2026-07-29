@@ -197,14 +197,34 @@ export type ProductLine = {
   comissao_seller_a_pagar_empresa: number;
 };
 
+// Um giro de roleta = uma venda nova elegível (renovação não gera giro).
+// Mentoria e Accelerator são roletas distintas, com prêmios distintos.
+export type RoletaSpin = {
+  id: string;
+  period_id: number | null;
+  seller_name: string;
+  spin_date: string;
+  wheel: string; // "mentoria" | "accelerator"
+  source: string; // fechamento | hotmart | wise | manual
+  source_sale_id: string | null;
+  client_name: string | null;
+  product: string | null;
+  prize_label: string | null;
+  prize_value_eur: number;
+  prize_value_brl: number;
+  status: string; // pendente | girada
+  notes: string | null;
+};
+
 export type RoletaLine = {
   week: number;
   label: string;
-  totalSales: number; // vendas na semana (fonte usada)
-  winners: string[];  // vencedores (pode ter empate)
-  valorPorGanhador_brl: number;
-  valorPorGanhador_eur: number;
+  spins: RoletaSpin[];
+  totalSpins: number;
+  premio_brl: number;
+  premio_eur: number;
 };
+
 
 export type SellerCommission = {
   sellerName: string;
@@ -261,6 +281,7 @@ export function calculateCommissions(
   wisePayments: WisePayment[],
   bonuses: CommissionBonus[],
   manualSales: ManualSaleRow[],
+  roletaSpins: RoletaSpin[] = [],
 ): CommissionSummary {
   const start = new Date(period.data_inicio);
   const end = new Date(`${period.data_fim}T23:59:59`);
@@ -329,73 +350,46 @@ export function calculateCommissions(
     .filter((w) => !w.inadimplente);
 
 
-  // ── Roleta semanal ────────────────────────────────────────────────────────
-  // Regra: vencedor da semana leva pool_semanal; empate divide;
-  // semana sem vendas → pool acumula para a próxima.
+  // ── Roleta por venda ──────────────────────────────────────────────────────
+  // Cada venda nova elegível gera 1 giro (renovação não gera).
+  // O prêmio é o que saiu na roleta (Mentoria e Accelerator têm prêmios
+  // diferentes) e é lançado/editado manualmente em cada giro.
   const weeks = periodWeeks(period);
-  const salesCountByWeek: Record<number, Map<string, number>> = {};
-  for (const w of weeks) salesCountByWeek[w.week] = new Map();
-
-  // Conta vendas aprovadas do Hotmart (por vendedor atribuído) + manuais confirmadas
-  for (const s of attributed) {
-    if (!s._seller || !s.data_venda) continue;
-    // Parcelas 2/3 não contam como nova venda na roleta
-    if ((s.numero_parcela ?? 1) > 1) continue;
-    const d = new Date(s.data_venda);
-    const w = weeks.find((x) => d >= x.start && d <= x.end);
-    if (!w) continue;
-    const m = salesCountByWeek[w.week];
-    m.set(s._seller, (m.get(s._seller) ?? 0) + 1);
-  }
-  for (const m of manualInPeriod) {
-    const d = new Date(m.sale_date);
-    const w = weeks.find((x) => d >= x.start && d <= x.end);
-    if (!w) continue;
-    const cnt = salesCountByWeek[w.week];
-    cnt.set(m.seller_name, (cnt.get(m.seller_name) ?? 0) + 1);
-  }
-
-  const poolSemanalBrl = (period.roleta_pool_brl ?? 0) / weeks.length;
-  const poolSemanalEur = (period.roleta_pool_eur ?? 0) / weeks.length;
-
-  const roleta: RoletaLine[] = [];
-  let carryBrl = 0;
-  let carryEur = 0;
+  const roleta: RoletaLine[] = weeks.map((w) => ({
+    week: w.week,
+    label: w.label,
+    spins: [],
+    totalSpins: 0,
+    premio_brl: 0,
+    premio_eur: 0,
+  }));
   const roletaBySeller = new Map<string, { brl: number; eur: number }>();
 
-  for (const w of weeks) {
-    const counts = salesCountByWeek[w.week];
-    const totalSales = Array.from(counts.values()).reduce((a, b) => a + b, 0);
-    const disputeBrl = poolSemanalBrl + carryBrl;
-    const disputeEur = poolSemanalEur + carryEur;
-    if (totalSales === 0) {
-      roleta.push({ week: w.week, label: w.label, totalSales: 0, winners: [], valorPorGanhador_brl: 0, valorPorGanhador_eur: 0 });
-      carryBrl = disputeBrl;
-      carryEur = disputeEur;
-      continue;
+  const spinsInPeriod = roletaSpins.filter((sp) => {
+    const d = new Date(`${sp.spin_date}T12:00:00`);
+    return d >= start && d <= end;
+  });
+
+  for (const sp of spinsInPeriod) {
+    const seller = canonicalSeller(sp.seller_name) ?? sp.seller_name;
+    const brl = Number(sp.prize_value_brl ?? 0) + Number(sp.prize_value_eur ?? 0) * cotacao;
+    const eur = Number(sp.prize_value_eur ?? 0) + Number(sp.prize_value_brl ?? 0) / cotacao;
+    const cur = roletaBySeller.get(seller) ?? { brl: 0, eur: 0 };
+    cur.brl += brl;
+    cur.eur += eur;
+    roletaBySeller.set(seller, cur);
+
+    const d = new Date(`${sp.spin_date}T12:00:00`);
+    const wk = weeks.find((x) => d >= x.start && d <= x.end);
+    const line = wk ? roleta.find((r) => r.week === wk.week) : undefined;
+    if (line) {
+      line.spins.push({ ...sp, seller_name: seller });
+      line.totalSpins += 1;
+      line.premio_brl += brl;
+      line.premio_eur += eur;
     }
-    let max = 0;
-    for (const v of counts.values()) if (v > max) max = v;
-    const winners = Array.from(counts.entries()).filter(([, v]) => v === max).map(([k]) => k);
-    const perBrl = winners.length > 0 ? disputeBrl / winners.length : 0;
-    const perEur = winners.length > 0 ? disputeEur / winners.length : 0;
-    for (const wnr of winners) {
-      const cur = roletaBySeller.get(wnr) ?? { brl: 0, eur: 0 };
-      cur.brl += perBrl;
-      cur.eur += perEur;
-      roletaBySeller.set(wnr, cur);
-    }
-    roleta.push({
-      week: w.week,
-      label: w.label,
-      totalSales,
-      winners,
-      valorPorGanhador_brl: perBrl,
-      valorPorGanhador_eur: perEur,
-    });
-    carryBrl = 0;
-    carryEur = 0;
   }
+
 
   // ── Por vendedor ──────────────────────────────────────────────────────────
   const sellerResults: SellerCommission[] = [];
