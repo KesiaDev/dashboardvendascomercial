@@ -648,7 +648,7 @@ function Dashboard() {
                             </tr>
                           ))}
                           <tr className="bg-muted/20 font-semibold">
-                            <td className="px-3 py-2" colSpan={5}>
+                            <td className="px-3 py-2" colSpan={6}>
                               Total
                             </td>
                             <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
