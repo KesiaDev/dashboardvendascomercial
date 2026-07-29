@@ -152,7 +152,7 @@ export const fetchManualSalesForCommissionFn = createServerFn({ method: "GET" })
     const db = await admin();
     const { data: rows, error } = await db
       .from("manual_sales")
-      .select("id,seller_name,product,funnel,value_eur,sale_date,confirmation_status,confirmed_hotmart_valor_brl,installment_number,installment_total,installment_paid")
+      .select("id,seller_name,product,funnel,value_eur,sale_date,confirmation_status,confirmed_hotmart_valor_brl,client_email,client_name,installment_number,installment_total,installment_paid")
       .eq("installment_paid", true)
       .gte("sale_date", data.from)
       .lte("sale_date", data.to)
