@@ -45,6 +45,17 @@ function MetasComercialPage() {
         </p>
       </div>
 
+      <Tabs defaultValue="metas">
+        <TabsList>
+          <TabsTrigger value="metas">Metas & KPIs</TabsTrigger>
+          <TabsTrigger value="okrs">OKRs</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="okrs" className="mt-4">
+          <OkrBoard />
+        </TabsContent>
+
+        <TabsContent value="metas" className="mt-4 space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
         <MetaCard
           title="Frontend"
