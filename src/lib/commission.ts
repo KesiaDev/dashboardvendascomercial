@@ -98,7 +98,19 @@ export type ManualSaleRow = {
   sale_date: string;
   confirmation_status: string;
   confirmed_hotmart_valor_brl: number | null;
+  client_email?: string | null;
+  client_name?: string | null;
 };
+
+/**
+ * Nome do vendedor gravado no Fechamento/Wise/Clint ("Gisele Pimentel",
+ * "João Pessoa", "FABIO NADAL...") → seller_name canônico do bi_seller_config.
+ */
+export function canonicalSeller(name: string | null | undefined): string | null {
+  if (!name) return null;
+  return sellerFromAffiliate(name) ?? name;
+}
+
 
 export type ProductLine = {
   produto_grupo: string;
