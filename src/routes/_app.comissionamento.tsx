@@ -380,8 +380,8 @@ function Dashboard() {
         </Card>
       )}
 
-      {/* ── Recebimentos Wise ── */}
-      <WiseRecebimentosCard payments={wisePayments as any} />
+
+
 
       {/* ── Roleta ── */}
 
@@ -844,6 +844,10 @@ function Dashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Recebimentos Wise (final da página) ── */}
+      <WiseRecebimentosCard payments={wisePayments as any} />
+
     </div>
   );
 }
