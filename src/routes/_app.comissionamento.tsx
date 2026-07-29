@@ -181,6 +181,11 @@ function Dashboard() {
     },
   });
 
+  const { data: roletaSpins = [] } = useQuery({
+    queryKey: ["roleta_spins"],
+    queryFn: async () => (await fetchRoletaSpinsFn()) as RoletaSpinRow[],
+  });
+
   const summary = useMemo(() => {
     if (!activePeriod || sellers.length === 0) return null;
     return calculateCommissions(
@@ -191,8 +196,9 @@ function Dashboard() {
       wisePayments,
       bonuses,
       manualSales,
+      roletaSpins,
     );
-  }, [activePeriod, sellers, rates, sales, wisePayments, bonuses, manualSales]);
+  }, [activePeriod, sellers, rates, sales, wisePayments, bonuses, manualSales, roletaSpins]);
 
   const weekSales = useMemo(() => {
     if (!activePeriod || sellers.length === 0) return [];
