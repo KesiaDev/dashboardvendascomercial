@@ -124,8 +124,8 @@ export const syncWiseSheetFn = createServerFn({ method: "POST" })
 
 
     return {
-      imported: rows.length,
+      imported: unique.length,
       tabs: tabs!.length,
-      inadimplentes: rows.filter((r) => r.inadimplente).length,
+      inadimplentes: unique.filter((r) => r.inadimplente).length,
     };
   });
