@@ -179,7 +179,7 @@ export function calculateCommissions(
   type AttributedSale = SaleRow & { _seller: string | null; _source: "afiliado" | "sck" | null };
   const attributed: AttributedSale[] = hotmartInPeriod.map((s) => {
     const byAff =
-      (s.nome_afiliado ? affiliateToSeller.get(s.nome_afiliado.toLowerCase()) ?? null : null) ??
+      affiliateToSeller.get((s.nome_afiliado ?? "").toLowerCase()) ??
       sellerFromAffiliate(s.nome_afiliado);
     if (byAff) return { ...s, _seller: byAff, _source: "afiliado" };
     const bySck = sellerFromSck(s.origem_checkout);
@@ -441,7 +441,7 @@ export function countSalesBySellerWeek(
     .map((sc) => {
       const mySales = periodSales.filter((s) => {
         const byAff =
-          (s.nome_afiliado ? affiliateToSeller.get(s.nome_afiliado.toLowerCase()) ?? null : null) ??
+          affiliateToSeller.get((s.nome_afiliado ?? "").toLowerCase()) ??
           sellerFromAffiliate(s.nome_afiliado);
         if (byAff === sc.seller_name) return true;
         const bySck = sellerFromSck(s.origem_checkout);
