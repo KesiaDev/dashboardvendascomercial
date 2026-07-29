@@ -1,5 +1,5 @@
 import { PRODUCT_GROUPS, mapProductToGroup } from "./product-groups";
-import { sellerFromSck, sellerFromAffiliate } from "./sck-attribution";
+import { resolveSaleSeller } from "./sck-attribution";
 
 export type CommissionPeriod = {
   id: number;
@@ -178,14 +178,10 @@ export function calculateCommissions(
   // Atribui cada venda Hotmart a um vendedor (afiliado primeiro, SCK fallback)
   type AttributedSale = SaleRow & { _seller: string | null; _source: "afiliado" | "sck" | null };
   const attributed: AttributedSale[] = hotmartInPeriod.map((s) => {
-    const byAff =
-      affiliateToSeller.get((s.nome_afiliado ?? "").toLowerCase()) ??
-      sellerFromAffiliate(s.nome_afiliado);
-    if (byAff) return { ...s, _seller: byAff, _source: "afiliado" };
-    const bySck = sellerFromSck(s.origem_checkout);
-    if (bySck && sellers.some((sc) => sc.seller_name === bySck))
-      return { ...s, _seller: bySck, _source: "sck" };
-    return { ...s, _seller: null, _source: null };
+    const { seller, source } = resolveSaleSeller(s.nome_afiliado, s.origem_checkout, affiliateToSeller);
+    if (source === "sck" && seller && !sellers.some((sc) => sc.seller_name === seller))
+      return { ...s, _seller: null, _source: null };
+    return { ...s, _seller: seller, _source: source };
   });
 
   const wiseInPeriod = wisePayments.filter((w) => w.period_id === period.id);
@@ -439,14 +435,11 @@ export function countSalesBySellerWeek(
   return sellers
     .filter((s) => s.is_active)
     .map((sc) => {
-      const mySales = periodSales.filter((s) => {
-        const byAff =
-          affiliateToSeller.get((s.nome_afiliado ?? "").toLowerCase()) ??
-          sellerFromAffiliate(s.nome_afiliado);
-        if (byAff === sc.seller_name) return true;
-        const bySck = sellerFromSck(s.origem_checkout);
-        return bySck === sc.seller_name;
-      });
+      const mySales = periodSales.filter(
+        (s) =>
+          resolveSaleSeller(s.nome_afiliado, s.origem_checkout, affiliateToSeller).seller ===
+          sc.seller_name,
+      );
       const weekCounts = weeks.map(
         (w) => mySales.filter((s) => {
           const d = new Date(s.data_venda!);

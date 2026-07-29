@@ -46,3 +46,47 @@ export function sellerFromAffiliate(nomeAfiliado: string | null | undefined): st
   }
   return null;
 }
+
+// Tokens de SCK que NÃO pertencem a nenhum vendedor do comercial.
+// - marketing / tráfego pago / orgânico: venda da área de marketing, fica fora do comissionamento
+// - pessoas que não fazem parte da equipa comercial (ex.: janete)
+const IGNORED_SCK_TOKENS = new Set([
+  "janete",
+  "mkt",
+  "marketing",
+  "ads",
+  "meta",
+  "google",
+  "organico",
+  "organic",
+  "email",
+  "youtube",
+  "instagram",
+]);
+
+export function isIgnoredOrigin(origemCheckout: string | null | undefined): boolean {
+  if (!origemCheckout) return false;
+  const tokens = stripAccents(origemCheckout.toLowerCase()).split(/[^a-z0-9]+/).filter(Boolean);
+  return tokens.some((t) => IGNORED_SCK_TOKENS.has(t));
+}
+
+/**
+ * Regra única de atribuição de uma venda Hotmart:
+ * 1. Nome do Afiliado (comissão paga direto pela Hotmart) — tem prioridade absoluta.
+ *    Ex.: venda com afiliado Nadal e SCK ".joao" pertence ao **Nadal**.
+ * 2. SCK (origem_checkout) — só quando não há afiliado reconhecido.
+ * 3. Origens de marketing ou pessoas fora do comercial → não atribui a ninguém.
+ */
+export function resolveSaleSeller(
+  nomeAfiliado: string | null | undefined,
+  origemCheckout: string | null | undefined,
+  affiliateToSeller?: Map<string, string>,
+): { seller: string | null; source: "afiliado" | "sck" | null } {
+  const byAff =
+    affiliateToSeller?.get((nomeAfiliado ?? "").toLowerCase()) ?? sellerFromAffiliate(nomeAfiliado);
+  if (byAff) return { seller: byAff, source: "afiliado" };
+  if (isIgnoredOrigin(origemCheckout)) return { seller: null, source: null };
+  const bySck = sellerFromSck(origemCheckout);
+  if (bySck) return { seller: bySck, source: "sck" };
+  return { seller: null, source: null };
+}
