@@ -568,10 +568,18 @@ export function calculateCommissions(
       bonus_total,
       roleta_ganho_brl: rGanho.brl,
       roleta_ganho_eur: rGanho.eur,
+      metas,
+      bonus_metas_eur: metas.bonus_total_eur,
+      bonus_metas_brl: metas.bonus_total_eur * cotacao,
       hotmart_sales_by_affiliate,
       hotmart_sales_by_sck,
-      // A empresa paga: (comissão sobre fechamento+wise) + bônus + roleta
-      total_a_pagar: comissao_seller_a_pagar_empresa_total + bonus_total + rGanho.brl,
+      // A empresa paga: (comissão sobre fechamento+wise) + bônus + roleta + metas
+      total_a_pagar:
+        comissao_seller_a_pagar_empresa_total +
+        bonus_total +
+        rGanho.brl +
+        metas.bonus_total_eur * cotacao,
+
     });
   }
 
