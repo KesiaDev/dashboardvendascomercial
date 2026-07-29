@@ -281,6 +281,7 @@ export function calculateCommissions(
   wisePayments: WisePayment[],
   bonuses: CommissionBonus[],
   manualSales: ManualSaleRow[],
+  roletaSpins: RoletaSpin[] = [],
 ): CommissionSummary {
   const start = new Date(period.data_inicio);
   const end = new Date(`${period.data_fim}T23:59:59`);
