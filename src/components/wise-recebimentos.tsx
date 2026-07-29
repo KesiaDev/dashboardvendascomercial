@@ -141,10 +141,11 @@ export function WiseRecebimentosCard({ payments }: { payments: WisePayment[] }) 
           </Button>
         </div>
 
-        <div className="overflow-x-auto rounded border border-border/50">
+        <div className="max-h-[420px] overflow-auto rounded border border-border/50">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
+            <thead className="sticky top-0 z-10">
+              <tr className="border-b border-border bg-muted text-left text-muted-foreground">
+
                 <th className="px-3 py-2">Data</th>
                 <th className="px-3 py-2">Cliente</th>
                 <th className="px-3 py-2">Produto</th>
