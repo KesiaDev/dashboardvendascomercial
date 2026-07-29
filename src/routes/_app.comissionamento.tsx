@@ -378,7 +378,11 @@ function Dashboard() {
         </Card>
       )}
 
+      {/* ── Recebimentos Wise ── */}
+      <WiseRecebimentosCard payments={wisePayments as any} />
+
       {/* ── Roleta ── */}
+
       {summary && (
         <Card>
           <CardHeader>
