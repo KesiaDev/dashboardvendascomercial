@@ -616,6 +616,9 @@ function Dashboard() {
                                 {p.faturamento_hotmart > 0 ? money(p.faturamento_hotmart) : "—"}
                               </td>
                               <td className="px-3 py-1.5 text-right tabular-nums">
+                                {p.faturamento_sck > 0 ? money(p.faturamento_sck) : "—"}
+                              </td>
+                              <td className="px-3 py-1.5 text-right tabular-nums">
                                 {p.faturamento_fechamento > 0 ? (
                                   <span
                                     className="cursor-help"
