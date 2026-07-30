@@ -59,6 +59,9 @@ export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
     }
 
     return Array.from(map.values()).filter(
-      (r) => FUNIS_VENDEDOR.has(r.funnel) && r.leads + r.lost + r.vendas > 0,
+      (r) =>
+        FUNIS_VENDEDOR.has(r.funnel) &&
+        !isVendedorExcluido(r.seller) &&
+        r.leads + r.lost + r.vendas > 0,
     );
   });
