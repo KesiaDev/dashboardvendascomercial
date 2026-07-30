@@ -13,7 +13,7 @@ import { isAdminUser } from "@/lib/auth";
 import { ArenaAdminPanel } from "@/components/arena-admin";
 import { getArenaDashboardFn, generateDailyMissionFn, startSimulationFn } from "@/lib/arena.functions";
 
-export const Route = createFileRoute("/_app/arena")({
+export const Route = createFileRoute("/_app/arena/")({
   component: ArenaPage,
 });
 
