@@ -47,6 +47,18 @@ export const FUNIS_VENDEDOR = new Set<string>(
   ].map(canonicalFunnel),
 );
 
+/** Vendedores fora do relatório de conversão por enquanto. */
+export const VENDEDORES_EXCLUIDOS = new Set(["aline", "kesia", "camila"]);
+
+export function isVendedorExcluido(name: string): boolean {
+  const n = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  for (const ex of VENDEDORES_EXCLUIDOS) if (n.includes(ex)) return true;
+  return false;
+}
+
 export function canonicalSellerName(raw: string | null | undefined): string {
   const s = (raw ?? "").trim();
   if (!s) return "— sem vendedor —";
