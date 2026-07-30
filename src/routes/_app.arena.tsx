@@ -1,17 +1,47 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Swords, Flame, Trophy, Target, Sparkles, Play, RefreshCw, Award, TrendingUp, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { isAdminUser } from "@/lib/auth";
+import { ArenaAdminPanel } from "@/components/arena-admin";
 import { getArenaDashboardFn, generateDailyMissionFn, startSimulationFn } from "@/lib/arena.functions";
 
 export const Route = createFileRoute("/_app/arena")({
-  component: ArenaDashboard,
+  component: ArenaPage,
 });
+
+function ArenaPage() {
+  const [user, setUser] = useState<{ email: string | null; user_metadata?: any } | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ? { email: data.session.user.email ?? null, user_metadata: data.session.user.user_metadata } : null);
+    });
+  }, []);
+
+  const admin = isAdminUser(user);
+
+  if (!admin) return <ArenaDashboard />;
+
+  return (
+    <Tabs defaultValue="meu" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="meu">Meu treino</TabsTrigger>
+        <TabsTrigger value="equipa">Equipa (admin)</TabsTrigger>
+      </TabsList>
+      <TabsContent value="meu"><ArenaDashboard /></TabsContent>
+      <TabsContent value="equipa"><ArenaAdminPanel /></TabsContent>
+    </Tabs>
+  );
+}
+
 
 const DIFFICULTIES = ["Bronze", "Prata", "Ouro", "Diamante", "Elite", "Lenda"] as const;
 const LEAGUE_COLOR: Record<string, string> = {
