@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_clint_deals_lost_at ON public.clint_deals (lost_at);
