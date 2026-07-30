@@ -36,6 +36,8 @@ async function aiJson(system: string, user: string, temperature = 0.9): Promise<
       response_format: { type: "json_object" },
     }),
   });
+  if (res.status === 402) throw new Error("Créditos de IA esgotados no workspace Lovable. Recarregue para continuar a treinar na Arena.");
+  if (res.status === 429) throw new Error("Muitos pedidos à IA num curto espaço de tempo. Tente novamente em instantes.");
   if (!res.ok) throw new Error(`IA falhou: ${res.status} ${await res.text()}`);
   const data = await res.json();
   const txt = data.choices?.[0]?.message?.content ?? "{}";
@@ -54,6 +56,8 @@ async function aiText(system: string, messages: Array<{ role: "user" | "assistan
       messages: [{ role: "system", content: system }, ...messages],
     }),
   });
+  if (res.status === 402) throw new Error("Créditos de IA esgotados no workspace Lovable. Recarregue para continuar a treinar na Arena.");
+  if (res.status === 429) throw new Error("Muitos pedidos à IA num curto espaço de tempo. Tente novamente em instantes.");
   if (!res.ok) throw new Error(`IA falhou: ${res.status} ${await res.text()}`);
   const data = await res.json();
   return String(data.choices?.[0]?.message?.content ?? "").trim();

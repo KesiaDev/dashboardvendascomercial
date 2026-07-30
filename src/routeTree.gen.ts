@@ -31,10 +31,10 @@ import { Route as AppComissionamentoRouteImport } from './routes/_app.comissiona
 import { Route as AppComercialRouteImport } from './routes/_app.comercial'
 import { Route as AppCoachRouteImport } from './routes/_app.coach'
 import { Route as AppCampanhaRouteImport } from './routes/_app.campanha'
-import { Route as AppArenaRouteImport } from './routes/_app.arena'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
 import { Route as AppAgendaRouteImport } from './routes/_app.agenda'
+import { Route as AppArenaIndexRouteImport } from './routes/_app.arena.index'
 import { Route as ApiPublicHotmartRawRouteImport } from './routes/api/public/hotmart-raw'
 import { Route as ApiPublicHotmartProbeRouteImport } from './routes/api/public/hotmart-probe'
 import { Route as ApiPublicHotmartDebugRouteImport } from './routes/api/public/hotmart-debug'
@@ -157,11 +157,6 @@ const AppCampanhaRoute = AppCampanhaRouteImport.update({
   path: '/campanha',
   getParentRoute: () => AppRoute,
 } as any)
-const AppArenaRoute = AppArenaRouteImport.update({
-  id: '/arena',
-  path: '/arena',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppAreasRoute = AppAreasRouteImport.update({
   id: '/areas',
   path: '/areas',
@@ -175,6 +170,11 @@ const AppAgenteRoute = AppAgenteRouteImport.update({
 const AppAgendaRoute = AppAgendaRouteImport.update({
   id: '/agenda',
   path: '/agenda',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppArenaIndexRoute = AppArenaIndexRouteImport.update({
+  id: '/arena/',
+  path: '/arena/',
   getParentRoute: () => AppRoute,
 } as any)
 const ApiPublicHotmartRawRoute = ApiPublicHotmartRawRouteImport.update({
@@ -233,9 +233,9 @@ const ApiPublicAgendaBookRoute = ApiPublicAgendaBookRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppArenaSimIdRoute = AppArenaSimIdRouteImport.update({
-  id: '/sim/$id',
-  path: '/sim/$id',
-  getParentRoute: () => AppArenaRoute,
+  id: '/arena/sim/$id',
+  path: '/arena/sim/$id',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -244,7 +244,6 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AppAgendaRoute
   '/agente': typeof AppAgenteRoute
   '/areas': typeof AppAreasRoute
-  '/arena': typeof AppArenaRouteWithChildren
   '/campanha': typeof AppCampanhaRoute
   '/coach': typeof AppCoachRouteWithChildren
   '/comercial': typeof AppComercialRoute
@@ -271,6 +270,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-probe': typeof ApiPublicHotmartProbeRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
+  '/arena/': typeof AppArenaIndexRoute
   '/arena/sim/$id': typeof AppArenaSimIdRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
@@ -282,7 +282,6 @@ export interface FileRoutesByTo {
   '/agenda': typeof AppAgendaRoute
   '/agente': typeof AppAgenteRoute
   '/areas': typeof AppAreasRoute
-  '/arena': typeof AppArenaRouteWithChildren
   '/campanha': typeof AppCampanhaRoute
   '/coach': typeof AppCoachRouteWithChildren
   '/comercial': typeof AppComercialRoute
@@ -310,6 +309,7 @@ export interface FileRoutesByTo {
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-probe': typeof ApiPublicHotmartProbeRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
+  '/arena': typeof AppArenaIndexRoute
   '/arena/sim/$id': typeof AppArenaSimIdRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
@@ -323,7 +323,6 @@ export interface FileRoutesById {
   '/_app/agenda': typeof AppAgendaRoute
   '/_app/agente': typeof AppAgenteRoute
   '/_app/areas': typeof AppAreasRoute
-  '/_app/arena': typeof AppArenaRouteWithChildren
   '/_app/campanha': typeof AppCampanhaRoute
   '/_app/coach': typeof AppCoachRouteWithChildren
   '/_app/comercial': typeof AppComercialRoute
@@ -351,6 +350,7 @@ export interface FileRoutesById {
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-probe': typeof ApiPublicHotmartProbeRoute
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
+  '/_app/arena/': typeof AppArenaIndexRoute
   '/_app/arena/sim/$id': typeof AppArenaSimIdRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
@@ -365,7 +365,6 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/agente'
     | '/areas'
-    | '/arena'
     | '/campanha'
     | '/coach'
     | '/comercial'
@@ -392,6 +391,7 @@ export interface FileRouteTypes {
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-probe'
     | '/api/public/hotmart-raw'
+    | '/arena/'
     | '/arena/sim/$id'
     | '/api/public/agenda/book'
     | '/api/public/sync/ccpbx'
@@ -403,7 +403,6 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/agente'
     | '/areas'
-    | '/arena'
     | '/campanha'
     | '/coach'
     | '/comercial'
@@ -431,6 +430,7 @@ export interface FileRouteTypes {
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-probe'
     | '/api/public/hotmart-raw'
+    | '/arena'
     | '/arena/sim/$id'
     | '/api/public/agenda/book'
     | '/api/public/sync/ccpbx'
@@ -443,7 +443,6 @@ export interface FileRouteTypes {
     | '/_app/agenda'
     | '/_app/agente'
     | '/_app/areas'
-    | '/_app/arena'
     | '/_app/campanha'
     | '/_app/coach'
     | '/_app/comercial'
@@ -471,6 +470,7 @@ export interface FileRouteTypes {
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-probe'
     | '/api/public/hotmart-raw'
+    | '/_app/arena/'
     | '/_app/arena/sim/$id'
     | '/api/public/agenda/book'
     | '/api/public/sync/ccpbx'
@@ -649,13 +649,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCampanhaRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/arena': {
-      id: '/_app/arena'
-      path: '/arena'
-      fullPath: '/arena'
-      preLoaderRoute: typeof AppArenaRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/areas': {
       id: '/_app/areas'
       path: '/areas'
@@ -675,6 +668,13 @@ declare module '@tanstack/react-router' {
       path: '/agenda'
       fullPath: '/agenda'
       preLoaderRoute: typeof AppAgendaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/arena/': {
+      id: '/_app/arena/'
+      path: '/arena'
+      fullPath: '/arena/'
+      preLoaderRoute: typeof AppArenaIndexRouteImport
       parentRoute: typeof AppRoute
     }
     '/api/public/hotmart-raw': {
@@ -756,25 +756,13 @@ declare module '@tanstack/react-router' {
     }
     '/_app/arena/sim/$id': {
       id: '/_app/arena/sim/$id'
-      path: '/sim/$id'
+      path: '/arena/sim/$id'
       fullPath: '/arena/sim/$id'
       preLoaderRoute: typeof AppArenaSimIdRouteImport
-      parentRoute: typeof AppArenaRoute
+      parentRoute: typeof AppRoute
     }
   }
 }
-
-interface AppArenaRouteChildren {
-  AppArenaSimIdRoute: typeof AppArenaSimIdRoute
-}
-
-const AppArenaRouteChildren: AppArenaRouteChildren = {
-  AppArenaSimIdRoute: AppArenaSimIdRoute,
-}
-
-const AppArenaRouteWithChildren = AppArenaRoute._addFileChildren(
-  AppArenaRouteChildren,
-)
 
 interface AppCoachRouteChildren {
   AppCoachIdRoute: typeof AppCoachIdRoute
@@ -792,7 +780,6 @@ interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
   AppAgenteRoute: typeof AppAgenteRoute
   AppAreasRoute: typeof AppAreasRoute
-  AppArenaRoute: typeof AppArenaRouteWithChildren
   AppCampanhaRoute: typeof AppCampanhaRoute
   AppCoachRoute: typeof AppCoachRouteWithChildren
   AppComercialRoute: typeof AppComercialRoute
@@ -812,13 +799,14 @@ interface AppRouteChildren {
   AppVendasReaisRoute: typeof AppVendasReaisRoute
   AppVendedorProdutoRoute: typeof AppVendedorProdutoRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppArenaIndexRoute: typeof AppArenaIndexRoute
+  AppArenaSimIdRoute: typeof AppArenaSimIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppAgendaRoute: AppAgendaRoute,
   AppAgenteRoute: AppAgenteRoute,
   AppAreasRoute: AppAreasRoute,
-  AppArenaRoute: AppArenaRouteWithChildren,
   AppCampanhaRoute: AppCampanhaRoute,
   AppCoachRoute: AppCoachRouteWithChildren,
   AppComercialRoute: AppComercialRoute,
@@ -838,6 +826,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppVendasReaisRoute: AppVendasReaisRoute,
   AppVendedorProdutoRoute: AppVendedorProdutoRoute,
   AppIndexRoute: AppIndexRoute,
+  AppArenaIndexRoute: AppArenaIndexRoute,
+  AppArenaSimIdRoute: AppArenaSimIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
