@@ -21,6 +21,32 @@ export function canonicalFunnel(raw: string | null | undefined): string {
   return k;
 }
 
+/**
+ * Funis que os vendedores realmente trabalham — mesma lista do formulário de
+ * fechamento manual (FUNNELS em manual-sales.functions.ts), já canonicalizada.
+ * Tudo que não estiver aqui (automação de marketing, testes, cobrança...) é
+ * ignorado no relatório de conversão.
+ */
+export const FUNIS_VENDEDOR = new Set<string>(
+  [
+    "PIPELINE_COMERCIAL-V3",
+    "IGT23",
+    "Master and Scale — LDP_03_MAS_MGT",
+    "Funil - Sessão Estratégica",
+    "SESSÃO ESTRATÉGICA",
+    "Funil de Indicações",
+    "WGRS 1",
+    "Renovação Mariana",
+    "Funil Retomada de Leads Perdidos",
+    "Funil Potencial Compra Futura",
+    "Renovação",
+    "Retrabalho Leads",
+    "WGT - Perpétuo",
+    "WGT-2",
+    "CONVIDAR PARA IMERSÃO",
+  ].map(canonicalFunnel),
+);
+
 export function canonicalSellerName(raw: string | null | undefined): string {
   const s = (raw ?? "").trim();
   if (!s) return "— sem vendedor —";
