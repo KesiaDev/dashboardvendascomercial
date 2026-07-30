@@ -56,12 +56,15 @@ export function canonicalSellerName(raw: string | null | undefined): string {
 export async function pagedDeals(db: any, column: string, from: string, to: string) {
   const rows: any[] = [];
   for (let page = 0; page < 30; page++) {
-    const { data, error } = await db
+    let q = db
       .from("clint_deals")
-      .select("id,origin_name,user_name,status,created_at,lost_at")
+      .select("origin_name,user_name,status")
       .gte(column, `${from}T00:00:00Z`)
       .lte(column, `${to}T23:59:59Z`)
+      .order(column, { ascending: true })
       .range(page * PAGE, (page + 1) * PAGE - 1);
+    if (column === "lost_at") q = q.eq("status", "LOST");
+    const { data, error } = await q;
     if (error) throw new Error(error.message);
     const batch = data ?? [];
     rows.push(...batch);
