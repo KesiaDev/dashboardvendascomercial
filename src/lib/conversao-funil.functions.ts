@@ -19,9 +19,8 @@ export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<ConversaoRow[]> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { pagedDeals, fetchManualSales, canonicalFunnel, canonicalSellerName } = await import(
-      "@/lib/conversao-funil.server"
-    );
+    const { pagedDeals, fetchManualSales, canonicalFunnel, canonicalSellerName, FUNIS_VENDEDOR } =
+      await import("@/lib/conversao-funil.server");
 
     const [created, lostRows, sales] = await Promise.all([
       pagedDeals(supabaseAdmin, "created_at", data.from, data.to),
