@@ -386,7 +386,7 @@ function AgendaRow({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium">{item.lead_name}</span>
           <Badge variant="outline" className={STATUS_COLORS[item.status] ?? ""}>{item.status}</Badge>
-          {item.source === "ia_agent" && (
+          {(item.source === "agente_ia" || item.source === "ia_agent") && (
             <Badge variant="outline" className="bg-purple-500/15 text-purple-500 border-purple-500/30">
               <Bot className="h-3 w-3 mr-1" /> IA
             </Badge>
