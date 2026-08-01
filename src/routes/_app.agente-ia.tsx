@@ -82,7 +82,8 @@ function AgenteIaPage() {
     return <div className="p-6 text-sm text-muted-foreground">Acesso restrito ao administrador.</div>;
   }
 
-  const k = q.data?.kpis;
+  const d = q.data;
+  const k = d?.kpis;
 
   return (
     <div className="space-y-5 p-4 md:p-6">
@@ -126,7 +127,7 @@ function AgenteIaPage() {
         <div className="p-6 text-sm text-muted-foreground">Carregando dados do agente...</div>
       ) : q.error ? (
         <div className="p-6 text-sm text-destructive">Erro: {(q.error as any)?.message}</div>
-      ) : !k ? null : (
+      ) : !k || !d ? null : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Kpi icon={MessageSquare} label="Conversas atendidas pela IA" value={String(k.conversasIa)}
@@ -155,7 +156,7 @@ function AgenteIaPage() {
               <CardHeader className="pb-2"><CardTitle className="text-sm">Funil do agente IA</CardTitle></CardHeader>
               <CardContent className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={q.data.funil} layout="vertical" margin={{ left: 24, right: 16 }}>
+                  <BarChart data={d.funil} layout="vertical" margin={{ left: 24, right: 16 }}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                     <XAxis type="number" tick={{ fontSize: 11 }} />
                     <YAxis type="category" dataKey="etapa" width={140} tick={{ fontSize: 11 }} />
@@ -170,7 +171,7 @@ function AgenteIaPage() {
               <CardHeader className="pb-2"><CardTitle className="text-sm">Velocidade de resposta</CardTitle></CardHeader>
               <CardContent className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={q.data.respostaBuckets}>
+                  <BarChart data={d.respostaBuckets}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                     <XAxis dataKey="faixa" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
@@ -185,7 +186,7 @@ function AgenteIaPage() {
               <CardHeader className="pb-2"><CardTitle className="text-sm">Evolução diária</CardTitle></CardHeader>
               <CardContent className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={q.data.daily}>
+                  <LineChart data={d.daily}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(8) + "/" + v.slice(5, 7)} />
                     <YAxis tick={{ fontSize: 11 }} />
@@ -204,26 +205,26 @@ function AgenteIaPage() {
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">Onde os leads da IA estão no funil</CardTitle></CardHeader>
               <CardContent className="space-y-1.5">
-                {q.data.stages.slice(0, 12).map((s) => (
+                {d.stages.slice(0, 12).map((s) => (
                   <div key={s.stage} className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-1.5 text-sm">
                     <span className="truncate">{s.stage}</span>
                     <Badge variant="secondary">{s.total}</Badge>
                   </div>
                 ))}
-                {!q.data.stages.length && <div className="text-sm text-muted-foreground">Sem dados no período.</div>}
+                {!d.stages.length && <div className="text-sm text-muted-foreground">Sem dados no período.</div>}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">Aberturas sem resposta (amostra)</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                {q.data.amostraSemResposta.map((a, i) => (
+                {d.amostraSemResposta.map((a, i) => (
                   <div key={i} className="rounded-md border px-3 py-2 text-xs">
                     <div className="font-medium">{a.contato} <span className="text-muted-foreground">· {a.data}</span></div>
                     <div className="mt-0.5 text-muted-foreground line-clamp-2">{a.abertura}</div>
                   </div>
                 ))}
-                {!q.data.amostraSemResposta.length && <div className="text-sm text-muted-foreground">Todos os leads responderam 🎉</div>}
+                {!d.amostraSemResposta.length && <div className="text-sm text-muted-foreground">Todos os leads responderam 🎉</div>}
               </CardContent>
             </Card>
           </div>
