@@ -32,6 +32,7 @@ import { Route as AppComercialRouteImport } from './routes/_app.comercial'
 import { Route as AppCoachRouteImport } from './routes/_app.coach'
 import { Route as AppCampanhaRouteImport } from './routes/_app.campanha'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
+import { Route as AppAgenteIaRouteImport } from './routes/_app.agente-ia'
 import { Route as AppAgenteRouteImport } from './routes/_app.agente'
 import { Route as AppAgendaRouteImport } from './routes/_app.agenda'
 import { Route as AppArenaIndexRouteImport } from './routes/_app.arena.index'
@@ -162,6 +163,11 @@ const AppAreasRoute = AppAreasRouteImport.update({
   path: '/areas',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAgenteIaRoute = AppAgenteIaRouteImport.update({
+  id: '/agente-ia',
+  path: '/agente-ia',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAgenteRoute = AppAgenteRouteImport.update({
   id: '/agente',
   path: '/agente',
@@ -243,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/agenda': typeof AppAgendaRoute
   '/agente': typeof AppAgenteRoute
+  '/agente-ia': typeof AppAgenteIaRoute
   '/areas': typeof AppAreasRoute
   '/campanha': typeof AppCampanhaRoute
   '/coach': typeof AppCoachRouteWithChildren
@@ -281,6 +288,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/agenda': typeof AppAgendaRoute
   '/agente': typeof AppAgenteRoute
+  '/agente-ia': typeof AppAgenteIaRoute
   '/areas': typeof AppAreasRoute
   '/campanha': typeof AppCampanhaRoute
   '/coach': typeof AppCoachRouteWithChildren
@@ -322,6 +330,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/_app/agenda': typeof AppAgendaRoute
   '/_app/agente': typeof AppAgenteRoute
+  '/_app/agente-ia': typeof AppAgenteIaRoute
   '/_app/areas': typeof AppAreasRoute
   '/_app/campanha': typeof AppCampanhaRoute
   '/_app/coach': typeof AppCoachRouteWithChildren
@@ -364,6 +373,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/agenda'
     | '/agente'
+    | '/agente-ia'
     | '/areas'
     | '/campanha'
     | '/coach'
@@ -402,6 +412,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/agenda'
     | '/agente'
+    | '/agente-ia'
     | '/areas'
     | '/campanha'
     | '/coach'
@@ -442,6 +453,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_app/agenda'
     | '/_app/agente'
+    | '/_app/agente-ia'
     | '/_app/areas'
     | '/_app/campanha'
     | '/_app/coach'
@@ -656,6 +668,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAreasRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/agente-ia': {
+      id: '/_app/agente-ia'
+      path: '/agente-ia'
+      fullPath: '/agente-ia'
+      preLoaderRoute: typeof AppAgenteIaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/agente': {
       id: '/_app/agente'
       path: '/agente'
@@ -779,6 +798,7 @@ const AppCoachRouteWithChildren = AppCoachRoute._addFileChildren(
 interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
   AppAgenteRoute: typeof AppAgenteRoute
+  AppAgenteIaRoute: typeof AppAgenteIaRoute
   AppAreasRoute: typeof AppAreasRoute
   AppCampanhaRoute: typeof AppCampanhaRoute
   AppCoachRoute: typeof AppCoachRouteWithChildren
@@ -806,6 +826,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAgendaRoute: AppAgendaRoute,
   AppAgenteRoute: AppAgenteRoute,
+  AppAgenteIaRoute: AppAgenteIaRoute,
   AppAreasRoute: AppAreasRoute,
   AppCampanhaRoute: AppCampanhaRoute,
   AppCoachRoute: AppCoachRouteWithChildren,
