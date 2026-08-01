@@ -139,7 +139,15 @@ export const listAgendaLogsFn = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(25);
     if (error) throw error;
-    return { items: (data ?? []) as unknown as AgendaLog[] };
+    const items: AgendaLog[] = (data ?? []).map((r: any) => ({
+      id: r.id,
+      created_at: r.created_at,
+      status: r.status,
+      error_msg: r.error_msg ?? null,
+      payload: r.payload ? JSON.stringify(r.payload) : null,
+    }));
+    return { items };
+
   });
 
 export const listPromptsFn = createServerFn({ method: "GET" })
