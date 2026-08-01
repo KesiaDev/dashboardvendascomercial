@@ -344,6 +344,18 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
     <div className="space-y-5">
       {/* Navegador */}
       <div className="flex flex-wrap items-center justify-end gap-2">
+        <select
+          aria-label="Selecionar semana"
+          className="h-9 rounded-lg border border-border bg-card px-3 text-sm"
+          value={weekIdx}
+          onChange={(e)=>setWeekIdx(Number(e.target.value))}
+        >
+          {Array.from({length:maxWeek+1},(_,i)=>{
+            const r=weekRange(i);
+            const n=allSales.filter(s=>s.sale_date>=r.start&&s.sale_date<=r.end).length;
+            return <option key={i} value={i}>{`S${i+1+WEEK_LABEL_OFFSET} · ${fmtDate(r.start)}–${fmtDate(r.end)} · ${n}v`}</option>;
+          })}
+        </select>
         <Button variant="outline" size="icon" disabled={weekIdx===0} onClick={()=>setWeekIdx(i=>i-1)}><ChevronLeft className="h-4 w-4"/></Button>
         <div className="text-center min-w-[170px] px-3 py-2 rounded-lg border border-border bg-card">
           <div className="text-sm font-semibold">Semana {weekIdx+1+WEEK_LABEL_OFFSET}</div>
@@ -352,6 +364,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
         <Button variant="outline" size="icon" disabled={weekIdx>=maxWeek} onClick={()=>setWeekIdx(i=>i+1)}><ChevronRight className="h-4 w-4"/></Button>
         {weekIdx!==maxWeek&&<Button variant="ghost" size="sm" className="text-xs" onClick={()=>setWeekIdx(maxWeek)}>Semana atual</Button>}
       </div>
+
 
       {/* KPIs */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 items-stretch">
