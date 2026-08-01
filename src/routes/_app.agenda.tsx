@@ -720,5 +720,73 @@ function AgentesTab() {
         </CardContent>
       </Card>
     </div>
+    </div>
   );
 }
+
+function IntegracaoDiagnostico() {
+  const list = useServerFn(listAgendaLogsFn);
+  const [logs, setLogs] = useState<AgendaLog[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  async function reload() {
+    setLoading(true);
+    try {
+      const r = await list();
+      setLogs(r.items);
+    } catch (e: any) {
+      toast.error(String(e?.message ?? e));
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => { reload(); }, []);
+
+  const ok = logs.filter((l) => l.status === "processed").length;
+  const err = logs.filter((l) => l.status === "error").length;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Bot className="h-4 w-4" /> Diagnóstico da automação (n8n → agenda)
+        </CardTitle>
+        <p className="text-xs text-muted-foreground">
+          Endpoint: <code>POST /api/public/agenda/book</code> · header <code>x-api-key</code> ·
+          body <code>{"{ seller_email, lead_name, lead_phone, clint_deal_id, scheduled_at | agenda_tag | message }"}</code>
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30">{ok} ok</Badge>
+          <Badge variant="outline" className="bg-rose-500/15 text-rose-500 border-rose-500/30">{err} erro</Badge>
+          <Button variant="outline" size="sm" className="ml-auto" onClick={reload} disabled={loading}>
+            {loading ? "Atualizando…" : "Atualizar"}
+          </Button>
+        </div>
+        {!loading && logs.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma chamada recebida ainda — o n8n não está chegando no endpoint (URL, método POST ou x-api-key).
+          </p>
+        )}
+        {logs.map((l) => (
+          <div key={l.id} className="rounded-md border border-border p-2 text-xs">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className={l.status === "error" ? STATUS_COLORS.cancelado : STATUS_COLORS.realizado}>
+                {l.status}
+              </Badge>
+              <span className="text-muted-foreground">{fmtDate(l.created_at)}</span>
+              {l.error_msg && <span className="text-rose-500">{l.error_msg}</span>}
+            </div>
+            {l.payload && (
+              <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap break-all text-[10px] text-muted-foreground">
+                {l.payload}
+              </pre>
+            )}
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
