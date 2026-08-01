@@ -116,7 +116,34 @@ export const deleteAgendaFn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export type AgendaLog = {
+  id: number;
+  created_at: string;
+  status: string;
+  error_msg: string | null;
+  payload: Record<string, unknown> | null;
+};
+
+/** Diagnóstico: últimas chamadas do n8n/Clint ao endpoint /api/public/agenda/book */
+export const listAgendaLogsFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const email = (context.claims as any)?.email as string | undefined;
+    const isAdmin = isAdminEmail(email) || (context.claims as any)?.user_metadata?.role === "admin";
+    if (!isAdmin) return { items: [] as AgendaLog[] };
+    const supabase = await admin();
+    const { data, error } = await supabase
+      .from("coach_integration_logs")
+      .select("id, created_at, status, error_msg, payload")
+      .eq("event_type", "agenda_book")
+      .order("created_at", { ascending: false })
+      .limit(25);
+    if (error) throw error;
+    return { items: (data ?? []) as unknown as AgendaLog[] };
+  });
+
 export const listPromptsFn = createServerFn({ method: "GET" })
+
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const supabase = await admin();
