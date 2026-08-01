@@ -21,9 +21,12 @@ import {
   deleteAgendaFn,
   listPromptsFn,
   savePromptFn,
+  listAgendaLogsFn,
   type AgendaItem,
   type AgentPrompt,
+  type AgendaLog,
 } from "@/lib/agenda.functions";
+
 
 export const Route = createFileRoute("/_app/agenda")({
   component: AgendaPage,
