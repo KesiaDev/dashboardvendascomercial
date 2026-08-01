@@ -121,7 +121,7 @@ export type AgendaLog = {
   created_at: string;
   status: string;
   error_msg: string | null;
-  payload: Record<string, unknown> | null;
+  payload: string | null;
 };
 
 /** Diagnóstico: últimas chamadas do n8n/Clint ao endpoint /api/public/agenda/book */
