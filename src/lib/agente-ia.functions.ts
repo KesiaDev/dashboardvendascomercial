@@ -23,11 +23,12 @@ function isAiMessage(body: string | null, clintSource?: string | null): boolean 
   return AI_PATTERNS.some((re) => re.test(body));
 }
 
-// Estágios que representam reunião conquistada pelo trabalho do SDR
-const MEETING_STAGES = ["reunião agendada", "reuniao agendada", "proposta enviada", "fechado"];
-function isMeetingStage(stage: string | null | undefined): boolean {
-  const s = (stage ?? "").trim().toLowerCase();
-  return MEETING_STAGES.includes(s);
+// Detecção de reunião confirmada pelo AI com base no conteúdo das mensagens.
+// "lembrete no dia" aparece em TODAS as confirmações de sessão estratégica,
+// independente do estágio do deal no CRM.
+const MEETING_PATTERNS = [/lembrete no dia/i, /\[AGENDA:/i];
+function hasMeetingConfirmation(aiMsgBodies: (string | null)[]): boolean {
+  return aiMsgBodies.some((b) => MEETING_PATTERNS.some((re) => re.test(b ?? "")));
 }
 
 export type AgenteIaResult = {
@@ -256,7 +257,10 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
       const deal = c.deal_id ? dealById.get(c.deal_id) : undefined;
       const stage = deal?.stage ?? c.stage ?? "—";
       stageCount.set(stage, (stageCount.get(stage) ?? 0) + 1);
-      if (isMeetingStage(stage)) {
+
+      // Reunião = AI enviou mensagem com "lembrete no dia" ou [AGENDA:] (confirmação de sessão)
+      const aiMsgBodies = aiMsgs.map((m) => m.body);
+      if (hasMeetingConfirmation(aiMsgBodies)) {
         reunioes += 1;
         msgsAteReuniaoArr.push(afterStart.length);
         const d = deal?.updated_stage_at ? dayISO(deal.updated_stage_at) : dayKey;

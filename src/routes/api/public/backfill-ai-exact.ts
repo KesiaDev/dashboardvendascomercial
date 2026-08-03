@@ -40,6 +40,11 @@ const KNOWN_AI_CHAT_IDS: string[] = [
   "365ff93b-24b3-4e7a-9efc-425f2a1eca3e",
   "8152fba3-716c-4514-828c-6582c8a17a4f",
   "72d1d8cc-b97f-44f3-9675-100e53ad4396",
+  // Adicionadas em 03/08/2026 — encontradas no spreadsheet de reuniões, confirmadas como IA
+  "3e4bbd82-ff21-461c-800b-1baa67797701",
+  "a94b7fbc-de33-4190-98b1-9acb0f701828",
+  "44bbf2c5-a3a4-4e85-921d-8454882b4384",
+  "8e204716-97ef-455d-941d-cc48cf90be62",
 ];
 
 function checkApiKey(request: Request): boolean {
