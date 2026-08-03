@@ -22,6 +22,8 @@ import {
   listPromptsFn,
   savePromptFn,
   listAgendaLogsFn,
+  blockAgendaFn,
+  unblockAgendaFn,
   type AgendaItem,
   type AgentPrompt,
   type AgendaLog,
