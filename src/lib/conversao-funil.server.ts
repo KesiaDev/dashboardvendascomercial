@@ -65,12 +65,36 @@ export function canonicalSellerName(raw: string | null | undefined): string {
   return canonicalSeller(s) ?? s;
 }
 
+// Padrões de tag por categoria (case-insensitive substring match)
+export const TAG_FILTER_OPTIONS = [
+  { value: "", label: "Todas as origens" },
+  { value: "ebook", label: "Ebook" },
+  { value: "minicurso", label: "Minicurso" },
+  { value: "wgt", label: "WGT Perpétuo" },
+  { value: "igt", label: "IGT" },
+  { value: "palavras", label: "Palavras" },
+] as const;
+
+const TAG_PATTERNS: Record<string, string[]> = {
+  ebook: ["ebook", "e-book"],
+  minicurso: ["minicurso", "mc-"],
+  wgt: ["wgt"],
+  igt: ["igt"],
+  palavras: ["palavras"],
+};
+
+export function dealMatchesTagFilter(tags: string[], tagFilter: string): boolean {
+  if (!tagFilter) return true;
+  const pats = TAG_PATTERNS[tagFilter] ?? [tagFilter];
+  return tags.some((t) => pats.some((p) => t.toLowerCase().includes(p)));
+}
+
 export async function pagedDeals(db: any, column: string, from: string, to: string) {
   const rows: any[] = [];
   for (let page = 0; page < 30; page++) {
     let q = db
       .from("clint_deals")
-      .select("origin_name,user_name,status")
+      .select("origin_name,user_name,status,contact_tags")
       .gte(column, `${from}T00:00:00Z`)
       .lte(column, `${to}T23:59:59Z`)
       .order(column, { ascending: true })
