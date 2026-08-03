@@ -526,6 +526,37 @@ function sameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+type DayEntry = { key: string; item: AgendaItem; start: Date; end: Date; count: number };
+
+/** Junta slots de bloqueio consecutivos do mesmo vendedor/motivo num único bloco visual. */
+function mergeBlocked(list: AgendaItem[]): DayEntry[] {
+  const out: DayEntry[] = [];
+  for (const it of list) {
+    const start = new Date(it.scheduled_at);
+    const end = new Date(start.getTime() + (it.duration_min || 30) * 60 * 1000);
+    const last = out[out.length - 1];
+    const isBlock = it.status === "bloqueado" || it.meeting_type === "bloqueio";
+    if (
+      isBlock &&
+      last &&
+      (last.item.status === "bloqueado" || last.item.meeting_type === "bloqueio") &&
+      last.item.seller_email === it.seller_email &&
+      (last.item.notes ?? last.item.lead_name) === (it.notes ?? it.lead_name) &&
+      (last.item.color ?? null) === (it.color ?? null) &&
+      last.end.getTime() >= start.getTime()
+    ) {
+      last.end = end > last.end ? end : last.end;
+      last.count += 1;
+      continue;
+    }
+    out.push({ key: it.id, item: it, start, end, count: 1 });
+  }
+  return out;
+}
+
+const hhmm = (d: Date) => d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+
 function CalendarView({ items, onSelectItem }: { items: AgendaItem[]; onSelectItem: (i: AgendaItem) => void }) {
   const [cursor, setCursor] = useState(() => new Date());
   const [selected, setSelected] = useState<Date | null>(new Date());
