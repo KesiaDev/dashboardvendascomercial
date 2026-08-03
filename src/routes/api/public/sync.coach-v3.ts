@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 const CLINT_BASE = "https://api.clint.digital";
-const PIPELINE_V3_ORIGIN_ID = "f8b0fa1a-5f7b-4402-bb47-b0c4cbdf9090";
+// Both origin IDs named "PIPELINE_COMERCIAL-V3" in Clint (verified via API)
+const PIPELINE_V3_ORIGIN_IDS = [
+  "07fc7c4b-82d2-427d-b09e-04a7f90f16f1",
+  "8c159581-ba93-4fad-a909-f4e204d6faaf",
+];
 const PIPELINE_V3_ORIGIN_NAME = "PIPELINE_COMERCIAL-V3";
 
 function checkApiKey(request: Request): boolean {
@@ -55,13 +59,13 @@ async function runCoachV3Sync(sinceDays: number) {
     });
   }
 
-  // Try to get deals from already-synced clint_deals table
+  // Try to get deals from already-synced clint_deals table (both PIPELINE_COMERCIAL-V3 origin IDs)
   const { data: dbDeals } = await db
     .from("clint_deals")
     .select(
       "id, contact_id, contact_name, contact_email, contact_phone, user_id, user_email, user_name, stage, status, value, updated_at",
     )
-    .eq("origin_id", PIPELINE_V3_ORIGIN_ID)
+    .in("origin_id", PIPELINE_V3_ORIGIN_IDS)
     .gte("updated_at", sinceDate)
     .in("status", ["OPEN", "WON", "LOST"])
     .order("updated_at", { ascending: false })
@@ -82,7 +86,7 @@ async function runCoachV3Sync(sinceDays: number) {
       });
       const resp = await clintGet(`/v1/deals?${q}`, token);
       const items: any[] = (resp.data ?? []).filter(
-        (d: any) => d.origin_id === PIPELINE_V3_ORIGIN_ID,
+        (d: any) => PIPELINE_V3_ORIGIN_IDS.includes(d.origin_id),
       );
       deals.push(...items);
       if (!resp.hasNext) break;
