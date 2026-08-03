@@ -110,7 +110,7 @@ async function runBackfillAiExact() {
         .eq("clint_conversation_id", chatId)
         .maybeSingle();
 
-      let convId: string;
+      let convId: string | null = null;
 
       if (existing) {
         // Update is_ai_conversation flag
@@ -118,7 +118,7 @@ async function runBackfillAiExact() {
           .from("coach_conversations")
           .update({ is_ai_conversation: hasAiMessages })
           .eq("id", existing.id);
-        convId = existing.id;
+        convId = existing.id as string;
 
         // Delete old messages (will re-insert with clint_source)
         await db.from("coach_messages").delete().eq("conversation_id", convId);
@@ -143,24 +143,24 @@ async function runBackfillAiExact() {
 
         if (cErr) {
           if (cErr.code === "23505") {
-            // Race condition: re-fetch
+            // Race condition: conversation inserted concurrently, re-fetch
             const { data: retried } = await db
               .from("coach_conversations")
               .select("id")
               .eq("clint_conversation_id", chatId)
               .single();
-            convId = retried?.id;
-            await db.from("coach_messages").delete().eq("conversation_id", convId);
+            convId = (retried?.id as string) ?? null;
+            if (convId) await db.from("coach_messages").delete().eq("conversation_id", convId);
           } else {
             throw new Error(`insert conv: ${cErr.message}`);
           }
         } else {
-          convId = convRow.id;
+          convId = convRow.id as string;
         }
       }
 
-      if (!convId!) {
-        results.push({ chat_id: chatId, status: "error", error: "no conv id" });
+      if (!convId) {
+        results.push({ chat_id: chatId, status: "error", error: "no conv id resolved" });
         continue;
       }
 
