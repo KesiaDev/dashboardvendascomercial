@@ -188,19 +188,18 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
       const msgs = (byConv.get(c.id) ?? []).sort((a, b) => a.sent_at.localeCompare(b.sent_at));
       if (!msgs.length) continue;
 
-      // is_ai_conversation already filtered at DB level; detect AI messages within the conversation
-      const aiMsgs = msgs.filter(
-        (m) => m.direction === "outbound" && isAiMessage(m.body, m.clint_source),
-      );
-      // Fallback: if no clint_source data yet, treat all outbound as AI (since conv is flagged)
-      const effectiveAiMsgs = aiMsgs.length > 0
-        ? aiMsgs
-        : msgs.filter((m) => m.direction === "outbound");
-      if (!effectiveAiMsgs.length) continue;
+      // Detect AI messages: prefer clint_source (exact), fallback to regex for old data
+      const hasClintSource = msgs.some((m) => m.clint_source != null);
+      const aiMsgs = msgs.filter((m) => {
+        if (m.direction !== "outbound") return false;
+        if (hasClintSource) return m.clint_source === "AI_CONVERSATION";
+        return isAiMessage(m.body, null);
+      });
+      if (!aiMsgs.length) continue;
 
       conversasIa += 1;
-      mensagensIa += effectiveAiMsgs.length;
-      const startedAt = effectiveAiMsgs[0].sent_at;
+      mensagensIa += aiMsgs.length;
+      const startedAt = aiMsgs[0].sent_at;
       const dayKey = dayISO(startedAt);
       touch(dayKey).iniciadas += 1;
 
