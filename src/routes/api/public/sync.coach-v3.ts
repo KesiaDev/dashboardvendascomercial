@@ -203,12 +203,15 @@ async function runCoachV3Sync(sinceDays: number) {
         }
         const conversationId = convRow.id as string;
 
-        // Insert messages — only columns guaranteed in base schema + webhook migration
+        // Insert messages with clint_source for reliable AI detection
+        const isAiConversation = realMsgs.some((m: any) => m.source === "AI_CONVERSATION");
         const msgRows = realMsgs.map((m: any) => {
           const direction = m.type === "USER" ? "outbound" : "inbound";
           const msgSeller = m.user_id ? userMap.get(m.user_id) : null;
           const senderName =
-            direction === "outbound"
+            direction === "outbound" && m.source === "AI_CONVERSATION"
+              ? "SDR COMERCIAL IA"
+              : direction === "outbound"
               ? (msgSeller?.name ?? sellerName)
               : (deal.contact_name ?? null);
           return {
@@ -218,8 +221,17 @@ async function runCoachV3Sync(sinceDays: number) {
             direction,
             sender_name: senderName,
             body: extractText(m),
+            clint_source: m.source ?? null,
           };
         });
+
+        // Mark conversation as AI if any message came from SDR COMERCIAL IA
+        if (isAiConversation) {
+          await db
+            .from("coach_conversations")
+            .update({ is_ai_conversation: true })
+            .eq("id", conversationId);
+        }
 
         for (let i = 0; i < msgRows.length; i += 200) {
           const { error: mErr } = await db

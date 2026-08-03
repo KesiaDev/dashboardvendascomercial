@@ -1,19 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 
 /**
- * Análise de desempenho do Agente IA (SDR) da Clint.
- *
- * A Clint não expõe API pública das execuções dos agentes de IA (testado:
- * /v1/ai/agents, /automations → 404). Então identificamos as mensagens da IA
- * pela assinatura do script do agente (prompt fixo do "SDR COMERCIAL IA":
- * abertura obrigatória, "equipa/equipe do Luciano Larrossa", convite para a
- * Sessão Estratégica). Toda conversa do PIPELINE_COMERCIAL-V3 que tiver ao
- * menos 1 mensagem com essa assinatura é considerada "atendida pela IA".
+ * Análise de desempenho do Agente IA (SDR COMERCIAL IA) da Clint.
+ * Identificação primária: clint_source="AI_CONVERSATION" nas mensagens.
+ * Fallback: regex nas conversas antigas sem clint_source.
  */
 
 const V3 = "PIPELINE_COMERCIAL-V3";
 
-// Assinaturas do script do agente (case-insensitive, sem acento sensível)
+// Fallback regex para mensagens antigas sem clint_source
 const AI_PATTERNS: RegExp[] = [
   /seja bem[- ]vindo/i,
   /equip[ae] d[eo] luciano larrossa/i,
@@ -22,7 +17,8 @@ const AI_PATTERNS: RegExp[] = [
   /sou d[ao] equip[ae]/i,
 ];
 
-function isAiMessage(body: string | null): boolean {
+function isAiMessage(body: string | null, clintSource?: string | null): boolean {
+  if (clintSource === "AI_CONVERSATION") return true;
   if (!body) return false;
   return AI_PATTERNS.some((re) => re.test(body));
 }
@@ -87,11 +83,19 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
     const startTS = `${data.startDate}T00:00:00.000Z`;
     const endTS = `${data.endDate}T23:59:59.999Z`;
 
-    const [convsRes, agendaRes] = await Promise.all([
+    // Query total V3 conversations (for coverage %) and AI conversations separately
+    const [allConvsRes, aiConvsRes, agendaRes] = await Promise.all([
       supabaseAdmin
         .from("coach_conversations")
-        .select("id,deal_id,contact_name,stage,first_message_at,last_message_at,message_count")
+        .select("id", { count: "exact", head: true })
         .eq("origin_name", V3)
+        .gte("last_message_at", startTS)
+        .lte("last_message_at", endTS),
+      supabaseAdmin
+        .from("coach_conversations")
+        .select("id,deal_id,contact_name,stage,first_message_at,last_message_at,message_count,is_ai_conversation")
+        .eq("origin_name", V3)
+        .eq("is_ai_conversation", true)
         .gte("last_message_at", startTS)
         .lte("last_message_at", endTS)
         .limit(5000),
@@ -102,9 +106,11 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
         .lte("scheduled_at", endTS)
         .limit(2000),
     ]);
-    if (convsRes.error) throw new Error(`coach_conversations: ${convsRes.error.message}`);
+    if (aiConvsRes.error) throw new Error(`coach_conversations: ${aiConvsRes.error.message}`);
 
-    const convs = convsRes.data ?? [];
+    const convs = aiConvsRes.data ?? [];
+    // Total V3 conversations (all, not just AI) for coverage percentage
+    const totalV3 = allConvsRes.count ?? convs.length;
     const agenda = agendaRes.data ?? [];
     const agendaClint = agenda.filter((a: any) =>
       /clint|ia|agente|autom/i.test(String(a.source ?? "")),
@@ -118,13 +124,16 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
       chunks.map((chunk) =>
         supabaseAdmin
           .from("coach_messages")
-          .select("conversation_id,sent_at,direction,body")
+          .select("conversation_id,sent_at,direction,body,clint_source")
           .in("conversation_id", chunk)
           .order("sent_at", { ascending: true })
           .limit(50000),
       ),
     );
-    const byConv = new Map<string, { sent_at: string; direction: string; body: string }[]>();
+    const byConv = new Map<
+      string,
+      { sent_at: string; direction: string; body: string; clint_source?: string | null }[]
+    >();
     for (const r of msgChunks) {
       for (const m of r.data ?? []) {
         const arr = byConv.get(m.conversation_id) ?? [];
@@ -178,12 +187,20 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
     for (const c of convs as any[]) {
       const msgs = (byConv.get(c.id) ?? []).sort((a, b) => a.sent_at.localeCompare(b.sent_at));
       if (!msgs.length) continue;
-      const aiMsgs = msgs.filter((m) => m.direction === "outbound" && isAiMessage(m.body));
-      if (!aiMsgs.length) continue;
+
+      // is_ai_conversation already filtered at DB level; detect AI messages within the conversation
+      const aiMsgs = msgs.filter(
+        (m) => m.direction === "outbound" && isAiMessage(m.body, m.clint_source),
+      );
+      // Fallback: if no clint_source data yet, treat all outbound as AI (since conv is flagged)
+      const effectiveAiMsgs = aiMsgs.length > 0
+        ? aiMsgs
+        : msgs.filter((m) => m.direction === "outbound");
+      if (!effectiveAiMsgs.length) continue;
 
       conversasIa += 1;
-      mensagensIa += aiMsgs.length;
-      const startedAt = aiMsgs[0].sent_at;
+      mensagensIa += effectiveAiMsgs.length;
+      const startedAt = effectiveAiMsgs[0].sent_at;
       const dayKey = dayISO(startedAt);
       touch(dayKey).iniciadas += 1;
 
@@ -228,9 +245,12 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
         }
       }
 
-      // Passou para humano: outbound sem assinatura da IA depois do lead responder
+      // Passou para humano: mensagem outbound com source=CHAT (humano) após lead responder
       const humano = afterStart.some(
-        (m) => m.direction === "outbound" && !isAiMessage(m.body) && (m.body ?? "").length > 40,
+        (m) =>
+          m.direction === "outbound" &&
+          (m.clint_source === "CHAT" ||
+            (!m.clint_source && !isAiMessage(m.body, null) && (m.body ?? "").length > 40)),
       );
       if (humano && respondeu) passouParaHumano += 1;
 
@@ -259,9 +279,9 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
       periodStart: data.startDate,
       periodEnd: data.endDate,
       kpis: {
-        conversasTotal: convs.length,
+        conversasTotal: totalV3,
         conversasIa,
-        coberturaPct: pct(conversasIa, convs.length),
+        coberturaPct: pct(conversasIa, totalV3),
         mensagensIa,
         leadsResponderam,
         taxaRespostaPct: pct(leadsResponderam, conversasIa),
