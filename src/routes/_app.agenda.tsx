@@ -39,6 +39,7 @@ const STATUS_COLORS: Record<string, string> = {
   realizado: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30",
   cancelado: "bg-rose-500/15 text-rose-500 border-rose-500/30",
   no_show: "bg-amber-500/15 text-amber-500 border-amber-500/30",
+  bloqueado: "bg-muted text-muted-foreground border-border",
 };
 
 function fmtDate(iso: string) {
