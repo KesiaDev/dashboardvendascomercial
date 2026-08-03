@@ -421,7 +421,9 @@ function BlockForm({
               </div>
             </div>
           )}
+          <RepeatPicker value={repeat} onChange={setRepeat} baseDate={form.date} />
           <ColorPicker value={form.color} onChange={(v) => setForm((f) => ({ ...f, color: v }))} />
+
           <div>
             <Label>Motivo</Label>
             <Input placeholder="Almoço, folga, reunião interna…" value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} />
