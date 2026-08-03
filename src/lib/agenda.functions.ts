@@ -195,7 +195,7 @@ export const savePromptFn = createServerFn({ method: "POST" })
 /** Bloqueio de agenda: cria slots de 30 em 30 min com status "bloqueado". */
 export const blockAgendaFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { from: string; to: string; reason?: string | null; seller_email?: string | null; seller_name?: string | null }) => d)
+  .inputValidator((d: { from: string; to: string; reason?: string | null; seller_email?: string | null; seller_name?: string | null; color?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const supabase = await admin();
     const email = (context.claims as any)?.email as string | undefined;
