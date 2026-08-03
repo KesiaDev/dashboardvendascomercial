@@ -93,16 +93,26 @@ export const upsertAgendaFn = createServerFn({ method: "POST" })
     if (data.id) {
       const { error } = await supabase.from("seller_agenda").update(payload).eq("id", data.id);
       if (error) throw error;
-      return { ok: true, id: data.id };
+      return { ok: true, id: data.id, count: 1 };
     }
+
+    const days = repeatDates(new Date(data.scheduled_at), data.repeat_weekdays, data.repeat_until);
+    if (days.length > 1) {
+      const rows = days.map((d) => ({ ...payload, scheduled_at: d.toISOString() }));
+      const { error } = await supabase.from("seller_agenda").insert(rows);
+      if (error) throw error;
+      return { ok: true, id: null as string | null, count: rows.length };
+    }
+
     const { data: inserted, error } = await supabase
       .from("seller_agenda")
       .insert(payload)
       .select("id")
       .single();
     if (error) throw error;
-    return { ok: true, id: inserted.id };
+    return { ok: true, id: inserted.id as string | null, count: 1 };
   });
+
 
 export const deleteAgendaFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
