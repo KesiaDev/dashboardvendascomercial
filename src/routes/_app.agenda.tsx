@@ -526,6 +526,37 @@ function sameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+type DayEntry = { key: string; item: AgendaItem; start: Date; end: Date; count: number };
+
+/** Junta slots de bloqueio consecutivos do mesmo vendedor/motivo num único bloco visual. */
+function mergeBlocked(list: AgendaItem[]): DayEntry[] {
+  const out: DayEntry[] = [];
+  for (const it of list) {
+    const start = new Date(it.scheduled_at);
+    const end = new Date(start.getTime() + (it.duration_min || 30) * 60 * 1000);
+    const last = out[out.length - 1];
+    const isBlock = it.status === "bloqueado" || it.meeting_type === "bloqueio";
+    if (
+      isBlock &&
+      last &&
+      (last.item.status === "bloqueado" || last.item.meeting_type === "bloqueio") &&
+      last.item.seller_email === it.seller_email &&
+      (last.item.notes ?? last.item.lead_name) === (it.notes ?? it.lead_name) &&
+      (last.item.color ?? null) === (it.color ?? null) &&
+      last.end.getTime() >= start.getTime()
+    ) {
+      last.end = end > last.end ? end : last.end;
+      last.count += 1;
+      continue;
+    }
+    out.push({ key: it.id, item: it, start, end, count: 1 });
+  }
+  return out;
+}
+
+const hhmm = (d: Date) => d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+
 function CalendarView({ items, onSelectItem }: { items: AgendaItem[]; onSelectItem: (i: AgendaItem) => void }) {
   const [cursor, setCursor] = useState(() => new Date());
   const [selected, setSelected] = useState<Date | null>(new Date());
@@ -552,14 +583,19 @@ function CalendarView({ items, onSelectItem }: { items: AgendaItem[]; onSelectIt
       arr.push(it);
       map.set(key, arr);
     }
-    for (const arr of map.values()) arr.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
-    return map;
+    const merged = new Map<string, DayEntry[]>();
+    for (const [k, arr] of map) {
+      arr.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+      merged.set(k, mergeBlocked(arr));
+    }
+    return merged;
   }, [items]);
 
   const today = new Date();
   const selectedItems = selected
     ? byDay.get(`${selected.getFullYear()}-${selected.getMonth()}-${selected.getDate()}`) ?? []
     : [];
+
 
   return (
     <Card className="overflow-hidden">
@@ -608,18 +644,24 @@ function CalendarView({ items, onSelectItem }: { items: AgendaItem[]; onSelectIt
                 )}
               </div>
               <div className="space-y-1">
-                {dayItems.slice(0, 3).map((it) => (
-                  <div
-                    key={it.id}
-                    style={colorStyle(it.color)}
-                    className={`truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                      it.color ? "" : TYPE_COLOR[it.meeting_type] ?? "bg-secondary text-foreground"
-                    }`}
-                    title={`${new Date(it.scheduled_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} · ${it.lead_name}`}
-                  >
-                    {new Date(it.scheduled_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} {it.lead_name}
-                  </div>
-                ))}
+                {dayItems.slice(0, 3).map((e) => {
+                  const it = e.item;
+                  const label = e.count > 1
+                    ? `${hhmm(e.start)}–${hhmm(e.end)} ${it.lead_name}`
+                    : `${hhmm(e.start)} ${it.lead_name}`;
+                  return (
+                    <div
+                      key={e.key}
+                      style={colorStyle(it.color)}
+                      className={`truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                        it.color ? "" : TYPE_COLOR[it.meeting_type] ?? "bg-secondary text-foreground"
+                      }`}
+                      title={label}
+                    >
+                      {label}
+                    </div>
+                  );
+                })}
                 {dayItems.length > 3 && (
                   <div className="text-[10px] text-muted-foreground pl-1">+{dayItems.length - 3} mais</div>
                 )}
@@ -641,26 +683,31 @@ function CalendarView({ items, onSelectItem }: { items: AgendaItem[]; onSelectIt
             <p className="text-xs text-muted-foreground">Nada agendado neste dia.</p>
           )}
           <div className="space-y-1.5">
-            {selectedItems.map((it) => (
-              <button
-                key={it.id}
-                onClick={() => onSelectItem(it)}
-                className="w-full flex items-center gap-3 rounded-md bg-card px-3 py-2 text-left text-sm hover:bg-secondary/60 transition"
-              >
-                <span
-                  style={it.color ? { backgroundColor: it.color } : undefined}
-                  className={`h-8 w-1.5 rounded-full ${it.color ? "" : TYPE_COLOR[it.meeting_type] ?? "bg-secondary"}`}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{it.lead_name}</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {new Date(it.scheduled_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} · {it.duration_min}min · {it.seller_name ?? it.seller_email}
+            {selectedItems.map((e) => {
+              const it = e.item;
+              const mins = Math.round((e.end.getTime() - e.start.getTime()) / 60000);
+              return (
+                <button
+                  key={e.key}
+                  onClick={() => onSelectItem(it)}
+                  className="w-full flex items-center gap-3 rounded-md bg-card px-3 py-2 text-left text-sm hover:bg-secondary/60 transition"
+                >
+                  <span
+                    style={it.color ? { backgroundColor: it.color } : undefined}
+                    className={`h-8 w-1.5 rounded-full ${it.color ? "" : TYPE_COLOR[it.meeting_type] ?? "bg-secondary"}`}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{it.lead_name}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {e.count > 1 ? `${hhmm(e.start)}–${hhmm(e.end)}` : hhmm(e.start)} · {mins}min · {it.seller_name ?? it.seller_email}
+                    </div>
                   </div>
-                </div>
-                <Badge variant="outline" className={STATUS_COLORS[it.status] ?? ""}>{it.status}</Badge>
-              </button>
-            ))}
+                  <Badge variant="outline" className={STATUS_COLORS[it.status] ?? ""}>{it.status}</Badge>
+                </button>
+              );
+            })}
           </div>
+
         </div>
       )}
     </Card>
