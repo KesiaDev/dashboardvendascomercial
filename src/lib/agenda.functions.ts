@@ -17,6 +17,7 @@ export type AgendaItem = {
   status: string;
   clint_deal_id: string | null;
   notes: string | null;
+  color: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -86,6 +87,7 @@ export const upsertAgendaFn = createServerFn({ method: "POST" })
       status: data.status ?? "agendado",
       clint_deal_id: data.clint_deal_id ?? null,
       notes: data.notes ?? null,
+      color: data.color ?? null,
     };
 
     if (data.id) {
@@ -220,6 +222,7 @@ export const blockAgendaFn = createServerFn({ method: "POST" })
         source: "bloqueio",
         status: "bloqueado",
         notes: data.reason ?? null,
+        color: data.color ?? null,
       });
     }
     if (!rows.length) throw new Error("Intervalo vazio");
