@@ -907,21 +907,33 @@ function AgendaForm({
     color: initial?.color ?? null as string | null,
   });
   const [saving, setSaving] = useState(false);
+  const [repeat, setRepeat] = useState<RepeatState>(emptyRepeat());
 
   async function save() {
+    if (repeat.enabled && (!repeat.weekdays.length || !repeat.until)) {
+      toast.error("Escolha os dias da semana e a data final da repetição");
+      return;
+    }
     setSaving(true);
     try {
-      await upsert({
+      const r = await upsert({
         data: {
           id: initial?.id,
           ...form,
           scheduled_at: new Date(form.scheduled_at).toISOString(),
           duration_min: Number(form.duration_min),
           source: initial?.source ?? "manual",
+          repeat_weekdays: !initial && repeat.enabled ? repeat.weekdays : null,
+          repeat_until: !initial && repeat.enabled ? repeat.until : null,
         },
       });
-      toast.success(initial ? "Agendamento atualizado" : "Agendamento criado");
+      toast.success(
+        initial
+          ? "Agendamento atualizado"
+          : `Agendamento criado${(r as any)?.count > 1 ? ` (${(r as any).count} datas)` : ""}`,
+      );
       setOpen(false);
+      setRepeat(emptyRepeat());
       onSaved();
     } catch (e: any) {
       toast.error(String(e?.message ?? e));
@@ -929,6 +941,7 @@ function AgendaForm({
       setSaving(false);
     }
   }
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
