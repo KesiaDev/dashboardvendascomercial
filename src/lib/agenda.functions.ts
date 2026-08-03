@@ -189,3 +189,66 @@ export const savePromptFn = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true };
   });
+
+/** Bloqueio de agenda: cria slots de 30 em 30 min com status "bloqueado". */
+export const blockAgendaFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { from: string; to: string; reason?: string | null; seller_email?: string | null; seller_name?: string | null }) => d)
+  .handler(async ({ data, context }) => {
+    const supabase = await admin();
+    const email = (context.claims as any)?.email as string | undefined;
+    const isAdmin = isAdminEmail(email) || (context.claims as any)?.user_metadata?.role === "admin";
+    const seller = (data.seller_email ?? email ?? "").toLowerCase();
+    if (!seller) throw new Error("seller_email obrigatório");
+    if (!isAdmin && seller !== (email ?? "").toLowerCase()) {
+      throw new Error("Sem permissão para bloquear a agenda de outro vendedor");
+    }
+    const start = new Date(data.from);
+    const end = new Date(data.to);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) throw new Error("Datas inválidas");
+    if (end <= start) throw new Error("Hora final deve ser maior que a inicial");
+    const maxSlots = 96;
+    const rows: any[] = [];
+    for (let t = start.getTime(); t < end.getTime() && rows.length < maxSlots; t += 30 * 60 * 1000) {
+      rows.push({
+        seller_email: seller,
+        seller_name: data.seller_name ?? null,
+        lead_name: data.reason?.trim() || "Bloqueado",
+        scheduled_at: new Date(t).toISOString(),
+        duration_min: 30,
+        meeting_type: "bloqueio",
+        source: "bloqueio",
+        status: "bloqueado",
+        notes: data.reason ?? null,
+      });
+    }
+    if (!rows.length) throw new Error("Intervalo vazio");
+    const { error } = await supabase.from("seller_agenda").insert(rows);
+    if (error) throw error;
+    return { ok: true, count: rows.length };
+  });
+
+/** Remove todos os bloqueios de um vendedor dentro de um intervalo. */
+export const unblockAgendaFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { from: string; to: string; seller_email?: string | null }) => d)
+  .handler(async ({ data, context }) => {
+    const supabase = await admin();
+    const email = (context.claims as any)?.email as string | undefined;
+    const isAdmin = isAdminEmail(email) || (context.claims as any)?.user_metadata?.role === "admin";
+    let q = supabase
+      .from("seller_agenda")
+      .delete()
+      .eq("status", "bloqueado")
+      .gte("scheduled_at", data.from)
+      .lte("scheduled_at", data.to);
+    const seller = (data.seller_email ?? "").toLowerCase();
+    if (isAdmin) {
+      if (seller) q = q.eq("seller_email", seller);
+    } else {
+      q = q.eq("seller_email", (email ?? "").toLowerCase());
+    }
+    const { error } = await q;
+    if (error) throw error;
+    return { ok: true };
+  });
