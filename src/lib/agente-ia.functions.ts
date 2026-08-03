@@ -23,12 +23,17 @@ function isAiMessage(body: string | null, clintSource?: string | null): boolean 
   return AI_PATTERNS.some((re) => re.test(body));
 }
 
-// Detecção de reunião confirmada pelo AI com base no conteúdo das mensagens.
-// "lembrete no dia" aparece em TODAS as confirmações de sessão estratégica,
-// independente do estágio do deal no CRM.
-const MEETING_PATTERNS = [/lembrete no dia/i, /\[AGENDA:/i];
+// Detecção de reunião: primário = conteúdo das mensagens da IA, fallback = estágio do deal.
+// "lembrete no dia" aparece em TODAS as confirmações de sessão estratégica.
+// [AGENDA:DD/MM:HH:MM] é a tag estruturada gerada pelo agente.
+const MEETING_MSG_PATTERNS = [/lembrete no dia/i, /\[AGENDA:/i];
 function hasMeetingConfirmation(aiMsgBodies: (string | null)[]): boolean {
-  return aiMsgBodies.some((b) => MEETING_PATTERNS.some((re) => re.test(b ?? "")));
+  return aiMsgBodies.some((b) => MEETING_MSG_PATTERNS.some((re) => re.test(b ?? "")));
+}
+// Fallback: deal com estágio explícito de reunião (para casos em que humano fechou a sessão)
+function isMeetingStage(stage: string | null | undefined): boolean {
+  const s = (stage ?? "").trim().toLowerCase();
+  return /reuni(ã|a)o agendada/i.test(s) || /sess(ã|a)o agendada/i.test(s);
 }
 
 export type AgenteIaResult = {
@@ -258,9 +263,10 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
       const stage = deal?.stage ?? c.stage ?? "—";
       stageCount.set(stage, (stageCount.get(stage) ?? 0) + 1);
 
-      // Reunião = AI enviou mensagem com "lembrete no dia" ou [AGENDA:] (confirmação de sessão)
+      // Reunião = IA confirmou sessão ("lembrete no dia") OU deal em estágio de reunião (fallback humano)
       const aiMsgBodies = aiMsgs.map((m) => m.body);
-      if (hasMeetingConfirmation(aiMsgBodies)) {
+      const isReuniao = hasMeetingConfirmation(aiMsgBodies) || isMeetingStage(stage);
+      if (isReuniao) {
         reunioes += 1;
         msgsAteReuniaoArr.push(afterStart.length);
         const d = deal?.updated_stage_at ? dayISO(deal.updated_stage_at) : dayKey;

@@ -160,7 +160,7 @@ function AgenteIaPage() {
                     <XAxis type="number" tick={{ fontSize: 11 }} />
                     <YAxis type="category" dataKey="etapa" width={140} tick={{ fontSize: 11 }} />
                     <Tooltip />
-                    <Bar dataKey="valor" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="valor" fill="#6366f1" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -175,7 +175,7 @@ function AgenteIaPage() {
                     <XAxis dataKey="faixa" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip />
-                    <Bar dataKey="total" fill="hsl(var(--chart-2, var(--primary)))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="total" fill="#06b6d4" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -191,7 +191,7 @@ function AgenteIaPage() {
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="iniciadas" name="Conversas iniciadas" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="iniciadas" name="Conversas iniciadas" stroke="#6366f1" strokeWidth={2} dot={false} />
                     <Line type="monotone" dataKey="responderam" name="Leads que responderam" stroke="#10b981" strokeWidth={2} dot={false} />
                     <Line type="monotone" dataKey="reunioes" name="Reuniões" stroke="#f59e0b" strokeWidth={2} dot={false} />
                   </LineChart>
