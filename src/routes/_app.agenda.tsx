@@ -218,6 +218,7 @@ type BlockGroup = {
   from: string;
   to: string;
   slots: number;
+  color: string | null;
 };
 
 /** Agrupa slots bloqueados consecutivos (30 em 30 min) do mesmo vendedor/motivo. */
@@ -249,6 +250,7 @@ function groupBlocks(list: AgendaItem[]): BlockGroup[] {
       from: start.toISOString(),
       to: end.toISOString(),
       slots: 1,
+      color: it.color ?? null,
     });
   }
   return out.sort((a, b) => a.from.localeCompare(b.from));
@@ -293,6 +295,10 @@ function BlocksCard({ blocks, onChanged }: { blocks: BlockGroup[]; onChanged: ()
         )}
         {blocks.map((b) => (
           <div key={b.key} className="flex items-center gap-3 rounded-lg border border-dashed border-border bg-muted/30 p-3">
+            <span
+              className="h-8 w-1.5 shrink-0 rounded-full bg-muted-foreground/40"
+              style={b.color ? { backgroundColor: b.color } : undefined}
+            />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium truncate">{b.reason}</div>
               <div className="text-xs text-muted-foreground">
@@ -328,6 +334,7 @@ function BlockForm({
     end: "12:00",
     allDay: false,
     reason: "",
+    color: "#64748b" as string | null,
   });
 
   useEffect(() => {
@@ -350,6 +357,7 @@ function BlockForm({
           from: from.toISOString(),
           to: to.toISOString(),
           reason: form.reason || null,
+          color: form.color,
           seller_email: form.seller_email || defaultSellerEmail,
           seller_name: defaultSellerName,
         },
@@ -404,6 +412,7 @@ function BlockForm({
               </div>
             </div>
           )}
+          <ColorPicker value={form.color} onChange={(v) => setForm((f) => ({ ...f, color: v }))} />
           <div>
             <Label>Motivo</Label>
             <Input placeholder="Almoço, folga, reunião interna…" value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} />
@@ -440,6 +449,78 @@ const TYPE_COLOR: Record<string, string> = {
   fechamento: "bg-emerald-500 text-white",
   bloqueio: "bg-muted text-muted-foreground border border-dashed border-muted-foreground/40 [background-image:repeating-linear-gradient(45deg,transparent,transparent_4px,hsl(var(--muted-foreground)/0.15)_4px,hsl(var(--muted-foreground)/0.15)_8px)]",
 };
+
+const PALETTE: { hex: string; name: string }[] = [
+  { hex: "#6366f1", name: "Índigo" },
+  { hex: "#3b82f6", name: "Azul" },
+  { hex: "#06b6d4", name: "Ciano" },
+  { hex: "#10b981", name: "Verde" },
+  { hex: "#84cc16", name: "Lima" },
+  { hex: "#f59e0b", name: "Âmbar" },
+  { hex: "#f97316", name: "Laranja" },
+  { hex: "#ef4444", name: "Vermelho" },
+  { hex: "#ec4899", name: "Rosa" },
+  { hex: "#a855f7", name: "Roxo" },
+  { hex: "#0ea5e9", name: "Céu" },
+  { hex: "#64748b", name: "Cinza" },
+];
+
+/** Contraste automático do texto sobre a cor escolhida. */
+function readableOn(hex: string) {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? "#0b1220" : "#ffffff";
+}
+
+function ColorPicker({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
+  return (
+    <div className="space-y-2">
+      <Label>Cor</Label>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          title="Cor automática"
+          className={`h-7 w-7 rounded-full border bg-gradient-to-br from-secondary to-muted transition ${
+            !value ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : "hover:scale-110"
+          }`}
+        />
+        {PALETTE.map((c) => (
+          <button
+            key={c.hex}
+            type="button"
+            title={c.name}
+            onClick={() => onChange(c.hex)}
+            style={{ backgroundColor: c.hex }}
+            className={`h-7 w-7 rounded-full border border-black/10 transition ${
+              value?.toLowerCase() === c.hex ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : "hover:scale-110"
+            }`}
+          />
+        ))}
+        <label
+          className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-full border border-border"
+          title="Escolher outra cor"
+          style={{
+            background:
+              "conic-gradient(#ef4444,#f59e0b,#84cc16,#10b981,#06b6d4,#3b82f6,#a855f7,#ec4899,#ef4444)",
+          }}
+        >
+          <input
+            type="color"
+            value={value ?? "#6366f1"}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function colorStyle(color: string | null | undefined) {
+  if (!color) return undefined;
+  return { backgroundColor: color, color: readableOn(color), borderColor: color } as React.CSSProperties;
+}
 
 function sameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -530,7 +611,10 @@ function CalendarView({ items, onSelectItem }: { items: AgendaItem[]; onSelectIt
                 {dayItems.slice(0, 3).map((it) => (
                   <div
                     key={it.id}
-                    className={`truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${TYPE_COLOR[it.meeting_type] ?? "bg-secondary text-foreground"}`}
+                    style={colorStyle(it.color)}
+                    className={`truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                      it.color ? "" : TYPE_COLOR[it.meeting_type] ?? "bg-secondary text-foreground"
+                    }`}
                     title={`${new Date(it.scheduled_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} · ${it.lead_name}`}
                   >
                     {new Date(it.scheduled_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} {it.lead_name}
@@ -563,7 +647,10 @@ function CalendarView({ items, onSelectItem }: { items: AgendaItem[]; onSelectIt
                 onClick={() => onSelectItem(it)}
                 className="w-full flex items-center gap-3 rounded-md bg-card px-3 py-2 text-left text-sm hover:bg-secondary/60 transition"
               >
-                <span className={`h-8 w-1 rounded-full ${TYPE_COLOR[it.meeting_type] ?? "bg-secondary"}`} />
+                <span
+                  style={it.color ? { backgroundColor: it.color } : undefined}
+                  className={`h-8 w-1.5 rounded-full ${it.color ? "" : TYPE_COLOR[it.meeting_type] ?? "bg-secondary"}`}
+                />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{it.lead_name}</div>
                   <div className="text-xs text-muted-foreground truncate">
@@ -692,6 +779,7 @@ function AgendaForm({
     meeting_link: initial?.meeting_link ?? "",
     status: initial?.status ?? "agendado",
     notes: initial?.notes ?? "",
+    color: initial?.color ?? null as string | null,
   });
   const [saving, setSaving] = useState(false);
 
@@ -791,6 +879,7 @@ function AgendaForm({
             <Label>Link da reunião</Label>
             <Input placeholder="https://meet.google.com/…" value={form.meeting_link} onChange={(e) => setForm((f) => ({ ...f, meeting_link: e.target.value }))} />
           </div>
+          <ColorPicker value={form.color} onChange={(v) => setForm((f) => ({ ...f, color: v }))} />
           <div>
             <Label>Notas</Label>
             <Textarea rows={3} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
