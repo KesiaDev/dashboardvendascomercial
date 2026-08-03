@@ -1017,6 +1017,13 @@ function AgendaForm({
             <Label>Link da reunião</Label>
             <Input placeholder="https://meet.google.com/…" value={form.meeting_link} onChange={(e) => setForm((f) => ({ ...f, meeting_link: e.target.value }))} />
           </div>
+          {!initial && (
+            <RepeatPicker
+              value={repeat}
+              onChange={setRepeat}
+              baseDate={(form.scheduled_at || "").slice(0, 10)}
+            />
+          )}
           <ColorPicker value={form.color} onChange={(v) => setForm((f) => ({ ...f, color: v }))} />
           <div>
             <Label>Notas</Label>
