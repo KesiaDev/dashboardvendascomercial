@@ -583,14 +583,19 @@ function CalendarView({ items, onSelectItem }: { items: AgendaItem[]; onSelectIt
       arr.push(it);
       map.set(key, arr);
     }
-    for (const arr of map.values()) arr.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
-    return map;
+    const merged = new Map<string, DayEntry[]>();
+    for (const [k, arr] of map) {
+      arr.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+      merged.set(k, mergeBlocked(arr));
+    }
+    return merged;
   }, [items]);
 
   const today = new Date();
   const selectedItems = selected
     ? byDay.get(`${selected.getFullYear()}-${selected.getMonth()}-${selected.getDate()}`) ?? []
     : [];
+
 
   return (
     <Card className="overflow-hidden">
