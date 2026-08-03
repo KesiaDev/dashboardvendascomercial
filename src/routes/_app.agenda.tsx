@@ -438,6 +438,7 @@ const TYPE_COLOR: Record<string, string> = {
   reuniao: "bg-blue-500 text-white",
   follow_up: "bg-amber-500 text-white",
   fechamento: "bg-emerald-500 text-white",
+  bloqueio: "bg-muted text-muted-foreground border border-dashed border-muted-foreground/40 [background-image:repeating-linear-gradient(45deg,transparent,transparent_4px,hsl(var(--muted-foreground)/0.15)_4px,hsl(var(--muted-foreground)/0.15)_8px)]",
 };
 
 function sameDay(a: Date, b: Date) {
