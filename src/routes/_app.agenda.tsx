@@ -327,6 +327,7 @@ function BlockForm({
   const block = useServerFn(blockAgendaFn);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [repeat, setRepeat] = useState<RepeatState>(emptyRepeat());
   const [form, setForm] = useState({
     seller_email: defaultSellerEmail,
     date: new Date().toISOString().slice(0, 10),
@@ -350,6 +351,10 @@ function BlockForm({
       toast.error("Verifique o dia e o horário do bloqueio");
       return;
     }
+    if (repeat.enabled && (!repeat.weekdays.length || !repeat.until)) {
+      toast.error("Escolha os dias da semana e a data final da repetição");
+      return;
+    }
     setSaving(true);
     try {
       const r = await block({
@@ -360,11 +365,14 @@ function BlockForm({
           color: form.color,
           seller_email: form.seller_email || defaultSellerEmail,
           seller_name: defaultSellerName,
+          repeat_weekdays: repeat.enabled ? repeat.weekdays : null,
+          repeat_until: repeat.enabled ? repeat.until : null,
         },
       });
-      toast.success(`Período bloqueado (${r.count} slots)`);
+      toast.success(`Período bloqueado (${r.days ?? 1} dia(s), ${r.count} slots)`);
       setOpen(false);
       setForm((f) => ({ ...f, reason: "" }));
+      setRepeat(emptyRepeat());
       onSaved();
     } catch (e: any) {
       toast.error(String(e?.message ?? e));
@@ -372,6 +380,7 @@ function BlockForm({
       setSaving(false);
     }
   }
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
