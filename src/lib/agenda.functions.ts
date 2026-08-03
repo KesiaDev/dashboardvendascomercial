@@ -59,7 +59,7 @@ export const listAgendaFn = createServerFn({ method: "POST" })
 
 export const upsertAgendaFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: Partial<AgendaItem> & { id?: string }) => d)
+  .inputValidator((d: Partial<AgendaItem> & { id?: string; repeat_weekdays?: number[] | null; repeat_until?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const supabase = await admin();
     const email = (context.claims as any)?.email as string | undefined;
@@ -93,16 +93,26 @@ export const upsertAgendaFn = createServerFn({ method: "POST" })
     if (data.id) {
       const { error } = await supabase.from("seller_agenda").update(payload).eq("id", data.id);
       if (error) throw error;
-      return { ok: true, id: data.id };
+      return { ok: true, id: data.id, count: 1 };
     }
+
+    const days = repeatDates(new Date(data.scheduled_at), data.repeat_weekdays, data.repeat_until);
+    if (days.length > 1) {
+      const rows = days.map((d) => ({ ...payload, scheduled_at: d.toISOString() }));
+      const { error } = await supabase.from("seller_agenda").insert(rows);
+      if (error) throw error;
+      return { ok: true, id: null as string | null, count: rows.length };
+    }
+
     const { data: inserted, error } = await supabase
       .from("seller_agenda")
       .insert(payload)
       .select("id")
       .single();
     if (error) throw error;
-    return { ok: true, id: inserted.id };
+    return { ok: true, id: inserted.id as string | null, count: 1 };
   });
+
 
 export const deleteAgendaFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -192,10 +202,26 @@ export const savePromptFn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Gera as datas de repetição a partir de um início, dias da semana e data limite. */
+function repeatDates(start: Date, weekdays?: number[] | null, until?: string | null): Date[] {
+  const base = new Date(start);
+  if (!weekdays?.length || !until) return [base];
+  const limit = new Date(`${until}T23:59:59`);
+  if (isNaN(limit.getTime()) || limit < base) return [base];
+  const out: Date[] = [];
+  const cursor = new Date(base);
+  // começa no mesmo dia (se bater no filtro) e avança dia a dia
+  for (let i = 0; i < 400 && cursor <= limit; i++) {
+    if (weekdays.includes(cursor.getDay())) out.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return out.length ? out : [base];
+}
+
 /** Bloqueio de agenda: cria slots de 30 em 30 min com status "bloqueado". */
 export const blockAgendaFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { from: string; to: string; reason?: string | null; seller_email?: string | null; seller_name?: string | null; color?: string | null }) => d)
+  .inputValidator((d: { from: string; to: string; reason?: string | null; seller_email?: string | null; seller_name?: string | null; color?: string | null; repeat_weekdays?: number[] | null; repeat_until?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const supabase = await admin();
     const email = (context.claims as any)?.email as string | undefined;
@@ -209,27 +235,33 @@ export const blockAgendaFn = createServerFn({ method: "POST" })
     const end = new Date(data.to);
     if (isNaN(start.getTime()) || isNaN(end.getTime())) throw new Error("Datas inválidas");
     if (end <= start) throw new Error("Hora final deve ser maior que a inicial");
-    const maxSlots = 96;
+    const durationMs = end.getTime() - start.getTime();
+    const days = repeatDates(start, data.repeat_weekdays, data.repeat_until);
+    const maxSlots = 2000;
     const rows: any[] = [];
-    for (let t = start.getTime(); t < end.getTime() && rows.length < maxSlots; t += 30 * 60 * 1000) {
-      rows.push({
-        seller_email: seller,
-        seller_name: data.seller_name ?? null,
-        lead_name: data.reason?.trim() || "Bloqueado",
-        scheduled_at: new Date(t).toISOString(),
-        duration_min: 30,
-        meeting_type: "bloqueio",
-        source: "bloqueio",
-        status: "bloqueado",
-        notes: data.reason ?? null,
-        color: data.color ?? null,
-      });
+    for (const day of days) {
+      const dayEnd = day.getTime() + durationMs;
+      for (let t = day.getTime(); t < dayEnd && rows.length < maxSlots; t += 30 * 60 * 1000) {
+        rows.push({
+          seller_email: seller,
+          seller_name: data.seller_name ?? null,
+          lead_name: data.reason?.trim() || "Bloqueado",
+          scheduled_at: new Date(t).toISOString(),
+          duration_min: 30,
+          meeting_type: "bloqueio",
+          source: "bloqueio",
+          status: "bloqueado",
+          notes: data.reason ?? null,
+          color: data.color ?? null,
+        });
+      }
     }
     if (!rows.length) throw new Error("Intervalo vazio");
     const { error } = await supabase.from("seller_agenda").insert(rows);
     if (error) throw error;
-    return { ok: true, count: rows.length };
+    return { ok: true, count: rows.length, days: days.length };
   });
+
 
 /** Remove todos os bloqueios de um vendedor dentro de um intervalo. */
 export const unblockAgendaFn = createServerFn({ method: "POST" })

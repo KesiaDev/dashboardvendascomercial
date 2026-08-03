@@ -327,6 +327,7 @@ function BlockForm({
   const block = useServerFn(blockAgendaFn);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [repeat, setRepeat] = useState<RepeatState>(emptyRepeat());
   const [form, setForm] = useState({
     seller_email: defaultSellerEmail,
     date: new Date().toISOString().slice(0, 10),
@@ -350,6 +351,10 @@ function BlockForm({
       toast.error("Verifique o dia e o horário do bloqueio");
       return;
     }
+    if (repeat.enabled && (!repeat.weekdays.length || !repeat.until)) {
+      toast.error("Escolha os dias da semana e a data final da repetição");
+      return;
+    }
     setSaving(true);
     try {
       const r = await block({
@@ -360,11 +365,14 @@ function BlockForm({
           color: form.color,
           seller_email: form.seller_email || defaultSellerEmail,
           seller_name: defaultSellerName,
+          repeat_weekdays: repeat.enabled ? repeat.weekdays : null,
+          repeat_until: repeat.enabled ? repeat.until : null,
         },
       });
-      toast.success(`Período bloqueado (${r.count} slots)`);
+      toast.success(`Período bloqueado (${r.days ?? 1} dia(s), ${r.count} slots)`);
       setOpen(false);
       setForm((f) => ({ ...f, reason: "" }));
+      setRepeat(emptyRepeat());
       onSaved();
     } catch (e: any) {
       toast.error(String(e?.message ?? e));
@@ -373,12 +381,13 @@ function BlockForm({
     }
   }
 
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline"><Ban className="h-4 w-4 mr-1" /> Bloquear período</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Bloquear período</DialogTitle>
         </DialogHeader>
@@ -412,7 +421,9 @@ function BlockForm({
               </div>
             </div>
           )}
+          <RepeatPicker value={repeat} onChange={setRepeat} baseDate={form.date} />
           <ColorPicker value={form.color} onChange={(v) => setForm((f) => ({ ...f, color: v }))} />
+
           <div>
             <Label>Motivo</Label>
             <Input placeholder="Almoço, folga, reunião interna…" value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} />
@@ -427,7 +438,74 @@ function BlockForm({
   );
 }
 
+export type RepeatState = { enabled: boolean; weekdays: number[]; until: string };
+
+export const emptyRepeat = (): RepeatState => ({ enabled: false, weekdays: [], until: "" });
+
+/** Seletor de repetição: dias da semana + data limite. */
+function RepeatPicker({
+  value, onChange, baseDate,
+}: {
+  value: RepeatState;
+  onChange: (v: RepeatState) => void;
+  baseDate: string; // yyyy-mm-dd
+}) {
+  function toggleDay(d: number) {
+    const has = value.weekdays.includes(d);
+    onChange({ ...value, weekdays: has ? value.weekdays.filter((x) => x !== d) : [...value.weekdays, d].sort() });
+  }
+  function enable(v: boolean) {
+    if (!v) return onChange({ ...value, enabled: false });
+    const base = baseDate ? new Date(`${baseDate}T00:00:00`) : new Date();
+    const until = new Date(base);
+    until.setDate(until.getDate() + 6);
+    onChange({
+      enabled: true,
+      weekdays: value.weekdays.length ? value.weekdays : [1, 2, 3, 4, 5],
+      until: value.until || until.toISOString().slice(0, 10),
+    });
+  }
+  return (
+    <div className="rounded-lg border border-border p-3 space-y-3">
+      <div className="flex items-center gap-2">
+        <Switch checked={value.enabled} onCheckedChange={enable} />
+        <Label className="text-sm font-normal">Repetir em vários dias</Label>
+      </div>
+      {value.enabled && (
+        <>
+          <div className="flex flex-wrap gap-1">
+            {WEEKDAYS.map((w, i) => (
+              <Button
+                key={w}
+                type="button"
+                size="sm"
+                variant={value.weekdays.includes(i) ? "default" : "outline"}
+                className="h-8 w-11 px-0 text-xs"
+                onClick={() => toggleDay(i)}
+              >
+                {w}
+              </Button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1">
+            <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onChange({ ...value, weekdays: [1, 2, 3, 4, 5] })}>Seg–Sex</Button>
+            <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onChange({ ...value, weekdays: [0, 1, 2, 3, 4, 5, 6] })}>Todos os dias</Button>
+          </div>
+          <div>
+            <Label>Repetir até *</Label>
+            <Input type="date" value={value.until} onChange={(e) => onChange({ ...value, until: e.target.value })} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Ex.: almoço de segunda a sexta às 12h — escolha Seg–Sex e a data final.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function StatCard({ label, value, tint }: { label: string; value: number; tint?: string }) {
+
   return (
     <Card className={`overflow-hidden bg-gradient-to-br ${tint ?? "from-secondary/40 to-secondary/10"}`}>
       <CardContent className="p-4">
@@ -829,21 +907,33 @@ function AgendaForm({
     color: initial?.color ?? null as string | null,
   });
   const [saving, setSaving] = useState(false);
+  const [repeat, setRepeat] = useState<RepeatState>(emptyRepeat());
 
   async function save() {
+    if (repeat.enabled && (!repeat.weekdays.length || !repeat.until)) {
+      toast.error("Escolha os dias da semana e a data final da repetição");
+      return;
+    }
     setSaving(true);
     try {
-      await upsert({
+      const r = await upsert({
         data: {
           id: initial?.id,
           ...form,
           scheduled_at: new Date(form.scheduled_at).toISOString(),
           duration_min: Number(form.duration_min),
           source: initial?.source ?? "manual",
+          repeat_weekdays: !initial && repeat.enabled ? repeat.weekdays : null,
+          repeat_until: !initial && repeat.enabled ? repeat.until : null,
         },
       });
-      toast.success(initial ? "Agendamento atualizado" : "Agendamento criado");
+      toast.success(
+        initial
+          ? "Agendamento atualizado"
+          : `Agendamento criado${(r as any)?.count > 1 ? ` (${(r as any).count} datas)` : ""}`,
+      );
       setOpen(false);
+      setRepeat(emptyRepeat());
       onSaved();
     } catch (e: any) {
       toast.error(String(e?.message ?? e));
@@ -851,6 +941,7 @@ function AgendaForm({
       setSaving(false);
     }
   }
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -926,6 +1017,13 @@ function AgendaForm({
             <Label>Link da reunião</Label>
             <Input placeholder="https://meet.google.com/…" value={form.meeting_link} onChange={(e) => setForm((f) => ({ ...f, meeting_link: e.target.value }))} />
           </div>
+          {!initial && (
+            <RepeatPicker
+              value={repeat}
+              onChange={setRepeat}
+              baseDate={(form.scheduled_at || "").slice(0, 10)}
+            />
+          )}
           <ColorPicker value={form.color} onChange={(v) => setForm((f) => ({ ...f, color: v }))} />
           <div>
             <Label>Notas</Label>
