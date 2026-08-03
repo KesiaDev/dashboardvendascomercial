@@ -142,8 +142,7 @@ function AgenteIaPage() {
             <Kpi icon={CalendarCheck} label="Reuniões agendadas" value={String(k.reunioes)}
               hint={`${k.conversaoReuniaoPct}% de conversão · ${k.agendaClint} na Agenda`}
               tone={k.conversaoReuniaoPct >= 15 ? "good" : "default"} />
-            <Kpi icon={MessageSquare} label="Mensagens enviadas pela IA" value={String(k.mensagensIa)} />
-            <Kpi icon={TrendingUp} label="Leads qualificados (3+ msgs)" value={String(k.qualificados)}
+<Kpi icon={TrendingUp} label="Leads qualificados (3+ msgs)" value={String(k.qualificados)}
               hint={`${k.taxaQualificacaoPct}% das conversas`} />
             <Kpi icon={Clock} label="Tempo médio de resposta"
               value={k.tempoMedioRespostaMin === null ? "—" : `${k.tempoMedioRespostaMin} min`} />
