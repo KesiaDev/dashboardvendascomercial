@@ -387,7 +387,7 @@ function BlockForm({
       <DialogTrigger asChild>
         <Button variant="outline"><Ban className="h-4 w-4 mr-1" /> Bloquear período</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Bloquear período</DialogTitle>
         </DialogHeader>
