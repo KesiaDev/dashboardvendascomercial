@@ -89,12 +89,15 @@ export function dealMatchesTagFilter(tags: string[], tagFilter: string): boolean
   return tags.some((t) => pats.some((p) => t.toLowerCase().includes(p)));
 }
 
-export async function pagedDeals(db: any, column: string, from: string, to: string) {
+export async function pagedDeals(db: any, column: string, from: string, to: string, tagFilter = "") {
+  const selectCols = tagFilter
+    ? "origin_name,user_name,status,contact_tags"
+    : "origin_name,user_name,status";
   const rows: any[] = [];
   for (let page = 0; page < 30; page++) {
     let q = db
       .from("clint_deals")
-      .select("origin_name,user_name,status,contact_tags")
+      .select(selectCols)
       .gte(column, `${from}T00:00:00Z`)
       .lte(column, `${to}T23:59:59Z`)
       .order(column, { ascending: true })

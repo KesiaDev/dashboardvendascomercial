@@ -41,8 +41,8 @@ export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
     const tagFilter = data.tagFilter ?? "";
 
     const [created, lostRows, sales] = await Promise.all([
-      pagedDeals(supabaseAdmin, "created_at", data.from, data.to),
-      pagedDeals(supabaseAdmin, "lost_at", data.from, data.to),
+      pagedDeals(supabaseAdmin, "created_at", data.from, data.to, tagFilter),
+      pagedDeals(supabaseAdmin, "lost_at", data.from, data.to, tagFilter),
       fetchManualSales(supabaseAdmin, data.from, data.to),
     ]);
 
