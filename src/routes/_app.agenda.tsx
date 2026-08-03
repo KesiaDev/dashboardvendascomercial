@@ -644,18 +644,24 @@ function CalendarView({ items, onSelectItem }: { items: AgendaItem[]; onSelectIt
                 )}
               </div>
               <div className="space-y-1">
-                {dayItems.slice(0, 3).map((it) => (
-                  <div
-                    key={it.id}
-                    style={colorStyle(it.color)}
-                    className={`truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                      it.color ? "" : TYPE_COLOR[it.meeting_type] ?? "bg-secondary text-foreground"
-                    }`}
-                    title={`${new Date(it.scheduled_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} · ${it.lead_name}`}
-                  >
-                    {new Date(it.scheduled_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} {it.lead_name}
-                  </div>
-                ))}
+                {dayItems.slice(0, 3).map((e) => {
+                  const it = e.item;
+                  const label = e.count > 1
+                    ? `${hhmm(e.start)}–${hhmm(e.end)} ${it.lead_name}`
+                    : `${hhmm(e.start)} ${it.lead_name}`;
+                  return (
+                    <div
+                      key={e.key}
+                      style={colorStyle(it.color)}
+                      className={`truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                        it.color ? "" : TYPE_COLOR[it.meeting_type] ?? "bg-secondary text-foreground"
+                      }`}
+                      title={label}
+                    >
+                      {label}
+                    </div>
+                  );
+                })}
                 {dayItems.length > 3 && (
                   <div className="text-[10px] text-muted-foreground pl-1">+{dayItems.length - 3} mais</div>
                 )}
@@ -677,26 +683,31 @@ function CalendarView({ items, onSelectItem }: { items: AgendaItem[]; onSelectIt
             <p className="text-xs text-muted-foreground">Nada agendado neste dia.</p>
           )}
           <div className="space-y-1.5">
-            {selectedItems.map((it) => (
-              <button
-                key={it.id}
-                onClick={() => onSelectItem(it)}
-                className="w-full flex items-center gap-3 rounded-md bg-card px-3 py-2 text-left text-sm hover:bg-secondary/60 transition"
-              >
-                <span
-                  style={it.color ? { backgroundColor: it.color } : undefined}
-                  className={`h-8 w-1.5 rounded-full ${it.color ? "" : TYPE_COLOR[it.meeting_type] ?? "bg-secondary"}`}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{it.lead_name}</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {new Date(it.scheduled_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} · {it.duration_min}min · {it.seller_name ?? it.seller_email}
+            {selectedItems.map((e) => {
+              const it = e.item;
+              const mins = Math.round((e.end.getTime() - e.start.getTime()) / 60000);
+              return (
+                <button
+                  key={e.key}
+                  onClick={() => onSelectItem(it)}
+                  className="w-full flex items-center gap-3 rounded-md bg-card px-3 py-2 text-left text-sm hover:bg-secondary/60 transition"
+                >
+                  <span
+                    style={it.color ? { backgroundColor: it.color } : undefined}
+                    className={`h-8 w-1.5 rounded-full ${it.color ? "" : TYPE_COLOR[it.meeting_type] ?? "bg-secondary"}`}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{it.lead_name}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {e.count > 1 ? `${hhmm(e.start)}–${hhmm(e.end)}` : hhmm(e.start)} · {mins}min · {it.seller_name ?? it.seller_email}
+                    </div>
                   </div>
-                </div>
-                <Badge variant="outline" className={STATUS_COLORS[it.status] ?? ""}>{it.status}</Badge>
-              </button>
-            ))}
+                  <Badge variant="outline" className={STATUS_COLORS[it.status] ?? ""}>{it.status}</Badge>
+                </button>
+              );
+            })}
           </div>
+
         </div>
       )}
     </Card>
