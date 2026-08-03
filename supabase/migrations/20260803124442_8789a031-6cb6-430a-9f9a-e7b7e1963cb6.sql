@@ -1,0 +1,1 @@
+ALTER TABLE public.seller_agenda ADD COLUMN IF NOT EXISTS color TEXT;

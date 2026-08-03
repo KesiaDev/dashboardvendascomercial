@@ -2016,6 +2016,7 @@ export type Database = {
       seller_agenda: {
         Row: {
           clint_deal_id: string | null
+          color: string | null
           created_at: string
           created_by: string | null
           duration_min: number
@@ -2035,6 +2036,7 @@ export type Database = {
         }
         Insert: {
           clint_deal_id?: string | null
+          color?: string | null
           created_at?: string
           created_by?: string | null
           duration_min?: number
@@ -2054,6 +2056,7 @@ export type Database = {
         }
         Update: {
           clint_deal_id?: string | null
+          color?: string | null
           created_at?: string
           created_by?: string | null
           duration_min?: number
