@@ -7,6 +7,7 @@ const PIPELINE_V3_ORIGIN_IDS = [
   "8c159581-ba93-4fad-a909-f4e204d6faaf",
 ];
 const PIPELINE_V3_ORIGIN_NAME = "PIPELINE_COMERCIAL-V3";
+const BATCH_SIZE = 8; // parallel Clint API calls per batch
 
 function checkApiKey(request: Request): boolean {
   const key = request.headers.get("x-api-key");
@@ -109,28 +110,33 @@ async function runCoachV3Sync(sinceDays: number) {
     }));
   }
 
-  let processed = 0;
   let inserted = 0;
   let updated = 0;
   let skipped = 0;
   const errors: { deal_id: string; error: string }[] = [];
 
-  for (const deal of deals) {
-    processed++;
+  // Process a single deal: fetch chats + messages, upsert to coach tables
+  async function processDeal(deal: any): Promise<void> {
+    if (!deal.contact_id) {
+      skipped++;
+      return;
+    }
+
+    let chatsResp: any;
     try {
-      if (!deal.contact_id) {
-        skipped++;
-        continue;
-      }
+      chatsResp = await clintGet(`/v2/chats/contact/${deal.contact_id}`, token);
+    } catch {
+      skipped++;
+      return;
+    }
+    const chats: any[] = chatsResp?.data ?? [];
+    if (!chats.length) {
+      skipped++;
+      return;
+    }
 
-      const chatsResp = await clintGet(`/v2/chats/contact/${deal.contact_id}`, token);
-      const chats: any[] = chatsResp?.data ?? [];
-      if (!chats.length) {
-        skipped++;
-        continue;
-      }
-
-      for (const chat of chats) {
+    for (const chat of chats) {
+      try {
         // Check if conversation already exists (unique by clint_conversation_id)
         const { data: existing } = await db
           .from("coach_conversations")
@@ -139,7 +145,6 @@ async function runCoachV3Sync(sinceDays: number) {
           .maybeSingle();
 
         if (existing) {
-          // Refresh stage only — don't re-insert messages to avoid duplicates
           await db
             .from("coach_conversations")
             .update({ stage: deal.stage ?? null })
@@ -191,7 +196,11 @@ async function runCoachV3Sync(sinceDays: number) {
           .select("id")
           .single();
 
-        if (cErr) throw new Error(`insert conv: ${cErr.message}`);
+        if (cErr) {
+          // Unique constraint violation = race condition, treat as update
+          if (cErr.code === "23505") { updated++; continue; }
+          throw new Error(`insert conv: ${cErr.message}`);
+        }
         const conversationId = convRow.id as string;
 
         // Insert messages — only columns guaranteed in base schema + webhook migration
@@ -216,24 +225,29 @@ async function runCoachV3Sync(sinceDays: number) {
           const { error: mErr } = await db
             .from("coach_messages")
             .insert(msgRows.slice(i, i + 200));
-          if (mErr) throw new Error(`insert msgs: ${mErr.message}`);
+          if (mErr && mErr.code !== "23505") throw new Error(`insert msgs: ${mErr.message}`);
         }
 
         inserted++;
+      } catch (e: unknown) {
+        errors.push({
+          deal_id: deal.id ?? "unknown",
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
-    } catch (e: unknown) {
-      errors.push({
-        deal_id: deal.id ?? "unknown",
-        error: e instanceof Error ? e.message : String(e),
-      });
     }
+  }
+
+  // Process in parallel batches (BATCH_SIZE deals at a time)
+  for (let i = 0; i < deals.length; i += BATCH_SIZE) {
+    const batch = deals.slice(i, i + BATCH_SIZE);
+    await Promise.allSettled(batch.map((deal) => processDeal(deal)));
   }
 
   return {
     ok: true,
     since: sinceDate,
     deals_found: deals.length,
-    processed,
     inserted,
     updated,
     skipped,
