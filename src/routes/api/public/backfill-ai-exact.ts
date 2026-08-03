@@ -113,10 +113,10 @@ async function runBackfillAiExact() {
       let convId: string | null = null;
 
       if (existing) {
-        // Update stage only (is_ai_conversation column added via migration separately)
+        // Mark as AI conversation and update count
         await db
           .from("coach_conversations")
-          .update({ message_count: realMsgs.length })
+          .update({ is_ai_conversation: hasAiMessages, message_count: realMsgs.length })
           .eq("id", existing.id);
         convId = existing.id as string;
 
@@ -133,6 +133,7 @@ async function runBackfillAiExact() {
             clint_conversation_id: chatId,
             origin_name: PIPELINE_V3_ORIGIN_NAME,
             source: "clint",
+            is_ai_conversation: hasAiMessages,
             first_message_at: firstMsg?.created_at ?? new Date().toISOString(),
             last_message_at: lastMsg?.created_at ?? new Date().toISOString(),
             message_count: realMsgs.length,
@@ -180,6 +181,7 @@ async function runBackfillAiExact() {
           direction,
           sender_name: senderName,
           body: extractText(m),
+          clint_source: m.source ?? null,
         };
       });
 
