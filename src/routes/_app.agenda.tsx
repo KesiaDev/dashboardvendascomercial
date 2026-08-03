@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Plus, Trash2, Bot, Save, Video, Phone, Mail, User as UserIcon, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Bot, Save, Video, Phone, Mail, User as UserIcon, ChevronLeft, ChevronRight, Sparkles, Ban } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { isAdminUser } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,8 @@ import {
   listPromptsFn,
   savePromptFn,
   listAgendaLogsFn,
+  blockAgendaFn,
+  unblockAgendaFn,
   type AgendaItem,
   type AgentPrompt,
   type AgendaLog,
@@ -37,6 +39,7 @@ const STATUS_COLORS: Record<string, string> = {
   realizado: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30",
   cancelado: "bg-rose-500/15 text-rose-500 border-rose-500/30",
   no_show: "bg-amber-500/15 text-amber-500 border-amber-500/30",
+  bloqueado: "bg-muted text-muted-foreground border-border",
 };
 
 function fmtDate(iso: string) {
@@ -118,8 +121,13 @@ function AgendaTab({ admin, userEmail, userName }: { admin: boolean; userEmail: 
     [items, statusFilter],
   );
 
-  const upcoming = filtered.filter((i) => new Date(i.scheduled_at) >= new Date());
-  const past = filtered.filter((i) => new Date(i.scheduled_at) < new Date());
+  const meetings = filtered.filter((i) => i.status !== "bloqueado");
+  const blocks = useMemo(
+    () => groupBlocks(items.filter((i) => i.status === "bloqueado")),
+    [items],
+  );
+  const upcoming = meetings.filter((i) => new Date(i.scheduled_at) >= new Date());
+  const past = meetings.filter((i) => new Date(i.scheduled_at) < new Date());
 
   return (
     <div className="space-y-4">
@@ -141,9 +149,16 @@ function AgendaTab({ admin, userEmail, userName }: { admin: boolean; userEmail: 
             <SelectItem value="realizado">Realizado</SelectItem>
             <SelectItem value="cancelado">Cancelado</SelectItem>
             <SelectItem value="no_show">No-show</SelectItem>
+            <SelectItem value="bloqueado">Bloqueado</SelectItem>
           </SelectContent>
         </Select>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <BlockForm
+            admin={admin}
+            defaultSellerEmail={userEmail}
+            defaultSellerName={userName}
+            onSaved={reload}
+          />
           <AgendaForm
             admin={admin}
             defaultSellerEmail={userEmail}
@@ -155,10 +170,11 @@ function AgendaTab({ admin, userEmail, userName }: { admin: boolean; userEmail: 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <StatCard label="Total" value={filtered.length} tint="from-primary/20 to-primary/5" />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <StatCard label="Total" value={meetings.length} tint="from-primary/20 to-primary/5" />
         <StatCard label="Próximos" value={upcoming.length} tint="from-blue-500/20 to-blue-500/5" />
-        <StatCard label="Realizados" value={filtered.filter((i) => i.status === "realizado").length} tint="from-emerald-500/20 to-emerald-500/5" />
+        <StatCard label="Realizados" value={meetings.filter((i) => i.status === "realizado").length} tint="from-emerald-500/20 to-emerald-500/5" />
+        <StatCard label="Bloqueios" value={blocks.length} tint="from-muted-foreground/20 to-muted-foreground/5" />
       </div>
 
       <CalendarView items={filtered} onSelectItem={() => { /* row edit handles it */ }} />
@@ -177,6 +193,8 @@ function AgendaTab({ admin, userEmail, userName }: { admin: boolean; userEmail: 
         </CardContent>
       </Card>
 
+      <BlocksCard blocks={blocks} onChanged={reload} />
+
       {past.length > 0 && (
         <Card>
           <CardHeader><CardTitle className="text-base">Histórico ({past.length})</CardTitle></CardHeader>
@@ -188,6 +206,215 @@ function AgendaTab({ admin, userEmail, userName }: { admin: boolean; userEmail: 
         </Card>
       )}
     </div>
+  );
+}
+
+// ---------------- Bloqueios ----------------
+type BlockGroup = {
+  key: string;
+  seller_email: string;
+  seller_name: string | null;
+  reason: string;
+  from: string;
+  to: string;
+  slots: number;
+};
+
+/** Agrupa slots bloqueados consecutivos (30 em 30 min) do mesmo vendedor/motivo. */
+function groupBlocks(list: AgendaItem[]): BlockGroup[] {
+  const sorted = [...list].sort(
+    (a, b) => a.seller_email.localeCompare(b.seller_email) || a.scheduled_at.localeCompare(b.scheduled_at),
+  );
+  const out: BlockGroup[] = [];
+  for (const it of sorted) {
+    const start = new Date(it.scheduled_at);
+    const end = new Date(start.getTime() + (it.duration_min || 30) * 60 * 1000);
+    const reason = (it.notes ?? it.lead_name ?? "").trim() || "Bloqueado";
+    const last = out[out.length - 1];
+    if (
+      last &&
+      last.seller_email === it.seller_email &&
+      last.reason === reason &&
+      new Date(last.to).getTime() === start.getTime()
+    ) {
+      last.to = end.toISOString();
+      last.slots += 1;
+      continue;
+    }
+    out.push({
+      key: `${it.seller_email}-${it.scheduled_at}`,
+      seller_email: it.seller_email,
+      seller_name: it.seller_name,
+      reason,
+      from: start.toISOString(),
+      to: end.toISOString(),
+      slots: 1,
+    });
+  }
+  return out.sort((a, b) => a.from.localeCompare(b.from));
+}
+
+function BlocksCard({ blocks, onChanged }: { blocks: BlockGroup[]; onChanged: () => void }) {
+  const unblock = useServerFn(unblockAgendaFn);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  async function remove(b: BlockGroup) {
+    if (!confirm("Liberar este período bloqueado?")) return;
+    setBusy(b.key);
+    try {
+      await unblock({
+        data: {
+          from: b.from,
+          to: new Date(new Date(b.to).getTime() - 1000).toISOString(),
+          seller_email: b.seller_email,
+        },
+      });
+      toast.success("Período liberado");
+      onChanged();
+    } catch (e: any) {
+      toast.error(String(e?.message ?? e));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Ban className="h-4 w-4 text-muted-foreground" /> Períodos bloqueados ({blocks.length})
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {blocks.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            Nenhum bloqueio. Use “Bloquear período” para reservar horários — eles somem da disponibilidade do Agente IA.
+          </p>
+        )}
+        {blocks.map((b) => (
+          <div key={b.key} className="flex items-center gap-3 rounded-lg border border-dashed border-border bg-muted/30 p-3">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium truncate">{b.reason}</div>
+              <div className="text-xs text-muted-foreground">
+                {fmtDate(b.from)} → {new Date(b.to).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} ·{" "}
+                {b.seller_name ?? b.seller_email}
+              </div>
+            </div>
+            <Button variant="ghost" size="icon" disabled={busy === b.key} onClick={() => remove(b)} aria-label="Liberar período">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function BlockForm({
+  admin, defaultSellerEmail, defaultSellerName, onSaved,
+}: {
+  admin: boolean;
+  defaultSellerEmail: string;
+  defaultSellerName: string | null;
+  onSaved: () => void;
+}) {
+  const block = useServerFn(blockAgendaFn);
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    seller_email: defaultSellerEmail,
+    date: new Date().toISOString().slice(0, 10),
+    start: "09:00",
+    end: "12:00",
+    allDay: false,
+    reason: "",
+  });
+
+  useEffect(() => {
+    setForm((f) => ({ ...f, seller_email: f.seller_email || defaultSellerEmail }));
+  }, [defaultSellerEmail]);
+
+  async function save() {
+    const start = form.allDay ? "00:00" : form.start;
+    const end = form.allDay ? "23:30" : form.end;
+    const from = new Date(`${form.date}T${start}:00`);
+    const to = new Date(`${form.date}T${end}:00`);
+    if (isNaN(from.getTime()) || isNaN(to.getTime()) || to <= from) {
+      toast.error("Verifique o dia e o horário do bloqueio");
+      return;
+    }
+    setSaving(true);
+    try {
+      const r = await block({
+        data: {
+          from: from.toISOString(),
+          to: to.toISOString(),
+          reason: form.reason || null,
+          seller_email: form.seller_email || defaultSellerEmail,
+          seller_name: defaultSellerName,
+        },
+      });
+      toast.success(`Período bloqueado (${r.count} slots)`);
+      setOpen(false);
+      setForm((f) => ({ ...f, reason: "" }));
+      onSaved();
+    } catch (e: any) {
+      toast.error(String(e?.message ?? e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline"><Ban className="h-4 w-4 mr-1" /> Bloquear período</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Bloquear período</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Os horários bloqueados deixam de aparecer como disponíveis para o Agente IA agendar.
+          </p>
+          {admin && (
+            <div>
+              <Label>Email do vendedor</Label>
+              <Input value={form.seller_email} onChange={(e) => setForm((f) => ({ ...f, seller_email: e.target.value }))} />
+            </div>
+          )}
+          <div>
+            <Label>Dia *</Label>
+            <Input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={form.allDay} onCheckedChange={(v) => setForm((f) => ({ ...f, allDay: v }))} />
+            <Label className="text-sm font-normal">Dia inteiro</Label>
+          </div>
+          {!form.allDay && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label>Início *</Label>
+                <Input type="time" step={1800} value={form.start} onChange={(e) => setForm((f) => ({ ...f, start: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Fim *</Label>
+                <Input type="time" step={1800} value={form.end} onChange={(e) => setForm((f) => ({ ...f, end: e.target.value }))} />
+              </div>
+            </div>
+          )}
+          <div>
+            <Label>Motivo</Label>
+            <Input placeholder="Almoço, folga, reunião interna…" value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button onClick={save} disabled={saving}>{saving ? "Bloqueando…" : "Bloquear"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -211,6 +438,7 @@ const TYPE_COLOR: Record<string, string> = {
   reuniao: "bg-blue-500 text-white",
   follow_up: "bg-amber-500 text-white",
   fechamento: "bg-emerald-500 text-white",
+  bloqueio: "bg-muted text-muted-foreground border border-dashed border-muted-foreground/40 [background-image:repeating-linear-gradient(45deg,transparent,transparent_4px,hsl(var(--muted-foreground)/0.15)_4px,hsl(var(--muted-foreground)/0.15)_8px)]",
 };
 
 function sameDay(a: Date, b: Date) {
