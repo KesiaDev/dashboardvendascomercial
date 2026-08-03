@@ -59,7 +59,7 @@ export const listAgendaFn = createServerFn({ method: "POST" })
 
 export const upsertAgendaFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: Partial<AgendaItem> & { id?: string }) => d)
+  .inputValidator((d: Partial<AgendaItem> & { id?: string; repeat_weekdays?: number[] | null; repeat_until?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const supabase = await admin();
     const email = (context.claims as any)?.email as string | undefined;
