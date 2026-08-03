@@ -83,37 +83,25 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
     const startTS = `${data.startDate}T00:00:00.000Z`;
     const endTS = `${data.endDate}T23:59:59.999Z`;
 
-    // Cast to any: is_ai_conversation / clint_source are new columns not yet in generated types
-    const db = supabaseAdmin as any;
-
-    // Query total V3 conversations (for coverage %) and AI conversations separately
-    const [allConvsRes, aiConvsRes, agendaRes] = await Promise.all([
-      db
-        .from("coach_conversations")
-        .select("id", { count: "exact", head: true })
-        .eq("origin_name", V3)
-        .gte("last_message_at", startTS)
-        .lte("last_message_at", endTS),
-      db
+    const [convsRes, agendaRes] = await Promise.all([
+      supabaseAdmin
         .from("coach_conversations")
         .select("id,deal_id,contact_name,stage,first_message_at,last_message_at,message_count")
         .eq("origin_name", V3)
-        .eq("is_ai_conversation", true)
         .gte("last_message_at", startTS)
         .lte("last_message_at", endTS)
         .limit(5000),
-      db
+      supabaseAdmin
         .from("seller_agenda")
         .select("id,source,scheduled_at,created_at")
         .gte("scheduled_at", startTS)
         .lte("scheduled_at", endTS)
         .limit(2000),
     ]);
-    if (aiConvsRes.error) throw new Error(`coach_conversations: ${aiConvsRes.error.message}`);
+    if (convsRes.error) throw new Error(`coach_conversations: ${convsRes.error.message}`);
 
-    const convs = aiConvsRes.data ?? [];
-    // Total V3 conversations (all, not just AI) for coverage percentage
-    const totalV3 = allConvsRes.count ?? convs.length;
+    const convs = convsRes.data ?? [];
+    const totalV3 = convs.length;
     const agenda = agendaRes.data ?? [];
     const agendaClint = agenda.filter((a: any) =>
       /clint|ia|agente|autom/i.test(String(a.source ?? "")),
@@ -125,9 +113,9 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
     for (let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100));
     const msgChunks = await Promise.all(
       chunks.map((chunk) =>
-        db
+        supabaseAdmin
           .from("coach_messages")
-          .select("conversation_id,sent_at,direction,body,clint_source")
+          .select("conversation_id,sent_at,direction,body")
           .in("conversation_id", chunk)
           .order("sent_at", { ascending: true })
           .limit(50000),
@@ -151,7 +139,7 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
     for (let i = 0; i < dealIds.length; i += 100) dealChunks.push(dealIds.slice(i, i + 100));
     const dealRes = await Promise.all(
       dealChunks.map((chunk) =>
-        db.from("clint_deals").select("id,stage,updated_stage_at,status").in("id", chunk),
+        supabaseAdmin.from("clint_deals").select("id,stage,updated_stage_at,status").in("id", chunk),
       ),
     );
     const dealById = new Map<string, { stage: string | null; updated_stage_at: string | null }>();

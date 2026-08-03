@@ -113,10 +113,10 @@ async function runBackfillAiExact() {
       let convId: string | null = null;
 
       if (existing) {
-        // Update is_ai_conversation flag
+        // Update stage only (is_ai_conversation column added via migration separately)
         await db
           .from("coach_conversations")
-          .update({ is_ai_conversation: hasAiMessages })
+          .update({ message_count: realMsgs.length })
           .eq("id", existing.id);
         convId = existing.id as string;
 
@@ -133,7 +133,6 @@ async function runBackfillAiExact() {
             clint_conversation_id: chatId,
             origin_name: PIPELINE_V3_ORIGIN_NAME,
             source: "clint",
-            is_ai_conversation: hasAiMessages,
             first_message_at: firstMsg?.created_at ?? new Date().toISOString(),
             last_message_at: lastMsg?.created_at ?? new Date().toISOString(),
             message_count: realMsgs.length,
@@ -169,19 +168,18 @@ async function runBackfillAiExact() {
         const direction = m.type === "USER" ? "outbound" : "inbound";
         const msgSeller = m.user_id ? userMap.get(m.user_id) : null;
         const senderName =
-          direction === "outbound"
-            ? (msgSeller?.name ?? "SDR COMERCIAL IA")
+          direction === "outbound" && m.source === "AI_CONVERSATION"
+            ? "SDR COMERCIAL IA"
+            : direction === "outbound"
+            ? (msgSeller?.name ?? null)
             : null;
         return {
           conversation_id: convId,
           clint_message_id: m.id,
           sent_at: m.created_at,
           direction,
-          sender_name: direction === "outbound" && m.source === "AI_CONVERSATION"
-            ? "SDR COMERCIAL IA"
-            : senderName,
+          sender_name: senderName,
           body: extractText(m),
-          clint_source: m.source ?? null,
         };
       });
 
