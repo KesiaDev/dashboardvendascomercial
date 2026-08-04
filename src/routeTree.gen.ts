@@ -40,11 +40,14 @@ import { Route as ApiPublicHotmartRawRouteImport } from './routes/api/public/hot
 import { Route as ApiPublicHotmartProbeRouteImport } from './routes/api/public/hotmart-probe'
 import { Route as ApiPublicHotmartDebugRouteImport } from './routes/api/public/hotmart-debug'
 import { Route as ApiPublicBackfillV3RouteImport } from './routes/api/public/backfill-v3'
+import { Route as ApiPublicBackfillContactTagsRouteImport } from './routes/api/public/backfill-contact-tags'
+import { Route as ApiPublicBackfillAiExactRouteImport } from './routes/api/public/backfill-ai-exact'
 import { Route as ApiHotmartWebhookRouteImport } from './routes/api/hotmart/webhook'
 import { Route as ApiClintWebhookRouteImport } from './routes/api/clint/webhook'
 import { Route as AppCoachIdRouteImport } from './routes/_app.coach.$id'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
 import { Route as ApiPublicSyncHotmartRouteImport } from './routes/api/public/sync.hotmart'
+import { Route as ApiPublicSyncCoachV3RouteImport } from './routes/api/public/sync.coach-v3'
 import { Route as ApiPublicSyncCcpbxRouteImport } from './routes/api/public/sync.ccpbx'
 import { Route as ApiPublicAgendaBookRouteImport } from './routes/api/public/agenda.book'
 import { Route as ApiPublicAgendaAvailabilityRouteImport } from './routes/api/public/agenda.availability'
@@ -204,6 +207,18 @@ const ApiPublicBackfillV3Route = ApiPublicBackfillV3RouteImport.update({
   path: '/api/public/backfill-v3',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicBackfillContactTagsRoute =
+  ApiPublicBackfillContactTagsRouteImport.update({
+    id: '/api/public/backfill-contact-tags',
+    path: '/api/public/backfill-contact-tags',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicBackfillAiExactRoute =
+  ApiPublicBackfillAiExactRouteImport.update({
+    id: '/api/public/backfill-ai-exact',
+    path: '/api/public/backfill-ai-exact',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiHotmartWebhookRoute = ApiHotmartWebhookRouteImport.update({
   id: '/api/hotmart/webhook',
   path: '/api/hotmart/webhook',
@@ -227,6 +242,11 @@ const ApiPublicSyncTriggerRoute = ApiPublicSyncTriggerRouteImport.update({
 const ApiPublicSyncHotmartRoute = ApiPublicSyncHotmartRouteImport.update({
   id: '/api/public/sync/hotmart',
   path: '/api/public/sync/hotmart',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSyncCoachV3Route = ApiPublicSyncCoachV3RouteImport.update({
+  id: '/api/public/sync/coach-v3',
+  path: '/api/public/sync/coach-v3',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicSyncCcpbxRoute = ApiPublicSyncCcpbxRouteImport.update({
@@ -280,6 +300,8 @@ export interface FileRoutesByFullPath {
   '/coach/$id': typeof AppCoachIdRoute
   '/api/clint/webhook': typeof ApiClintWebhookRoute
   '/api/hotmart/webhook': typeof ApiHotmartWebhookRoute
+  '/api/public/backfill-ai-exact': typeof ApiPublicBackfillAiExactRoute
+  '/api/public/backfill-contact-tags': typeof ApiPublicBackfillContactTagsRoute
   '/api/public/backfill-v3': typeof ApiPublicBackfillV3Route
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-probe': typeof ApiPublicHotmartProbeRoute
@@ -289,6 +311,7 @@ export interface FileRoutesByFullPath {
   '/api/public/agenda/availability': typeof ApiPublicAgendaAvailabilityRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
+  '/api/public/sync/coach-v3': typeof ApiPublicSyncCoachV3Route
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -321,6 +344,8 @@ export interface FileRoutesByTo {
   '/coach/$id': typeof AppCoachIdRoute
   '/api/clint/webhook': typeof ApiClintWebhookRoute
   '/api/hotmart/webhook': typeof ApiHotmartWebhookRoute
+  '/api/public/backfill-ai-exact': typeof ApiPublicBackfillAiExactRoute
+  '/api/public/backfill-contact-tags': typeof ApiPublicBackfillContactTagsRoute
   '/api/public/backfill-v3': typeof ApiPublicBackfillV3Route
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-probe': typeof ApiPublicHotmartProbeRoute
@@ -330,6 +355,7 @@ export interface FileRoutesByTo {
   '/api/public/agenda/availability': typeof ApiPublicAgendaAvailabilityRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
+  '/api/public/sync/coach-v3': typeof ApiPublicSyncCoachV3Route
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -364,6 +390,8 @@ export interface FileRoutesById {
   '/_app/coach/$id': typeof AppCoachIdRoute
   '/api/clint/webhook': typeof ApiClintWebhookRoute
   '/api/hotmart/webhook': typeof ApiHotmartWebhookRoute
+  '/api/public/backfill-ai-exact': typeof ApiPublicBackfillAiExactRoute
+  '/api/public/backfill-contact-tags': typeof ApiPublicBackfillContactTagsRoute
   '/api/public/backfill-v3': typeof ApiPublicBackfillV3Route
   '/api/public/hotmart-debug': typeof ApiPublicHotmartDebugRoute
   '/api/public/hotmart-probe': typeof ApiPublicHotmartProbeRoute
@@ -373,6 +401,7 @@ export interface FileRoutesById {
   '/api/public/agenda/availability': typeof ApiPublicAgendaAvailabilityRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
+  '/api/public/sync/coach-v3': typeof ApiPublicSyncCoachV3Route
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -407,6 +436,8 @@ export interface FileRouteTypes {
     | '/coach/$id'
     | '/api/clint/webhook'
     | '/api/hotmart/webhook'
+    | '/api/public/backfill-ai-exact'
+    | '/api/public/backfill-contact-tags'
     | '/api/public/backfill-v3'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-probe'
@@ -416,6 +447,7 @@ export interface FileRouteTypes {
     | '/api/public/agenda/availability'
     | '/api/public/agenda/book'
     | '/api/public/sync/ccpbx'
+    | '/api/public/sync/coach-v3'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   fileRoutesByTo: FileRoutesByTo
@@ -448,6 +480,8 @@ export interface FileRouteTypes {
     | '/coach/$id'
     | '/api/clint/webhook'
     | '/api/hotmart/webhook'
+    | '/api/public/backfill-ai-exact'
+    | '/api/public/backfill-contact-tags'
     | '/api/public/backfill-v3'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-probe'
@@ -457,6 +491,7 @@ export interface FileRouteTypes {
     | '/api/public/agenda/availability'
     | '/api/public/agenda/book'
     | '/api/public/sync/ccpbx'
+    | '/api/public/sync/coach-v3'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   id:
@@ -490,6 +525,8 @@ export interface FileRouteTypes {
     | '/_app/coach/$id'
     | '/api/clint/webhook'
     | '/api/hotmart/webhook'
+    | '/api/public/backfill-ai-exact'
+    | '/api/public/backfill-contact-tags'
     | '/api/public/backfill-v3'
     | '/api/public/hotmart-debug'
     | '/api/public/hotmart-probe'
@@ -499,6 +536,7 @@ export interface FileRouteTypes {
     | '/api/public/agenda/availability'
     | '/api/public/agenda/book'
     | '/api/public/sync/ccpbx'
+    | '/api/public/sync/coach-v3'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   fileRoutesById: FileRoutesById
@@ -508,6 +546,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   ApiClintWebhookRoute: typeof ApiClintWebhookRoute
   ApiHotmartWebhookRoute: typeof ApiHotmartWebhookRoute
+  ApiPublicBackfillAiExactRoute: typeof ApiPublicBackfillAiExactRoute
+  ApiPublicBackfillContactTagsRoute: typeof ApiPublicBackfillContactTagsRoute
   ApiPublicBackfillV3Route: typeof ApiPublicBackfillV3Route
   ApiPublicHotmartDebugRoute: typeof ApiPublicHotmartDebugRoute
   ApiPublicHotmartProbeRoute: typeof ApiPublicHotmartProbeRoute
@@ -515,6 +555,7 @@ export interface RootRouteChildren {
   ApiPublicAgendaAvailabilityRoute: typeof ApiPublicAgendaAvailabilityRoute
   ApiPublicAgendaBookRoute: typeof ApiPublicAgendaBookRoute
   ApiPublicSyncCcpbxRoute: typeof ApiPublicSyncCcpbxRoute
+  ApiPublicSyncCoachV3Route: typeof ApiPublicSyncCoachV3Route
   ApiPublicSyncHotmartRoute: typeof ApiPublicSyncHotmartRoute
   ApiPublicSyncTriggerRoute: typeof ApiPublicSyncTriggerRoute
 }
@@ -738,6 +779,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicBackfillV3RouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/backfill-contact-tags': {
+      id: '/api/public/backfill-contact-tags'
+      path: '/api/public/backfill-contact-tags'
+      fullPath: '/api/public/backfill-contact-tags'
+      preLoaderRoute: typeof ApiPublicBackfillContactTagsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/backfill-ai-exact': {
+      id: '/api/public/backfill-ai-exact'
+      path: '/api/public/backfill-ai-exact'
+      fullPath: '/api/public/backfill-ai-exact'
+      preLoaderRoute: typeof ApiPublicBackfillAiExactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/hotmart/webhook': {
       id: '/api/hotmart/webhook'
       path: '/api/hotmart/webhook'
@@ -771,6 +826,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/sync/hotmart'
       fullPath: '/api/public/sync/hotmart'
       preLoaderRoute: typeof ApiPublicSyncHotmartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/sync/coach-v3': {
+      id: '/api/public/sync/coach-v3'
+      path: '/api/public/sync/coach-v3'
+      fullPath: '/api/public/sync/coach-v3'
+      preLoaderRoute: typeof ApiPublicSyncCoachV3RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/sync/ccpbx': {
@@ -889,6 +951,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   ApiClintWebhookRoute: ApiClintWebhookRoute,
   ApiHotmartWebhookRoute: ApiHotmartWebhookRoute,
+  ApiPublicBackfillAiExactRoute: ApiPublicBackfillAiExactRoute,
+  ApiPublicBackfillContactTagsRoute: ApiPublicBackfillContactTagsRoute,
   ApiPublicBackfillV3Route: ApiPublicBackfillV3Route,
   ApiPublicHotmartDebugRoute: ApiPublicHotmartDebugRoute,
   ApiPublicHotmartProbeRoute: ApiPublicHotmartProbeRoute,
@@ -896,9 +960,20 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAgendaAvailabilityRoute: ApiPublicAgendaAvailabilityRoute,
   ApiPublicAgendaBookRoute: ApiPublicAgendaBookRoute,
   ApiPublicSyncCcpbxRoute: ApiPublicSyncCcpbxRoute,
+  ApiPublicSyncCoachV3Route: ApiPublicSyncCoachV3Route,
   ApiPublicSyncHotmartRoute: ApiPublicSyncHotmartRoute,
   ApiPublicSyncTriggerRoute: ApiPublicSyncTriggerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
