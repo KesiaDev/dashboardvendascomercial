@@ -161,6 +161,79 @@ export const fetchManualSalesForCommissionFn = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
+// ── Vendas Hotmart do período (para cálculo e conferência) ───────────────────
+export const fetchSalesForCommissionFn = createServerFn({ method: "GET" })
+  .inputValidator((d: { from: string; to: string }) => {
+    if (!d.from || !d.to) throw new Error("Datas obrigatórias");
+    return d;
+  })
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const cols =
+      "transacao,produto_grupo,produto_original,status,data_venda,nome_cliente,email_cliente,nome_afiliado,origem_checkout,faturamento_liquido_brl,preco_total,moeda_original,numero_parcela";
+    const rows: any[] = [];
+    const pageSize = 1000;
+    for (let page = 0; page < 40; page++) {
+      const { data: chunk, error } = await db
+        .from("sales")
+        .select(cols)
+        .gte("data_venda", `${data.from}T00:00:00Z`)
+        .lte("data_venda", `${data.to}T23:59:59Z`)
+        .order("data_venda", { ascending: false })
+        .range(page * pageSize, page * pageSize + pageSize - 1);
+      if (error) throw new Error(error.message);
+      rows.push(...(chunk ?? []));
+      if (!chunk || chunk.length < pageSize) break;
+    }
+    return rows;
+  });
+
+// ── Ajustes manuais em vendas (observação / trocar vendedor / excluir) ───────
+export const fetchSaleOverridesFn = createServerFn({ method: "GET" }).handler(async () => {
+  const db = await admin();
+  const { data, error } = await db
+    .from("bi_sale_overrides")
+    .select("transacao,seller_name,produto_grupo,excluir,observacao");
+  if (error) throw new Error(error.message);
+  return data ?? [];
+});
+
+type OverrideInput = {
+  transacao: string;
+  seller_name?: string | null;
+  produto_grupo?: string | null;
+  excluir?: boolean;
+  observacao?: string | null;
+};
+
+export const upsertSaleOverrideFn = createServerFn({ method: "POST" })
+  .inputValidator((d: OverrideInput) => {
+    if (!d.transacao) throw new Error("Transação obrigatória");
+    return d;
+  })
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const row = {
+      transacao: data.transacao,
+      seller_name: data.seller_name ?? null,
+      produto_grupo: data.produto_grupo ?? null,
+      excluir: data.excluir ?? false,
+      observacao: data.observacao ?? null,
+    };
+    const vazio = !row.seller_name && !row.produto_grupo && !row.excluir && !row.observacao;
+    if (vazio) {
+      const { error } = await db.from("bi_sale_overrides").delete().eq("transacao", row.transacao);
+      if (error) throw new Error(error.message);
+      return { ok: true };
+    }
+    const { error } = await db
+      .from("bi_sale_overrides")
+      .upsert(row, { onConflict: "transacao" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
 export const importWisePaymentsFn = createServerFn({ method: "POST" })
   .inputValidator((d: ImportWiseInput) => d)
   .handler(async ({ data }) => {
