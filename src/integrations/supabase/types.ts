@@ -730,6 +730,36 @@ export type Database = {
           },
         ]
       }
+      bi_sale_overrides: {
+        Row: {
+          created_at: string
+          excluir: boolean
+          observacao: string | null
+          produto_grupo: string | null
+          seller_name: string | null
+          transacao: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          excluir?: boolean
+          observacao?: string | null
+          produto_grupo?: string | null
+          seller_name?: string | null
+          transacao: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          excluir?: boolean
+          observacao?: string | null
+          produto_grupo?: string | null
+          seller_name?: string | null
+          transacao?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bi_seller_config: {
         Row: {
           clint_user_name: string | null

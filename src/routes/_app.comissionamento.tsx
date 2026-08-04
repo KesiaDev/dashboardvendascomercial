@@ -9,6 +9,9 @@ import {
   fetchCommissionBonusesFn,
   fetchManualSalesForCommissionFn,
   fetchRoletaSpinsFn,
+  fetchSalesForCommissionFn,
+  fetchSaleOverridesFn,
+  upsertSaleOverrideFn,
   addCommissionBonusFn,
   deleteCommissionBonusFn,
   upsertCommissionRateFn,
@@ -16,13 +19,15 @@ import {
   type RoletaSpinRow,
 } from "@/lib/commission.functions";
 import { RoletaSpinsCard } from "@/components/roleta-spins";
-import { fetchAllSalesFn } from "@/lib/data.functions";
 import {
   calculateCommissions,
-  countSalesBySellerWeek,
   periodWeeks,
+  TAXA_LIQUIDO_HOTMART,
   type CommissionPeriod,
   type ManualSaleRow,
+  type SaleOverride,
+  type SellerCommission,
+  type AttributedSaleRow,
 } from "@/lib/commission";
 import { PRODUCT_GROUPS } from "@/lib/product-groups";
 import { WiseRecebimentosCard } from "@/components/wise-recebimentos";
@@ -41,16 +46,36 @@ import {
 import { toast } from "sonner";
 import {
   Lock,
-  TrendingUp,
+  Wallet,
   ChevronDown,
   ChevronUp,
   Settings,
   Plus,
   Trash2,
+  Trophy,
+  Target,
+  Search,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/comissionamento")({
   component: ComissionamentoPage,
+  head: () => ({
+    meta: [
+      { title: "Comissionamento | Dash Comercial" },
+      {
+        name: "description",
+        content:
+          "Cálculo automático das comissões do time comercial por produto, com metas, bônus e roleta.",
+      },
+      { property: "og:title", content: "Comissionamento | Dash Comercial" },
+      {
+        property: "og:description",
+        content: "Comissões do time comercial calculadas a partir das vendas Hotmart e Wise.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
 });
 
 const ADMIN_KEY = "comm_admin_v1";
@@ -108,6 +133,7 @@ function money(v: number, moeda = "BRL") {
   return v.toLocaleString("pt-BR", {
     style: "currency",
     currency: moeda === "EUR" ? "EUR" : "BRL",
+    maximumFractionDigits: 2,
   });
 }
 
@@ -115,11 +141,16 @@ function pct(v: number) {
   return `${v.toFixed(1)}%`;
 }
 
+function fmtDate(d: string | null | undefined) {
+  if (!d) return "—";
+  return new Date(d.length <= 10 ? `${d}T12:00:00` : d).toLocaleDateString("pt-BR");
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 function ComissionamentoPage() {
   const [unlocked, setUnlocked] = useState(
-    () => localStorage.getItem(ADMIN_KEY) === "1",
+    () => typeof window !== "undefined" && localStorage.getItem(ADMIN_KEY) === "1",
   );
   if (!unlocked) return <PinGate onUnlock={() => setUnlocked(true)} />;
   return <Dashboard />;
@@ -158,9 +189,9 @@ function Dashboard() {
     queryKey: ["comm_bonuses"],
     queryFn: async () => (await fetchCommissionBonusesFn()) as any[],
   });
-  const { data: sales = [] } = useQuery({
-    queryKey: ["sales"],
-    queryFn: async () => (await fetchAllSalesFn()) as any[],
+  const { data: overrides = [] } = useQuery({
+    queryKey: ["comm_overrides"],
+    queryFn: async () => (await fetchSaleOverridesFn()) as SaleOverride[],
   });
 
   const activePeriod = useMemo((): CommissionPeriod | null => {
@@ -169,7 +200,17 @@ function Dashboard() {
     return periods[0];
   }, [periods, periodId]);
 
-  // Busca Fechamento (manual_sales) para o período ativo
+  const { data: sales = [] } = useQuery({
+    queryKey: ["comm_sales", activePeriod?.id],
+    enabled: !!activePeriod,
+    queryFn: async () => {
+      if (!activePeriod) return [];
+      return (await fetchSalesForCommissionFn({
+        data: { from: activePeriod.data_inicio, to: activePeriod.data_fim },
+      })) as any[];
+    },
+  });
+
   const { data: manualSales = [] } = useQuery({
     queryKey: ["comm_manual_sales", activePeriod?.id],
     enabled: !!activePeriod,
@@ -197,23 +238,26 @@ function Dashboard() {
       bonuses,
       manualSales,
       roletaSpins,
+      overrides,
     );
-  }, [activePeriod, sellers, rates, sales, wisePayments, bonuses, manualSales, roletaSpins]);
+  }, [
+    activePeriod,
+    sellers,
+    rates,
+    sales,
+    wisePayments,
+    bonuses,
+    manualSales,
+    roletaSpins,
+    overrides,
+  ]);
 
-  const weekSales = useMemo(() => {
-    if (!activePeriod || sellers.length === 0) return [];
-    return countSalesBySellerWeek(activePeriod, sellers, sales);
-  }, [activePeriod, sellers, sales]);
-
-  const weeks = useMemo(
-    () => (activePeriod ? periodWeeks(activePeriod) : []),
-    [activePeriod],
-  );
+  const weeks = useMemo(() => (activePeriod ? periodWeeks(activePeriod) : []), [activePeriod]);
 
   const addBonusMut = useMutation({
     mutationFn: async (d: any) => addCommissionBonusFn({ data: d }),
     onSuccess: () => {
-      toast.success("Bônus adicionado");
+      toast.success("Lançamento adicionado");
       qc.invalidateQueries({ queryKey: ["comm_bonuses"] });
       setBonusForm(null);
     },
@@ -223,7 +267,7 @@ function Dashboard() {
   const delBonusMut = useMutation({
     mutationFn: async (id: number) => deleteCommissionBonusFn({ data: { id } }),
     onSuccess: () => {
-      toast.success("Bônus removido");
+      toast.success("Lançamento removido");
       qc.invalidateQueries({ queryKey: ["comm_bonuses"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -247,18 +291,20 @@ function Dashboard() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const managerTotal =
-    (summary?.manager_total_brl ?? 0) +
-    (summary?.manager_bonuses.reduce((s, b) => s + b.valor, 0) ?? 0);
+  const totalAPagar = summary?.sellers.reduce((s, r) => s + r.total_a_pagar, 0) ?? 0;
+  const totalFaturamento =
+    summary?.sellers.reduce((s, r) => s + r.faturamento_total_brl, 0) ?? 0;
+  const totalSplitHotmart =
+    summary?.sellers.reduce((s, r) => s + r.comissao_hotmart_direto, 0) ?? 0;
 
   return (
     <div className="space-y-6">
       {/* ── Header ── */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Comissionamento</h2>
+          <h1 className="text-2xl font-semibold tracking-tight">Comissionamento</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Cálculo automático · período de 5 semanas
+            Vendas da Hotmart + recebimentos Wise do mês, com metas, bônus e roleta
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -266,7 +312,7 @@ function Dashboard() {
             value={String(activePeriod?.id ?? "")}
             onValueChange={(v) => setPeriodId(Number(v))}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[190px]">
               <SelectValue placeholder="Período" />
             </SelectTrigger>
             <SelectContent>
@@ -277,660 +323,708 @@ function Dashboard() {
               ))}
             </SelectContent>
           </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowConfig((v) => !v)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowConfig((v) => !v)}>
             <Settings className="h-4 w-4 mr-1" />
             {showConfig ? "Fechar config" : "Configurar"}
           </Button>
         </div>
       </div>
 
-      {/* ── Meu comissionamento ── */}
-      {summary && (
+      {/* ── Resumo do mês ── */}
+      {summary && activePeriod && (
         <Card className="border-primary/40 bg-primary/5">
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-primary" />
-              Meu comissionamento — {activePeriod?.nome}
+              <Wallet className="h-4 w-4 text-primary" />
+              {activePeriod.nome} · {fmtDate(activePeriod.data_inicio)} a{" "}
+              {fmtDate(activePeriod.data_fim)}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <div>
-                <p className="text-xs text-muted-foreground">% adicional sobre vendedores</p>
-                <p className="text-2xl font-bold tabular-nums">
-                  {money(summary.manager_total_brl)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Bônus meus</p>
-                <p className="text-2xl font-bold tabular-nums">
-                  {money(summary.manager_bonuses.reduce((s, b) => s + b.valor, 0))}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total a receber</p>
-                <p className="text-2xl font-bold tabular-nums text-primary">
-                  {money(managerTotal)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Faturamento total time</p>
-                <p className="text-2xl font-bold tabular-nums">
-                  {money(summary.sellers.reduce((s, r) => s + r.faturamento_total_brl, 0))}
-                </p>
-              </div>
-            </div>
-
-            {/* Cotação EUR do período (editável) */}
-            {activePeriod && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Cotação EUR do período:</span>
-                <span
-                  className="font-medium text-foreground cursor-pointer hover:text-primary underline"
-                  onClick={() => {
-                    const val = prompt("Cotação EUR→BRL:", String(activePeriod.cotacao_eur ?? 5.85));
-                    if (val !== null && !isNaN(Number(val))) {
-                      upsertPeriodMut.mutate({ ...activePeriod, cotacao_eur: Number(val) });
-                    }
-                  }}
-                >
-                  R$ {(activePeriod.cotacao_eur ?? 5.85).toFixed(2)}
-                </span>
-                <span className="text-muted-foreground/70">(usado para converter Fechamento EUR não confirmado)</span>
-              </div>
-            )}
-
-            {/* De onde vem minha comissão */}
-            <div className="overflow-x-auto rounded border border-border/50">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
-                    <th className="px-3 py-2">Vendedor</th>
-                    <th className="px-3 py-2 text-right">Hotmart</th>
-                    <th className="px-3 py-2 text-right">Fechamento</th>
-                    <th className="px-3 py-2 text-right">Faturamento total</th>
-                    <th className="px-3 py-2 text-right">Minha % adicional</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summary.sellers.map((s) => {
-                    const fat_hotmart = s.byProduct.reduce((acc, p) => acc + p.faturamento_hotmart + p.faturamento_sck, 0);
-                    const fat_fechamento = s.byProduct.reduce((acc, p) => acc + p.faturamento_fechamento, 0);
-                    return (
-                      <tr key={s.sellerName} className="border-b border-border/40 last:border-0">
-                        <td className="px-3 py-1.5 font-medium">{s.sellerName}</td>
-                        <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
-                          {fat_hotmart > 0 ? money(fat_hotmart) : "—"}
-                        </td>
-                        <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
-                          {fat_fechamento > 0 ? (
-                            <span title={`${s.fechamento_eur.toFixed(2)} EUR`}>
-                              {money(fat_fechamento)}
-                            </span>
-                          ) : "—"}
-                        </td>
-                        <td className="px-3 py-1.5 text-right tabular-nums">
-                          {money(s.faturamento_total_brl)}
-                        </td>
-                        <td className="px-3 py-1.5 text-right tabular-nums font-semibold text-primary">
-                          {money(s.comissao_manager_total)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-
-
-
-      {/* ── Roleta: 1 giro por venda ── */}
-      <RoletaSpinsCard
-        period={activePeriod}
-        sellerNames={sellers.map((s: any) => s.seller_name)}
-      />
-
-      {/* Resumo dos giros por semana comercial */}
-      {summary && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Giros e prêmios por semana</CardTitle>
-          </CardHeader>
-          <CardContent className="overflow-x-auto space-y-4">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-muted-foreground">
-                  <th className="py-2 pr-3">Semana</th>
-                  <th className="py-2 pr-3 text-right">Giros</th>
-                  <th className="py-2 pr-3">Vendedores</th>
-                  <th className="py-2 text-right">Prêmios</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.roleta.map((r) => {
-                  const nomes = Array.from(new Set(r.spins.map((s) => s.seller_name)));
-                  return (
-                    <tr key={r.week} className="border-b border-border/40 last:border-0">
-                      <td className="py-1.5 pr-3 font-medium">{r.label}</td>
-                      <td className="py-1.5 pr-3 text-right tabular-nums">{r.totalSpins || "—"}</td>
-                      <td className="py-1.5 pr-3">
-                        {nomes.length > 0 ? (
-                          nomes.map((n) => (
-                            <Badge key={n} variant="secondary" className="mr-1 text-xs">
-                              {n}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-muted-foreground text-xs">Sem giros</span>
-                        )}
-                      </td>
-                      <td className="py-1.5 text-right tabular-nums">
-                        {r.premio_brl > 0 ? (
-                          <>
-                            <div>{money(r.premio_brl)}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {money(r.premio_eur, "EUR")}
-                            </div>
-                          </>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    </tr>
+              <Kpi label="Faturamento do time" value={money(totalFaturamento)} />
+              <Kpi
+                label="Comissão paga pela Hotmart"
+                value={money(totalSplitHotmart)}
+                hint="split de afiliado — a empresa não paga"
+              />
+              <Kpi
+                label="Total a pagar pela empresa"
+                value={money(totalAPagar)}
+                emphasis
+                hint="comissões + bônus + metas + roleta"
+              />
+              <Kpi
+                label="Cotação EUR do período"
+                value={`R$ ${(activePeriod.cotacao_eur ?? 5.85).toFixed(2)}`}
+                onClick={() => {
+                  const val = prompt(
+                    "Cotação EUR→BRL:",
+                    String(activePeriod.cotacao_eur ?? 5.85),
                   );
-                })}
-              </tbody>
-            </table>
+                  if (val !== null && !isNaN(Number(val)))
+                    upsertPeriodMut.mutate({ ...activePeriod, cotacao_eur: Number(val) });
+                }}
+              />
+            </div>
 
-            {/* Contagem de vendas por vendedor por semana (auditoria) */}
-            {weekSales.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                  Contagem de vendas por vendedor
-                </p>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-muted-foreground">
-                      <th className="py-2 pr-4">Vendedor</th>
-                      {weeks.map((w) => (
-                        <th key={w.week} className="py-2 pr-3 text-right">
-                          {w.label}
-                        </th>
-                      ))}
-                      <th className="py-2 text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {weekSales.map((ws) => (
-                      <tr key={ws.sellerName} className="border-b border-border/40 last:border-0">
-                        <td className="py-1.5 pr-4 font-medium">{ws.sellerName}</td>
-                        {ws.weeks.map((c, i) => (
-                          <td key={i} className="py-1.5 pr-3 text-right tabular-nums">
-                            {c || "—"}
-                          </td>
-                        ))}
-                        <td className="py-1.5 text-right tabular-nums font-semibold">{ws.total}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <div className="rounded-md border border-border/60 bg-background/60 p-3 text-xs text-muted-foreground leading-relaxed">
+              <strong className="text-foreground">Como o valor é calculado</strong> — Vendas da
+              Hotmart entram líquidas da taxa da plataforma (× {TAXA_LIQUIDO_HOTMART}); recebimentos
+              Wise entram cheios.
+              <br />
+              Quando o <em>Nome do afiliado</em> na Hotmart é o próprio vendedor, a Hotmart já paga
+              a comissão direto e a empresa não paga nada nessa venda. Quando a venda é atribuída
+              por SCK (link da equipe) ou vem por Wise, a comissão é paga pela empresa.
+            </div>
           </CardContent>
         </Card>
       )}
 
-
-      {/* ── Metas de faturamento (bônus automáticos) ── */}
+      {/* ── Tabela consolidada (igual à planilha) ── */}
       {summary && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Metas de faturamento — bônus automáticos</CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">
-              N1 (Luana): semanal €900 (+€25) · super €1.600 (+€25) · mensal €3.600 (+€25) · super
-              €6.400 (+€25) — N3 (Gisele, Rita, João, Nadal): semanal €1.200 (+€30) · super €2.100
-              (+€30) · mensal €4.800 (+€30) · super €8.400 (+€30). Bônus é cumulativo e a base é o
-              faturamento cheio das vendas (Hotmart + Fechamento + Wise) na semana comercial.
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Resumo por vendedor</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Clique num vendedor para ver produto a produto
             </p>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
+          <CardContent className="overflow-x-auto p-0">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-muted-foreground">
-                  <th className="py-2 pr-3">Vendedor</th>
-                  <th className="py-2 pr-3">Nível</th>
-                  {weeks.map((w) => (
-                    <th key={w.week} className="py-2 pr-3 text-right">
-                      {w.label}
-                    </th>
-                  ))}
-                  <th className="py-2 pr-3 text-right">Mês</th>
-                  <th className="py-2 text-right">Bônus metas</th>
+                <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="px-4 py-2">Vendedor</th>
+                  <th className="px-3 py-2 text-right">Hotmart (afiliado)</th>
+                  <th className="px-3 py-2 text-right">Hotmart (SCK)</th>
+                  <th className="px-3 py-2 text-right">Wise</th>
+                  <th className="px-3 py-2 text-right">Faturamento</th>
+                  <th className="px-3 py-2 text-right">Comissão total</th>
+                  <th className="px-3 py-2 text-right">Já pago Hotmart</th>
+                  <th className="px-3 py-2 text-right">Metas</th>
+                  <th className="px-3 py-2 text-right">Roleta</th>
+                  <th className="px-3 py-2 text-right">Bônus/Desc.</th>
+                  <th className="px-4 py-2 text-right">A pagar</th>
                 </tr>
               </thead>
               <tbody>
                 {summary.sellers.map((s) => (
-                  <tr key={s.sellerName} className="border-b border-border/40 last:border-0">
-                    <td className="py-1.5 pr-3 font-medium">{s.sellerName}</td>
-                    <td className="py-1.5 pr-3">
-                      <Badge variant="outline" className="text-xs">
-                        {s.metas.level}
-                      </Badge>
+                  <tr
+                    key={s.sellerName}
+                    className="border-b border-border/40 last:border-0 cursor-pointer hover:bg-muted/30"
+                    onClick={() =>
+                      setExpandedSeller((v) => (v === s.sellerName ? null : s.sellerName))
+                    }
+                  >
+                    <td className="px-4 py-2 font-medium">{s.sellerName}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                      {s.fat_hotmart ? money(s.fat_hotmart) : "—"}
                     </td>
-                    {s.metas.semanas.map((w) => (
-                      <td key={w.week} className="py-1.5 pr-3 text-right tabular-nums">
-                        <div
-                          className={
-                            w.bateu_super
-                              ? "font-semibold text-emerald-600 dark:text-emerald-400"
-                              : w.bateu_meta
-                                ? "font-medium text-sky-600 dark:text-sky-400"
-                                : "text-muted-foreground"
-                          }
-                        >
-                          {money(w.faturamento_eur, "EUR")}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {w.bonus_eur > 0 ? `+${money(w.bonus_eur, "EUR")}` : "—"}
-                        </div>
-                      </td>
-                    ))}
-                    <td className="py-1.5 pr-3 text-right tabular-nums">
-                      <div
-                        className={
-                          s.metas.bateu_super_mensal
-                            ? "font-semibold text-emerald-600 dark:text-emerald-400"
-                            : s.metas.bateu_meta_mensal
-                              ? "font-medium text-sky-600 dark:text-sky-400"
-                              : "text-muted-foreground"
-                        }
-                      >
-                        {money(s.metas.faturamento_mensal_eur, "EUR")}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {s.metas.bonus_mensal_eur > 0
-                          ? `+${money(s.metas.bonus_mensal_eur, "EUR")}`
-                          : "—"}
-                      </div>
+                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                      {s.fat_sck ? money(s.fat_sck) : "—"}
                     </td>
-                    <td className="py-1.5 text-right tabular-nums font-semibold text-primary">
-                      {money(s.bonus_metas_eur, "EUR")}
-                      <div className="text-xs font-normal text-muted-foreground">
-                        {money(s.bonus_metas_brl)}
-                      </div>
+                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                      {s.fat_wise ? money(s.fat_wise) : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums font-medium">
+                      {money(s.faturamento_total_brl)}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{money(s.comissao_total)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                      {s.comissao_hotmart_direto ? `− ${money(s.comissao_hotmart_direto)}` : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                      {s.bonus_metas_brl ? money(s.bonus_metas_brl) : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-amber-600 dark:text-amber-400">
+                      {s.roleta_ganho_brl ? money(s.roleta_ganho_brl) : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {s.bonus_total || s.descontos
+                        ? money(s.bonus_total - s.descontos)
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums font-semibold text-primary">
+                      {money(s.total_a_pagar)}
                     </td>
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </CardContent>
-        </Card>
-      )}
-
-
-
-
-      {/* ── Vendedores ── */}
-      {summary && (
-        <div className="space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Comissão dos vendedores
-          </h3>
-
-          {summary.sellers.map((s) => (
-            <Card key={s.sellerName}>
-              <CardHeader
-                className="cursor-pointer select-none py-3"
-                onClick={() =>
-                  setExpandedSeller(expandedSeller === s.sellerName ? null : s.sellerName)
-                }
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <Badge variant="outline">{s.sellerName}</Badge>
-                    <span className="text-xs text-muted-foreground">
-                      Fat. {money(s.faturamento_total_brl)}
-                    </span>
-                    {s.fechamento_eur > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        · Fechamento {s.fechamento_eur.toFixed(2)} EUR
-                      </span>
-                    )}
-                    {s.wise_eur > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        · Wise {money(s.wise_eur, "EUR")}
-                      </span>
-                    )}
-                    {(s.hotmart_sales_by_affiliate + s.hotmart_sales_by_sck) > 0 && (
-                      <span className="text-[11px] text-muted-foreground">
-                        · Hotmart: {s.hotmart_sales_by_affiliate} afiliado
-                        {s.hotmart_sales_by_sck > 0 && ` + ${s.hotmart_sales_by_sck} SCK`}
-                      </span>
-                    )}
-                    {s.roleta_ganho_brl > 0 && (
-                      <Badge variant="secondary" className="text-[11px]">
-                        Roleta {money(s.roleta_ganho_brl)}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Pago via Hotmart</p>
-                      <p className="font-medium tabular-nums text-muted-foreground">
-                        {money(s.comissao_seller_hotmart_split_total)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">A pagar pela empresa</p>
-                      <p className="font-semibold tabular-nums text-emerald-600">
-                        {money(s.total_a_pagar)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Minha % adicional</p>
-                      <p className="font-semibold tabular-nums text-primary">
-                        {money(s.comissao_manager_total)}
-                      </p>
-                    </div>
-                    {expandedSeller === s.sellerName ? (
-                      <ChevronUp className="h-4 w-4 shrink-0" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 shrink-0" />
-                    )}
-                  </div>
-                </div>
-
-              </CardHeader>
-
-              {expandedSeller === s.sellerName && (
-                <CardContent className="space-y-5 pt-0">
-                  {/* Por produto */}
-                  {s.byProduct.length > 0 && (
-                    <div className="overflow-x-auto rounded border border-border/50">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
-                            <th className="px-3 py-2">Produto</th>
-                            <th className="px-3 py-2 text-right" title="Vendas com o afiliado do vendedor — Hotmart paga direto">
-                              Hotmart (afiliado)
-                            </th>
-                            <th className="px-3 py-2 text-right" title="Vendas atribuídas pelo SCK — empresa paga">
-                              Hotmart (SCK)
-                            </th>
-                            <th className="px-3 py-2 text-right">Fechamento</th>
-                            <th className="px-3 py-2 text-right">Wise</th>
-                            <th className="px-3 py-2 text-right">% seller</th>
-                            <th className="px-3 py-2 text-right" title="Pago pelo Hotmart via split">
-                              Split HM
-                            </th>
-                            <th className="px-3 py-2 text-right" title="Empresa paga (Fechamento + Wise)">
-                              A pagar empresa
-                            </th>
-                            <th className="px-3 py-2 text-right">% Késia</th>
-                            <th className="px-3 py-2 text-right">Minha parte</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {s.byProduct.map((p) => (
-                            <tr
-                              key={p.produto_grupo}
-                              className="border-b border-border/40 last:border-0"
-                            >
-                              <td className="px-3 py-1.5 max-w-[140px] truncate">{p.label}</td>
-                              <td className="px-3 py-1.5 text-right tabular-nums">
-                                {p.faturamento_hotmart > 0 ? money(p.faturamento_hotmart) : "—"}
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums">
-                                {p.faturamento_sck > 0 ? money(p.faturamento_sck) : "—"}
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums">
-                                {p.faturamento_fechamento > 0 ? (
-                                  <span
-                                    className="cursor-help"
-                                    title={`${p.faturamento_fechamento_eur.toFixed(2)} EUR · ${p.faturamento_fechamento_confirmado} confirmada(s) via Hotmart`}
-                                  >
-                                    {money(p.faturamento_fechamento)}
-                                    {p.faturamento_fechamento_confirmado > 0 && (
-                                      <span className="ml-1 text-emerald-600 text-[10px]">✓</span>
-                                    )}
-                                  </span>
-                                ) : "—"}
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
-                                {p.faturamento_wise > 0 ? money(p.faturamento_wise) : "—"}
-                              </td>
-                              <td className="px-3 py-1.5 text-right">{pct(p.rate_pct)}</td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
-                                {p.comissao_seller_hotmart_split > 0 ? money(p.comissao_seller_hotmart_split) : "—"}
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums font-medium text-emerald-600">
-                                {p.comissao_seller_a_pagar_empresa > 0 ? money(p.comissao_seller_a_pagar_empresa) : "—"}
-                              </td>
-                              <td className="px-3 py-1.5 text-right">{pct(p.manager_rate_pct)}</td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-primary">
-                                {money(p.comissao_manager)}
-                              </td>
-                            </tr>
-                          ))}
-                          <tr className="bg-muted/20 font-semibold">
-                            <td className="px-3 py-2" colSpan={6}>
-                              Total
-                            </td>
-                            <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
-                              {money(s.comissao_seller_hotmart_split_total)}
-                            </td>
-                            <td className="px-3 py-2 text-right tabular-nums text-emerald-600">
-                              {money(s.comissao_seller_a_pagar_empresa_total)}
-                            </td>
-                            <td />
-                            <td className="px-3 py-2 text-right tabular-nums text-primary">
-                              {money(s.comissao_manager_total)}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-
-
-                  {s.byProduct.length === 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      Nenhuma venda encontrada neste período para este vendedor.
-                    </p>
-                  )}
-
-                  {/* Bônus */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Bônus
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs"
-                        onClick={() =>
-                          setBonusForm({
-                            seller: s.sellerName,
-                            tipo: "manual",
-                            valor: "",
-                            moeda: "BRL",
-                            notas: "",
-                          })
-                        }
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1" />
-                        Adicionar
-                      </Button>
-                    </div>
-
-                    {s.bonuses.map((b) => (
-                      <div
-                        key={b.id}
-                        className="flex items-center justify-between rounded-md border border-border/50 bg-secondary/20 px-3 py-2 text-sm"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {b.tipo}
-                          </Badge>
-                          <span className="text-muted-foreground">{b.notas ?? "—"}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="tabular-nums font-medium">
-                            {money(b.valor, b.moeda)}
-                          </span>
-                          <button
-                            onClick={() => delBonusMut.mutate(b.id)}
-                            className="text-muted-foreground hover:text-destructive transition-colors"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-
-                    {bonusForm?.seller === s.sellerName && (
-                      <div className="flex flex-wrap gap-2 rounded-md border border-border p-3">
-                        <Select
-                          value={bonusForm.tipo}
-                          onValueChange={(v) => setBonusForm((f) => f && { ...f, tipo: v })}
-                        >
-                          <SelectTrigger className="w-[110px] h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="roleta">Roleta</SelectItem>
-                            <SelectItem value="fixo">Fixo</SelectItem>
-                            <SelectItem value="manual">Manual</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          className="w-[100px] h-8"
-                          placeholder="Valor"
-                          value={bonusForm.valor}
-                          onChange={(e) => setBonusForm((f) => f && { ...f, valor: e.target.value })}
-                        />
-                        <Select
-                          value={bonusForm.moeda}
-                          onValueChange={(v) => setBonusForm((f) => f && { ...f, moeda: v })}
-                        >
-                          <SelectTrigger className="w-[75px] h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="BRL">BRL</SelectItem>
-                            <SelectItem value="EUR">EUR</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          className="flex-1 min-w-[120px] h-8"
-                          placeholder="Notas"
-                          value={bonusForm.notas}
-                          onChange={(e) => setBonusForm((f) => f && { ...f, notas: e.target.value })}
-                        />
-                        <Button
-                          size="sm"
-                          className="h-8"
-                          disabled={!bonusForm.valor || addBonusMut.isPending}
-                          onClick={() =>
-                            activePeriod &&
-                            addBonusMut.mutate({
-                              period_id: activePeriod.id,
-                              seller_name: bonusForm.seller,
-                              tipo: bonusForm.tipo,
-                              valor: Number(bonusForm.valor),
-                              moeda: bonusForm.moeda,
-                              notas: bonusForm.notas || null,
-                            })
-                          }
-                        >
-                          Salvar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8"
-                          onClick={() => setBonusForm(null)}
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              )}
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* ── Configuração de taxas ── */}
-      {showConfig && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Taxas de comissão
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">Clique nos valores para editar</p>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-muted-foreground">
-                  <th className="py-2 pr-4">Vendedor</th>
-                  <th className="py-2 pr-4">Produto</th>
-                  <th className="py-2 pr-4 text-right">% Vendedor</th>
-                  <th className="py-2 text-right">% Késia (adicional)</th>
+              <tfoot>
+                <tr className="border-t border-border bg-muted/40 font-semibold">
+                  <td className="px-4 py-2">Total</td>
+                  <td colSpan={3} />
+                  <td className="px-3 py-2 text-right tabular-nums">{money(totalFaturamento)}</td>
+                  <td colSpan={5} />
+                  <td className="px-4 py-2 text-right tabular-nums text-primary">
+                    {money(totalAPagar)}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {rates.map((r: any) => (
-                  <RateRow
-                    key={`${r.seller_name}||${r.produto_grupo}`}
-                    rate={r}
-                    onSave={(d) => upsertRateMut.mutate(d)}
-                  />
-                ))}
-              </tbody>
+              </tfoot>
             </table>
           </CardContent>
         </Card>
       )}
 
-      {/* ── Novo período ── */}
-      {showConfig && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Adicionar período</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <NewPeriodForm onSave={(d) => upsertPeriodMut.mutate(d)} />
-          </CardContent>
-        </Card>
+      {/* ── Detalhe por vendedor ── */}
+      {summary?.sellers.map((s) =>
+        expandedSeller === s.sellerName ? (
+          <SellerDetail
+            key={s.sellerName}
+            s={s}
+            weeks={weeks.map((w) => w.label)}
+            onClose={() => setExpandedSeller(null)}
+            bonusForm={bonusForm}
+            setBonusForm={setBonusForm}
+            onAddBonus={(d) => activePeriod && addBonusMut.mutate({ ...d, period_id: activePeriod.id })}
+            onDelBonus={(id) => delBonusMut.mutate(id)}
+          />
+        ) : null,
       )}
 
-      {/* ── Recebimentos Wise (final da página) ── */}
-      <WiseRecebimentosCard payments={wisePayments as any} />
+      {/* ── Roleta ── */}
+      {activePeriod && (
+        <RoletaSpinsCard
+          period={activePeriod}
+          sellerNames={sellers.filter((x: any) => x.is_active).map((x: any) => x.seller_name)}
+        />
+      )}
 
+
+      {/* ── Conferência das vendas ── */}
+      {summary && (
+        <VendasConferencia
+          vendas={summary.vendas}
+          sellers={sellers.filter((x: any) => x.is_active).map((x: any) => x.seller_name)}
+        />
+      )}
+
+      {/* ── Configuração ── */}
+      {showConfig && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Taxas de comissão por produto
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">Clique no valor para editar</p>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-muted-foreground">
+                    <th className="py-2 pr-4">Vendedor</th>
+                    <th className="py-2 pr-4">Produto</th>
+                    <th className="py-2 text-right">% Vendedor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rates.map((r: any) => (
+                    <RateRow
+                      key={`${r.seller_name}||${r.produto_grupo}`}
+                      rate={r}
+                      onSave={(d) => upsertRateMut.mutate(d)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Adicionar período</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <NewPeriodForm onSave={(d) => upsertPeriodMut.mutate(d)} />
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {/* ── Recebimentos Wise ── */}
+      <WiseRecebimentosCard payments={wisePayments as any} />
     </div>
   );
 }
 
-// ── Rate Row (inline edit) ─────────────────────────────────────────────────────
+function Kpi({
+  label,
+  value,
+  hint,
+  emphasis,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  emphasis?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <div onClick={onClick} className={onClick ? "cursor-pointer" : undefined}>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p
+        className={`text-2xl font-bold tabular-nums ${emphasis ? "text-primary" : ""} ${
+          onClick ? "hover:underline" : ""
+        }`}
+      >
+        {value}
+      </p>
+      {hint && <p className="text-[11px] text-muted-foreground/80 mt-0.5">{hint}</p>}
+    </div>
+  );
+}
+
+// ── Detalhe do vendedor ───────────────────────────────────────────────────────
+
+function SellerDetail({
+  s,
+  onClose,
+  bonusForm,
+  setBonusForm,
+  onAddBonus,
+  onDelBonus,
+}: {
+  s: SellerCommission;
+  weeks: string[];
+  onClose: () => void;
+  bonusForm: any;
+  setBonusForm: (v: any) => void;
+  onAddBonus: (d: any) => void;
+  onDelBonus: (id: number) => void;
+}) {
+  return (
+    <Card className="border-primary/30">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <CardTitle className="text-base">{s.sellerName} — detalhe</CardTitle>
+        <Button size="sm" variant="ghost" onClick={onClose}>
+          <ChevronUp className="h-4 w-4 mr-1" /> Fechar
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {/* Produtos */}
+        <div className="overflow-x-auto rounded border border-border/60">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/30 text-left text-xs uppercase text-muted-foreground">
+                <th className="px-3 py-2">Produto</th>
+                <th className="px-3 py-2 text-right">Hotmart (afil.)</th>
+                <th className="px-3 py-2 text-right">SCK</th>
+                <th className="px-3 py-2 text-right">Wise</th>
+                <th className="px-3 py-2 text-right">%</th>
+                <th className="px-3 py-2 text-right">Comissão total</th>
+                <th className="px-3 py-2 text-right">Pago Hotmart</th>
+                <th className="px-3 py-2 text-right">Empresa paga</th>
+              </tr>
+            </thead>
+            <tbody>
+              {s.byProduct.map((p) => (
+                <tr key={p.produto_grupo} className="border-b border-border/40 last:border-0">
+                  <td className="px-3 py-1.5 font-medium">{p.label}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
+                    {p.faturamento_hotmart ? `${money(p.faturamento_hotmart)} (${p.qtd_hotmart})` : "—"}
+                  </td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
+                    {p.faturamento_sck ? `${money(p.faturamento_sck)} (${p.qtd_sck})` : "—"}
+                  </td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
+                    {p.faturamento_wise ? `${money(p.faturamento_wise)} (${p.qtd_wise})` : "—"}
+                  </td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{pct(p.rate_pct)}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{money(p.comissao_total)}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
+                    {p.comissao_hotmart_direto ? money(p.comissao_hotmart_direto) : "—"}
+                  </td>
+                  <td className="px-3 py-1.5 text-right tabular-nums font-medium">
+                    {money(p.comissao_a_pagar)}
+                  </td>
+                </tr>
+              ))}
+              {s.byProduct.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-3 py-3 text-muted-foreground">
+                    Nenhuma venda neste período.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Metas */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+            <Target className="h-3.5 w-3.5" /> Metas ({s.metas.level}) · meta semanal{" "}
+            {s.metas.config.meta_semanal_eur} EUR · super {s.metas.config.super_semanal_eur} EUR
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {s.metas.semanas.map((w) => (
+              <div
+                key={w.week}
+                className={`rounded-md border px-3 py-2 text-xs ${
+                  w.bateu_super
+                    ? "border-emerald-500/50 bg-emerald-500/10"
+                    : w.bateu_meta
+                      ? "border-sky-500/50 bg-sky-500/10"
+                      : "border-border/60 bg-muted/20"
+                }`}
+              >
+                <p className="font-semibold">{w.label}</p>
+                <p className="tabular-nums">{w.faturamento_eur.toFixed(0)} EUR</p>
+                <p className="text-muted-foreground">
+                  {w.bonus_eur ? `+${w.bonus_eur} EUR` : "sem bônus"}
+                </p>
+              </div>
+            ))}
+            <div className="rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-xs">
+              <p className="font-semibold">Mês</p>
+              <p className="tabular-nums">{s.metas.faturamento_mensal_eur.toFixed(0)} EUR</p>
+              <p className="text-muted-foreground">
+                {s.metas.bonus_mensal_eur ? `+${s.metas.bonus_mensal_eur} EUR` : "sem bônus"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Roleta */}
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+            <Trophy className="h-3.5 w-3.5" /> Roleta
+          </span>
+          <Badge variant="secondary">{s.roleta_spins_normais} giros</Badge>
+          {s.roleta_spins_wise > 0 && (
+            <Badge variant="outline">{s.roleta_spins_wise} giros (Wise)</Badge>
+          )}
+          <span className="tabular-nums">{money(s.roleta_ganho_brl)}</span>
+        </div>
+
+        {/* Bônus e descontos */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Bônus e descontos manuais
+            </p>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs"
+              onClick={() =>
+                setBonusForm({
+                  seller: s.sellerName,
+                  tipo: "manual",
+                  valor: "",
+                  moeda: "BRL",
+                  notas: "",
+                })
+              }
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar
+            </Button>
+          </div>
+
+          {s.bonuses.map((b) => (
+            <div
+              key={b.id}
+              className="flex items-center justify-between rounded-md border border-border/50 bg-secondary/20 px-3 py-2 text-sm"
+            >
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                  {b.tipo}
+                </Badge>
+                <span className="text-muted-foreground">{b.notas ?? "—"}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="tabular-nums font-medium">{money(b.valor, b.moeda)}</span>
+                <button
+                  onClick={() => onDelBonus(b.id)}
+                  className="text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {bonusForm?.seller === s.sellerName && (
+            <div className="flex flex-wrap gap-2 rounded-md border border-border p-3">
+              <Select
+                value={bonusForm.tipo}
+                onValueChange={(v) => setBonusForm({ ...bonusForm, tipo: v })}
+              >
+                <SelectTrigger className="w-[120px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manual">Bônus manual</SelectItem>
+                  <SelectItem value="fixo">Fixo</SelectItem>
+                  <SelectItem value="desconto">Desconto</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                className="w-[100px] h-8"
+                placeholder="Valor"
+                value={bonusForm.valor}
+                onChange={(e) => setBonusForm({ ...bonusForm, valor: e.target.value })}
+              />
+              <Select
+                value={bonusForm.moeda}
+                onValueChange={(v) => setBonusForm({ ...bonusForm, moeda: v })}
+              >
+                <SelectTrigger className="w-[80px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BRL">BRL</SelectItem>
+                  <SelectItem value="EUR">EUR</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                className="flex-1 min-w-[140px] h-8"
+                placeholder="Observação"
+                value={bonusForm.notas}
+                onChange={(e) => setBonusForm({ ...bonusForm, notas: e.target.value })}
+              />
+              <Button
+                size="sm"
+                className="h-8"
+                disabled={!bonusForm.valor}
+                onClick={() =>
+                  onAddBonus({
+                    seller_name: bonusForm.seller,
+                    tipo: bonusForm.tipo,
+                    valor: Number(bonusForm.valor),
+                    moeda: bonusForm.moeda,
+                    notas: bonusForm.notas || null,
+                  })
+                }
+              >
+                Salvar
+              </Button>
+              <Button size="sm" variant="ghost" className="h-8" onClick={() => setBonusForm(null)}>
+                Cancelar
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Fecho do vendedor */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 rounded-md border border-border/60 bg-muted/20 p-3 text-sm">
+          <div>
+            <p className="text-xs text-muted-foreground">Comissão vendas (empresa)</p>
+            <p className="font-semibold tabular-nums">{money(s.comissao_a_pagar_vendas)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Bônus de metas</p>
+            <p className="font-semibold tabular-nums">{money(s.bonus_metas_brl)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Roleta + bônus − descontos</p>
+            <p className="font-semibold tabular-nums">
+              {money(s.roleta_ganho_brl + s.bonus_total - s.descontos)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total a pagar</p>
+            <p className="font-bold tabular-nums text-primary">{money(s.total_a_pagar)}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Conferência de vendas + ajustes ───────────────────────────────────────────
+
+function VendasConferencia({
+  vendas,
+  sellers,
+}: {
+  vendas: AttributedSaleRow[];
+  sellers: string[];
+}) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [filtroVendedor, setFiltroVendedor] = useState("todos");
+
+  const mut = useMutation({
+    mutationFn: async (d: any) => upsertSaleOverrideFn({ data: d }),
+    onSuccess: () => {
+      toast.success("Ajuste salvo");
+      qc.invalidateQueries({ queryKey: ["comm_overrides"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const filtered = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return vendas.filter((v) => {
+      if (filtroVendedor === "sem" && v.seller) return false;
+      if (filtroVendedor !== "todos" && filtroVendedor !== "sem" && v.seller !== filtroVendedor)
+        return false;
+      if (!term) return true;
+      return [v.nome_cliente, v.email_cliente, v.produto_original, v.transacao, v.nome_afiliado]
+        .filter(Boolean)
+        .some((x) => String(x).toLowerCase().includes(term));
+    });
+  }, [vendas, q, filtroVendedor]);
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">Conferência das vendas ({vendas.length})</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Ajuste o vendedor, exclua vendas ou deixe uma observação
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setOpen((v) => !v)}>
+            {open ? <ChevronUp className="h-4 w-4 mr-1" /> : <ChevronDown className="h-4 w-4 mr-1" />}
+            {open ? "Ocultar" : "Ver vendas"}
+          </Button>
+        </div>
+      </CardHeader>
+      {open && (
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                className="h-9 w-[240px] pl-7"
+                placeholder="Cliente, produto, transação…"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </div>
+            <Select value={filtroVendedor} onValueChange={setFiltroVendedor}>
+              <SelectTrigger className="h-9 w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os vendedores</SelectItem>
+                <SelectItem value="sem">Sem atribuição</SelectItem>
+                {sellers.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="overflow-x-auto rounded border border-border/60 max-h-[520px]">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-muted/60 backdrop-blur">
+                <tr className="border-b border-border text-left text-xs uppercase text-muted-foreground">
+                  <th className="px-3 py-2">Data</th>
+                  <th className="px-3 py-2">Cliente</th>
+                  <th className="px-3 py-2">Produto</th>
+                  <th className="px-3 py-2 text-right">Valor</th>
+                  <th className="px-3 py-2">Origem</th>
+                  <th className="px-3 py-2">Vendedor</th>
+                  <th className="px-3 py-2">Observação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((v) => (
+                  <VendaRow key={v.transacao} v={v} sellers={sellers} onSave={(d) => mut.mutate(d)} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+function VendaRow({
+  v,
+  sellers,
+  onSave,
+}: {
+  v: AttributedSaleRow;
+  sellers: string[];
+  onSave: (d: any) => void;
+}) {
+  const [obs, setObs] = useState(v.override?.observacao ?? "");
+  const excluida = v.override?.excluir ?? false;
+
+  const save = (patch: Record<string, unknown>) =>
+    onSave({
+      transacao: v.transacao,
+      seller_name: v.override?.seller_name ?? null,
+      produto_grupo: v.override?.produto_grupo ?? null,
+      excluir: excluida,
+      observacao: obs || null,
+      ...patch,
+    });
+
+  return (
+    <tr className={`border-b border-border/40 last:border-0 ${excluida ? "opacity-50" : ""}`}>
+      <td className="px-3 py-1.5 whitespace-nowrap text-muted-foreground">
+        {fmtDate(v.data_venda)}
+      </td>
+      <td className="px-3 py-1.5">{v.nome_cliente ?? "—"}</td>
+      <td className="px-3 py-1.5 text-muted-foreground max-w-[220px] truncate">
+        {v.produto_original ?? v.produto_grupo}
+      </td>
+      <td className="px-3 py-1.5 text-right tabular-nums">{money(v.base_brl)}</td>
+      <td className="px-3 py-1.5">
+        {v.source ? (
+          <Badge variant={v.source === "afiliado" ? "default" : "secondary"} className="text-[10px]">
+            {v.source}
+          </Badge>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </td>
+      <td className="px-3 py-1.5">
+        <Select
+          value={excluida ? "__excluir" : (v.seller ?? "__nenhum")}
+          onValueChange={(val) => {
+            if (val === "__excluir") return save({ excluir: true });
+            if (val === "__nenhum") return save({ excluir: false, seller_name: null });
+            save({ excluir: false, seller_name: val });
+          }}
+        >
+          <SelectTrigger className="h-7 w-[150px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__nenhum">Automático</SelectItem>
+            {sellers.map((s) => (
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
+            ))}
+            <SelectItem value="__excluir">Excluir do cálculo</SelectItem>
+          </SelectContent>
+        </Select>
+      </td>
+      <td className="px-3 py-1.5">
+        <Input
+          className="h-7 text-xs"
+          placeholder="Observação…"
+          value={obs}
+          onChange={(e) => setObs(e.target.value)}
+          onBlur={() => {
+            if ((v.override?.observacao ?? "") !== obs) save({});
+          }}
+        />
+      </td>
+    </tr>
+  );
+}
+
+// ── Rate Row (inline edit) ────────────────────────────────────────────────────
 
 function RateRow({ rate, onSave }: { rate: any; onSave: (d: any) => void }) {
   const [editing, setEditing] = useState(false);
   const [rp, setRp] = useState(String(rate.rate_pct));
-  const [mp, setMp] = useState(String(rate.manager_rate_pct));
   const label =
     PRODUCT_GROUPS.find((p) => p.id === rate.produto_grupo)?.label ?? rate.produto_grupo;
 
@@ -939,7 +1033,7 @@ function RateRow({ rate, onSave }: { rate: any; onSave: (d: any) => void }) {
       seller_name: rate.seller_name,
       produto_grupo: rate.produto_grupo,
       rate_pct: Number(rp),
-      manager_rate_pct: Number(mp),
+      manager_rate_pct: 0,
     });
     setEditing(false);
   };
@@ -949,56 +1043,39 @@ function RateRow({ rate, onSave }: { rate: any; onSave: (d: any) => void }) {
       <td className="py-1.5 pr-4">{rate.seller_name}</td>
       <td className="py-1.5 pr-4 text-muted-foreground">{label}</td>
       {editing ? (
-        <>
-          <td className="py-1 pr-4">
+        <td className="py-1">
+          <div className="flex items-center justify-end gap-2">
             <Input
               className="h-7 w-20 text-right"
               value={rp}
               onChange={(e) => setRp(e.target.value)}
             />
-          </td>
-          <td className="py-1">
-            <div className="flex items-center gap-2">
-              <Input
-                className="h-7 w-20 text-right"
-                value={mp}
-                onChange={(e) => setMp(e.target.value)}
-              />
-              <Button size="sm" className="h-7 px-2" onClick={save}>
-                ✓
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2"
-                onClick={() => setEditing(false)}
-              >
-                ✕
-              </Button>
-            </div>
-          </td>
-        </>
+            <Button size="sm" className="h-7 px-2" onClick={save}>
+              ✓
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2"
+              onClick={() => setEditing(false)}
+            >
+              ✕
+            </Button>
+          </div>
+        </td>
       ) : (
-        <>
-          <td
-            className="py-1.5 pr-4 text-right tabular-nums cursor-pointer hover:text-primary"
-            onClick={() => setEditing(true)}
-          >
-            {pct(rate.rate_pct)}
-          </td>
-          <td
-            className="py-1.5 text-right tabular-nums cursor-pointer hover:text-primary"
-            onClick={() => setEditing(true)}
-          >
-            {pct(rate.manager_rate_pct)}
-          </td>
-        </>
+        <td
+          className="py-1.5 text-right tabular-nums cursor-pointer hover:text-primary"
+          onClick={() => setEditing(true)}
+        >
+          {pct(rate.rate_pct)}
+        </td>
       )}
     </tr>
   );
 }
 
-// ── New Period Form ────────────────────────────────────────────────────────────
+// ── New Period Form ───────────────────────────────────────────────────────────
 
 function NewPeriodForm({ onSave }: { onSave: (d: any) => void }) {
   const [nome, setNome] = useState("");
@@ -1027,7 +1104,7 @@ function NewPeriodForm({ onSave }: { onSave: (d: any) => void }) {
         <p className="text-xs text-muted-foreground">Nome</p>
         <Input
           className="w-[150px]"
-          placeholder="Agosto 2026"
+          placeholder="Janeiro 2027"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
         />
@@ -1042,7 +1119,7 @@ function NewPeriodForm({ onSave }: { onSave: (d: any) => void }) {
         />
       </div>
       <div className="space-y-1">
-        <p className="text-xs text-muted-foreground">Fim (5 semanas = 34 dias)</p>
+        <p className="text-xs text-muted-foreground">Fim</p>
         <Input
           type="date"
           className="w-[150px]"
