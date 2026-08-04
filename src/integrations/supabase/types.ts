@@ -1494,6 +1494,7 @@ export type Database = {
           deal_value: number | null
           first_message_at: string | null
           id: string
+          is_ai_conversation: boolean
           last_message_at: string | null
           message_count: number
           origin_name: string | null
@@ -1514,6 +1515,7 @@ export type Database = {
           deal_value?: number | null
           first_message_at?: string | null
           id?: string
+          is_ai_conversation?: boolean
           last_message_at?: string | null
           message_count?: number
           origin_name?: string | null
@@ -1534,6 +1536,7 @@ export type Database = {
           deal_value?: number | null
           first_message_at?: string | null
           id?: string
+          is_ai_conversation?: boolean
           last_message_at?: string | null
           message_count?: number
           origin_name?: string | null
@@ -1703,6 +1706,7 @@ export type Database = {
           author: string | null
           body: string
           clint_message_id: string | null
+          clint_source: string | null
           conversation_id: string
           created_at: string
           direction: string
@@ -1716,6 +1720,7 @@ export type Database = {
           author?: string | null
           body: string
           clint_message_id?: string | null
+          clint_source?: string | null
           conversation_id: string
           created_at?: string
           direction: string
@@ -1729,6 +1734,7 @@ export type Database = {
           author?: string | null
           body?: string
           clint_message_id?: string | null
+          clint_source?: string | null
           conversation_id?: string
           created_at?: string
           direction?: string
