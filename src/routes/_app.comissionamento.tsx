@@ -485,13 +485,11 @@ function Dashboard() {
       {/* ── Roleta ── */}
       {activePeriod && (
         <RoletaSpinsCard
-          spins={roletaSpins}
-          sellers={sellers.map((x: any) => x.seller_name)}
-          periodId={activePeriod.id}
-          from={activePeriod.data_inicio}
-          to={activePeriod.data_fim}
+          period={activePeriod}
+          sellerNames={sellers.filter((x: any) => x.is_active).map((x: any) => x.seller_name)}
         />
       )}
+
 
       {/* ── Conferência das vendas ── */}
       {summary && (
