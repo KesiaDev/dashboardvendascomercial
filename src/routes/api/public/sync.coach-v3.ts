@@ -124,7 +124,7 @@ async function runCoachV3Sync(sinceDays: number) {
 
     let chatsResp: any;
     try {
-      chatsResp = await clintGet(`/v2/chats/contact/${deal.contact_id}`, token);
+      chatsResp = await clintGet(`/v2/chats/contact/${deal.contact_id}`, token!);
     } catch {
       skipped++;
       return;
@@ -154,7 +154,7 @@ async function runCoachV3Sync(sinceDays: number) {
         }
 
         // Fetch messages for this chat
-        const msgResp = await clintGet(`/v2/messages/chat/${chat.id}?limit=500`, token);
+        const msgResp = await clintGet(`/v2/messages/chat/${chat.id}?limit=500`, token!);
         const allMsgs: any[] = msgResp?.data ?? [];
 
         const realMsgs = allMsgs
