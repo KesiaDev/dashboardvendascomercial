@@ -595,23 +595,30 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
   // Vendas do mês
   const monthSales = useMemo(()=>allSales.filter(s=>isoMonth(s.sale_date)===yearMonth),[allSales,yearMonth]);
 
-  // Semanas que têm vendas neste mês (ou começam neste mês)
+  // Semanas que têm vendas neste mês (período recortado às fronteiras do mês)
   const weekData = useMemo(()=>{
+    const monthFirst = `${yearMonth}-01`;
+    const [yy,mm] = yearMonth.split("-").map(Number);
+    const monthLast = new Date(Date.UTC(yy, mm, 0)).toISOString().slice(0,10);
     const raw = Array.from({length:maxWeek+1},(_,i)=>{
       const {start,end}=weekRange(i);
-      // inclui semana se algum dia dela cai no mês
-      if (isoMonth(start)!==yearMonth && isoMonth(end)!==yearMonth) return null;
+      // ignora semanas totalmente fora do mês selecionado
+      if (end < monthFirst || start > monthLast) return null;
       const sales=allSales.filter(s=>s.sale_date>=start&&s.sale_date<=end&&isoMonth(s.sale_date)===yearMonth);
-      if (sales.length===0 && isoMonth(start)!==yearMonth) return null;
+      if (sales.length===0) return null;
+      // recorta o período exibido ao mês vigente
+      const cStart = start < monthFirst ? monthFirst : start;
+      const cEnd = end > monthLast ? monthLast : end;
       const total=sales.reduce((s,x)=>s+Number(x.value_eur),0);
       const map: Record<string,number>={};
       for (const s of sales) map[s.seller_name]=(map[s.seller_name]??0)+Number(s.value_eur);
       const top=Object.entries(map).sort((a,b)=>b[1]-a[1])[0];
-      return {idx:i,start,end,total,count:sales.length,topSeller:top?.[0]??null};
+      return {idx:i,start:cStart,end:cEnd,total,count:sales.length,topSeller:top?.[0]??null};
     }).filter(Boolean) as {idx:number;start:string;end:string;total:number;count:number;topSeller:string|null}[];
     // Rótulo por mês: S1, S2, S3... (ordem dentro do mês selecionado)
     return raw.map((w,i)=>({...w,monthOrder:i+1,label:`S${i+1}`}));
   },[allSales,yearMonth,maxWeek]);
+
 
   const monthEndISO = new Date(Date.UTC(y, m, 0)).toISOString().slice(0,10);
   const monthTotal = monthSales.reduce((s,x)=>s+Number(x.value_eur),0);
