@@ -153,7 +153,7 @@ function AgendaTab({ admin, userEmail, userName }: { admin: boolean; userEmail: 
           <SelectContent>
             <SelectItem value="all">Todos os vendedores</SelectItem>
             {sellers.map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
+              <SelectItem key={s.email} value={s.email}>{s.name} — {s.email}</SelectItem>
             ))}
           </SelectContent>
         </Select>
