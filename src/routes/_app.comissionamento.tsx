@@ -789,7 +789,7 @@ function SellerDetail({
           {s.roleta_spins_wise > 0 && (
             <Badge variant="outline">{s.roleta_spins_wise} giros (Wise)</Badge>
           )}
-          <span className="tabular-nums">{money(s.roleta_ganho_brl)}</span>
+          <span className="tabular-nums">{m(s.roleta_ganho_brl)}</span>
         </div>
 
         {/* Bônus e descontos */}
