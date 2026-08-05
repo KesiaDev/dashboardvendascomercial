@@ -150,7 +150,12 @@ function mapItemToSale(item: any) {
       ? "Sim"
       : null,
     cupom: purchase?.offer?.code ?? null,
-    origem_checkout: purchase?.tracking?.source_sck ?? purchase?.tracking?.source ?? null,
+    origem_checkout:
+      purchase?.origin?.sck ??
+      purchase?.origin?.src ??
+      purchase?.tracking?.source_sck ??
+      purchase?.tracking?.source ??
+      null,
     nome_afiliado: affiliates?.[0]?.name ?? null,
     raw: item,
   };
