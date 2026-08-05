@@ -174,18 +174,25 @@ export const listAgendaSellersFn = createServerFn({ method: "GET" })
     ]);
 
     const norm = (v?: string | null) =>
-      (v ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      (v ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
 
     const out = new Map<string, { email: string; name: string }>();
     for (const c of cfg ?? []) {
       if ((c as any).is_active === false) continue;
       const full = norm((c as any).clint_user_name);
+      if (!full) continue;
+      const parts = full.split(" ").filter(Boolean);
       const u = (users ?? []).find((x: any) => {
         const un = norm(`${x.first_name ?? ""} ${x.last_name ?? ""}`);
-        return un === full || (full && un.includes(full)) || (un && full.includes(un));
+        if (!un) return false;
+        if (un === full || un.includes(full) || full.includes(un)) return true;
+        // fallback: casa pelo e-mail (ex.: "luana guimaraes" -> luanaguimaraes@...)
+        const mail = norm(x.email).split("@")[0].replace(/[^a-z]/g, "");
+        return !!mail && parts.every((p) => mail.includes(p));
       });
       if (u?.email) out.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: (c as any).seller_name ?? u.email });
     }
+
     for (const a of agenda ?? []) {
       const e = ((a as any).seller_email ?? "").toLowerCase();
       if (e && !out.has(e)) out.set(e, { email: e, name: (a as any).seller_name ?? e });
