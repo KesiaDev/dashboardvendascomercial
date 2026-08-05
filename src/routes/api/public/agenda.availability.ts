@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { sellerEmailVariants } from "@/lib/seller-aliases";
 import { getWorkingHours } from "@/lib/agenda-hours";
 
 function checkApiKey(request: Request): boolean {
@@ -97,7 +98,7 @@ async function handleAvailability(request: Request) {
   const { data: bookings, error } = await supabaseAdmin
     .from("seller_agenda")
     .select("scheduled_at")
-    .eq("seller_email", sellerEmail.toLowerCase())
+    .in("seller_email", sellerEmailVariants(sellerEmail))
     .neq("status", "cancelado")
     .gte("scheduled_at", startUTC.toISOString())
     .lte("scheduled_at", endUTC.toISOString());

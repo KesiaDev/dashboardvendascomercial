@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isAdminEmail } from "@/lib/auth";
+import { canonicalSellerEmail, canonicalSellerName, sellerEmailVariants, isSameSeller } from "@/lib/seller-aliases";
 
 export type AgendaItem = {
   id: string;
@@ -51,7 +52,7 @@ export const listAgendaFn = createServerFn({ method: "POST" })
     if (data.to) q = q.lte("scheduled_at", data.to);
     // Calendário é visível para toda a equipa (todos os vendedores veem todas as reuniões).
     // A edição/eliminação continua restrita ao dono do agendamento ou admins.
-    if (data.seller) q = q.eq("seller_email", data.seller.toLowerCase());
+    if (data.seller) q = q.in("seller_email", sellerEmailVariants(data.seller));
     const { data: rows, error } = await q.limit(500);
     if (error) throw error;
     return { items: (rows ?? []) as AgendaItem[], isAdmin };
@@ -65,9 +66,9 @@ export const upsertAgendaFn = createServerFn({ method: "POST" })
     const email = (context.claims as any)?.email as string | undefined;
     const isAdmin = isAdminEmail(email) || (context.claims as any)?.user_metadata?.role === "admin";
 
-    const seller = (data.seller_email ?? (isAdmin ? "" : email ?? "")).toLowerCase();
+    const seller = canonicalSellerEmail(data.seller_email ?? (isAdmin ? "" : email ?? ""));
     if (!seller) throw new Error("seller_email obrigatório");
-    if (!isAdmin && seller !== (email ?? "").toLowerCase()) {
+    if (!isAdmin && !isSameSeller(seller, email)) {
       throw new Error("Sem permissão para agendar para outro vendedor");
     }
     if (!data.lead_name) throw new Error("Nome do lead obrigatório");
@@ -122,7 +123,7 @@ export const deleteAgendaFn = createServerFn({ method: "POST" })
     const email = (context.claims as any)?.email as string | undefined;
     const isAdmin = isAdminEmail(email) || (context.claims as any)?.user_metadata?.role === "admin";
     let q = supabase.from("seller_agenda").delete().eq("id", data.id);
-    if (!isAdmin) q = q.eq("seller_email", (email ?? "").toLowerCase());
+    if (!isAdmin) q = q.in("seller_email", sellerEmailVariants(email));
     const { error } = await q;
     if (error) throw error;
     return { ok: true };
@@ -190,12 +191,15 @@ export const listAgendaSellersFn = createServerFn({ method: "GET" })
         const mail = norm(x.email).split("@")[0].replace(/[^a-z]/g, "");
         return !!mail && parts.every((p) => mail.includes(p));
       });
-      if (u?.email) out.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: (c as any).seller_name ?? u.email });
+      if (u?.email) {
+        const key = canonicalSellerEmail(u.email);
+        out.set(key, { email: key, name: canonicalSellerName(key) ?? (c as any).seller_name ?? key });
+      }
     }
 
     for (const a of agenda ?? []) {
-      const e = ((a as any).seller_email ?? "").toLowerCase();
-      if (e && !out.has(e)) out.set(e, { email: e, name: (a as any).seller_name ?? e });
+      const e = canonicalSellerEmail((a as any).seller_email);
+      if (e && !out.has(e)) out.set(e, { email: e, name: canonicalSellerName(e) ?? (a as any).seller_name ?? e });
     }
     return { sellers: Array.from(out.values()).sort((a, b) => a.name.localeCompare(b.name)) };
   });
@@ -266,9 +270,9 @@ export const blockAgendaFn = createServerFn({ method: "POST" })
     const supabase = await admin();
     const email = (context.claims as any)?.email as string | undefined;
     const isAdmin = isAdminEmail(email) || (context.claims as any)?.user_metadata?.role === "admin";
-    const seller = (data.seller_email ?? email ?? "").toLowerCase();
+    const seller = canonicalSellerEmail(data.seller_email ?? email ?? "");
     if (!seller) throw new Error("seller_email obrigatório");
-    if (!isAdmin && seller !== (email ?? "").toLowerCase()) {
+    if (!isAdmin && !isSameSeller(seller, email)) {
       throw new Error("Sem permissão para bloquear a agenda de outro vendedor");
     }
     const start = new Date(data.from);
@@ -319,9 +323,9 @@ export const unblockAgendaFn = createServerFn({ method: "POST" })
       .lte("scheduled_at", data.to);
     const seller = (data.seller_email ?? "").toLowerCase();
     if (isAdmin) {
-      if (seller) q = q.eq("seller_email", seller);
+      if (seller) q = q.in("seller_email", sellerEmailVariants(seller));
     } else {
-      q = q.eq("seller_email", (email ?? "").toLowerCase());
+      q = q.in("seller_email", sellerEmailVariants(email));
     }
     const { error } = await q;
     if (error) throw error;

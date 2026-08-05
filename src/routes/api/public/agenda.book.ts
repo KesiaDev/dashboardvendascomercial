@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { canonicalSellerEmail } from "@/lib/seller-aliases";
 import { getWorkingHours } from "@/lib/agenda-hours";
 
 /** Hora local de Lisboa (0-23) de um instante UTC. */
@@ -108,7 +109,7 @@ async function handleBook(request: Request) {
   const { data: inserted, error } = await supabaseAdmin
     .from("seller_agenda")
     .insert({
-      seller_email: body.seller_email.toLowerCase(),
+      seller_email: canonicalSellerEmail(body.seller_email),
       seller_name: body.seller_name ?? null,
       lead_name: body.lead_name,
       lead_phone: body.lead_phone ?? null,
