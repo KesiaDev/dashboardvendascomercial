@@ -17,6 +17,8 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   listAgendaFn,
+  listAgendaSellersFn,
+
   upsertAgendaFn,
   deleteAgendaFn,
   listPromptsFn,
@@ -86,10 +88,12 @@ function AgendaPage() {
 
 function AgendaTab({ admin, userEmail, userName }: { admin: boolean; userEmail: string; userName: string | null }) {
   const list = useServerFn(listAgendaFn);
+  const listSellers = useServerFn(listAgendaSellersFn);
   const upsert = useServerFn(upsertAgendaFn);
   const del = useServerFn(deleteAgendaFn);
 
   const [items, setItems] = useState<AgendaItem[]>([]);
+  const [roster, setRoster] = useState<{ email: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [sellerFilter, setSellerFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -111,10 +115,22 @@ function AgendaTab({ admin, userEmail, userName }: { admin: boolean; userEmail: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sellerFilter]);
 
-  const sellers = useMemo(
-    () => Array.from(new Set(items.map((i) => i.seller_email))).sort(),
-    [items],
-  );
+  useEffect(() => {
+    listSellers()
+      .then((r: any) => setRoster(r.sellers ?? []))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const sellers = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of roster) map.set(s.email, s.name);
+    for (const i of items) if (!map.has(i.seller_email)) map.set(i.seller_email, i.seller_name ?? i.seller_email);
+    return Array.from(map.entries())
+      .map(([email, name]) => ({ email, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [roster, items]);
+
 
   const filtered = useMemo(
     () => items.filter((i) => statusFilter === "all" || i.status === statusFilter),
@@ -137,7 +153,7 @@ function AgendaTab({ admin, userEmail, userName }: { admin: boolean; userEmail: 
           <SelectContent>
             <SelectItem value="all">Todos os vendedores</SelectItem>
             {sellers.map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
+              <SelectItem key={s.email} value={s.email}>{s.name} — {s.email}</SelectItem>
             ))}
           </SelectContent>
         </Select>
