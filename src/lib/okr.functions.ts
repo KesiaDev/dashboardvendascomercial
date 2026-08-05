@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isAdminEmail } from "@/lib/auth";
 
 export type OkrMetric = "vendas_fe" | "vendas_ht" | "vendas_mas" | "renovacoes" | "faturamento" | null;
 
@@ -54,6 +55,8 @@ function quarterRange(ano: number, trimestre: number) {
 }
 
 async function assertAdmin(context: any) {
+  const email = (context?.claims?.email ?? "").toString().trim().toLowerCase();
+  if (isAdminEmail(email)) return;
   const { data: isAdmin } = await context.supabase.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
