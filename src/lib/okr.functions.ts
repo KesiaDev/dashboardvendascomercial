@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isAdminEmail } from "@/lib/auth";
 
 export type OkrMetric = "vendas_fe" | "vendas_ht" | "vendas_mas" | "renovacoes" | "faturamento" | null;
 
