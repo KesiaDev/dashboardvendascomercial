@@ -122,7 +122,11 @@ async function handle(request: Request) {
       cidade: buyer?.address?.city ?? null,
       numero_parcela: Number.isFinite(installments) && installments > 0 ? installments : null,
       cupom: purchase?.offer?.code ?? null,
-      origem_checkout: purchase?.offer?.key ?? purchase?.tracking?.source_sck ?? null,
+      origem_checkout:
+        purchase?.origin?.sck ??
+        purchase?.origin?.src ??
+        purchase?.tracking?.source_sck ??
+        null,
       nome_afiliado: affiliates?.[0]?.name ?? null,
       raw: payload,
       updated_at: new Date().toISOString(),
