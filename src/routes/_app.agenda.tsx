@@ -17,6 +17,8 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   listAgendaFn,
+  listAgendaSellersFn,
+
   upsertAgendaFn,
   deleteAgendaFn,
   listPromptsFn,
