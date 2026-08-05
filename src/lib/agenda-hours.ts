@@ -1,8 +1,8 @@
 /**
  * Janela de trabalho de cada vendedor, sempre expressa em hora de Lisboa
- * (fuso base da agenda). Vendedores no Brasil (BRT = Lisboa -4h no verão
- * europeu) só ficam disponíveis a partir das 10:00 de Lisboa, que equivale
- * às 06:00 no Brasil — assim o Agente IA da Clint nunca agenda cedo demais.
+ * (fuso base da agenda). Vendedores no Brasil só ficam disponíveis a partir
+ * das 10:00 de Lisboa (= 06:00 no Brasil) — a restrição importante é de
+ * manhã; à noite trabalham até tarde. Portugal (Rita e João) começa às 07:00.
  */
 export type WorkingHours = {
   startH: number;
@@ -11,8 +11,9 @@ export type WorkingHours = {
   label: string;
 };
 
-const PT_HOURS: WorkingHours = { startH: 9, endH: 18, tz: "Europe/Lisbon", label: "09:00–18:00 (Lisboa)" };
-const BR_HOURS: WorkingHours = { startH: 10, endH: 19, tz: "America/Sao_Paulo", label: "10:00–19:00 Lisboa = 06:00–15:00 Brasil" };
+const PT_HOURS: WorkingHours = { startH: 7, endH: 22, tz: "Europe/Lisbon", label: "07:00–22:00 (Lisboa)" };
+const BR_HOURS: WorkingHours = { startH: 10, endH: 22, tz: "America/Sao_Paulo", label: "10:00–22:00 Lisboa = 06:00–18:00 Brasil" };
+
 
 /** Vendedores baseados no Brasil (chave = e-mail ou pedaço do nome). */
 const BR_SELLERS = [
