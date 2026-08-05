@@ -442,6 +442,17 @@ function Conversas() {
     return list;
   }, [convs, q, minScore, sellerFilter, isAdmin, sellerNameGuess]);
 
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggleSel = (id: string) =>
+    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const filteredIds = useMemo(() => (filtered as any[]).map((c) => c.id), [filtered]);
+  const selectedInFilter = filteredIds.filter((id) => selected.has(id));
+  const allSelected = filteredIds.length > 0 && selectedInFilter.length === filteredIds.length;
+  const targets = useMemo(
+    () => (selectedInFilter.length ? (filtered as any[]).filter((c) => selected.has(c.id)) : (filtered as any[])),
+    [filtered, selected, selectedInFilter.length],
+  );
+
   return (
     <div className="space-y-3 mt-4">
       {isAdmin && <TeamInsightsPanel />}
@@ -468,14 +479,29 @@ function Conversas() {
 
       {isAdmin && (
       <div className="flex flex-wrap gap-2 items-center">
+        <label className="flex items-center gap-2 text-xs text-muted-foreground select-none cursor-pointer">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-primary"
+            checked={allSelected}
+            onChange={() => setSelected(allSelected ? new Set() : new Set(filteredIds))}
+          />
+          Selecionar todas
+        </label>
+        {selectedInFilter.length > 0 && (
+          <>
+            <Badge variant="secondary" className="text-[11px]">{selectedInFilter.length} selecionada(s)</Badge>
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Limpar seleção</Button>
+          </>
+        )}
         <Button
           size="sm"
           variant="default"
-          disabled={bulk.running || filtered.length === 0}
+          disabled={bulk.running || targets.length === 0}
           onClick={async () => {
-            const list = filtered as any[];
+            const list = targets;
             if (!list.length) return;
-            if (!confirm(`Analisar ${list.length} conversa(s) filtrada(s)? Isto pode demorar.`)) return;
+            if (!confirm(`Analisar ${list.length} conversa(s)? Isto pode demorar.`)) return;
             bulkCancelRef.current = false;
             setBulk({ running: true, done: 0, total: list.length, mode: "analyze" });
             let ok = 0, fail = 0;
@@ -495,14 +521,14 @@ function Conversas() {
           }}
         >
           <Sparkles className={"h-3.5 w-3.5 mr-1 " + (bulk.running && bulk.mode === "analyze" ? "animate-pulse" : "")} />
-          Analisar todas ({filtered.length})
+          {selectedInFilter.length ? `Analisar selecionadas (${targets.length})` : `Analisar todas (${targets.length})`}
         </Button>
         <Button
           size="sm"
           variant="outline"
-          disabled={bulk.running || filtered.length === 0}
+          disabled={bulk.running || targets.length === 0}
           onClick={async () => {
-            const list = filtered as any[];
+            const list = targets;
             if (!list.length) return;
             if (!confirm(`Sincronizar mensagens de ${list.length} conversa(s)?`)) return;
             bulkCancelRef.current = false;
@@ -520,7 +546,7 @@ function Conversas() {
           }}
         >
           <RefreshCw className={"h-3.5 w-3.5 mr-1 " + (bulk.running && bulk.mode === "sync" ? "animate-spin" : "")} />
-          Sincronizar todas
+          {selectedInFilter.length ? "Sincronizar selecionadas" : "Sincronizar todas"}
         </Button>
         {bulk.running && (
           <>
@@ -534,6 +560,7 @@ function Conversas() {
         )}
       </div>
       )}
+
 
 
 
