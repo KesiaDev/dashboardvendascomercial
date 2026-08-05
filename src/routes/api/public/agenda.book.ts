@@ -88,6 +88,23 @@ async function handleBook(request: Request) {
     return Response.json({ ok: false, error: "valid scheduled_at or agenda_tag required" }, { status: 400 });
   }
 
+  // Respeita a janela de trabalho do vendedor (brasileiros só a partir das 10:00 de Lisboa = 06:00 BR)
+  const hours = getWorkingHours(body.seller_email, body.seller_name);
+  const h = lisbonHour(scheduledAt);
+  if (h < hours.startH || h >= hours.endH) {
+    return Response.json(
+      {
+        ok: false,
+        error: "outside_working_hours",
+        message: `Este vendedor só atende entre ${String(hours.startH).padStart(2, "0")}:00 e ${String(hours.endH).padStart(2, "0")}:00 (hora de Lisboa). ${hours.label}`,
+        working_hours: { start: hours.startH, end: hours.endH, timezone: "Europe/Lisbon" },
+      },
+      { status: 409 },
+    );
+  }
+
+
+
   const { data: inserted, error } = await supabaseAdmin
     .from("seller_agenda")
     .insert({
