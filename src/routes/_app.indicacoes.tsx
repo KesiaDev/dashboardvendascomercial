@@ -378,13 +378,17 @@ function ReferralsTable({
                   </TableCell>
                   <TableCell className="text-right text-xs">{fmtEur(r.converted_value_eur)}</TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost" size="icon"
-                      onClick={() => { if (confirm("Remover indicação?")) del.mutate(r.id); }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <EditarIndicacaoDialog referral={r} onSaved={onChange} />
+                      <Button
+                        variant="ghost" size="icon"
+                        onClick={() => { if (confirm("Remover indicação?")) del.mutate(r.id); }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
+
                 </TableRow>
               ))}
             </TableBody>
