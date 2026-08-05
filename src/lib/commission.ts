@@ -108,22 +108,27 @@ export type SaleRow = {
   /** Valor TOTAL do produto na moeda da oferta (base de comissão da planilha). */
   preco_total?: number | null;
   moeda_original?: string | null;
-  /** Só a 1ª parcela entra na base (evita contar a mesma venda 2x/3x). */
+  /**
+   * Na Hotmart este campo é a QUANTIDADE de parcelas do parcelamento
+   * (installments_number), não o índice da parcela. Cada venda é uma linha
+   * única, então NÃO deve ser usado para filtrar nada.
+   */
   numero_parcela?: number | null;
 };
 
 /**
  * Base de comissão de uma venda Hotmart, em BRL.
- * Usa o valor TOTAL do produto (não o líquido em USD), só na 1ª parcela.
+ * Usa o valor TOTAL do produto (não o líquido em USD).
+ * Todas as vendas aprovadas entram — inclusive as parceladas, exatamente como
+ * na planilha de comissão.
  */
 export function hotmartBaseBrl(sale: SaleRow, cotacao: number): number {
-  const parcela = sale.numero_parcela ?? 1;
-  if (parcela > 1) return 0;
   const total = sale.preco_total ?? null;
   if (total == null || total === 0) return sale.faturamento_liquido_brl ?? 0;
   const moeda = (sale.moeda_original ?? "EUR").toUpperCase();
   return moeda === "BRL" ? total : total * cotacao;
 }
+
 
 // ── Metas de faturamento (EUR) por nível ─────────────────────────────────────
 // N1: Luana · N3: Gisele, Rita, João, Nadal (padrão para novos vendedores)

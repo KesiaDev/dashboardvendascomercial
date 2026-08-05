@@ -1,0 +1,2 @@
+UPDATE public.bi_commission_periods SET cotacao_eur = 5.86 WHERE id = 2;
+UPDATE public.bi_commission_rates SET rate_pct = 16.5 WHERE produto_grupo = 'estrategista' AND seller_name IN ('Gisele','Nadal');
