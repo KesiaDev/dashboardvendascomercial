@@ -54,6 +54,8 @@ function quarterRange(ano: number, trimestre: number) {
 }
 
 async function assertAdmin(context: any) {
+  const email = (context?.claims?.email ?? "").toString().trim().toLowerCase();
+  if (isAdminEmail(email)) return;
   const { data: isAdmin } = await context.supabase.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
