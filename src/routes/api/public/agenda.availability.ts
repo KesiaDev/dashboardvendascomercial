@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { getWorkingHours } from "@/lib/agenda-hours";
 
 function checkApiKey(request: Request): boolean {
   const key = request.headers.get("x-api-key");
