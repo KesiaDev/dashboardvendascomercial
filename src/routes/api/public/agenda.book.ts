@@ -1,4 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { getWorkingHours } from "@/lib/agenda-hours";
+
+/** Hora local de Lisboa (0-23) de um instante UTC. */
+function lisbonHour(date: Date): number {
+  const v = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Lisbon",
+    hour: "2-digit",
+    hour12: false,
+  }).format(date);
+  return parseInt(v, 10);
+}
 
 function checkApiKey(request: Request): boolean {
   const key = request.headers.get("x-api-key");
@@ -76,6 +87,23 @@ async function handleBook(request: Request) {
   if (!scheduledAt || isNaN(scheduledAt.getTime())) {
     return Response.json({ ok: false, error: "valid scheduled_at or agenda_tag required" }, { status: 400 });
   }
+
+  // Respeita a janela de trabalho do vendedor (brasileiros só a partir das 10:00 de Lisboa = 06:00 BR)
+  const hours = getWorkingHours(body.seller_email, body.seller_name);
+  const h = lisbonHour(scheduledAt);
+  if (h < hours.startH || h >= hours.endH) {
+    return Response.json(
+      {
+        ok: false,
+        error: "outside_working_hours",
+        message: `Este vendedor só atende entre ${String(hours.startH).padStart(2, "0")}:00 e ${String(hours.endH).padStart(2, "0")}:00 (hora de Lisboa). ${hours.label}`,
+        working_hours: { start: hours.startH, end: hours.endH, timezone: "Europe/Lisbon" },
+      },
+      { status: 409 },
+    );
+  }
+
+
 
   const { data: inserted, error } = await supabaseAdmin
     .from("seller_agenda")

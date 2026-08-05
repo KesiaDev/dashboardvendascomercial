@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { getWorkingHours } from "@/lib/agenda-hours";
 
 function checkApiKey(request: Request): boolean {
   const key = request.headers.get("x-api-key");
@@ -105,12 +106,13 @@ async function handleAvailability(request: Request) {
 
   const bookedTimes = (bookings ?? []).map((b) => new Date(b.scheduled_at));
   const allSlots: Slot[] = [];
+  const hours = getWorkingHours(sellerEmail);
 
   const cursor = new Date(startUTC);
   while (cursor < endUTC && allSlots.length < maxSlots * 3) {
     const loc = utcToLisbon(cursor);
     if (loc.dow !== 0 && loc.dow !== 6) { // skip weekends
-      const daySlots = generateDaySlots(loc.year, loc.month, loc.day, bookedTimes);
+      const daySlots = generateDaySlots(loc.year, loc.month, loc.day, bookedTimes, 30, hours.startH, hours.endH);
       // Only future slots
       allSlots.push(...daySlots.filter((s) => new Date(s.iso) > now));
     }
@@ -120,6 +122,7 @@ async function handleAvailability(request: Request) {
   return Response.json({
     ok: true,
     seller_email: sellerEmail,
+    working_hours: { start: `${String(hours.startH).padStart(2, "0")}:00`, end: `${String(hours.endH).padStart(2, "0")}:00`, timezone: "Europe/Lisbon", note: hours.label },
     slots: allSlots.slice(0, maxSlots),
     generated_at: now.toISOString(),
   });
