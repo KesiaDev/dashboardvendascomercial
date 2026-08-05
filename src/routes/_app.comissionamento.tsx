@@ -472,7 +472,10 @@ function Dashboard() {
           <SellerDetail
             key={s.sellerName}
             s={s}
+            rates={rates}
+            cotacao={activePeriod?.cotacao_eur ?? 5.86}
             weeks={weeks.map((w) => w.label)}
+
             onClose={() => setExpandedSeller(null)}
             bonusForm={bonusForm}
             setBonusForm={setBonusForm}
