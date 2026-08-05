@@ -399,6 +399,167 @@ function ReferralsTable({
   );
 }
 
+function EditarIndicacaoDialog({ referral, onSaved }: { referral: any; onSaved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    seller_name: referral.seller_name ?? "",
+    client_name: referral.client_name ?? "",
+    client_email: referral.client_email ?? "",
+    referred_name: referral.referred_name ?? "",
+    referred_phone: referral.referred_phone ?? "",
+    referred_email: referral.referred_email ?? "",
+    product_interest: referral.product_interest ?? "",
+    notes: referral.notes ?? "",
+    status: referral.status as ReferralStatus,
+    converted_value_eur:
+      referral.converted_value_eur != null ? String(referral.converted_value_eur) : "",
+  });
+
+  const save = useMutation({
+    mutationFn: () =>
+      updateReferralFn({
+        data: {
+          id: referral.id,
+          seller_name: form.seller_name,
+          client_name: form.client_name,
+          client_email: form.client_email || null,
+          referred_name: form.referred_name,
+          referred_phone: form.referred_phone || null,
+          referred_email: form.referred_email || null,
+          product_interest: form.product_interest || null,
+          notes: form.notes || null,
+          status: form.status,
+          converted_value_eur: form.converted_value_eur
+            ? Number(String(form.converted_value_eur).replace(",", "."))
+            : null,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Indicação atualizada");
+      onSaved();
+      setOpen(false);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro ao salvar"),
+  });
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (v) {
+          setForm({
+            seller_name: referral.seller_name ?? "",
+            client_name: referral.client_name ?? "",
+            client_email: referral.client_email ?? "",
+            referred_name: referral.referred_name ?? "",
+            referred_phone: referral.referred_phone ?? "",
+            referred_email: referral.referred_email ?? "",
+            product_interest: referral.product_interest ?? "",
+            notes: referral.notes ?? "",
+            status: referral.status as ReferralStatus,
+            converted_value_eur:
+              referral.converted_value_eur != null ? String(referral.converted_value_eur) : "",
+          });
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" title="Editar indicação">
+          <Pencil className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader><DialogTitle>Editar indicação</DialogTitle></DialogHeader>
+        <div className="grid gap-3">
+          <div className="grid gap-1.5">
+            <Label>Vendedor</Label>
+            <Select value={form.seller_name} onValueChange={(v) => setForm({ ...form, seller_name: v })}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>
+                {SELLERS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label>Cliente que indicou</Label>
+              <Input value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>E-mail do cliente</Label>
+              <Input value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
+            </div>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label>Nome do indicado</Label>
+              <Input value={form.referred_name} onChange={(e) => setForm({ ...form, referred_name: e.target.value })} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>WhatsApp</Label>
+              <Input value={form.referred_phone} onChange={(e) => setForm({ ...form, referred_phone: e.target.value })} />
+            </div>
+          </div>
+          <div className="grid gap-1.5">
+            <Label>E-mail do indicado</Label>
+            <Input value={form.referred_email} onChange={(e) => setForm({ ...form, referred_email: e.target.value })} />
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label>Produto de interesse</Label>
+              <Select value={form.product_interest} onValueChange={(v) => setForm({ ...form, product_interest: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as ReferralStatus })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {REFERRAL_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Valor convertido (€)</Label>
+            <Input
+              value={form.converted_value_eur}
+              onChange={(e) => setForm({ ...form, converted_value_eur: e.target.value })}
+              placeholder="0"
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Contexto / notas</Label>
+            <Textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button
+            onClick={() => {
+              if (!form.seller_name || !form.client_name || !form.referred_name) {
+                toast.error("Vendedor, cliente e indicado são obrigatórios");
+                return;
+              }
+              save.mutate();
+            }}
+            disabled={save.isPending}
+          >
+            {save.isPending ? "Salvando..." : "Salvar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function MensagemPadraoCard() {
   const [clientName, setClientName] = useState("");
   const [sellerName, setSellerName] = useState("");
