@@ -82,6 +82,33 @@ export const createReferralFn = createServerFn({ method: "POST" })
     return row as Referral;
   });
 
+export const updateReferralFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => data as {
+    id: string;
+    seller_name?: string;
+    client_name?: string;
+    client_email?: string | null;
+    referred_name?: string;
+    referred_phone?: string | null;
+    referred_email?: string | null;
+    product_interest?: string | null;
+    notes?: string | null;
+    status?: ReferralStatus;
+    converted_value_eur?: number | null;
+  })
+  .handler(async ({ data }) => {
+    const db = await adminDb();
+    const { id, ...rest } = data;
+    const patch: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rest)) {
+      if (v !== undefined) patch[k] = v === "" ? null : v;
+    }
+    if (Object.keys(patch).length === 0) return { ok: true };
+    const { error } = await db.from("referrals").update(patch as never).eq("id", id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const updateReferralStatusFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => data as {
     id: string;
