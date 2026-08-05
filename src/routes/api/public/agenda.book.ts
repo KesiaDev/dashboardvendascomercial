@@ -1,4 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { getWorkingHours } from "@/lib/agenda-hours";
+
+/** Hora local de Lisboa (0-23) de um instante UTC. */
+function lisbonHour(date: Date): number {
+  const v = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Lisbon",
+    hour: "2-digit",
+    hour12: false,
+  }).format(date);
+  return parseInt(v, 10);
+}
 
 function checkApiKey(request: Request): boolean {
   const key = request.headers.get("x-api-key");
