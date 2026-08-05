@@ -408,7 +408,12 @@ function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {summary.sellers.map((s) => (
+                {summary.sellers.map((s) => {
+                  // Cada vendedor é exibido na sua moeda (Rita/João em EUR, os demais em BRL)
+                  const cot = activePeriod?.cotacao_eur ?? 5.86;
+                  const mo = (s.moeda ?? "BRL").toUpperCase() === "EUR" ? "EUR" : "BRL";
+                  const mm = (brl: number) => money(mo === "EUR" ? brl / cot : brl, mo);
+                  return (
                   <tr
                     key={s.sellerName}
                     className="border-b border-border/40 last:border-0 cursor-pointer hover:bg-muted/30"
@@ -416,39 +421,44 @@ function Dashboard() {
                       setExpandedSeller((v) => (v === s.sellerName ? null : s.sellerName))
                     }
                   >
-                    <td className="px-4 py-2 font-medium">{s.sellerName}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
-                      {s.fat_hotmart ? money(s.fat_hotmart) : "—"}
+                    <td className="px-4 py-2 font-medium">
+                      {s.sellerName}
+                      <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+                        {mo}
+                      </span>
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
-                      {s.fat_sck ? money(s.fat_sck) : "—"}
+                      {s.fat_hotmart ? mm(s.fat_hotmart) : "—"}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
-                      {s.fat_wise ? money(s.fat_wise) : "—"}
+                      {s.fat_sck ? mm(s.fat_sck) : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                      {s.fat_wise ? mm(s.fat_wise) : "—"}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums font-medium">
-                      {money(s.faturamento_total_brl)}
+                      {mm(s.faturamento_total_brl)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{money(s.comissao_total)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{mm(s.comissao_total)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
-                      {s.comissao_hotmart_direto ? `− ${money(s.comissao_hotmart_direto)}` : "—"}
+                      {s.comissao_hotmart_direto ? `− ${mm(s.comissao_hotmart_direto)}` : "—"}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
-                      {s.bonus_metas_brl ? money(s.bonus_metas_brl) : "—"}
+                      {s.bonus_metas_brl ? mm(s.bonus_metas_brl) : "—"}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-amber-600 dark:text-amber-400">
-                      {s.roleta_ganho_brl ? money(s.roleta_ganho_brl) : "—"}
+                      {s.roleta_ganho_brl ? mm(s.roleta_ganho_brl) : "—"}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      {s.bonus_total || s.descontos
-                        ? money(s.bonus_total - s.descontos)
-                        : "—"}
+                      {s.bonus_total || s.descontos ? mm(s.bonus_total - s.descontos) : "—"}
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums font-semibold text-primary">
-                      {money(s.total_a_pagar)}
+                      {mm(s.total_a_pagar)}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
+
               </tbody>
               <tfoot>
                 <tr className="border-t border-border bg-muted/40 font-semibold">
@@ -779,7 +789,7 @@ function SellerDetail({
           {s.roleta_spins_wise > 0 && (
             <Badge variant="outline">{s.roleta_spins_wise} giros (Wise)</Badge>
           )}
-          <span className="tabular-nums">{money(s.roleta_ganho_brl)}</span>
+          <span className="tabular-nums">{m(s.roleta_ganho_brl)}</span>
         </div>
 
         {/* Bônus e descontos */}
@@ -895,22 +905,23 @@ function SellerDetail({
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 rounded-md border border-border/60 bg-muted/20 p-3 text-sm">
           <div>
             <p className="text-xs text-muted-foreground">Comissão vendas (empresa)</p>
-            <p className="font-semibold tabular-nums">{money(s.comissao_a_pagar_vendas)}</p>
+            <p className="font-semibold tabular-nums">{m(s.comissao_a_pagar_vendas)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Bônus de metas</p>
-            <p className="font-semibold tabular-nums">{money(s.bonus_metas_brl)}</p>
+            <p className="font-semibold tabular-nums">{m(s.bonus_metas_brl)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Roleta + bônus − descontos</p>
             <p className="font-semibold tabular-nums">
-              {money(s.roleta_ganho_brl + s.bonus_total - s.descontos)}
+              {m(s.roleta_ganho_brl + s.bonus_total - s.descontos)}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Total a pagar</p>
-            <p className="font-bold tabular-nums text-primary">{money(s.total_a_pagar)}</p>
+            <p className="font-bold tabular-nums text-primary">{m(s.total_a_pagar)}</p>
           </div>
+
         </div>
       </CardContent>
     </Card>
