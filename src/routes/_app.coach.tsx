@@ -573,8 +573,17 @@ function Conversas() {
 
       <div className="space-y-2">
         {filtered.map((c: any) => (
-          <Card key={c.id}>
+          <Card key={c.id} className={selected.has(c.id) ? "ring-1 ring-primary" : undefined}>
             <CardContent className="p-3 flex items-start gap-3">
+              {isAdmin && (
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 mt-1 accent-primary shrink-0"
+                  checked={selected.has(c.id)}
+                  onChange={() => toggleSel(c.id)}
+                  aria-label="Selecionar conversa"
+                />
+              )}
               <div className={"h-12 w-12 rounded-lg flex flex-col items-center justify-center shrink-0 " + (c.analysis?.status === "ok" ? "bg-muted" : "bg-muted/50")}>
                 <span className={"text-lg font-bold leading-none " + scoreColor(c.analysis?.score_geral)}>
                   {c.analysis?.status === "ok" ? Number(c.analysis.score_geral ?? 0).toFixed(1) : c.analysis?.status === "insufficient_data" ? "—" : "?"}
