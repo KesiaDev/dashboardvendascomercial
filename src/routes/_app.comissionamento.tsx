@@ -472,7 +472,10 @@ function Dashboard() {
           <SellerDetail
             key={s.sellerName}
             s={s}
+            rates={rates}
+            cotacao={activePeriod?.cotacao_eur ?? 5.86}
             weeks={weeks.map((w) => w.label)}
+
             onClose={() => setExpandedSeller(null)}
             bonusForm={bonusForm}
             setBonusForm={setBonusForm}
@@ -581,6 +584,8 @@ function Kpi({
 
 function SellerDetail({
   s,
+  rates,
+  cotacao,
   onClose,
   bonusForm,
   setBonusForm,
@@ -589,69 +594,146 @@ function SellerDetail({
 }: {
   s: SellerCommission;
   weeks: string[];
+  rates: { seller_name: string; produto_grupo: string; rate_pct: number }[];
+  cotacao: number;
   onClose: () => void;
   bonusForm: any;
   setBonusForm: (v: any) => void;
   onAddBonus: (d: any) => void;
   onDelBonus: (id: number) => void;
 }) {
+  // Planilha: valores na moeda do vendedor (Rita/João em EUR, os demais em BRL)
+  const moeda = (s.moeda ?? "BRL").toUpperCase() === "EUR" ? "EUR" : "BRL";
+  const cv = (brl: number) => (moeda === "EUR" ? brl / (cotacao || 5.86) : brl);
+  const m = (brl: number) => money(cv(brl), moeda);
+
+  // Todas as linhas de produto do vendedor, mesmo com faturamento zero
+  const linhas = useMemo(() => {
+    const byId = new Map(s.byProduct.map((p) => [p.produto_grupo, p]));
+    const ids = [
+      ...new Set([
+        ...rates.filter((r) => r.seller_name === s.sellerName).map((r) => r.produto_grupo),
+        ...s.byProduct.map((p) => p.produto_grupo),
+      ]),
+    ];
+    return ids.map((id) => {
+      const p = byId.get(id);
+      const rate =
+        p?.rate_pct ??
+        rates.find((r) => r.seller_name === s.sellerName && r.produto_grupo === id)?.rate_pct ??
+        0;
+      return {
+        id,
+        label: p?.label ?? PRODUCT_GROUPS.find((g) => g.id === id)?.label ?? id,
+        wise: p?.faturamento_wise ?? 0,
+        hotmart: p?.faturamento_hotmart ?? 0,
+        sck: p?.faturamento_sck ?? 0,
+        rate,
+        recebido: p?.comissao_total ?? 0,
+        pagar: p?.comissao_a_pagar ?? 0,
+      };
+    });
+  }, [s, rates]);
+
+  const roletaBrl = s.roleta_ganho_brl;
+  const bonusBrl = s.bonus_metas_brl + s.bonus_total;
+  const totalRecebido = s.comissao_total + roletaBrl + bonusBrl - s.descontos;
+
   return (
     <Card className="border-primary/30">
       <CardHeader className="flex flex-row items-center justify-between pb-3">
-        <CardTitle className="text-base">{s.sellerName} — detalhe</CardTitle>
+        <CardTitle className="text-base">
+          {s.sellerName} — detalhe{" "}
+          <span className="text-xs font-normal text-muted-foreground">
+            (valores em {moeda}
+            {moeda === "EUR" ? ` · câmbio ${cotacao.toFixed(2)}` : ""})
+          </span>
+        </CardTitle>
         <Button size="sm" variant="ghost" onClick={onClose}>
           <ChevronUp className="h-4 w-4 mr-1" /> Fechar
         </Button>
       </CardHeader>
       <CardContent className="space-y-5">
-        {/* Produtos */}
+        {/* Produtos — mesmo layout da planilha */}
         <div className="overflow-x-auto rounded border border-border/60">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30 text-left text-xs uppercase text-muted-foreground">
                 <th className="px-3 py-2">Produto</th>
-                <th className="px-3 py-2 text-right">Hotmart (afil.)</th>
-                <th className="px-3 py-2 text-right">SCK</th>
-                <th className="px-3 py-2 text-right">Wise</th>
-                <th className="px-3 py-2 text-right">%</th>
-                <th className="px-3 py-2 text-right">Comissão total</th>
-                <th className="px-3 py-2 text-right">Pago Hotmart</th>
-                <th className="px-3 py-2 text-right">Empresa paga</th>
+                <th className="px-3 py-2 text-right">Fat. Wise</th>
+                <th className="px-3 py-2 text-right">Fat. Hotmart</th>
+                <th className="px-3 py-2 text-right">Fat. SCK</th>
+                <th className="px-3 py-2 text-right">% Comissão</th>
+                <th className="px-3 py-2 text-right">Comissionamento total recebido</th>
+                <th className="px-3 py-2 text-right">Comissionamento a ser pago</th>
               </tr>
             </thead>
             <tbody>
-              {s.byProduct.map((p) => (
-                <tr key={p.produto_grupo} className="border-b border-border/40 last:border-0">
+              {linhas.map((p) => (
+                <tr key={p.id} className="border-b border-border/40">
                   <td className="px-3 py-1.5 font-medium">{p.label}</td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
-                    {p.faturamento_hotmart ? `${money(p.faturamento_hotmart)} (${p.qtd_hotmart})` : "—"}
+                    {m(p.wise)}
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
-                    {p.faturamento_sck ? `${money(p.faturamento_sck)} (${p.qtd_sck})` : "—"}
+                    {m(p.hotmart)}
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
-                    {p.faturamento_wise ? `${money(p.faturamento_wise)} (${p.qtd_wise})` : "—"}
+                    {m(p.sck)}
                   </td>
-                  <td className="px-3 py-1.5 text-right tabular-nums">{pct(p.rate_pct)}</td>
-                  <td className="px-3 py-1.5 text-right tabular-nums">{money(p.comissao_total)}</td>
-                  <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
-                    {p.comissao_hotmart_direto ? money(p.comissao_hotmart_direto) : "—"}
-                  </td>
-                  <td className="px-3 py-1.5 text-right tabular-nums font-medium">
-                    {money(p.comissao_a_pagar)}
-                  </td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{pct(p.rate)}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{m(p.recebido)}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums font-medium">{m(p.pagar)}</td>
                 </tr>
               ))}
-              {s.byProduct.length === 0 && (
+              {linhas.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-3 py-3 text-muted-foreground">
-                    Nenhuma venda neste período.
+                  <td colSpan={7} className="px-3 py-3 text-muted-foreground">
+                    Nenhum produto configurado para este vendedor.
+                  </td>
+                </tr>
+              )}
+
+              {/* Roleta / Bônus / Descontos — como na planilha */}
+              <tr className="border-b border-border/40 bg-amber-500/5">
+                <td className="px-3 py-1.5 font-medium">Roleta</td>
+                <td colSpan={4} />
+                <td className="px-3 py-1.5 text-right tabular-nums">{m(roletaBrl)}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums font-medium">{m(roletaBrl)}</td>
+              </tr>
+              <tr className="border-b border-border/40 bg-sky-500/5">
+                <td className="px-3 py-1.5 font-medium">Bônus (metas + manuais)</td>
+                <td colSpan={4} />
+                <td className="px-3 py-1.5 text-right tabular-nums">{m(bonusBrl)}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums font-medium">{m(bonusBrl)}</td>
+              </tr>
+              {s.descontos > 0 && (
+                <tr className="border-b border-border/40 bg-destructive/5">
+                  <td className="px-3 py-1.5 font-medium">Descontos</td>
+                  <td colSpan={4} />
+                  <td className="px-3 py-1.5 text-right tabular-nums">−{m(s.descontos)}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums font-medium">
+                    −{m(s.descontos)}
                   </td>
                 </tr>
               )}
             </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-border bg-muted/40 font-semibold">
+                <td className="px-3 py-2">Total</td>
+                <td className="px-3 py-2 text-right tabular-nums">{m(s.fat_wise)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{m(s.fat_hotmart)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{m(s.fat_sck)}</td>
+                <td />
+                <td className="px-3 py-2 text-right tabular-nums">{m(totalRecebido)}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-primary">
+                  {m(s.total_a_pagar)}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
+
 
         {/* Metas */}
         <div className="space-y-2">
