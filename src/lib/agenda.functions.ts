@@ -162,6 +162,39 @@ export const listAgendaLogsFn = createServerFn({ method: "GET" })
 
   });
 
+/** Lista fixa da equipa comercial (para filtrar a agenda por vendedor, mesmo sem eventos). */
+export const listAgendaSellersFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const supabase = await admin();
+    const [{ data: cfg }, { data: users }, { data: agenda }] = await Promise.all([
+      supabase.from("bi_seller_config").select("seller_name, clint_user_name, is_active"),
+      supabase.from("clint_users").select("email, first_name, last_name, active"),
+      supabase.from("seller_agenda").select("seller_email, seller_name"),
+    ]);
+
+    const norm = (v?: string | null) =>
+      (v ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    const out = new Map<string, { email: string; name: string }>();
+    for (const c of cfg ?? []) {
+      if ((c as any).is_active === false) continue;
+      const full = norm((c as any).clint_user_name);
+      const u = (users ?? []).find((x: any) => {
+        const un = norm(`${x.first_name ?? ""} ${x.last_name ?? ""}`);
+        return un === full || (full && un.includes(full)) || (un && full.includes(un));
+      });
+      if (u?.email) out.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: (c as any).seller_name ?? u.email });
+    }
+    for (const a of agenda ?? []) {
+      const e = ((a as any).seller_email ?? "").toLowerCase();
+      if (e && !out.has(e)) out.set(e, { email: e, name: (a as any).seller_name ?? e });
+    }
+    return { sellers: Array.from(out.values()).sort((a, b) => a.name.localeCompare(b.name)) };
+  });
+
+
+
 export const listPromptsFn = createServerFn({ method: "GET" })
 
   .middleware([requireSupabaseAuth])
