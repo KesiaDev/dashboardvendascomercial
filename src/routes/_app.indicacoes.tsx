@@ -20,7 +20,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  listReferralsFn, createReferralFn, updateReferralStatusFn,
+  listReferralsFn, createReferralFn, updateReferralStatusFn, updateReferralFn,
   deleteReferralFn, buildReferralMessage, buildReferralMessageNaoFechou,
   REFERRAL_STATUSES, type ReferralStatus,
 } from "@/lib/referrals.functions";
