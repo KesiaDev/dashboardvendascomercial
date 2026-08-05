@@ -905,22 +905,23 @@ function SellerDetail({
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 rounded-md border border-border/60 bg-muted/20 p-3 text-sm">
           <div>
             <p className="text-xs text-muted-foreground">Comissão vendas (empresa)</p>
-            <p className="font-semibold tabular-nums">{money(s.comissao_a_pagar_vendas)}</p>
+            <p className="font-semibold tabular-nums">{m(s.comissao_a_pagar_vendas)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Bônus de metas</p>
-            <p className="font-semibold tabular-nums">{money(s.bonus_metas_brl)}</p>
+            <p className="font-semibold tabular-nums">{m(s.bonus_metas_brl)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Roleta + bônus − descontos</p>
             <p className="font-semibold tabular-nums">
-              {money(s.roleta_ganho_brl + s.bonus_total - s.descontos)}
+              {m(s.roleta_ganho_brl + s.bonus_total - s.descontos)}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Total a pagar</p>
-            <p className="font-bold tabular-nums text-primary">{money(s.total_a_pagar)}</p>
+            <p className="font-bold tabular-nums text-primary">{m(s.total_a_pagar)}</p>
           </div>
+
         </div>
       </CardContent>
     </Card>
