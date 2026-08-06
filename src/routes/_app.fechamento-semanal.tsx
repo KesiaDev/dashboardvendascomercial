@@ -19,6 +19,7 @@ import {
 import { isRenewalProduct } from "@/lib/product-groups";
 import { ConversaoFunilCard } from "@/components/conversao-funil";
 import { MetasFunilCard } from "@/components/metas-funil";
+import { MetasIgt23Card } from "@/components/metas-igt23";
 
 // ─── Breakdown por funil ──────────────────────────────────────────────────────
 
@@ -781,6 +782,9 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
 
       {/* Meta de aproveitamento por funil */}
       <MetasFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Meta de Aproveitamento por Funil — ${monthLabel}`}/>
+
+      {/* Meta IGT23: Marketing x Comercial */}
+      <MetasIgt23Card title={`Meta IGT23 — Marketing x Comercial — ${monthLabel}`} />
 
       {/* Tabela de semanas do mês */}
       <Card>
