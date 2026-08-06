@@ -1,13 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 
-export const TAG_FILTER_OPTIONS = [
-  { value: "", label: "Todas as origens" },
-  { value: "ebook", label: "Ebook" },
-  { value: "minicurso", label: "Minicurso" },
-  { value: "wgt", label: "WGT Perpétuo" },
-  { value: "igt", label: "IGT" },
-  { value: "palavras", label: "Palavras" },
-] as const;
 
 export type ConversaoRow = {
   funnel: string;
