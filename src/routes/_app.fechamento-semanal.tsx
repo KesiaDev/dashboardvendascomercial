@@ -467,11 +467,11 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
       {/* Vendas por funil */}
       <FunnelBreakdownCard sales={weekSales} title={`Vendas por Funil — Semana ${weekIdx+1+WEEK_LABEL_OFFSET}`}/>
 
-      {/* Conversão por vendedor × funil */}
-      <ConversaoFunilCard from={start} to={end} title={`Conversão por Vendedor × Funil — Semana ${weekIdx+1+WEEK_LABEL_OFFSET}`}/>
-
       {/* Meta de aproveitamento por funil */}
       <MetasFunilCard from={start} to={end} title={`Meta de Aproveitamento por Funil — Semana ${weekIdx+1+WEEK_LABEL_OFFSET}`}/>
+
+      {/* Conversão por vendedor × funil */}
+      <ConversaoFunilCard from={start} to={end} title={`Conversão por Vendedor × Funil — Semana ${weekIdx+1+WEEK_LABEL_OFFSET}`}/>
 
       {/* Tabela de vendas */}
       <Card>
