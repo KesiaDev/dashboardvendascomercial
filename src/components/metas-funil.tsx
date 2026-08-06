@@ -57,6 +57,7 @@ function weeksBetween(from: string, to: string) {
 
 export function MetasFunilCard({ from, to, title }: { from: string; to: string; title: string }) {
   const [cfg, setCfg] = useState<Config>(DEFAULT_CONFIG);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
   useEffect(() => setCfg(loadConfig()), []);
   const save = (next: Config) => {
     setCfg(next);
