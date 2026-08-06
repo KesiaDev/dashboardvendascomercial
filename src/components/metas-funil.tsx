@@ -26,6 +26,7 @@ type Config = {
   metas: Record<string, number>;
   comparecimento: number; // % de reuniões agendadas que acontecem
   fechamento: number; // % de reuniões realizadas que viram venda
+  metaGeral: number; // % de aproveitamento alvo somando todos os funis
 };
 
 const DEFAULT_CONFIG: Config = {
@@ -33,6 +34,7 @@ const DEFAULT_CONFIG: Config = {
   metas: {},
   comparecimento: 48.6,
   fechamento: 33,
+  metaGeral: 10,
 };
 
 function loadConfig(): Config {
