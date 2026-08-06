@@ -7,7 +7,7 @@ import { ptBR } from "date-fns/locale";
 import {
   Sparkles, Upload, AlertTriangle, Settings, MessageSquare,
   TrendingUp, Clock, Target, Users, RefreshCw, Trash2, CheckCircle2,
-  Zap, Copy, Eye, BarChart2, Phone, Plus, X, Award, CalendarIcon,
+  Zap, Copy, Eye, BarChart2, Phone, Plus, X, Award, CalendarIcon, GraduationCap,
 } from "lucide-react";
 import { fetchPerformanceFn, generatePerformanceFeedbackFn, rangeBoundsFor, type PerfRange, type SellerPerf, type PerfResult } from "@/lib/performance.functions";
 import { getSellerPhoto } from "@/lib/seller-photos";
@@ -35,7 +35,8 @@ import {
 import { getHotmartWebhookTokenFn } from "@/lib/hotmart-webhook.functions";
 import { syncCcpbxCallsFn, listCcpbxCallsFn, analyzeCallFn, type CallRow } from "@/lib/ccpbx.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { isAdminUser, isAllowedSellerEmail } from "@/lib/auth";
+import { isAdminUser, isAllowedSellerEmail, isCaseOwnerEmail } from "@/lib/auth";
+import { CasesTab } from "@/components/coach-cases";
 
 
 export const Route = createFileRoute("/_app/coach")({
@@ -103,6 +104,7 @@ function CoachPage() {
   const isAdmin = isAdminUser(user);
   const sellerNameGuess = user?.email ? displaySellerName(user.email) : null;
   const isAllowedSeller = isAllowedSellerEmail(user?.email);
+  const isCaseOwner = isCaseOwnerEmail(user?.email);
   const userInfo: CoachUserInfo = { isAdmin, email: user?.email ?? null, sellerNameGuess, isAllowedSeller };
 
   const [tab, setTab] = useState(isAdmin ? "visao" : "performance");
@@ -164,6 +166,7 @@ function CoachPage() {
           <TabsTrigger value="performance"><Award className="h-4 w-4 mr-1" />Performance</TabsTrigger>
           <TabsTrigger value="conversas"><MessageSquare className="h-4 w-4 mr-1" />Conversas</TabsTrigger>
           <TabsTrigger value="ligacoes"><Phone className="h-4 w-4 mr-1" />Ligações</TabsTrigger>
+          {isCaseOwner && <TabsTrigger value="cases"><GraduationCap className="h-4 w-4 mr-1" />Cases</TabsTrigger>}
           {isAdmin && <TabsTrigger value="alertas"><AlertTriangle className="h-4 w-4 mr-1" />Alertas</TabsTrigger>}
           {isAdmin && <TabsTrigger value="upload"><Upload className="h-4 w-4 mr-1" />Nova análise</TabsTrigger>}
           {isAdmin && <TabsTrigger value="config"><Settings className="h-4 w-4 mr-1" />Config</TabsTrigger>}
@@ -173,6 +176,7 @@ function CoachPage() {
         <TabsContent value="performance">{isAdmin || isAllowedSeller ? <PerformanceTab /> : <SemAcessoIndividual />}</TabsContent>
         <TabsContent value="conversas">{isAdmin || isAllowedSeller ? <Conversas /> : <SemAcessoIndividual />}</TabsContent>
         <TabsContent value="ligacoes">{isAdmin || isAllowedSeller ? <LigacoesTab /> : <SemAcessoIndividual />}</TabsContent>
+        {isCaseOwner && <TabsContent value="cases"><CasesTab /></TabsContent>}
         {isAdmin && <TabsContent value="alertas"><Alertas /></TabsContent>}
         {isAdmin && <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>}
         {isAdmin && <TabsContent value="config"><ConfigTab /></TabsContent>}

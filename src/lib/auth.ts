@@ -1,5 +1,13 @@
 export const ADMIN_EMAILS = ["kesiawnandi@gmail.com", "kesia@llmidiaco.com"];
 
+// Cases de treinamento (Análise Comercial): visíveis apenas para este e-mail.
+export const CASE_OWNER_EMAILS = ["kesiawnandi@gmail.com"];
+
+export function isCaseOwnerEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return CASE_OWNER_EMAILS.includes(email.trim().toLowerCase());
+}
+
 export function isAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   return ADMIN_EMAILS.includes(email.trim().toLowerCase());
