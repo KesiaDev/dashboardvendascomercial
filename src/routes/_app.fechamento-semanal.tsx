@@ -782,6 +782,9 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
       {/* Meta de aproveitamento por funil */}
       <MetasFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Meta de Aproveitamento por Funil — ${monthLabel}`}/>
 
+      {/* Meta IGT23: Marketing x Comercial */}
+      <MetasIgt23Card title={`Meta IGT23 — Marketing x Comercial — ${monthLabel}`} />
+
       {/* Tabela de semanas do mês */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Semanas de {monthLabel}</CardTitle></CardHeader>
