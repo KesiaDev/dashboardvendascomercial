@@ -577,12 +577,12 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
   const today = todayBR();
   const [yearMonth, setYearMonth] = useState(() => todayBR().slice(0,7));
 
-  // Navegar meses disponíveis (desde SEASON_START até mês atual)
+  // Navegar meses disponíveis (desde SEASON_START até o mês vigente, inclusive)
   const months = useMemo(()=>{
     const result: string[] = [];
-    const cur = new Date(SEASON_START+"T12:00:00Z");
-    const end = new Date(today+"T12:00:00Z");
-    while (cur<=end){
+    const cur = new Date(SEASON_START.slice(0,7)+"-01T12:00:00Z");
+    const lastMonth = today.slice(0,7);
+    while (cur.toISOString().slice(0,7) <= lastMonth){
       result.push(cur.toISOString().slice(0,7));
       cur.setUTCMonth(cur.getUTCMonth()+1);
     }
