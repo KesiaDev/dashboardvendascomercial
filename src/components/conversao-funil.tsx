@@ -90,17 +90,6 @@ export function ConversaoFunilCard({
             {title}
           </CardTitle>
           <div className="flex items-center gap-2 flex-wrap">
-            <select
-              className="h-7 rounded-md border bg-background px-2 text-xs"
-              value={tagFilter}
-              onChange={(e) => setTagFilter(e.target.value)}
-            >
-              {TAG_FILTER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
             <Button
               variant="ghost"
               size="sm"
