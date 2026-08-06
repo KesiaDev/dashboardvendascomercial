@@ -185,6 +185,24 @@ export function MetasIgt23Card({ title }: { title?: string }) {
           ? "Mínimo"
           : "Abaixo do mínimo";
 
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center justify-between rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground hover:bg-muted/50 transition"
+      >
+        <span className="flex items-center gap-2">
+          <Target className="h-4 w-4" />
+          Meta IGT (Marketing x Comercial) — opcional
+        </span>
+        <span className="flex items-center gap-1 text-xs">
+          Mostrar <ChevronDown className="h-4 w-4" />
+        </span>
+      </button>
+    );
+  }
+
   return (
     <Card>
       <CardHeader className="pb-3 space-y-3">
@@ -193,6 +211,7 @@ export function MetasIgt23Card({ title }: { title?: string }) {
           {title ?? `Meta ${active} — Marketing x Comercial`}
           <Badge variant="secondary" className="font-normal">
             Comercial = {cfg.sharePct}% do total vendido
+
           </Badge>
           <Badge variant="outline" className="font-normal">
             Cenário atual: {cenarioAtual}
