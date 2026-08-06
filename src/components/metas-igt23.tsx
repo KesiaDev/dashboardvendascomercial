@@ -112,16 +112,46 @@ function Bar({ pct, tone }: { pct: number; tone: string }) {
 }
 
 export function MetasIgt23Card({ title }: { title?: string }) {
-  const [cfg, setCfg] = useState<Cfg>(DEFAULT_CFG);
-  useEffect(() => setCfg(load()), []);
-  const save = (next: Cfg) => {
-    setCfg(next);
+  const [store, setStore] = useState<Store>(DEFAULT_STORE);
+  const [novo, setNovo] = useState("");
+  useEffect(() => setStore(load()), []);
+
+  const persist = (next: Store) => {
+    setStore(next);
     try {
       window.localStorage.setItem(STORE_KEY, JSON.stringify(next));
     } catch {
       /* ignore */
     }
   };
+
+  const active = store.editions[store.active] ? store.active : store.order[0];
+  const cfg = store.editions[active] ?? DEFAULT_CFG;
+  const save = (next: Cfg) =>
+    persist({ ...store, editions: { ...store.editions, [active]: next } });
+
+  const addEdicao = () => {
+    const nome = novo.trim().toUpperCase();
+    if (!nome || store.editions[nome]) {
+      setNovo("");
+      return;
+    }
+    persist({
+      active: nome,
+      order: [...store.order, nome],
+      editions: { ...store.editions, [nome]: EMPTY_CFG },
+    });
+    setNovo("");
+  };
+
+  const removeEdicao = (nome: string) => {
+    if (store.order.length <= 1) return;
+    const editions = { ...store.editions };
+    delete editions[nome];
+    const order = store.order.filter((o) => o !== nome);
+    persist({ active: order[0], order, editions });
+  };
+
 
   const cenarios = useMemo(
     () =>
