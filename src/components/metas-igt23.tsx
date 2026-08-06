@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Target, Plus, Trash2 } from "lucide-react";
 
 /**
- * Meta IGT23: o Marketing define o volume total de vendas (cenários mínimo/boa/excelente)
- * e o Comercial precisa entregar uma fatia (% share) desse total.
+ * Meta IGT (IGT23, IGT24, ...): o Marketing define o volume total de vendas
+ * (cenários mínimo/boa/excelente) e o Comercial entrega uma fatia (% share) desse total.
+ * Cada edição tem sua própria configuração, guardada localmente.
  */
-const STORE_KEY = "metas-igt23-v1";
+const STORE_KEY = "metas-igt-v2";
+const LEGACY_KEY = "metas-igt23-v1";
 
 type Cfg = {
   minimo: number;
@@ -28,15 +31,39 @@ const DEFAULT_CFG: Cfg = {
   vendasComercial: 62,
 };
 
-function load(): Cfg {
-  if (typeof window === "undefined") return DEFAULT_CFG;
+const EMPTY_CFG: Cfg = { ...DEFAULT_CFG, totalVendas: 0, vendasComercial: 0 };
+
+type Store = {
+  active: string;
+  order: string[];
+  editions: Record<string, Cfg>;
+};
+
+const DEFAULT_STORE: Store = {
+  active: "IGT23",
+  order: ["IGT23"],
+  editions: { IGT23: DEFAULT_CFG },
+};
+
+function load(): Store {
+  if (typeof window === "undefined") return DEFAULT_STORE;
   try {
     const raw = window.localStorage.getItem(STORE_KEY);
-    return raw ? { ...DEFAULT_CFG, ...(JSON.parse(raw) as Cfg) } : DEFAULT_CFG;
+    if (raw) {
+      const s = JSON.parse(raw) as Store;
+      if (s?.order?.length && s.editions) return s;
+    }
+    const legacy = window.localStorage.getItem(LEGACY_KEY);
+    if (legacy) {
+      const cfg = { ...DEFAULT_CFG, ...(JSON.parse(legacy) as Cfg) };
+      return { active: "IGT23", order: ["IGT23"], editions: { IGT23: cfg } };
+    }
+    return DEFAULT_STORE;
   } catch {
-    return DEFAULT_CFG;
+    return DEFAULT_STORE;
   }
 }
+
 
 function NumField({
   label,
@@ -85,16 +112,46 @@ function Bar({ pct, tone }: { pct: number; tone: string }) {
 }
 
 export function MetasIgt23Card({ title }: { title?: string }) {
-  const [cfg, setCfg] = useState<Cfg>(DEFAULT_CFG);
-  useEffect(() => setCfg(load()), []);
-  const save = (next: Cfg) => {
-    setCfg(next);
+  const [store, setStore] = useState<Store>(DEFAULT_STORE);
+  const [novo, setNovo] = useState("");
+  useEffect(() => setStore(load()), []);
+
+  const persist = (next: Store) => {
+    setStore(next);
     try {
       window.localStorage.setItem(STORE_KEY, JSON.stringify(next));
     } catch {
       /* ignore */
     }
   };
+
+  const active = store.editions[store.active] ? store.active : store.order[0];
+  const cfg = store.editions[active] ?? DEFAULT_CFG;
+  const save = (next: Cfg) =>
+    persist({ ...store, editions: { ...store.editions, [active]: next } });
+
+  const addEdicao = () => {
+    const nome = novo.trim().toUpperCase();
+    if (!nome || store.editions[nome]) {
+      setNovo("");
+      return;
+    }
+    persist({
+      active: nome,
+      order: [...store.order, nome],
+      editions: { ...store.editions, [nome]: EMPTY_CFG },
+    });
+    setNovo("");
+  };
+
+  const removeEdicao = (nome: string) => {
+    if (store.order.length <= 1) return;
+    const editions = { ...store.editions };
+    delete editions[nome];
+    const order = store.order.filter((o) => o !== nome);
+    persist({ active: order[0], order, editions });
+  };
+
 
   const cenarios = useMemo(
     () =>
@@ -130,10 +187,10 @@ export function MetasIgt23Card({ title }: { title?: string }) {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 space-y-3">
         <CardTitle className="flex flex-wrap items-center gap-2 text-base">
           <Target className="h-4 w-4 text-primary" />
-          {title ?? "Meta IGT23 — Marketing x Comercial"}
+          {title ?? `Meta ${active} — Marketing x Comercial`}
           <Badge variant="secondary" className="font-normal">
             Comercial = {cfg.sharePct}% do total vendido
           </Badge>
@@ -141,7 +198,52 @@ export function MetasIgt23Card({ title }: { title?: string }) {
             Cenário atual: {cenarioAtual}
           </Badge>
         </CardTitle>
+        {/* Abas de edições (IGT23, IGT24, ...) */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1 rounded-lg bg-muted p-1">
+            {store.order.map((nome) => (
+              <div key={nome} className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => persist({ ...store, active: nome })}
+                  className={`rounded-md px-3 py-1 text-xs font-medium transition ${
+                    nome === active
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {nome}
+                </button>
+                {nome === active && store.order.length > 1 ? (
+                  <button
+                    type="button"
+                    title={`Remover ${nome}`}
+                    onClick={() => removeEdicao(nome)}
+                    className="ml-0.5 rounded p-1 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <Input
+              value={novo}
+              onChange={(e) => setNovo(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") addEdicao();
+              }}
+              placeholder="IGT24"
+              className="h-8 w-24 text-xs"
+            />
+            <Button type="button" size="sm" variant="outline" className="h-8" onClick={addEdicao}>
+              <Plus className="h-3 w-3 mr-1" /> Nova edição
+            </Button>
+          </div>
+        </div>
       </CardHeader>
+
       <CardContent className="space-y-5">
         {/* Realizado consolidado */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
