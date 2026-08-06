@@ -234,7 +234,6 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   <td className="px-3 py-2 text-right tabular-nums">{totals.leads}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.vendas}</td>
                   <td className="px-3 py-2" />
-                  <td className="px-3 py-2" />
                   <td className="px-3 py-2 text-right tabular-nums">
                     {fmtPct(totals.leads > 0 ? (totals.vendas / totals.leads) * 100 : 0)}
                   </td>
@@ -255,10 +254,7 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                 </strong>{" "}
                 vendas/semana
               </span>
-              <span>
-                Meta = 2× a baseline histórica do funil (V3 2,97% · Sessão Estratégica 5% · WGT 0,47%). Baseline e meta
-                são editáveis por funil.
-              </span>
+              <span>Meta de aproveitamento editável por funil. Comparecimento e fechamento ajustáveis acima.</span>
             </div>
           </div>
         )}
