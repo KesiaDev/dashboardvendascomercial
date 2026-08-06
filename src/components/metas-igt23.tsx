@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Target, Plus, Trash2 } from "lucide-react";
+import { Target, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
 /**
  * Meta IGT (IGT23, IGT24, ...): o Marketing define o volume total de vendas
@@ -114,7 +114,23 @@ function Bar({ pct, tone }: { pct: number; tone: string }) {
 export function MetasIgt23Card({ title }: { title?: string }) {
   const [store, setStore] = useState<Store>(DEFAULT_STORE);
   const [novo, setNovo] = useState("");
-  useEffect(() => setStore(load()), []);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    setStore(load());
+    try {
+      setOpen(window.localStorage.getItem("metas-igt-open") === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const toggleOpen = (v: boolean) => {
+    setOpen(v);
+    try {
+      window.localStorage.setItem("metas-igt-open", v ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  };
 
   const persist = (next: Store) => {
     setStore(next);
@@ -185,6 +201,24 @@ export function MetasIgt23Card({ title }: { title?: string }) {
           ? "Mínimo"
           : "Abaixo do mínimo";
 
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => toggleOpen(true)}
+        className="w-full flex items-center justify-between rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground hover:bg-muted/50 transition"
+      >
+        <span className="flex items-center gap-2">
+          <Target className="h-4 w-4" />
+          Meta IGT (Marketing x Comercial) — opcional
+        </span>
+        <span className="flex items-center gap-1 text-xs">
+          Mostrar <ChevronDown className="h-4 w-4" />
+        </span>
+      </button>
+    );
+  }
+
   return (
     <Card>
       <CardHeader className="pb-3 space-y-3">
@@ -193,11 +227,22 @@ export function MetasIgt23Card({ title }: { title?: string }) {
           {title ?? `Meta ${active} — Marketing x Comercial`}
           <Badge variant="secondary" className="font-normal">
             Comercial = {cfg.sharePct}% do total vendido
+
           </Badge>
           <Badge variant="outline" className="font-normal">
             Cenário atual: {cenarioAtual}
           </Badge>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 ml-auto text-xs"
+            onClick={() => toggleOpen(false)}
+          >
+            Ocultar <ChevronUp className="h-3 w-3 ml-1" />
+          </Button>
         </CardTitle>
+
         {/* Abas de edições (IGT23, IGT24, ...) */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap items-center gap-1 rounded-lg bg-muted p-1">
