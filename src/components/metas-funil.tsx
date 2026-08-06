@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
-import { Gauge, CalendarClock, RotateCcw } from "lucide-react";
+import { Gauge, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -57,6 +57,7 @@ function weeksBetween(from: string, to: string) {
 
 export function MetasFunilCard({ from, to, title }: { from: string; to: string; title: string }) {
   const [cfg, setCfg] = useState<Config>(DEFAULT_CONFIG);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
   useEffect(() => setCfg(loadConfig()), []);
   const save = (next: Config) => {
     setCfg(next);
@@ -191,12 +192,18 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                     <td className="px-3 py-2 text-right tabular-nums text-emerald-500 font-medium">{r.vendas}</td>
                     <td className="px-3 py-2 text-right">
                       <Input
-                        type="number"
-                        step="0.01"
-                        value={Number(r.meta.toFixed(2))}
-                        onChange={(e) =>
-                          save({ ...cfg, metas: { ...cfg.metas, [r.funnel]: Number(e.target.value) } })
-                        }
+                        type="text"
+                        inputMode="decimal"
+                        value={drafts[r.funnel] ?? String(Number(r.meta.toFixed(2)))}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setDrafts((d) => ({ ...d, [r.funnel]: v }));
+                          const n = Number(v.replace(",", "."));
+                          if (v.trim() !== "" && Number.isFinite(n)) {
+                            save({ ...cfg, metas: { ...cfg.metas, [r.funnel]: n } });
+                          }
+                        }}
+                        onBlur={() => setDrafts((d) => { const n = { ...d }; delete n[r.funnel]; return n; })}
                         className="h-7 w-20 text-xs text-right ml-auto"
                       />
                     </td>
@@ -243,18 +250,8 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                 </tr>
               </tfoot>
             </table>
-            <div className="px-4 py-3 border-t border-border/40 flex flex-wrap gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <CalendarClock className="h-3.5 w-3.5" />
-                Plano da semana: <strong className="text-foreground">{Math.ceil(totals.agendamentosSemana)}</strong>{" "}
-                reuniões agendadas →{" "}
-                <strong className="text-foreground">{Math.ceil(totals.reunioesSemana)}</strong> realizadas →{" "}
-                <strong className="text-foreground">
-                  {(totals.reunioesSemana * (cfg.fechamento / 100)).toFixed(1)}
-                </strong>{" "}
-                vendas/semana
-              </span>
-              <span>Meta de aproveitamento editável por funil. Comparecimento e fechamento ajustáveis acima.</span>
+            <div className="px-4 py-3 border-t border-border/40 text-xs text-muted-foreground">
+              Meta de aproveitamento editável por funil. Comparecimento e fechamento ajustáveis acima.
             </div>
           </div>
         )}
