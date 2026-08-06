@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { fetchConversaoFunilFn, TAG_FILTER_OPTIONS, type ConversaoRow } from "@/lib/conversao-funil.functions";
+import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
 import { ChevronDown, ChevronRight, Target } from "lucide-react";
 
 function pct(n: number, d: number) {
@@ -40,11 +40,10 @@ export function ConversaoFunilCard({
 }) {
   const [hideNoSeller, setHideNoSeller] = useState(true);
   const [openFunnels, setOpenFunnels] = useState<Record<string, boolean>>({});
-  const [tagFilter, setTagFilter] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["conversao-funil", from, to, tagFilter],
-    queryFn: () => fetchConversaoFunilFn({ data: { from, to, tagFilter } }),
+    queryKey: ["conversao-funil", from, to],
+    queryFn: () => fetchConversaoFunilFn({ data: { from, to } }),
     staleTime: 5 * 60_000,
   });
 
@@ -91,17 +90,6 @@ export function ConversaoFunilCard({
             {title}
           </CardTitle>
           <div className="flex items-center gap-2 flex-wrap">
-            <select
-              className="h-7 rounded-md border bg-background px-2 text-xs"
-              value={tagFilter}
-              onChange={(e) => setTagFilter(e.target.value)}
-            >
-              {TAG_FILTER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
             <Button
               variant="ghost"
               size="sm"
@@ -197,7 +185,7 @@ export function ConversaoFunilCard({
               Vendas e faturamento vêm do <strong>fechamento dos vendedores</strong> (1ª parcela), não dos "ganhos" da
               Clint — que podem conter resultado de marketing no nome do vendedor. Leads e perdidos são dos pipelines da
               Clint. Conversão = vendas ÷ leads do período.
-              {tagFilter && " Filtro por origem atua sobre leads e perdidos (vendas exibidas apenas no modo sem filtro)."}
+              
             </p>
           </div>
         )}

@@ -1,13 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 
-export const TAG_FILTER_OPTIONS = [
-  { value: "", label: "Todas as origens" },
-  { value: "ebook", label: "Ebook" },
-  { value: "minicurso", label: "Minicurso" },
-  { value: "wgt", label: "WGT Perpétuo" },
-  { value: "igt", label: "IGT" },
-  { value: "palavras", label: "Palavras" },
-] as const;
 
 export type ConversaoRow = {
   funnel: string;
@@ -21,11 +13,11 @@ export type ConversaoRow = {
 
 /**
  * Conversão por vendedor × funil.
- * - leads / perdidos: negócios da Clint no período (filtráveis por tag de contato)
+ * - leads / perdidos: negócios da Clint no período
  * - vendas / valor: fechamento manual dos vendedores (manual_sales, 1ª parcela)
  */
 export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
-  .inputValidator((d: { from: string; to: string; tagFilter?: string }) => d)
+  .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<ConversaoRow[]> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const {
@@ -35,23 +27,13 @@ export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
       canonicalSellerName,
       FUNIS_VENDEDOR,
       isVendedorExcluido,
-      dealMatchesTagFilter,
     } = await import("@/lib/conversao-funil.server");
 
-    const tagFilter = data.tagFilter ?? "";
-
     const [created, lostRows, sales] = await Promise.all([
-      pagedDeals(supabaseAdmin, "created_at", data.from, data.to, tagFilter),
-      pagedDeals(supabaseAdmin, "lost_at", data.from, data.to, tagFilter),
+      pagedDeals(supabaseAdmin, "created_at", data.from, data.to),
+      pagedDeals(supabaseAdmin, "lost_at", data.from, data.to),
       fetchManualSales(supabaseAdmin, data.from, data.to),
     ]);
-
-    const filteredCreated = tagFilter
-      ? (created as any[]).filter((d) => dealMatchesTagFilter(d.contact_tags ?? [], tagFilter))
-      : (created as any[]);
-    const filteredLost = tagFilter
-      ? (lostRows as any[]).filter((d) => dealMatchesTagFilter(d.contact_tags ?? [], tagFilter))
-      : (lostRows as any[]);
 
     const map = new Map<string, ConversaoRow>();
     const get = (funnelRaw: string | null, sellerRaw: string | null) => {
@@ -66,19 +48,17 @@ export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
       return row;
     };
 
-    for (const d of filteredCreated) get(d.origin_name, d.user_name).leads++;
-    for (const d of filteredLost) {
+    for (const d of created as any[]) get(d.origin_name, d.user_name).leads++;
+    for (const d of lostRows as any[]) {
       if (d.status !== "LOST") continue;
       get(d.origin_name, d.user_name).lost++;
     }
-    // vendas/valor não são filtráveis por tag (manual_sales não tem contact_tags)
-    if (!tagFilter) {
-      for (const s of sales as any[]) {
-        const row = get(s.funnel, s.seller_name);
-        row.vendas++;
-        row.valor += Number(s.value_eur ?? 0);
-      }
+    for (const s of sales as any[]) {
+      const row = get(s.funnel, s.seller_name);
+      row.vendas++;
+      row.valor += Number(s.value_eur ?? 0);
     }
+
 
     return Array.from(map.values()).filter(
       (r) =>
