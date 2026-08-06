@@ -185,7 +185,7 @@ export function ConversaoFunilCard({
               Vendas e faturamento vêm do <strong>fechamento dos vendedores</strong> (1ª parcela), não dos "ganhos" da
               Clint — que podem conter resultado de marketing no nome do vendedor. Leads e perdidos são dos pipelines da
               Clint. Conversão = vendas ÷ leads do período.
-              {tagFilter && " Filtro por origem atua sobre leads e perdidos (vendas exibidas apenas no modo sem filtro)."}
+              
             </p>
           </div>
         )}
