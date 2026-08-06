@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { fetchConversaoFunilFn, TAG_FILTER_OPTIONS, type ConversaoRow } from "@/lib/conversao-funil.functions";
+import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
 import { ChevronDown, ChevronRight, Target } from "lucide-react";
 
 function pct(n: number, d: number) {
@@ -40,11 +40,10 @@ export function ConversaoFunilCard({
 }) {
   const [hideNoSeller, setHideNoSeller] = useState(true);
   const [openFunnels, setOpenFunnels] = useState<Record<string, boolean>>({});
-  const [tagFilter, setTagFilter] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["conversao-funil", from, to, tagFilter],
-    queryFn: () => fetchConversaoFunilFn({ data: { from, to, tagFilter } }),
+    queryKey: ["conversao-funil", from, to],
+    queryFn: () => fetchConversaoFunilFn({ data: { from, to } }),
     staleTime: 5 * 60_000,
   });
 
