@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { isRenewalProduct } from "@/lib/product-groups";
 import { ConversaoFunilCard } from "@/components/conversao-funil";
+import { MetasFunilCard } from "@/components/metas-funil";
 
 // ─── Breakdown por funil ──────────────────────────────────────────────────────
 
