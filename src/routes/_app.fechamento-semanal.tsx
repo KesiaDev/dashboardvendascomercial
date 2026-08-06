@@ -19,6 +19,7 @@ import {
 import { isRenewalProduct } from "@/lib/product-groups";
 import { ConversaoFunilCard } from "@/components/conversao-funil";
 import { MetasFunilCard } from "@/components/metas-funil";
+import { MetasIgt23Card } from "@/components/metas-igt23";
 
 // ─── Breakdown por funil ──────────────────────────────────────────────────────
 
