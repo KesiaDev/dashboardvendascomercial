@@ -182,8 +182,14 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Meta %</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Realizado %</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground w-[16%]">Atingimento</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Vendas p/ meta</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Reuniões/sem</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                    Vendas necessárias
+                    <span className="block text-[10px] font-normal opacity-70">no período (falta/sobra)</span>
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                    Reuniões por semana
+                    <span className="block text-[10px] font-normal opacity-70">realizar (agendar)</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
