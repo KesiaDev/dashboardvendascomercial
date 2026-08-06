@@ -250,18 +250,8 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                 </tr>
               </tfoot>
             </table>
-            <div className="px-4 py-3 border-t border-border/40 flex flex-wrap gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <CalendarClock className="h-3.5 w-3.5" />
-                Plano da semana: <strong className="text-foreground">{Math.ceil(totals.agendamentosSemana)}</strong>{" "}
-                reuniões agendadas →{" "}
-                <strong className="text-foreground">{Math.ceil(totals.reunioesSemana)}</strong> realizadas →{" "}
-                <strong className="text-foreground">
-                  {(totals.reunioesSemana * (cfg.fechamento / 100)).toFixed(1)}
-                </strong>{" "}
-                vendas/semana
-              </span>
-              <span>Meta de aproveitamento editável por funil. Comparecimento e fechamento ajustáveis acima.</span>
+            <div className="px-4 py-3 border-t border-border/40 text-xs text-muted-foreground">
+              Meta de aproveitamento editável por funil. Comparecimento e fechamento ajustáveis acima.
             </div>
           </div>
         )}
