@@ -26,6 +26,7 @@ type Config = {
   metas: Record<string, number>;
   comparecimento: number; // % de reuniões agendadas que acontecem
   fechamento: number; // % de reuniões realizadas que viram venda
+  metaGeral: number; // % de aproveitamento alvo somando todos os funis
 };
 
 const DEFAULT_CONFIG: Config = {
@@ -33,6 +34,7 @@ const DEFAULT_CONFIG: Config = {
   metas: {},
   comparecimento: 48.6,
   fechamento: 33,
+  metaGeral: 10,
 };
 
 function loadConfig(): Config {
@@ -180,8 +182,14 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Meta %</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Realizado %</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground w-[16%]">Atingimento</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Vendas p/ meta</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Reuniões/sem</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                    Vendas necessárias
+                    <span className="block text-[10px] font-normal opacity-70">no período (falta/sobra)</span>
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                    Reuniões por semana
+                    <span className="block text-[10px] font-normal opacity-70">realizar (agendar)</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -250,9 +258,74 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                 </tr>
               </tfoot>
             </table>
-            <div className="px-4 py-3 border-t border-border/40 text-xs text-muted-foreground">
-              Meta de aproveitamento editável por funil. Comparecimento e fechamento ajustáveis acima.
-            </div>
+            {(() => {
+              const realGeral = totals.leads > 0 ? (totals.vendas / totals.leads) * 100 : 0;
+              const metaGeral = cfg.metaGeral;
+              const atgGeral = metaGeral > 0 ? (realGeral / metaGeral) * 100 : 0;
+              const vendasNecessarias = (totals.leads * metaGeral) / 100;
+              const faltam = vendasNecessarias - totals.vendas;
+              return (
+                <div className="px-4 py-3 border-t border-border space-y-2 bg-muted/20">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Meta geral (todos os funis juntos)
+                    </span>
+                    <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                      Meta
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={drafts.__geral ?? String(cfg.metaGeral)}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setDrafts((d) => ({ ...d, __geral: v }));
+                          const n = Number(v.replace(",", "."));
+                          if (v.trim() !== "" && Number.isFinite(n)) save({ ...cfg, metaGeral: n });
+                        }}
+                        onBlur={() => setDrafts((d) => { const n = { ...d }; delete n.__geral; return n; })}
+                        className="h-7 w-20 text-xs text-right"
+                      />
+                      %
+                    </label>
+                    {statusBadge(atgGeral)}
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Meta de aproveitamento</p>
+                      <p className="text-lg font-semibold tabular-nums">{fmtPct(metaGeral)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Realizado</p>
+                      <p className="text-lg font-semibold tabular-nums">{fmtPct(realGeral)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Atingimento da meta</p>
+                      <p className="text-lg font-semibold tabular-nums">{atgGeral.toFixed(0)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Vendas necessárias</p>
+                      <p className="text-lg font-semibold tabular-nums">
+                        {vendasNecessarias.toFixed(0)}
+                        <span className={`ml-1 text-xs ${faltam > 0 ? "text-red-500" : "text-emerald-500"}`}>
+                          ({faltam > 0 ? `faltam ${faltam.toFixed(0)}` : `+${Math.abs(faltam).toFixed(0)}`})
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full ${atgGeral >= 100 ? "bg-emerald-500" : atgGeral >= 70 ? "bg-amber-500" : "bg-red-500"}`}
+                      style={{ width: `${Math.min(100, atgGeral)}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Aproveitamento = vendas ÷ leads do período. <strong>Vendas necessárias</strong> = leads × meta %.{" "}
+                    <strong>Reuniões por semana</strong> = quantas reuniões precisam acontecer (e quantas agendar,
+                    considerando {cfg.comparecimento}% de comparecimento e {cfg.fechamento}% de fechamento).
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         )}
       </CardContent>
