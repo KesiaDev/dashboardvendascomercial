@@ -115,7 +115,22 @@ export function MetasIgt23Card({ title }: { title?: string }) {
   const [store, setStore] = useState<Store>(DEFAULT_STORE);
   const [novo, setNovo] = useState("");
   const [open, setOpen] = useState(false);
-  useEffect(() => setStore(load()), []);
+  useEffect(() => {
+    setStore(load());
+    try {
+      setOpen(window.localStorage.getItem("metas-igt-open") === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const toggleOpen = (v: boolean) => {
+    setOpen(v);
+    try {
+      window.localStorage.setItem("metas-igt-open", v ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  };
 
   const persist = (next: Store) => {
     setStore(next);
