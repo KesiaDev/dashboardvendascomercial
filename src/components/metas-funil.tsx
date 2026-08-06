@@ -51,6 +51,9 @@ function loadConfig(): Config {
 function fmtPct(v: number) {
   return `${v.toFixed(2)}%`;
 }
+function ceil(v: number) {
+  return Math.ceil(v);
+}
 
 function weeksBetween(from: string, to: string) {
   const ms = new Date(`${to}T23:59:59Z`).getTime() - new Date(`${from}T00:00:00Z`).getTime();
@@ -92,11 +95,11 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
           cfg.baselines[f.funnel] ?? DEFAULT_BASELINES[f.funnel] ?? DEFAULT_BASELINE_FALLBACK;
         const meta = cfg.metas[f.funnel] ?? baseline * MULTIPLICADOR_META;
         const real = f.leads > 0 ? (f.vendas / f.leads) * 100 : 0;
-        const vendasMeta = (f.leads * meta) / 100;
+        const vendasMeta = ceil((f.leads * meta) / 100);
         const gap = f.vendas - vendasMeta;
         // Reuniões necessárias: vendas alvo ÷ taxa de fechamento, e agendamentos ÷ comparecimento
-        const reunioesRealizadas = cfg.fechamento > 0 ? vendasMeta / (cfg.fechamento / 100) : 0;
-        const agendamentos = cfg.comparecimento > 0 ? reunioesRealizadas / (cfg.comparecimento / 100) : 0;
+        const reunioesRealizadas = ceil(cfg.fechamento > 0 ? vendasMeta / (cfg.fechamento / 100) : 0);
+        const agendamentos = ceil(cfg.comparecimento > 0 ? reunioesRealizadas / (cfg.comparecimento / 100) : 0);
         return {
           ...f,
           baseline,
@@ -105,8 +108,8 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
           vendasMeta,
           gap,
           atingimento: meta > 0 ? (real / meta) * 100 : 0,
-          reunioesSemana: reunioesRealizadas / semanas,
-          agendamentosSemana: agendamentos / semanas,
+          reunioesSemana: ceil(reunioesRealizadas / semanas),
+          agendamentosSemana: ceil(agendamentos / semanas),
         };
       })
       .filter((f) => f.leads > 0 || f.vendas > 0)
@@ -228,16 +231,16 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                       </div>
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      {r.vendasMeta.toFixed(1)}
+                      {r.vendasMeta.toFixed(0)}
                       <span className={`ml-1 text-xs ${r.gap >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                         ({r.gap >= 0 ? "+" : ""}
-                        {r.gap.toFixed(1)})
+                        {r.gap.toFixed(0)})
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      {r.reunioesSemana.toFixed(1)}
+                      {r.reunioesSemana.toFixed(0)}
                       <span className="text-xs text-muted-foreground ml-1">
-                        (agendar {r.agendamentosSemana.toFixed(1)})
+                        (agendar {r.agendamentosSemana.toFixed(0)})
                       </span>
                     </td>
                   </tr>
@@ -253,8 +256,8 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                     {fmtPct(totals.leads > 0 ? (totals.vendas / totals.leads) * 100 : 0)}
                   </td>
                   <td className="px-3 py-2" />
-                  <td className="px-3 py-2 text-right tabular-nums">{totals.vendasMeta.toFixed(1)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{totals.reunioesSemana.toFixed(1)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{totals.vendasMeta.toFixed(0)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{totals.reunioesSemana.toFixed(0)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -262,7 +265,7 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
               const realGeral = totals.leads > 0 ? (totals.vendas / totals.leads) * 100 : 0;
               const metaGeral = cfg.metaGeral;
               const atgGeral = metaGeral > 0 ? (realGeral / metaGeral) * 100 : 0;
-              const vendasNecessarias = (totals.leads * metaGeral) / 100;
+              const vendasNecessarias = ceil((totals.leads * metaGeral) / 100);
               const faltam = vendasNecessarias - totals.vendas;
               return (
                 <div className="px-4 py-3 border-t border-border space-y-2 bg-muted/20">
