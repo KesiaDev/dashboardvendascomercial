@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
-import { Gauge, CalendarClock, RotateCcw } from "lucide-react";
+import { Gauge, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
