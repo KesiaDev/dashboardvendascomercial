@@ -775,6 +775,9 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
       {/* Conversão por vendedor × funil */}
       <ConversaoFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Conversão por Vendedor × Funil — ${monthLabel}`}/>
 
+      {/* Meta de aproveitamento por funil */}
+      <MetasFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Meta de Aproveitamento por Funil — ${monthLabel}`}/>
+
       {/* Tabela de semanas do mês */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Semanas de {monthLabel}</CardTitle></CardHeader>
