@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { isRenewalProduct } from "@/lib/product-groups";
 import { ConversaoFunilCard } from "@/components/conversao-funil";
+import { MetasFunilCard } from "@/components/metas-funil";
 
 // ─── Breakdown por funil ──────────────────────────────────────────────────────
 
@@ -468,6 +469,9 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
       {/* Conversão por vendedor × funil */}
       <ConversaoFunilCard from={start} to={end} title={`Conversão por Vendedor × Funil — Semana ${weekIdx+1+WEEK_LABEL_OFFSET}`}/>
 
+      {/* Meta de aproveitamento por funil */}
+      <MetasFunilCard from={start} to={end} title={`Meta de Aproveitamento por Funil — Semana ${weekIdx+1+WEEK_LABEL_OFFSET}`}/>
+
       {/* Tabela de vendas */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-1.5"><ShoppingBag className="h-4 w-4 text-muted-foreground"/>Vendas — Semana {weekIdx+1+WEEK_LABEL_OFFSET} · {fmtDate(start)} a {fmtDate(end)}</CardTitle></CardHeader>
@@ -774,6 +778,9 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
 
       {/* Conversão por vendedor × funil */}
       <ConversaoFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Conversão por Vendedor × Funil — ${monthLabel}`}/>
+
+      {/* Meta de aproveitamento por funil */}
+      <MetasFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Meta de Aproveitamento por Funil — ${monthLabel}`}/>
 
       {/* Tabela de semanas do mês */}
       <Card>
