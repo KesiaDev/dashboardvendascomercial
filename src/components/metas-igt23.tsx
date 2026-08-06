@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Target, Plus, Trash2 } from "lucide-react";
+import { Target, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
 /**
  * Meta IGT (IGT23, IGT24, ...): o Marketing define o volume total de vendas
@@ -114,6 +114,7 @@ function Bar({ pct, tone }: { pct: number; tone: string }) {
 export function MetasIgt23Card({ title }: { title?: string }) {
   const [store, setStore] = useState<Store>(DEFAULT_STORE);
   const [novo, setNovo] = useState("");
+  const [open, setOpen] = useState(false);
   useEffect(() => setStore(load()), []);
 
   const persist = (next: Store) => {
