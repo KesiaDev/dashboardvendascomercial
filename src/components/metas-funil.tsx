@@ -191,12 +191,18 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                     <td className="px-3 py-2 text-right tabular-nums text-emerald-500 font-medium">{r.vendas}</td>
                     <td className="px-3 py-2 text-right">
                       <Input
-                        type="number"
-                        step="0.01"
-                        value={Number(r.meta.toFixed(2))}
-                        onChange={(e) =>
-                          save({ ...cfg, metas: { ...cfg.metas, [r.funnel]: Number(e.target.value) } })
-                        }
+                        type="text"
+                        inputMode="decimal"
+                        value={drafts[r.funnel] ?? String(Number(r.meta.toFixed(2)))}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setDrafts((d) => ({ ...d, [r.funnel]: v }));
+                          const n = Number(v.replace(",", "."));
+                          if (v.trim() !== "" && Number.isFinite(n)) {
+                            save({ ...cfg, metas: { ...cfg.metas, [r.funnel]: n } });
+                          }
+                        }}
+                        onBlur={() => setDrafts((d) => { const n = { ...d }; delete n[r.funnel]; return n; })}
                         className="h-7 w-20 text-xs text-right ml-auto"
                       />
                     </td>
