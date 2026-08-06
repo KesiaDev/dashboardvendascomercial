@@ -187,10 +187,10 @@ export function MetasIgt23Card({ title }: { title?: string }) {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 space-y-3">
         <CardTitle className="flex flex-wrap items-center gap-2 text-base">
           <Target className="h-4 w-4 text-primary" />
-          {title ?? "Meta IGT23 — Marketing x Comercial"}
+          {title ?? `Meta ${active} — Marketing x Comercial`}
           <Badge variant="secondary" className="font-normal">
             Comercial = {cfg.sharePct}% do total vendido
           </Badge>
@@ -198,7 +198,52 @@ export function MetasIgt23Card({ title }: { title?: string }) {
             Cenário atual: {cenarioAtual}
           </Badge>
         </CardTitle>
+        {/* Abas de edições (IGT23, IGT24, ...) */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1 rounded-lg bg-muted p-1">
+            {store.order.map((nome) => (
+              <div key={nome} className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => persist({ ...store, active: nome })}
+                  className={`rounded-md px-3 py-1 text-xs font-medium transition ${
+                    nome === active
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {nome}
+                </button>
+                {nome === active && store.order.length > 1 ? (
+                  <button
+                    type="button"
+                    title={`Remover ${nome}`}
+                    onClick={() => removeEdicao(nome)}
+                    className="ml-0.5 rounded p-1 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <Input
+              value={novo}
+              onChange={(e) => setNovo(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") addEdicao();
+              }}
+              placeholder="IGT24"
+              className="h-8 w-24 text-xs"
+            />
+            <Button type="button" size="sm" variant="outline" className="h-8" onClick={addEdicao}>
+              <Plus className="h-3 w-3 mr-1" /> Nova edição
+            </Button>
+          </div>
+        </div>
       </CardHeader>
+
       <CardContent className="space-y-5">
         {/* Realizado consolidado */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
