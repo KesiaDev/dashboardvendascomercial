@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Target, Plus, Trash2 } from "lucide-react";
 
 /**
- * Meta IGT23: o Marketing define o volume total de vendas (cenários mínimo/boa/excelente)
- * e o Comercial precisa entregar uma fatia (% share) desse total.
+ * Meta IGT (IGT23, IGT24, ...): o Marketing define o volume total de vendas
+ * (cenários mínimo/boa/excelente) e o Comercial entrega uma fatia (% share) desse total.
+ * Cada edição tem sua própria configuração, guardada localmente.
  */
-const STORE_KEY = "metas-igt23-v1";
+const STORE_KEY = "metas-igt-v2";
+const LEGACY_KEY = "metas-igt23-v1";
 
 type Cfg = {
   minimo: number;
@@ -28,15 +31,39 @@ const DEFAULT_CFG: Cfg = {
   vendasComercial: 62,
 };
 
-function load(): Cfg {
-  if (typeof window === "undefined") return DEFAULT_CFG;
+const EMPTY_CFG: Cfg = { ...DEFAULT_CFG, totalVendas: 0, vendasComercial: 0 };
+
+type Store = {
+  active: string;
+  order: string[];
+  editions: Record<string, Cfg>;
+};
+
+const DEFAULT_STORE: Store = {
+  active: "IGT23",
+  order: ["IGT23"],
+  editions: { IGT23: DEFAULT_CFG },
+};
+
+function load(): Store {
+  if (typeof window === "undefined") return DEFAULT_STORE;
   try {
     const raw = window.localStorage.getItem(STORE_KEY);
-    return raw ? { ...DEFAULT_CFG, ...(JSON.parse(raw) as Cfg) } : DEFAULT_CFG;
+    if (raw) {
+      const s = JSON.parse(raw) as Store;
+      if (s?.order?.length && s.editions) return s;
+    }
+    const legacy = window.localStorage.getItem(LEGACY_KEY);
+    if (legacy) {
+      const cfg = { ...DEFAULT_CFG, ...(JSON.parse(legacy) as Cfg) };
+      return { active: "IGT23", order: ["IGT23"], editions: { IGT23: cfg } };
+    }
+    return DEFAULT_STORE;
   } catch {
-    return DEFAULT_CFG;
+    return DEFAULT_STORE;
   }
 }
+
 
 function NumField({
   label,
