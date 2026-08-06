@@ -205,7 +205,7 @@ export function MetasIgt23Card({ title }: { title?: string }) {
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => toggleOpen(true)}
         className="w-full flex items-center justify-between rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground hover:bg-muted/50 transition"
       >
         <span className="flex items-center gap-2">
@@ -232,7 +232,17 @@ export function MetasIgt23Card({ title }: { title?: string }) {
           <Badge variant="outline" className="font-normal">
             Cenário atual: {cenarioAtual}
           </Badge>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 ml-auto text-xs"
+            onClick={() => toggleOpen(false)}
+          >
+            Ocultar <ChevronUp className="h-3 w-3 ml-1" />
+          </Button>
         </CardTitle>
+
         {/* Abas de edições (IGT23, IGT24, ...) */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap items-center gap-1 rounded-lg bg-muted p-1">
