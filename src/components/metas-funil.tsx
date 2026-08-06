@@ -176,7 +176,6 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   <th className="px-4 py-2 text-left font-medium text-muted-foreground">Funil</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Leads</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Vendas</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Baseline</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Meta %</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Realizado %</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground w-[16%]">Atingimento</th>
@@ -190,17 +189,6 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                     <td className="px-4 py-2 font-medium truncate max-w-[200px]">{r.funnel}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{r.leads}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-emerald-500 font-medium">{r.vendas}</td>
-                    <td className="px-3 py-2 text-right">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={r.baseline}
-                        onChange={(e) =>
-                          save({ ...cfg, baselines: { ...cfg.baselines, [r.funnel]: Number(e.target.value) } })
-                        }
-                        className="h-7 w-20 text-xs text-right ml-auto"
-                      />
-                    </td>
                     <td className="px-3 py-2 text-right">
                       <Input
                         type="number"
