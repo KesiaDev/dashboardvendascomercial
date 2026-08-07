@@ -409,13 +409,48 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                       style={{ width: `${Math.min(100, atgGeral)}%` }}
                     />
                   </div>
+                  <div className="rounded-md border border-border/60 bg-background/60 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                      Por vendedor · time de {cfg.vendedores} (divisão igual)
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Vendas na semana</p>
+                        <p className="text-lg font-semibold tabular-nums">
+                          {ceil(totals.vendasMeta / cfg.vendedores)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Faltam vender</p>
+                        <p className="text-lg font-semibold tabular-nums">
+                          {ceil(Math.max(0, totals.vendasMeta - totals.vendas) / cfg.vendedores)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Reuniões a realizar/semana</p>
+                        <p className="text-lg font-semibold tabular-nums">
+                          {ceil(totals.reunioesSemana / cfg.vendedores)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Reuniões a agendar/semana</p>
+                        <p className="text-lg font-semibold tabular-nums">
+                          {ceil(totals.agendamentosSemana / cfg.vendedores)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Como ler: <strong>Meta de vendas</strong> = leads × meta % (quantas vendas o funil deveria dar no
-                    período). <strong>Faltam vender</strong> = quanto ainda falta para chegar nessa meta.{" "}
-                    <strong>Reuniões a realizar</strong> = reuniões que precisam acontecer por semana (fechamento de{" "}
-                    {cfg.fechamento}%). <strong>Reuniões a agendar</strong> = quantas marcar por semana, já contando{" "}
-                    {cfg.comparecimento}% de comparecimento.
+                    Como ler: a <strong>Meta % mês</strong> é a fonte da verdade — a <strong>Meta % semana</strong>
+                    {" "}herda automaticamente esse valor (a taxa de aproveitamento é a mesma; o que muda é o volume de
+                    leads da semana). Você pode sobrescrever a semana pontualmente e voltar ao mês com um clique.{" "}
+                    <strong>Meta de vendas</strong> = leads × meta % (arredondado pra cima).{" "}
+                    <strong>Faltam vender</strong> = quanto ainda falta para bater a meta.{" "}
+                    <strong>Reuniões a realizar</strong> = por semana, com fechamento de {cfg.fechamento}%;{" "}
+                    <strong>Reuniões a agendar</strong> já considera {cfg.comparecimento}% de comparecimento. O bloco
+                    "por vendedor" divide tudo igualmente entre os {cfg.vendedores} vendedores.
                   </p>
+
                 </div>
               );
             })()}
