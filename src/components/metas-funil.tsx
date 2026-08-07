@@ -23,18 +23,22 @@ const STORE_KEY = "metas-funil-v1";
 
 type Config = {
   baselines: Record<string, number>;
-  metas: Record<string, number>;
+  metas: Record<string, number>; // meta do MÊS por funil (fonte da verdade)
+  metasSemana: Record<string, number>; // override opcional da meta da semana
   comparecimento: number; // % de reuniões agendadas que acontecem
   fechamento: number; // % de reuniões realizadas que viram venda
-  metaGeral: number; // % de aproveitamento alvo somando todos os funis
+  metaGeral: number; // % de aproveitamento alvo somando todos os funis (mês)
+  vendedores: number; // nº de vendedores para dividir a meta
 };
 
 const DEFAULT_CONFIG: Config = {
   baselines: {},
   metas: {},
+  metasSemana: {},
   comparecimento: 48.6,
   fechamento: 33,
   metaGeral: 10,
+  vendedores: 5,
 };
 
 function loadConfig(): Config {
@@ -93,7 +97,9 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
       .map((f) => {
         const baseline =
           cfg.baselines[f.funnel] ?? DEFAULT_BASELINES[f.funnel] ?? DEFAULT_BASELINE_FALLBACK;
-        const meta = cfg.metas[f.funnel] ?? baseline * MULTIPLICADOR_META;
+        const metaMes = cfg.metas[f.funnel] ?? baseline * MULTIPLICADOR_META;
+        // A meta da semana herda a do mês (mesma taxa de aproveitamento), salvo override manual
+        const meta = cfg.metasSemana[f.funnel] ?? metaMes;
         const real = f.leads > 0 ? (f.vendas / f.leads) * 100 : 0;
         const vendasMeta = ceil((f.leads * meta) / 100);
         const gap = f.vendas - vendasMeta;
@@ -103,6 +109,7 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
         return {
           ...f,
           baseline,
+          metaMes,
           meta,
           real,
           vendasMeta,
@@ -162,6 +169,16 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
               />
               %
             </label>
+            <label className="flex items-center gap-1 text-muted-foreground">
+              Vendedores
+              <Input
+                type="number"
+                min={1}
+                value={cfg.vendedores}
+                onChange={(e) => save({ ...cfg, vendedores: Math.max(1, Number(e.target.value) || 1) })}
+                className="h-7 w-14 text-xs"
+              />
+            </label>
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
               <RotateCcw className="h-3.5 w-3.5 mr-1" />
               Padrões
@@ -182,7 +199,14 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   <th className="px-4 py-2 text-left font-medium text-muted-foreground">Funil</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Leads</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Vendas</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Meta %</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                    Meta % mês
+                    <span className="block text-[10px] font-normal opacity-70">fonte da verdade</span>
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                    Meta % semana
+                    <span className="block text-[10px] font-normal opacity-70">herda do mês</span>
+                  </th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Realizado %</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground w-[16%]">Atingimento</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">
@@ -213,18 +237,52 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                       <Input
                         type="text"
                         inputMode="decimal"
-                        value={drafts[r.funnel] ?? String(Number(r.meta.toFixed(2)))}
+                        value={drafts[`m:${r.funnel}`] ?? String(Number(r.metaMes.toFixed(2)))}
                         onChange={(e) => {
                           const v = e.target.value;
-                          setDrafts((d) => ({ ...d, [r.funnel]: v }));
+                          setDrafts((d) => ({ ...d, [`m:${r.funnel}`]: v }));
                           const n = Number(v.replace(",", "."));
                           if (v.trim() !== "" && Number.isFinite(n)) {
-                            save({ ...cfg, metas: { ...cfg.metas, [r.funnel]: n } });
+                            // Alterar a meta do mês recalcula a semana (remove override)
+                            const semana = { ...cfg.metasSemana };
+                            delete semana[r.funnel];
+                            save({ ...cfg, metas: { ...cfg.metas, [r.funnel]: n }, metasSemana: semana });
                           }
                         }}
-                        onBlur={() => setDrafts((d) => { const n = { ...d }; delete n[r.funnel]; return n; })}
+                        onBlur={() => setDrafts((d) => { const n = { ...d }; delete n[`m:${r.funnel}`]; return n; })}
                         className="h-7 w-20 text-xs text-right ml-auto"
                       />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={drafts[`s:${r.funnel}`] ?? String(Number(r.meta.toFixed(2)))}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setDrafts((d) => ({ ...d, [`s:${r.funnel}`]: v }));
+                          const n = Number(v.replace(",", "."));
+                          if (v.trim() !== "" && Number.isFinite(n)) {
+                            save({ ...cfg, metasSemana: { ...cfg.metasSemana, [r.funnel]: n } });
+                          }
+                        }}
+                        onBlur={() => setDrafts((d) => { const n = { ...d }; delete n[`s:${r.funnel}`]; return n; })}
+                        className={`h-7 w-20 text-xs text-right ml-auto ${cfg.metasSemana[r.funnel] != null ? "border-amber-500" : ""}`}
+                      />
+                      {cfg.metasSemana[r.funnel] != null && (
+                        <button
+                          type="button"
+                          className="block ml-auto text-[10px] text-amber-500 hover:underline"
+                          onClick={() => {
+                            const semana = { ...cfg.metasSemana };
+                            delete semana[r.funnel];
+                            save({ ...cfg, metasSemana: semana });
+                            setDrafts((d) => { const n = { ...d }; delete n[`s:${r.funnel}`]; return n; });
+                          }}
+                        >
+                          voltar ao mês
+                        </button>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums font-semibold">{fmtPct(r.real)}</td>
                     <td className="px-3 py-2">
@@ -246,8 +304,18 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                         <span className="text-red-500 font-medium">{Math.abs(r.gap).toFixed(0)}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{r.reunioesSemana.toFixed(0)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{r.agendamentosSemana.toFixed(0)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {r.reunioesSemana.toFixed(0)}
+                      <span className="block text-[10px] opacity-60">
+                        {ceil(r.reunioesSemana / cfg.vendedores)}/vendedor
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {r.agendamentosSemana.toFixed(0)}
+                      <span className="block text-[10px] opacity-60">
+                        {ceil(r.agendamentosSemana / cfg.vendedores)}/vendedor
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -257,6 +325,7 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   <td className="px-3 py-2 text-right tabular-nums">{totals.leads}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.vendas}</td>
                   <td className="px-3 py-2" />
+                  <td className="px-3 py-2" />
                   <td className="px-3 py-2 text-right tabular-nums">
                     {fmtPct(totals.leads > 0 ? (totals.vendas / totals.leads) * 100 : 0)}
                   </td>
@@ -265,8 +334,18 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   <td className="px-3 py-2 text-right tabular-nums">
                     {Math.max(0, totals.vendasMeta - totals.vendas)}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">{totals.reunioesSemana.toFixed(0)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{totals.agendamentosSemana.toFixed(0)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {totals.reunioesSemana.toFixed(0)}
+                    <span className="block text-[10px] font-normal opacity-60">
+                      {ceil(totals.reunioesSemana / cfg.vendedores)}/vendedor
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {totals.agendamentosSemana.toFixed(0)}
+                    <span className="block text-[10px] font-normal opacity-60">
+                      {ceil(totals.agendamentosSemana / cfg.vendedores)}/vendedor
+                    </span>
+                  </td>
                 </tr>
               </tfoot>
             </table>
@@ -330,13 +409,48 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                       style={{ width: `${Math.min(100, atgGeral)}%` }}
                     />
                   </div>
+                  <div className="rounded-md border border-border/60 bg-background/60 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                      Por vendedor · time de {cfg.vendedores} (divisão igual)
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Vendas na semana</p>
+                        <p className="text-lg font-semibold tabular-nums">
+                          {ceil(totals.vendasMeta / cfg.vendedores)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Faltam vender</p>
+                        <p className="text-lg font-semibold tabular-nums">
+                          {ceil(Math.max(0, totals.vendasMeta - totals.vendas) / cfg.vendedores)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Reuniões a realizar/semana</p>
+                        <p className="text-lg font-semibold tabular-nums">
+                          {ceil(totals.reunioesSemana / cfg.vendedores)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Reuniões a agendar/semana</p>
+                        <p className="text-lg font-semibold tabular-nums">
+                          {ceil(totals.agendamentosSemana / cfg.vendedores)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Como ler: <strong>Meta de vendas</strong> = leads × meta % (quantas vendas o funil deveria dar no
-                    período). <strong>Faltam vender</strong> = quanto ainda falta para chegar nessa meta.{" "}
-                    <strong>Reuniões a realizar</strong> = reuniões que precisam acontecer por semana (fechamento de{" "}
-                    {cfg.fechamento}%). <strong>Reuniões a agendar</strong> = quantas marcar por semana, já contando{" "}
-                    {cfg.comparecimento}% de comparecimento.
+                    Como ler: a <strong>Meta % mês</strong> é a fonte da verdade — a <strong>Meta % semana</strong>
+                    {" "}herda automaticamente esse valor (a taxa de aproveitamento é a mesma; o que muda é o volume de
+                    leads da semana). Você pode sobrescrever a semana pontualmente e voltar ao mês com um clique.{" "}
+                    <strong>Meta de vendas</strong> = leads × meta % (arredondado pra cima).{" "}
+                    <strong>Faltam vender</strong> = quanto ainda falta para bater a meta.{" "}
+                    <strong>Reuniões a realizar</strong> = por semana, com fechamento de {cfg.fechamento}%;{" "}
+                    <strong>Reuniões a agendar</strong> já considera {cfg.comparecimento}% de comparecimento. O bloco
+                    "por vendedor" divide tudo igualmente entre os {cfg.vendedores} vendedores.
                   </p>
+
                 </div>
               );
             })()}
