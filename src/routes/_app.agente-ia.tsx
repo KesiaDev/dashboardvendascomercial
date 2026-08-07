@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Bot, Sparkles, Clock, MessageSquare, CalendarCheck, TrendingUp } from "lucide-react";
+import { Bot, Sparkles, Clock, MessageSquare, CalendarCheck, TrendingUp, Trophy } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   LineChart, Line,
