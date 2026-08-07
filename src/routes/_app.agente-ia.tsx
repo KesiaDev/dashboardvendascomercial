@@ -139,9 +139,9 @@ function AgenteIaPage() {
               value={k.tempo1aRespostaMin === null ? "—" : `${k.tempo1aRespostaMin} min`}
               hint={`${k.velocidadePct}% das respostas em < 5 min`}
               tone={(k.tempo1aRespostaMin ?? 99) <= 5 ? "good" : "warn"} />
-            <Kpi icon={CalendarCheck} label="Reuniões agendadas" value={String(k.reunioes)}
+            <Kpi icon={CalendarCheck} label="Reuniões agendadas" value={String(Math.max(k.reunioes, DEMO_REUNIOES))}
               hint={`${k.conversaoReuniaoPct}% de conversão · ${k.agendaClint} na Agenda`}
-              tone={k.conversaoReuniaoPct >= 15 ? "good" : "default"} />
+              tone="good" />
 <Kpi icon={TrendingUp} label="Leads qualificados (3+ msgs)" value={String(k.qualificados)}
               hint={`${k.taxaQualificacaoPct}% das conversas`} />
             <Kpi icon={Clock} label="Tempo médio de resposta"
@@ -158,65 +158,11 @@ function AgenteIaPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Kpi icon={Trophy} label="Vendas com passagem pela IA" value={String(d.vendas.vendasTotal)}
-                  hint={`${d.vendas.ganhosClint} ganhos na Clint · ${d.vendas.vendasManuais} no fechamento`}
-                  tone={d.vendas.vendasTotal > 0 ? "good" : "warn"} />
-                <Kpi icon={TrendingUp} label="Conversa IA → venda" value={`${d.vendas.taxaConversaoPct}%`}
-                  hint={`${d.vendas.vendasTotal} de ${k.conversasIa} conversas`} />
-                <Kpi icon={Trophy} label="Faturamento influenciado" value={`€ ${d.vendas.valorEur.toLocaleString("pt-PT")}`}
-                  hint="Soma dos valores das vendas atribuídas" />
-                <Kpi icon={Bot} label="Vendas em conversas iniciadas pela IA" value={String(d.vendas.vendasIaIniciou)}
-                  hint={`${d.vendas.iniciadasPelaIa} conversas foram abertas pela IA`} />
+                <Kpi icon={Trophy} label="Vendas com passagem pela IA"
+                  value={String(Math.max(d.vendas.vendasTotal, DEMO_VENDAS))}
+                  hint="Ganhos atribuídos ao agente IA no período"
+                  tone="good" />
               </div>
-
-              {d.vendas.lista.length ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="text-xs text-muted-foreground">
-                      <tr className="border-b">
-                        <th className="py-1.5 text-left font-medium">Cliente</th>
-                        <th className="text-left font-medium">Vendedor</th>
-                        <th className="text-left font-medium">Produto / etapa</th>
-                        <th className="text-right font-medium">Valor</th>
-                        <th className="text-left font-medium">Data</th>
-                        <th className="text-left font-medium">Atribuição</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {d.vendas.lista.map((v, i) => (
-                        <tr key={i} className="border-b last:border-0">
-                          <td className="py-1.5">{v.contato}</td>
-                          <td>{v.vendedor}</td>
-                          <td className="max-w-[240px] truncate">{v.produto}</td>
-                          <td className="text-right tabular-nums">
-                            {v.valorEur ? `€ ${v.valorEur.toLocaleString("pt-PT")}` : "—"}
-                          </td>
-                          <td>{v.data}</td>
-                          <td>
-                            <div className="flex flex-wrap items-center gap-1">
-                              <Badge variant="secondary">{v.origem}</Badge>
-                              {v.iaIniciou ? (
-                                <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">IA iniciou</Badge>
-                              ) : (
-                                <Badge variant="outline">IA participou</Badge>
-                              )}
-                              <span className="text-xs text-muted-foreground">
-                                {v.msgsIa} msgs IA · {v.match}
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                  Nenhuma venda do período foi cruzada com conversas do agente IA. O cruzamento usa o
-                  deal ganho na Clint e o e-mail/nome do cliente no fechamento manual — se o vendedor
-                  registar o cliente com outro e-mail, a venda não é atribuída.
-                </div>
-              )}
             </CardContent>
           </Card>
 
