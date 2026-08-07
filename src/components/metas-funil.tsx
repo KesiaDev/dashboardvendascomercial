@@ -97,7 +97,9 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
       .map((f) => {
         const baseline =
           cfg.baselines[f.funnel] ?? DEFAULT_BASELINES[f.funnel] ?? DEFAULT_BASELINE_FALLBACK;
-        const meta = cfg.metas[f.funnel] ?? baseline * MULTIPLICADOR_META;
+        const metaMes = cfg.metas[f.funnel] ?? baseline * MULTIPLICADOR_META;
+        // A meta da semana herda a do mês (mesma taxa de aproveitamento), salvo override manual
+        const meta = cfg.metasSemana[f.funnel] ?? metaMes;
         const real = f.leads > 0 ? (f.vendas / f.leads) * 100 : 0;
         const vendasMeta = ceil((f.leads * meta) / 100);
         const gap = f.vendas - vendasMeta;
@@ -107,6 +109,7 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
         return {
           ...f,
           baseline,
+          metaMes,
           meta,
           real,
           vendasMeta,
