@@ -65,7 +65,40 @@ export type AgenteIaResult = {
   respostaBuckets: { faixa: string; total: number }[];
   amostraSemResposta: { contato: string; abertura: string; data: string }[];
   amostraConvertida: { contato: string; mensagens: number; data: string; stage: string }[];
+  vendas: {
+    ganhosClint: number;
+    vendasManuais: number;
+    vendasTotal: number;
+    valorEur: number;
+    taxaConversaoPct: number;
+    iniciadasPelaIa: number;
+    vendasIaIniciou: number;
+    lista: {
+      contato: string;
+      origem: "Clint (ganho)" | "Fechamento manual";
+      vendedor: string;
+      produto: string;
+      valorEur: number;
+      data: string;
+      iaIniciou: boolean;
+      msgsIa: number;
+      match: string;
+    }[];
+  };
 };
+
+function digits(s: string | null | undefined): string {
+  const d = (s ?? "").replace(/\D/g, "");
+  return d.length >= 9 ? d.slice(-9) : "";
+}
+function normName(s: string | null | undefined): string {
+  return (s ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 function toDate(ts: string | null | undefined): number | null {
   if (!ts) return null;
