@@ -1433,14 +1433,6 @@ function PerformanceTab() {
                   value={String(view.atendimentos)}
                 />
               )}
-              {showAttendance && !isSeller && (
-                <KpiCard
-                  icon={<Users className="h-3 w-3" />}
-                  label="Leads V3 sem 1º atendimento"
-                  value={String(perf.team.leadsSemAtendimento)}
-                  valueClass={perf.team.leadsSemAtendimento > 0 ? "text-amber-600" : "text-emerald-600"}
-                />
-              )}
               <KpiCard icon={<CheckCircle2 className="h-3 w-3" />} label="Vendas" value={String(view.vendas)} />
               <KpiCard icon={<TrendingUp className="h-3 w-3" />} label="Faturamento" value={fmtEUR(view.faturamento)} />
               <KpiCard
