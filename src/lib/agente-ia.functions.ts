@@ -438,6 +438,7 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
         { etapa: "Leads responderam", valor: leadsResponderam },
         { etapa: "Qualificados (3+ msgs)", valor: qualificados },
         { etapa: "Reunião agendada", valor: reunioes },
+        { etapa: "Venda ganha", valor: vendasLista.length },
       ],
       stages: Array.from(stageCount.entries())
         .map(([stage, total]) => ({ stage, total }))
@@ -445,7 +446,18 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
       respostaBuckets: buckets.map((b) => ({ faixa: b.faixa, total: b.total })),
       amostraSemResposta,
       amostraConvertida,
+      vendas: {
+        ganhosClint: vendasLista.filter((v) => v.origem === "Clint (ganho)").length,
+        vendasManuais: vendasLista.filter((v) => v.origem === "Fechamento manual").length,
+        vendasTotal: vendasLista.length,
+        valorEur: Number(vendasLista.reduce((s, v) => s + (v.valorEur || 0), 0).toFixed(2)),
+        taxaConversaoPct: pct(vendasLista.length, conversasIa),
+        iniciadasPelaIa,
+        vendasIaIniciou,
+        lista: vendasLista.sort((a, b) => b.data.localeCompare(a.data)),
+      },
     };
+
   });
 
 export const generateAgenteIaInsightsFn = createServerFn({ method: "POST" })
