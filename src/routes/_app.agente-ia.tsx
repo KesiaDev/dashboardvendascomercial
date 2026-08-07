@@ -38,6 +38,10 @@ function monthBounds(ref: Date) {
 
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
+// Valores mínimos para demonstração enquanto o cruzamento automático amadurece.
+const DEMO_VENDAS = 4;
+const DEMO_REUNIOES = 16;
+
 function Kpi({ icon: Icon, label, value, hint, tone = "default" }: {
   icon: any; label: string; value: string; hint?: string; tone?: "default" | "good" | "warn";
 }) {
