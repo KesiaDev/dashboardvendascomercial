@@ -189,11 +189,37 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
     for (let i = 0; i < dealIds.length; i += 100) dealChunks.push(dealIds.slice(i, i + 100));
     const dealRes = await Promise.all(
       dealChunks.map((chunk) =>
-        db.from("clint_deals").select("id,stage,updated_stage_at,status").in("id", chunk),
+        db
+          .from("clint_deals")
+          .select(
+            "id,stage,updated_stage_at,status,value,currency,won_at,won_by_name,user_name,contact_email,contact_phone,contact_name",
+          )
+          .in("id", chunk),
       ),
     );
-    const dealById = new Map<string, { stage: string | null; updated_stage_at: string | null }>();
+    const dealById = new Map<string, any>();
     for (const r of dealRes) for (const d of r.data ?? []) dealById.set(d.id, d as any);
+
+    // Vendas manuais do período (fechamento dos vendedores) para cruzar com contatos da IA
+    const manualRes = await db
+      .from("manual_sales")
+      .select("id,seller_name,product,value_eur,client_name,client_email,sale_date")
+      .gte("sale_date", data.startDate)
+      .lte("sale_date", data.endDate)
+      .eq("installment_number", 1)
+      .limit(3000);
+    const manualSales = (manualRes.data ?? []) as any[];
+    const manualByEmail = new Map<string, any>();
+    const manualByName = new Map<string, any>();
+    for (const m of manualSales) {
+      if (m.client_email) manualByEmail.set(String(m.client_email).toLowerCase().trim(), m);
+      if (m.client_name) manualByName.set(normName(m.client_name), m);
+    }
+    const vendasLista: AgenteIaResult["vendas"]["lista"] = [];
+    const vendasKeys = new Set<string>();
+    let iniciadasPelaIa = 0;
+    let vendasIaIniciou = 0;
+
 
     const daily = new Map<string, { iniciadas: number; responderam: number; reunioes: number }>();
     const touch = (d: string) => {
