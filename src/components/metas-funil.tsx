@@ -199,7 +199,14 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   <th className="px-4 py-2 text-left font-medium text-muted-foreground">Funil</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Leads</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Vendas</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Meta %</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                    Meta % mês
+                    <span className="block text-[10px] font-normal opacity-70">fonte da verdade</span>
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                    Meta % semana
+                    <span className="block text-[10px] font-normal opacity-70">herda do mês</span>
+                  </th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Realizado %</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground w-[16%]">Atingimento</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">
