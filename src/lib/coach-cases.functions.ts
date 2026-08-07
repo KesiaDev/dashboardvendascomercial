@@ -23,6 +23,26 @@ export type CaseCandidate = {
   last_message_at: string | null;
 };
 
+export type TrainingCase = {
+  generated_at: string;
+  conversation_id: string;
+  seller: string;
+  titulo: string;
+  duracao_min: number;
+  contexto: string;
+  objetivo_aprendizagem: string[];
+  o_que_a_ia_viu: { tema: string; o_que_aconteceu: string; impacto: string; evidencia: string }[];
+  abertura: { o_que_foi_feito: string; por_que_nao_funciona: string; modelo_melhor: string };
+  objecoes: { objecao: string; resposta_dada: string; resposta_ideal: string; tecnica: string }[];
+  trechos: { quem: string; texto: string; comentario_ia: string }[];
+  roteiro: { bloco: string; minutos: number; como_conduzir: string; perguntas_para_equipe: string[] }[];
+  roleplay: { cenario: string; papel_cliente: string; objecoes_do_cliente: string[]; criterios_avaliacao: string[] };
+  mensagens_modelo: { situacao: string; texto: string }[];
+  compromissos: string[];
+  indicador_acompanhamento: string;
+};
+
+
 const AI_SOURCES = new Set(["AI_CONVERSATION"]);
 
 function isAutomationBody(b: string) {
