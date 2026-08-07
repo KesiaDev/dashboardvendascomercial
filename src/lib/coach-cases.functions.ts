@@ -42,50 +42,102 @@ export type TrainingCase = {
   indicador_acompanhamento: string;
 };
 
+
+const AI_SOURCES = new Set(["AI_CONVERSATION"]);
+
+function isAutomationBody(b: string) {
+  const t = (b ?? "").trim().toLowerCase();
+  if (!t || t === "[sem texto]") return true;
+  if (t.startsWith("[template:")) return true;
+  if (/^\[[a-z_ ]+\]$/.test(t)) return true; // [IMAGE], [AUDIO], etc
+  return false;
+}
+
 export const listCaseCandidatesFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { days?: number } = {}) => d)
   .handler(async ({ data, context }): Promise<CaseCandidate[]> => {
     assertOwner((context as any)?.claims?.email);
     const db = await admin();
-    const days = Math.max(3, Math.min(180, data.days ?? 30));
+    const days = Math.max(3, Math.min(365, data.days ?? 60));
     const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
 
-    const { data: analyses, error } = await db
+    // 1) Conversas humanas (não-IA) com volume relevante
+    const { data: convs, error: convErr } = await db
+      .from("coach_conversations")
+      .select("id, seller_name, seller_email, contact_name, message_count, last_message_at, is_ai_conversation")
+      .gte("last_message_at", since)
+      .eq("is_ai_conversation", false)
+      .gte("message_count", 10)
+      .order("message_count", { ascending: false })
+      .limit(120);
+    if (convErr) throw new Error(convErr.message);
+    const convRows = convs ?? [];
+    if (!convRows.length) return [];
+
+    const ids = convRows.map((c: any) => c.id);
+
+    // 2) Só conversas com troca real (humano <-> lead)
+    const { data: msgs } = await db
+      .from("coach_messages")
+      .select("conversation_id, direction, body, clint_source")
+      .in("conversation_id", ids)
+      .limit(20000);
+
+    const stats = new Map<string, { inb: number; out: number }>();
+    for (const m of (msgs ?? []) as any[]) {
+      if (AI_SOURCES.has(m.clint_source ?? "")) continue;
+      if (isAutomationBody(m.body)) continue;
+      const s = stats.get(m.conversation_id) ?? { inb: 0, out: 0 };
+      if (m.direction === "inbound") s.inb++;
+      else s.out++;
+      stats.set(m.conversation_id, s);
+    }
+
+    const eligible = ids.filter((id: string) => {
+      const s = stats.get(id);
+      return !!s && s.inb >= 4 && s.out >= 4;
+    });
+    if (!eligible.length) return [];
+
+    // 3) Nota da IA (quando existir) para priorizar as piores
+    const { data: analyses } = await db
       .from("coach_analyses")
       .select("conversation_id, score_geral, resumo, pontos_melhoria, analyzed_at")
-      .gte("analyzed_at", since)
+      .in("conversation_id", eligible)
       .eq("status", "ok")
-      .order("score_geral", { ascending: true })
-      .limit(40);
-    if (error) throw new Error(error.message);
-    const rows = analyses ?? [];
-    if (!rows.length) return [];
+      .order("analyzed_at", { ascending: false });
+    const byConv = new Map<string, any>();
+    for (const a of (analyses ?? []) as any[]) if (!byConv.has(a.conversation_id)) byConv.set(a.conversation_id, a);
 
-    const ids = rows.map((r: any) => r.conversation_id);
-    const { data: convs } = await db
-      .from("coach_conversations")
-      .select("id, seller_name, seller_email, contact_name, message_count, last_message_at")
-      .in("id", ids);
-    const byId = new Map<string, any>();
-    for (const c of convs ?? []) byId.set((c as any).id, c);
+    const convById = new Map<string, any>();
+    for (const c of convRows) convById.set((c as any).id, c);
 
-    return rows
-      .map((r: any) => {
-        const c = byId.get(r.conversation_id);
+    return eligible
+      .map((id: string) => {
+        const c = convById.get(id);
+        const a = byConv.get(id);
+        const s = stats.get(id)!;
         return {
-          conversation_id: r.conversation_id as string,
+          conversation_id: id,
           seller: (c?.seller_name || c?.seller_email || "—") as string,
           contact_name: c?.contact_name ?? null,
-          score: r.score_geral ?? null,
-          resumo: r.resumo ?? null,
-          pontos_melhoria: Array.isArray(r.pontos_melhoria) ? r.pontos_melhoria.slice(0, 3) : [],
-          message_count: c?.message_count ?? null,
+          score: a?.score_geral ?? null,
+          resumo: a?.resumo ?? null,
+          pontos_melhoria: Array.isArray(a?.pontos_melhoria) ? a.pontos_melhoria.slice(0, 3) : [],
+          message_count: s.inb + s.out,
           last_message_at: c?.last_message_at ?? null,
         };
       })
-      .filter((r) => (r.message_count ?? 0) >= 4);
+      .sort((x, y) => {
+        const sx = x.score ?? 99;
+        const sy = y.score ?? 99;
+        if (sx !== sy) return sx - sy;
+        return (y.message_count ?? 0) - (x.message_count ?? 0);
+      })
+      .slice(0, 30);
   });
+
 
 export const generateTrainingCaseFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
