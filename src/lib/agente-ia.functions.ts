@@ -481,7 +481,7 @@ export const generateAgenteIaInsightsFn = createServerFn({ method: "POST" })
           {
             role: "user",
             content: `Período ${res.periodStart} a ${res.periodEnd}:\n${JSON.stringify(
-              { kpis: res.kpis, funil: res.funil, stages: res.stages, tempos: res.respostaBuckets, amostra_sem_resposta: res.amostraSemResposta, amostra_convertida: res.amostraConvertida },
+              { kpis: res.kpis, funil: res.funil, stages: res.stages, tempos: res.respostaBuckets, vendas_atribuidas: res.vendas, amostra_sem_resposta: res.amostraSemResposta, amostra_convertida: res.amostraConvertida },
               null,
               2,
             )}`,
