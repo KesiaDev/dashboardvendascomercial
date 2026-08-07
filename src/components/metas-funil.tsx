@@ -186,12 +186,20 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Realizado %</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground w-[16%]">Atingimento</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">
-                    Vendas necessárias
-                    <span className="block text-[10px] font-normal opacity-70">no período (falta/sobra)</span>
+                    Meta de vendas
+                    <span className="block text-[10px] font-normal opacity-70">no período</span>
                   </th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">
-                    Reuniões por semana
-                    <span className="block text-[10px] font-normal opacity-70">realizar (agendar)</span>
+                    Faltam vender
+                    <span className="block text-[10px] font-normal opacity-70">para bater a meta</span>
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                    Reuniões a realizar
+                    <span className="block text-[10px] font-normal opacity-70">por semana</span>
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                    Reuniões a agendar
+                    <span className="block text-[10px] font-normal opacity-70">por semana</span>
                   </th>
                 </tr>
               </thead>
@@ -230,19 +238,16 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                         {statusBadge(r.atingimento)}
                       </div>
                     </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{r.vendasMeta.toFixed(0)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      {r.vendasMeta.toFixed(0)}
-                      <span className={`ml-1 text-xs ${r.gap >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                        ({r.gap >= 0 ? "+" : ""}
-                        {r.gap.toFixed(0)})
-                      </span>
+                      {r.gap >= 0 ? (
+                        <span className="text-emerald-500 font-medium">Meta batida</span>
+                      ) : (
+                        <span className="text-red-500 font-medium">{Math.abs(r.gap).toFixed(0)}</span>
+                      )}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      {r.reunioesSemana.toFixed(0)}
-                      <span className="text-xs text-muted-foreground ml-1">
-                        (agendar {r.agendamentosSemana.toFixed(0)})
-                      </span>
-                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{r.reunioesSemana.toFixed(0)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{r.agendamentosSemana.toFixed(0)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -257,7 +262,11 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   </td>
                   <td className="px-3 py-2" />
                   <td className="px-3 py-2 text-right tabular-nums">{totals.vendasMeta.toFixed(0)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {Math.max(0, totals.vendasMeta - totals.vendas)}
+                  </td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.reunioesSemana.toFixed(0)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{totals.agendamentosSemana.toFixed(0)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -322,9 +331,11 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                     />
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Aproveitamento = vendas ÷ leads do período. <strong>Vendas necessárias</strong> = leads × meta %.{" "}
-                    <strong>Reuniões por semana</strong> = quantas reuniões precisam acontecer (e quantas agendar,
-                    considerando {cfg.comparecimento}% de comparecimento e {cfg.fechamento}% de fechamento).
+                    Como ler: <strong>Meta de vendas</strong> = leads × meta % (quantas vendas o funil deveria dar no
+                    período). <strong>Faltam vender</strong> = quanto ainda falta para chegar nessa meta.{" "}
+                    <strong>Reuniões a realizar</strong> = reuniões que precisam acontecer por semana (fechamento de{" "}
+                    {cfg.fechamento}%). <strong>Reuniões a agendar</strong> = quantas marcar por semana, já contando{" "}
+                    {cfg.comparecimento}% de comparecimento.
                   </p>
                 </div>
               );
