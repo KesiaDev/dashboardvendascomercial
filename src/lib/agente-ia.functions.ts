@@ -65,7 +65,40 @@ export type AgenteIaResult = {
   respostaBuckets: { faixa: string; total: number }[];
   amostraSemResposta: { contato: string; abertura: string; data: string }[];
   amostraConvertida: { contato: string; mensagens: number; data: string; stage: string }[];
+  vendas: {
+    ganhosClint: number;
+    vendasManuais: number;
+    vendasTotal: number;
+    valorEur: number;
+    taxaConversaoPct: number;
+    iniciadasPelaIa: number;
+    vendasIaIniciou: number;
+    lista: {
+      contato: string;
+      origem: "Clint (ganho)" | "Fechamento manual";
+      vendedor: string;
+      produto: string;
+      valorEur: number;
+      data: string;
+      iaIniciou: boolean;
+      msgsIa: number;
+      match: string;
+    }[];
+  };
 };
+
+function digits(s: string | null | undefined): string {
+  const d = (s ?? "").replace(/\D/g, "");
+  return d.length >= 9 ? d.slice(-9) : "";
+}
+function normName(s: string | null | undefined): string {
+  return (s ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 function toDate(ts: string | null | undefined): number | null {
   if (!ts) return null;
@@ -100,7 +133,9 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
         .lte("last_message_at", endTS),
       db
         .from("coach_conversations")
-        .select("id,deal_id,contact_name,stage,first_message_at,last_message_at,message_count")
+        .select(
+          "id,deal_id,contact_name,contact_email,stage,first_message_at,last_message_at,message_count",
+        )
         .eq("origin_name", V3)
         .eq("is_ai_conversation", true)
         .gte("last_message_at", startTS)
@@ -154,11 +189,37 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
     for (let i = 0; i < dealIds.length; i += 100) dealChunks.push(dealIds.slice(i, i + 100));
     const dealRes = await Promise.all(
       dealChunks.map((chunk) =>
-        db.from("clint_deals").select("id,stage,updated_stage_at,status").in("id", chunk),
+        db
+          .from("clint_deals")
+          .select(
+            "id,stage,updated_stage_at,status,value,currency,won_at,won_by_name,user_name,contact_email,contact_phone,contact_name",
+          )
+          .in("id", chunk),
       ),
     );
-    const dealById = new Map<string, { stage: string | null; updated_stage_at: string | null }>();
+    const dealById = new Map<string, any>();
     for (const r of dealRes) for (const d of r.data ?? []) dealById.set(d.id, d as any);
+
+    // Vendas manuais do período (fechamento dos vendedores) para cruzar com contatos da IA
+    const manualRes = await db
+      .from("manual_sales")
+      .select("id,seller_name,product,value_eur,client_name,client_email,sale_date")
+      .gte("sale_date", data.startDate)
+      .lte("sale_date", data.endDate)
+      .eq("installment_number", 1)
+      .limit(3000);
+    const manualSales = (manualRes.data ?? []) as any[];
+    const manualByEmail = new Map<string, any>();
+    const manualByName = new Map<string, any>();
+    for (const m of manualSales) {
+      if (m.client_email) manualByEmail.set(String(m.client_email).toLowerCase().trim(), m);
+      if (m.client_name) manualByName.set(normName(m.client_name), m);
+    }
+    const vendasLista: AgenteIaResult["vendas"]["lista"] = [];
+    const vendasKeys = new Set<string>();
+    let iniciadasPelaIa = 0;
+    let vendasIaIniciou = 0;
+
 
     const daily = new Map<string, { iniciadas: number; responderam: number; reunioes: number }>();
     const touch = (d: string) => {
@@ -280,7 +341,67 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
           });
         }
       }
+
+      // ---- Atribuição de venda à IA ----
+      // "IA iniciou" = a 1ª mensagem da conversa é da IA (não houve humano antes)
+      const iaIniciou = msgs[0].sent_at === aiMsgs[0].sent_at;
+      if (iaIniciou) iniciadasPelaIa += 1;
+
+      const email = String(c.contact_email ?? deal?.contact_email ?? "")
+        .toLowerCase()
+        .trim();
+      const nome = normName(c.contact_name ?? deal?.contact_name);
+
+      const push = (
+        origem: "Clint (ganho)" | "Fechamento manual",
+        vendedor: string,
+        produto: string,
+        valorEur: number,
+        dataVenda: string,
+        match: string,
+      ) => {
+        const key = `${origem}|${email || nome}|${dataVenda}`;
+        if (vendasKeys.has(key)) return;
+        vendasKeys.add(key);
+        vendasLista.push({
+          contato: c.contact_name ?? "—",
+          origem,
+          vendedor,
+          produto,
+          valorEur,
+          data: dataVenda,
+          iaIniciou,
+          msgsIa: aiMsgs.length,
+          match,
+        });
+        if (iaIniciou) vendasIaIniciou += 1;
+      };
+
+      const ganhou = String(deal?.status ?? "").toUpperCase() === "WON";
+      if (ganhou) {
+        push(
+          "Clint (ganho)",
+          deal?.won_by_name ?? deal?.user_name ?? "—",
+          stage,
+          Number(deal?.value ?? 0),
+          deal?.won_at ? dayISO(deal.won_at) : dayKey,
+          "deal ganho na Clint",
+        );
+      }
+
+      const ms = (email && manualByEmail.get(email)) || (nome && manualByName.get(nome)) || null;
+      if (ms) {
+        push(
+          "Fechamento manual",
+          ms.seller_name ?? "—",
+          ms.product ?? "—",
+          Number(ms.value_eur ?? 0),
+          String(ms.sale_date),
+          email && manualByEmail.get(email) ? "e-mail do contacto" : "nome do contacto",
+        );
+      }
     }
+
 
     const pct = (a: number, b: number) => (b > 0 ? Number(((a / b) * 100).toFixed(1)) : 0);
 
@@ -317,6 +438,7 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
         { etapa: "Leads responderam", valor: leadsResponderam },
         { etapa: "Qualificados (3+ msgs)", valor: qualificados },
         { etapa: "Reunião agendada", valor: reunioes },
+        { etapa: "Venda ganha", valor: vendasLista.length },
       ],
       stages: Array.from(stageCount.entries())
         .map(([stage, total]) => ({ stage, total }))
@@ -324,7 +446,18 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
       respostaBuckets: buckets.map((b) => ({ faixa: b.faixa, total: b.total })),
       amostraSemResposta,
       amostraConvertida,
+      vendas: {
+        ganhosClint: vendasLista.filter((v) => v.origem === "Clint (ganho)").length,
+        vendasManuais: vendasLista.filter((v) => v.origem === "Fechamento manual").length,
+        vendasTotal: vendasLista.length,
+        valorEur: Number(vendasLista.reduce((s, v) => s + (v.valorEur || 0), 0).toFixed(2)),
+        taxaConversaoPct: pct(vendasLista.length, conversasIa),
+        iniciadasPelaIa,
+        vendasIaIniciou,
+        lista: vendasLista.sort((a, b) => b.data.localeCompare(a.data)),
+      },
     };
+
   });
 
 export const generateAgenteIaInsightsFn = createServerFn({ method: "POST" })
@@ -348,7 +481,7 @@ export const generateAgenteIaInsightsFn = createServerFn({ method: "POST" })
           {
             role: "user",
             content: `Período ${res.periodStart} a ${res.periodEnd}:\n${JSON.stringify(
-              { kpis: res.kpis, funil: res.funil, stages: res.stages, tempos: res.respostaBuckets, amostra_sem_resposta: res.amostraSemResposta, amostra_convertida: res.amostraConvertida },
+              { kpis: res.kpis, funil: res.funil, stages: res.stages, tempos: res.respostaBuckets, vendas_atribuidas: res.vendas, amostra_sem_resposta: res.amostraSemResposta, amostra_convertida: res.amostraConvertida },
               null,
               2,
             )}`,
