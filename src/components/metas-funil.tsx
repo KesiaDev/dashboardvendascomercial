@@ -23,18 +23,22 @@ const STORE_KEY = "metas-funil-v1";
 
 type Config = {
   baselines: Record<string, number>;
-  metas: Record<string, number>;
+  metas: Record<string, number>; // meta do MÊS por funil (fonte da verdade)
+  metasSemana: Record<string, number>; // override opcional da meta da semana
   comparecimento: number; // % de reuniões agendadas que acontecem
   fechamento: number; // % de reuniões realizadas que viram venda
-  metaGeral: number; // % de aproveitamento alvo somando todos os funis
+  metaGeral: number; // % de aproveitamento alvo somando todos os funis (mês)
+  vendedores: number; // nº de vendedores para dividir a meta
 };
 
 const DEFAULT_CONFIG: Config = {
   baselines: {},
   metas: {},
+  metasSemana: {},
   comparecimento: 48.6,
   fechamento: 33,
   metaGeral: 10,
+  vendedores: 5,
 };
 
 function loadConfig(): Config {
