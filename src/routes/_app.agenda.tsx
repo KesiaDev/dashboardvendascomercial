@@ -148,15 +148,17 @@ function AgendaTab({ admin, userEmail, userName }: { admin: boolean; userEmail: 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Select value={sellerFilter} onValueChange={setSellerFilter}>
-          <SelectTrigger className="w-56"><SelectValue placeholder="Vendedor" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os vendedores</SelectItem>
-            {sellers.map((s) => (
-              <SelectItem key={s.email} value={s.email}>{s.name} — {s.email}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {admin && (
+          <Select value={sellerFilter} onValueChange={setSellerFilter}>
+            <SelectTrigger className="w-56"><SelectValue placeholder="Vendedor" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os vendedores</SelectItem>
+              {sellers.map((s) => (
+                <SelectItem key={s.email} value={s.email}>{s.name} — {s.email}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-44"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
