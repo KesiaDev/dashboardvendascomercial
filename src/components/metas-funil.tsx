@@ -269,8 +269,6 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   <td className="px-3 py-2 text-right tabular-nums">{totals.agendamentosSemana.toFixed(0)}</td>
                 </tr>
               </tfoot>
-                </tr>
-              </tfoot>
             </table>
             {(() => {
               const realGeral = totals.leads > 0 ? (totals.vendas / totals.leads) * 100 : 0;
