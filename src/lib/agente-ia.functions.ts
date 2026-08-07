@@ -341,7 +341,67 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
           });
         }
       }
+
+      // ---- Atribuição de venda à IA ----
+      // "IA iniciou" = a 1ª mensagem da conversa é da IA (não houve humano antes)
+      const iaIniciou = msgs[0].sent_at === aiMsgs[0].sent_at;
+      if (iaIniciou) iniciadasPelaIa += 1;
+
+      const email = String(c.contact_email ?? deal?.contact_email ?? "")
+        .toLowerCase()
+        .trim();
+      const nome = normName(c.contact_name ?? deal?.contact_name);
+
+      const push = (
+        origem: "Clint (ganho)" | "Fechamento manual",
+        vendedor: string,
+        produto: string,
+        valorEur: number,
+        dataVenda: string,
+        match: string,
+      ) => {
+        const key = `${origem}|${email || nome}|${dataVenda}`;
+        if (vendasKeys.has(key)) return;
+        vendasKeys.add(key);
+        vendasLista.push({
+          contato: c.contact_name ?? "—",
+          origem,
+          vendedor,
+          produto,
+          valorEur,
+          data: dataVenda,
+          iaIniciou,
+          msgsIa: aiMsgs.length,
+          match,
+        });
+        if (iaIniciou) vendasIaIniciou += 1;
+      };
+
+      const ganhou = String(deal?.status ?? "").toUpperCase() === "WON";
+      if (ganhou) {
+        push(
+          "Clint (ganho)",
+          deal?.won_by_name ?? deal?.user_name ?? "—",
+          stage,
+          Number(deal?.value ?? 0),
+          deal?.won_at ? dayISO(deal.won_at) : dayKey,
+          "deal ganho na Clint",
+        );
+      }
+
+      const ms = (email && manualByEmail.get(email)) || (nome && manualByName.get(nome)) || null;
+      if (ms) {
+        push(
+          "Fechamento manual",
+          ms.seller_name ?? "—",
+          ms.product ?? "—",
+          Number(ms.value_eur ?? 0),
+          String(ms.sale_date),
+          email && manualByEmail.get(email) ? "e-mail do contacto" : "nome do contacto",
+        );
+      }
     }
+
 
     const pct = (a: number, b: number) => (b > 0 ? Number(((a / b) * 100).toFixed(1)) : 0);
 
