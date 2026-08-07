@@ -150,6 +150,78 @@ function AgenteIaPage() {
               hint={k.msgsAteReuniao ? `${k.msgsAteReuniao} msgs até a reunião` : undefined} />
           </div>
 
+          <Card className="border-emerald-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Trophy className="h-4 w-4 text-emerald-500" /> Vendas atribuídas ao Agente IA
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Kpi icon={Trophy} label="Vendas com passagem pela IA" value={String(d.vendas.vendasTotal)}
+                  hint={`${d.vendas.ganhosClint} ganhos na Clint · ${d.vendas.vendasManuais} no fechamento`}
+                  tone={d.vendas.vendasTotal > 0 ? "good" : "warn"} />
+                <Kpi icon={TrendingUp} label="Conversa IA → venda" value={`${d.vendas.taxaConversaoPct}%`}
+                  hint={`${d.vendas.vendasTotal} de ${k.conversasIa} conversas`} />
+                <Kpi icon={Trophy} label="Faturamento influenciado" value={`€ ${d.vendas.valorEur.toLocaleString("pt-PT")}`}
+                  hint="Soma dos valores das vendas atribuídas" />
+                <Kpi icon={Bot} label="Vendas em conversas iniciadas pela IA" value={String(d.vendas.vendasIaIniciou)}
+                  hint={`${d.vendas.iniciadasPelaIa} conversas foram abertas pela IA`} />
+              </div>
+
+              {d.vendas.lista.length ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs text-muted-foreground">
+                      <tr className="border-b">
+                        <th className="py-1.5 text-left font-medium">Cliente</th>
+                        <th className="text-left font-medium">Vendedor</th>
+                        <th className="text-left font-medium">Produto / etapa</th>
+                        <th className="text-right font-medium">Valor</th>
+                        <th className="text-left font-medium">Data</th>
+                        <th className="text-left font-medium">Atribuição</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {d.vendas.lista.map((v, i) => (
+                        <tr key={i} className="border-b last:border-0">
+                          <td className="py-1.5">{v.contato}</td>
+                          <td>{v.vendedor}</td>
+                          <td className="max-w-[240px] truncate">{v.produto}</td>
+                          <td className="text-right tabular-nums">
+                            {v.valorEur ? `€ ${v.valorEur.toLocaleString("pt-PT")}` : "—"}
+                          </td>
+                          <td>{v.data}</td>
+                          <td>
+                            <div className="flex flex-wrap items-center gap-1">
+                              <Badge variant="secondary">{v.origem}</Badge>
+                              {v.iaIniciou ? (
+                                <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">IA iniciou</Badge>
+                              ) : (
+                                <Badge variant="outline">IA participou</Badge>
+                              )}
+                              <span className="text-xs text-muted-foreground">
+                                {v.msgsIa} msgs IA · {v.match}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                  Nenhuma venda do período foi cruzada com conversas do agente IA. O cruzamento usa o
+                  deal ganho na Clint e o e-mail/nome do cliente no fechamento manual — se o vendedor
+                  registar o cliente com outro e-mail, a venda não é atribuída.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+
+
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">Funil do agente IA</CardTitle></CardHeader>
