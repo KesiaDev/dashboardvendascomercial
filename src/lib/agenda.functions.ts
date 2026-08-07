@@ -50,9 +50,12 @@ export const listAgendaFn = createServerFn({ method: "POST" })
     let q = supabase.from("seller_agenda").select("*").order("scheduled_at", { ascending: true });
     if (data.from) q = q.gte("scheduled_at", data.from);
     if (data.to) q = q.lte("scheduled_at", data.to);
-    // Calendário é visível para toda a equipa (todos os vendedores veem todas as reuniões).
-    // A edição/eliminação continua restrita ao dono do agendamento ou admins.
-    if (data.seller) q = q.in("seller_email", sellerEmailVariants(data.seller));
+    // Cada vendedor vê apenas a própria agenda; admins veem todas.
+    if (!isAdmin) {
+      q = q.in("seller_email", sellerEmailVariants(email ?? ""));
+    } else if (data.seller) {
+      q = q.in("seller_email", sellerEmailVariants(data.seller));
+    }
     const { data: rows, error } = await q.limit(500);
     if (error) throw error;
     return { items: (rows ?? []) as AgendaItem[], isAdmin };
