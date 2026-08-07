@@ -162,14 +162,14 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       supabaseAdmin
         .from("coach_conversations")
         .select("id,seller_email,seller_name,first_message_at,last_message_at,clint_contact_id,origin_name")
-        .eq("origin_name", "PIPELINE_COMERCIAL-V3")
+        .in("origin_name", FUNIS_LEADS)
         .gte("last_message_at", startTS)
         .lte("last_message_at", endTS)
         .limit(5000),
       supabaseAdmin
         .from("clint_deals")
         .select("id,contact_id,created_at,user_email,user_name")
-        .eq("origin_name", "PIPELINE_COMERCIAL-V3")
+        .in("origin_name", FUNIS_LEADS)
         .gte("created_at", startTS)
         .lte("created_at", endTS)
         .limit(20000),
