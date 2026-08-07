@@ -1292,7 +1292,7 @@ function PerformanceTab() {
   const todayISO = new Date().toISOString().slice(0, 10);
   const [refDate, setRefDate] = useState<string>(todayISO);
 
-  const effectiveRefDate = range === "day" ? refDate : undefined;
+  const effectiveRefDate = refDate;
 
   const { data: perf, isLoading, isFetching, error: perfError } = useQuery({
     queryKey: ["coach-perf", range, effectiveRefDate ?? "today"],
