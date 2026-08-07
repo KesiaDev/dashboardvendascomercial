@@ -237,18 +237,52 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                       <Input
                         type="text"
                         inputMode="decimal"
-                        value={drafts[r.funnel] ?? String(Number(r.meta.toFixed(2)))}
+                        value={drafts[`m:${r.funnel}`] ?? String(Number(r.metaMes.toFixed(2)))}
                         onChange={(e) => {
                           const v = e.target.value;
-                          setDrafts((d) => ({ ...d, [r.funnel]: v }));
+                          setDrafts((d) => ({ ...d, [`m:${r.funnel}`]: v }));
                           const n = Number(v.replace(",", "."));
                           if (v.trim() !== "" && Number.isFinite(n)) {
-                            save({ ...cfg, metas: { ...cfg.metas, [r.funnel]: n } });
+                            // Alterar a meta do mês recalcula a semana (remove override)
+                            const semana = { ...cfg.metasSemana };
+                            delete semana[r.funnel];
+                            save({ ...cfg, metas: { ...cfg.metas, [r.funnel]: n }, metasSemana: semana });
                           }
                         }}
-                        onBlur={() => setDrafts((d) => { const n = { ...d }; delete n[r.funnel]; return n; })}
+                        onBlur={() => setDrafts((d) => { const n = { ...d }; delete n[`m:${r.funnel}`]; return n; })}
                         className="h-7 w-20 text-xs text-right ml-auto"
                       />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={drafts[`s:${r.funnel}`] ?? String(Number(r.meta.toFixed(2)))}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setDrafts((d) => ({ ...d, [`s:${r.funnel}`]: v }));
+                          const n = Number(v.replace(",", "."));
+                          if (v.trim() !== "" && Number.isFinite(n)) {
+                            save({ ...cfg, metasSemana: { ...cfg.metasSemana, [r.funnel]: n } });
+                          }
+                        }}
+                        onBlur={() => setDrafts((d) => { const n = { ...d }; delete n[`s:${r.funnel}`]; return n; })}
+                        className={`h-7 w-20 text-xs text-right ml-auto ${cfg.metasSemana[r.funnel] != null ? "border-amber-500" : ""}`}
+                      />
+                      {cfg.metasSemana[r.funnel] != null && (
+                        <button
+                          type="button"
+                          className="block ml-auto text-[10px] text-amber-500 hover:underline"
+                          onClick={() => {
+                            const semana = { ...cfg.metasSemana };
+                            delete semana[r.funnel];
+                            save({ ...cfg, metasSemana: semana });
+                            setDrafts((d) => { const n = { ...d }; delete n[`s:${r.funnel}`]; return n; });
+                          }}
+                        >
+                          voltar ao mês
+                        </button>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums font-semibold">{fmtPct(r.real)}</td>
                     <td className="px-3 py-2">
