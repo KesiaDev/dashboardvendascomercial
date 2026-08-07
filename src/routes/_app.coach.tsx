@@ -1435,7 +1435,7 @@ function PerformanceTab() {
               </div>
             )}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 auto-rows-fr">
-              <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads V3 (${isSeller ? scopeLabel : rangeLabel})`} value={String(view.leadsNovos)} />
+              <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads novos (${isSeller ? scopeLabel : rangeLabel})`} value={String(view.leadsNovos)} />
               {showAttendance && (
                 <KpiCard
                   icon={<MessageSquare className="h-3 w-3" />}
