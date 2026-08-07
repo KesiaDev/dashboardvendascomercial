@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { cleanSellerName, isExcludedSeller } from "@/lib/bi";
+import { FUNIS_LEADS } from "@/lib/performance-funnels";
 
 export type PerfRange = "day" | "week" | "month";
 
