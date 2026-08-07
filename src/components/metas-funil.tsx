@@ -325,6 +325,7 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   <td className="px-3 py-2 text-right tabular-nums">{totals.leads}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.vendas}</td>
                   <td className="px-3 py-2" />
+                  <td className="px-3 py-2" />
                   <td className="px-3 py-2 text-right tabular-nums">
                     {fmtPct(totals.leads > 0 ? (totals.vendas / totals.leads) * 100 : 0)}
                   </td>
