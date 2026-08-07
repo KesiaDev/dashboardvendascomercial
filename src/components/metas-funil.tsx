@@ -304,8 +304,18 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                         <span className="text-red-500 font-medium">{Math.abs(r.gap).toFixed(0)}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{r.reunioesSemana.toFixed(0)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{r.agendamentosSemana.toFixed(0)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {r.reunioesSemana.toFixed(0)}
+                      <span className="block text-[10px] opacity-60">
+                        {ceil(r.reunioesSemana / cfg.vendedores)}/vendedor
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {r.agendamentosSemana.toFixed(0)}
+                      <span className="block text-[10px] opacity-60">
+                        {ceil(r.agendamentosSemana / cfg.vendedores)}/vendedor
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
