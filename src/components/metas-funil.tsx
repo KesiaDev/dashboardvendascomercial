@@ -186,12 +186,20 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Realizado %</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground w-[16%]">Atingimento</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">
-                    Vendas necessárias
-                    <span className="block text-[10px] font-normal opacity-70">no período (falta/sobra)</span>
+                    Meta de vendas
+                    <span className="block text-[10px] font-normal opacity-70">no período</span>
                   </th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">
-                    Reuniões por semana
-                    <span className="block text-[10px] font-normal opacity-70">realizar (agendar)</span>
+                    Faltam vender
+                    <span className="block text-[10px] font-normal opacity-70">para bater a meta</span>
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                    Reuniões a realizar
+                    <span className="block text-[10px] font-normal opacity-70">por semana</span>
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                    Reuniões a agendar
+                    <span className="block text-[10px] font-normal opacity-70">por semana</span>
                   </th>
                 </tr>
               </thead>
