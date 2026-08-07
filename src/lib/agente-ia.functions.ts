@@ -133,7 +133,9 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
         .lte("last_message_at", endTS),
       db
         .from("coach_conversations")
-        .select("id,deal_id,contact_name,stage,first_message_at,last_message_at,message_count")
+        .select(
+          "id,deal_id,contact_name,contact_email,stage,first_message_at,last_message_at,message_count",
+        )
         .eq("origin_name", V3)
         .eq("is_ai_conversation", true)
         .gte("last_message_at", startTS)
