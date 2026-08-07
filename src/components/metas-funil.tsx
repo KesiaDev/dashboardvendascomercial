@@ -331,9 +331,11 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                     />
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Aproveitamento = vendas ÷ leads do período. <strong>Vendas necessárias</strong> = leads × meta %.{" "}
-                    <strong>Reuniões por semana</strong> = quantas reuniões precisam acontecer (e quantas agendar,
-                    considerando {cfg.comparecimento}% de comparecimento e {cfg.fechamento}% de fechamento).
+                    Como ler: <strong>Meta de vendas</strong> = leads × meta % (quantas vendas o funil deveria dar no
+                    período). <strong>Faltam vender</strong> = quanto ainda falta para chegar nessa meta.{" "}
+                    <strong>Reuniões a realizar</strong> = reuniões que precisam acontecer por semana (fechamento de{" "}
+                    {cfg.fechamento}%). <strong>Reuniões a agendar</strong> = quantas marcar por semana, já contando{" "}
+                    {cfg.comparecimento}% de comparecimento.
                   </p>
                 </div>
               );
