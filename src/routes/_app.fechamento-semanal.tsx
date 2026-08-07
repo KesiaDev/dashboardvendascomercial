@@ -360,7 +360,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
         </select>
         <Button variant="outline" size="icon" disabled={weekIdx===0} onClick={()=>setWeekIdx(i=>i-1)}><ChevronLeft className="h-4 w-4"/></Button>
         <div className="text-center min-w-[170px] px-3 py-2 rounded-lg border border-border bg-card">
-          <div className="text-sm font-semibold">Semana {weekIdx+1+WEEK_LABEL_OFFSET}</div>
+          <div className="text-sm font-semibold">S{weekIdx+1+WEEK_LABEL_OFFSET} da temporada</div>
           <div className="text-xs text-muted-foreground">{fmtDate(start)} – {fmtDate(end)}</div>
         </div>
         <Button variant="outline" size="icon" disabled={weekIdx>=maxWeek} onClick={()=>setWeekIdx(i=>i+1)}><ChevronRight className="h-4 w-4"/></Button>
@@ -465,13 +465,13 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
       </div>
 
       {/* Vendas por funil */}
-      <FunnelBreakdownCard sales={weekSales} title={`Vendas por Funil — Semana ${weekIdx+1+WEEK_LABEL_OFFSET}`}/>
+      <FunnelBreakdownCard sales={weekSales} title={`Vendas por Funil — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
 
       {/* Meta de aproveitamento por funil */}
-      <MetasFunilCard from={start} to={end} title={`Meta de Aproveitamento por Funil — Semana ${weekIdx+1+WEEK_LABEL_OFFSET}`}/>
+      <MetasFunilCard from={start} to={end} title={`Meta de Aproveitamento por Funil — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
 
       {/* Conversão por vendedor × funil */}
-      <ConversaoFunilCard from={start} to={end} title={`Conversão por Vendedor × Funil — Semana ${weekIdx+1+WEEK_LABEL_OFFSET}`}/>
+      <ConversaoFunilCard from={start} to={end} title={`Conversão por Vendedor × Funil — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
 
       {/* Tabela de vendas */}
       <Card>
