@@ -1339,7 +1339,10 @@ function PerformanceTab() {
             </button>
           ))}
         </div>
-        {range === "day" && (
+        <div className="flex items-center gap-1">
+          <span className="text-[11px] text-muted-foreground">
+            {range === "day" ? "Dia" : range === "week" ? "Semana de" : "Mês de"}
+          </span>
           <input
             type="date"
             value={refDate}
@@ -1347,7 +1350,14 @@ function PerformanceTab() {
             onChange={(e) => setRefDate(e.target.value || todayISO)}
             className="text-xs border rounded-md px-2 py-1 bg-background"
           />
-        )}
+          {refDate !== todayISO && (
+            <button
+              onClick={() => setRefDate(todayISO)}
+              className="text-[11px] text-muted-foreground hover:text-foreground underline"
+            >hoje</button>
+          )}
+        </div>
+
         <div className="ml-auto flex items-center gap-2">
           {isAdmin && (
             <div className="inline-flex rounded-lg border p-1 bg-card">
