@@ -238,19 +238,16 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                         {statusBadge(r.atingimento)}
                       </div>
                     </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{r.vendasMeta.toFixed(0)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      {r.vendasMeta.toFixed(0)}
-                      <span className={`ml-1 text-xs ${r.gap >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                        ({r.gap >= 0 ? "+" : ""}
-                        {r.gap.toFixed(0)})
-                      </span>
+                      {r.gap >= 0 ? (
+                        <span className="text-emerald-500 font-medium">Meta batida</span>
+                      ) : (
+                        <span className="text-red-500 font-medium">{Math.abs(r.gap).toFixed(0)}</span>
+                      )}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      {r.reunioesSemana.toFixed(0)}
-                      <span className="text-xs text-muted-foreground ml-1">
-                        (agendar {r.agendamentosSemana.toFixed(0)})
-                      </span>
-                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{r.reunioesSemana.toFixed(0)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{r.agendamentosSemana.toFixed(0)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -265,7 +262,13 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   </td>
                   <td className="px-3 py-2" />
                   <td className="px-3 py-2 text-right tabular-nums">{totals.vendasMeta.toFixed(0)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {Math.max(0, totals.vendasMeta - totals.vendas)}
+                  </td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.reunioesSemana.toFixed(0)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{totals.agendamentosSemana.toFixed(0)}</td>
+                </tr>
+              </tfoot>
                 </tr>
               </tfoot>
             </table>
