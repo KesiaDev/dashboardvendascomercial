@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { isRenewalProduct } from "@/lib/product-groups";
 import { ConversaoFunilCard } from "@/components/conversao-funil";
+import { OrigemV3Card } from "@/components/origem-v3";
+
 import { MetasFunilCard } from "@/components/metas-funil";
 import { MetasIgt23Card } from "@/components/metas-igt23";
 
@@ -472,6 +474,10 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
 
       {/* Conversão por vendedor × funil */}
       <ConversaoFunilCard from={start} to={end} title={`Conversão por Vendedor × Funil — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
+
+      {/* Origem dos leads V3 */}
+      <OrigemV3Card from={start} to={end} title={`Origem dos leads V3 — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
+
 
       {/* Tabela de vendas */}
       <Card>
