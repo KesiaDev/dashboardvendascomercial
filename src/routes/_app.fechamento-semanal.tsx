@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { isRenewalProduct } from "@/lib/product-groups";
 import { ConversaoFunilCard } from "@/components/conversao-funil";
+import { OrigemV3Card } from "@/components/origem-v3";
+
 import { MetasFunilCard } from "@/components/metas-funil";
 import { MetasIgt23Card } from "@/components/metas-igt23";
 
@@ -473,6 +475,10 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
       {/* Conversão por vendedor × funil */}
       <ConversaoFunilCard from={start} to={end} title={`Conversão por Vendedor × Funil — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
 
+      {/* Origem dos leads V3 */}
+      <OrigemV3Card from={start} to={end} title={`Origem dos leads V3 — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
+
+
       {/* Tabela de vendas */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-1.5"><ShoppingBag className="h-4 w-4 text-muted-foreground"/>Vendas — Semana {weekIdx+1+WEEK_LABEL_OFFSET} · {fmtDate(start)} a {fmtDate(end)}</CardTitle></CardHeader>
@@ -782,6 +788,10 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
 
       {/* Conversão por vendedor × funil */}
       <ConversaoFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Conversão por Vendedor × Funil — ${monthLabel}`}/>
+
+      {/* Origem dos leads V3 */}
+      <OrigemV3Card from={`${yearMonth}-01`} to={monthEndISO} title={`Origem dos leads V3 — ${monthLabel}`}/>
+
 
       {/* Meta IGT23: Marketing x Comercial */}
       <MetasIgt23Card />
