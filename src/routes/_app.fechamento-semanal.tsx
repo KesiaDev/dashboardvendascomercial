@@ -479,39 +479,6 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
       <ConversaoFunilCard from={start} to={end} title={`Conversão por Vendedor × Funil — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
 
 
-      {/* Tabela de vendas */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-1.5"><ShoppingBag className="h-4 w-4 text-muted-foreground"/>Vendas — Semana {weekIdx+1+WEEK_LABEL_OFFSET} · {fmtDate(start)} a {fmtDate(end)}</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          {weekSales.length===0?(<p className="text-sm text-muted-foreground px-4 py-6">Nenhuma venda registrada nesta semana.</p>):(
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="border-t border-border bg-muted/40">
-                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Data</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Produto</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Vendedor</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Valor</th>
-                </tr></thead>
-                <tbody>
-                  {[...weekSales].sort((a,b)=>a.sale_date.localeCompare(b.sale_date)).map(s=>(
-                    <tr key={s.id} className="border-t border-border/40 hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-2 text-muted-foreground tabular-nums">{fmtDate(s.sale_date)}</td>
-                      <td className="px-3 py-2 max-w-[200px] truncate font-medium">{s.product}</td>
-                      <td className="px-3 py-2"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full shrink-0" style={{background:sellerColor(s.seller_name)}}/>{s.seller_name.split(" ")[0]}</span></td>
-                      <td className="px-3 py-2 text-right tabular-nums font-medium">{fmtEur(Number(s.value_eur))}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot><tr className="border-t-2 border-border bg-muted/40 font-semibold">
-                  <td className="px-4 py-2" colSpan={2}>Total</td>
-                  <td className="px-3 py-2 text-muted-foreground text-sm">{weekSales.length} vendas</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{fmtEur(weekTotal)}</td>
-                </tr></tfoot>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Histórico + destaques */}
       <div className="grid gap-5 lg:grid-cols-[1fr_260px]">
