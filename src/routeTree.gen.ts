@@ -49,6 +49,7 @@ import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sy
 import { Route as ApiPublicSyncHotmartRouteImport } from './routes/api/public/sync.hotmart'
 import { Route as ApiPublicSyncCoachV3RouteImport } from './routes/api/public/sync.coach-v3'
 import { Route as ApiPublicSyncCcpbxRouteImport } from './routes/api/public/sync.ccpbx'
+import { Route as ApiPublicAuditManualSalesRouteImport } from './routes/api/public/audit/manual-sales'
 import { Route as ApiPublicAgendaBookRouteImport } from './routes/api/public/agenda.book'
 import { Route as ApiPublicAgendaAvailabilityRouteImport } from './routes/api/public/agenda.availability'
 import { Route as AppArenaSimIdRouteImport } from './routes/_app.arena.sim.$id'
@@ -254,6 +255,12 @@ const ApiPublicSyncCcpbxRoute = ApiPublicSyncCcpbxRouteImport.update({
   path: '/api/public/sync/ccpbx',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAuditManualSalesRoute =
+  ApiPublicAuditManualSalesRouteImport.update({
+    id: '/api/public/audit/manual-sales',
+    path: '/api/public/audit/manual-sales',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicAgendaBookRoute = ApiPublicAgendaBookRouteImport.update({
   id: '/api/public/agenda/book',
   path: '/api/public/agenda/book',
@@ -310,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/arena/sim/$id': typeof AppArenaSimIdRoute
   '/api/public/agenda/availability': typeof ApiPublicAgendaAvailabilityRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
+  '/api/public/audit/manual-sales': typeof ApiPublicAuditManualSalesRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/coach-v3': typeof ApiPublicSyncCoachV3Route
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
@@ -354,6 +362,7 @@ export interface FileRoutesByTo {
   '/arena/sim/$id': typeof AppArenaSimIdRoute
   '/api/public/agenda/availability': typeof ApiPublicAgendaAvailabilityRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
+  '/api/public/audit/manual-sales': typeof ApiPublicAuditManualSalesRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/coach-v3': typeof ApiPublicSyncCoachV3Route
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
@@ -400,6 +409,7 @@ export interface FileRoutesById {
   '/_app/arena/sim/$id': typeof AppArenaSimIdRoute
   '/api/public/agenda/availability': typeof ApiPublicAgendaAvailabilityRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
+  '/api/public/audit/manual-sales': typeof ApiPublicAuditManualSalesRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/coach-v3': typeof ApiPublicSyncCoachV3Route
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
@@ -446,6 +456,7 @@ export interface FileRouteTypes {
     | '/arena/sim/$id'
     | '/api/public/agenda/availability'
     | '/api/public/agenda/book'
+    | '/api/public/audit/manual-sales'
     | '/api/public/sync/ccpbx'
     | '/api/public/sync/coach-v3'
     | '/api/public/sync/hotmart'
@@ -490,6 +501,7 @@ export interface FileRouteTypes {
     | '/arena/sim/$id'
     | '/api/public/agenda/availability'
     | '/api/public/agenda/book'
+    | '/api/public/audit/manual-sales'
     | '/api/public/sync/ccpbx'
     | '/api/public/sync/coach-v3'
     | '/api/public/sync/hotmart'
@@ -535,6 +547,7 @@ export interface FileRouteTypes {
     | '/_app/arena/sim/$id'
     | '/api/public/agenda/availability'
     | '/api/public/agenda/book'
+    | '/api/public/audit/manual-sales'
     | '/api/public/sync/ccpbx'
     | '/api/public/sync/coach-v3'
     | '/api/public/sync/hotmart'
@@ -554,6 +567,7 @@ export interface RootRouteChildren {
   ApiPublicHotmartRawRoute: typeof ApiPublicHotmartRawRoute
   ApiPublicAgendaAvailabilityRoute: typeof ApiPublicAgendaAvailabilityRoute
   ApiPublicAgendaBookRoute: typeof ApiPublicAgendaBookRoute
+  ApiPublicAuditManualSalesRoute: typeof ApiPublicAuditManualSalesRoute
   ApiPublicSyncCcpbxRoute: typeof ApiPublicSyncCcpbxRoute
   ApiPublicSyncCoachV3Route: typeof ApiPublicSyncCoachV3Route
   ApiPublicSyncHotmartRoute: typeof ApiPublicSyncHotmartRoute
@@ -842,6 +856,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSyncCcpbxRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/audit/manual-sales': {
+      id: '/api/public/audit/manual-sales'
+      path: '/api/public/audit/manual-sales'
+      fullPath: '/api/public/audit/manual-sales'
+      preLoaderRoute: typeof ApiPublicAuditManualSalesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/agenda/book': {
       id: '/api/public/agenda/book'
       path: '/api/public/agenda/book'
@@ -959,6 +980,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHotmartRawRoute: ApiPublicHotmartRawRoute,
   ApiPublicAgendaAvailabilityRoute: ApiPublicAgendaAvailabilityRoute,
   ApiPublicAgendaBookRoute: ApiPublicAgendaBookRoute,
+  ApiPublicAuditManualSalesRoute: ApiPublicAuditManualSalesRoute,
   ApiPublicSyncCcpbxRoute: ApiPublicSyncCcpbxRoute,
   ApiPublicSyncCoachV3Route: ApiPublicSyncCoachV3Route,
   ApiPublicSyncHotmartRoute: ApiPublicSyncHotmartRoute,
@@ -967,13 +989,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
