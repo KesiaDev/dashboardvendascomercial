@@ -652,7 +652,7 @@ function FunisPage() {
         }`}>{syncMsg}</div>
       )}
 
-      <Tabs defaultValue="retomada">
+      <Tabs defaultValue="pipeline_v3">
         <TabsList className="flex-wrap h-auto gap-1 mb-4">
           {TARGET_FUNNELS.map((f) => (
             <TabsTrigger key={f.key} value={f.key} className="text-xs">
