@@ -35,8 +35,10 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
           perdidos: a.perdidos + r.perdidos,
           ganhos: a.ganhos + r.ganhos,
           valor: a.valor + r.valor,
+          ganhosSemContato: a.ganhosSemContato + r.ganhosSemContato,
+          valorSemContato: a.valorSemContato + r.valorSemContato,
         }),
-        { leads: 0, atendidos: 0, soIa: 0, perdidos: 0, ganhos: 0, valor: 0 },
+        { leads: 0, atendidos: 0, soIa: 0, perdidos: 0, ganhos: 0, valor: 0, ganhosSemContato: 0, valorSemContato: 0 },
       ),
     [rows],
   );
