@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import {
   ChevronLeft, ChevronRight, Trophy, TrendingUp, TrendingDown,
-  CalendarDays, Flame, Star, ShoppingBag, Filter,
+  CalendarDays, Flame, Star, Filter,
 } from "lucide-react";
 import { isRenewalProduct } from "@/lib/product-groups";
 import { ConversaoFunilCard } from "@/components/conversao-funil";
