@@ -469,14 +469,14 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
       {/* Vendas por funil */}
       <FunnelBreakdownCard sales={weekSales} title={`Vendas por Funil — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
 
+      {/* Origem dos leads V3 */}
+      <OrigemV3Card from={start} to={end} title={`Origem dos leads V3 — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
+
       {/* Meta de aproveitamento por funil */}
       <MetasFunilCard from={start} to={end} title={`Meta de Aproveitamento por Funil — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
 
       {/* Conversão por vendedor × funil */}
       <ConversaoFunilCard from={start} to={end} title={`Conversão por Vendedor × Funil — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
-
-      {/* Origem dos leads V3 */}
-      <OrigemV3Card from={start} to={end} title={`Origem dos leads V3 — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
 
 
       {/* Tabela de vendas */}
@@ -783,14 +783,14 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
       {/* Vendas por funil */}
       <FunnelBreakdownCard sales={monthSales} title={`Vendas por Funil — ${monthLabel}`}/>
 
+      {/* Origem dos leads V3 */}
+      <OrigemV3Card from={`${yearMonth}-01`} to={monthEndISO} title={`Origem dos leads V3 — ${monthLabel}`}/>
+
       {/* Meta de aproveitamento por funil */}
       <MetasFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Meta de Aproveitamento por Funil — ${monthLabel}`}/>
 
       {/* Conversão por vendedor × funil */}
       <ConversaoFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Conversão por Vendedor × Funil — ${monthLabel}`}/>
-
-      {/* Origem dos leads V3 */}
-      <OrigemV3Card from={`${yearMonth}-01`} to={monthEndISO} title={`Origem dos leads V3 — ${monthLabel}`}/>
 
 
       {/* Meta IGT23: Marketing x Comercial */}
