@@ -15,6 +15,7 @@ import {
   Tooltip as RTooltip, Cell, PieChart, Pie, Legend,
 } from "recharts";
 import { TrendingUp, Users, CheckCircle, XCircle, Clock, Trophy, CalendarDays, RefreshCw, CalendarRange } from "lucide-react";
+import { OrigemV3Card } from "@/components/origem-v3";
 
 export const Route = createFileRoute("/_app/funis")({
   component: FunisPage,
@@ -367,6 +368,17 @@ function FunnelPanel({
           <p className="text-xs text-muted-foreground">ticket: {fmtEur(m.avgTicket)}</p>
         </CardContent></Card>
       </div>
+
+      {/* Origem das campanhas (somente PIPELINE_COMERCIAL-V3) */}
+      {cfg.key === "pipeline_v3" && (
+        <OrigemV3Card
+          from={range.from ?? "2026-01-01"}
+          to={range.to ?? isoDay(new Date())}
+          title={`Origem dos leads V3 — ${fmtRangeLabel(range)}`}
+        />
+      )}
+
+
 
       {/* Leads ao longo do tempo */}
       <Card>
