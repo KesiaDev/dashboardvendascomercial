@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchAllDeals, fetchAllSales, matchSellerProduct, periodRange, type Period } from "@/lib/bi";
 import { fetchProductConfig } from "@/lib/product-config.functions";
 import { formatInt } from "@/lib/format";
-import { formatBRL } from "@/lib/format";
+import { useCurrency } from "@/lib/currency-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ export const Route = createFileRoute("/_app/vendedor-produto")({
 });
 
 function VendedorProduto() {
+  const { format: formatBRL } = useCurrency();
   const [period, setPeriod] = useState<Period>("month");
   const { data: deals = [], isLoading: l1 } = useQuery({ queryKey: ["bi_deals"], queryFn: fetchAllDeals });
   const { data: sales = [], isLoading: l2 } = useQuery({ queryKey: ["bi_sales"], queryFn: fetchAllSales });
