@@ -368,6 +368,17 @@ function FunnelPanel({
         </CardContent></Card>
       </div>
 
+      {/* Origem das campanhas (somente PIPELINE_COMERCIAL-V3) */}
+      {cfg.key === "pipeline_v3" && (
+        <OrigemV3Card
+          from={range.from ?? "2026-01-01"}
+          to={range.to ?? isoDay(new Date())}
+          title={`Origem dos leads V3 — ${fmtRangeLabel(range)}`}
+        />
+      )}
+
+
+
       {/* Leads ao longo do tempo */}
       <Card>
         <CardHeader className="pb-2">
