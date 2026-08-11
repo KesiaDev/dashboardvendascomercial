@@ -783,14 +783,14 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
       {/* Vendas por funil */}
       <FunnelBreakdownCard sales={monthSales} title={`Vendas por Funil — ${monthLabel}`}/>
 
+      {/* Origem dos leads V3 */}
+      <OrigemV3Card from={`${yearMonth}-01`} to={monthEndISO} title={`Origem dos leads V3 — ${monthLabel}`}/>
+
       {/* Meta de aproveitamento por funil */}
       <MetasFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Meta de Aproveitamento por Funil — ${monthLabel}`}/>
 
       {/* Conversão por vendedor × funil */}
       <ConversaoFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Conversão por Vendedor × Funil — ${monthLabel}`}/>
-
-      {/* Origem dos leads V3 */}
-      <OrigemV3Card from={`${yearMonth}-01`} to={monthEndISO} title={`Origem dos leads V3 — ${monthLabel}`}/>
 
 
       {/* Meta IGT23: Marketing x Comercial */}
