@@ -15,6 +15,7 @@ import {
   Tooltip as RTooltip, Cell, PieChart, Pie, Legend,
 } from "recharts";
 import { TrendingUp, Users, CheckCircle, XCircle, Clock, Trophy, CalendarDays, RefreshCw, CalendarRange } from "lucide-react";
+import { OrigemV3Card } from "@/components/origem-v3";
 
 export const Route = createFileRoute("/_app/funis")({
   component: FunisPage,
