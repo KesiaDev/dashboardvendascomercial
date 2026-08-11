@@ -447,37 +447,15 @@ export const deleteManualSale = createServerFn({ method: "POST" })
   });
 
 // ── Re-confirmar todas as pendentes (admin) ───────────────────────────────────
+// Reaproveita o mesmo ciclo usado pela auditoria automática (pg_cron horário):
+// reconfere pendentes na Hotmart e atualiza os alertas de comissão.
 
 export const reconfirmAllPendingFn = createServerFn({ method: "POST" })
   .handler(async () => {
-    const db = await adminDb();
-    const { data: pending, error: pendingError } = await db
-      .from("manual_sales")
-      .select("id,client_email,sale_date,seller_name")
-      .eq("confirmation_status", "pendente")
-      .not("client_email", "is", null);
-    if (pendingError) throw new Error(pendingError.message);
-
-    let confirmed = 0;
-    let mismatches = 0;
-    for (const row of pending ?? []) {
-      if (!row.client_email) continue;
-      const match = await findHotmartMatch(row.client_email, row.sale_date);
-      if (match) {
-        const mismatch = isAffiliateMismatch(row.seller_name, match.nome_afiliado);
-        if (mismatch) mismatches++;
-        await db
-          .from("manual_sales")
-          .update({
-            confirmation_status: "confirmado_hotmart",
-            confirmed_hotmart_sale_id: match.id,
-            confirmed_hotmart_valor_brl: match.faturamento_liquido_brl,
-            affiliate_mismatch: mismatch,
-            hotmart_nome_afiliado: match.nome_afiliado,
-          })
-          .eq("id", row.id);
-        confirmed++;
-      }
-    }
-    return { total: (pending ?? []).length, confirmed, mismatches };
+    const { reconfirmPending, refreshCommissionAlerts } = await import(
+      "@/lib/manual-sales-audit.server"
+    );
+    const result = await reconfirmPending();
+    await refreshCommissionAlerts();
+    return result;
   });
