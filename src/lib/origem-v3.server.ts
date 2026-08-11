@@ -15,16 +15,20 @@ const norm = (s: unknown) =>
     .replace(/[-_]/g, " ");
 
 /** Classificação por tags do contato na Clint (mais confiável que UTM). */
-function classifyByTags(contactTags: string[] | null | undefined): string | null {
+function classifyByTags(
+  contactTags: string[] | null | undefined,
+): { origem: string; tag: string } | null {
   if (!contactTags?.length) return null;
-  const tags = contactTags.map(norm);
-  const some = (...pats: string[]) => tags.some((t) => pats.some((p) => t.includes(p)));
+  const find = (pred: (t: string) => boolean) => contactTags.find((t) => pred(norm(t)));
 
-  if (some("minicurso", "mini curso")) return "Minicurso V3";
-  if (some("ebook", "e book")) return "Ebook V3";
-  if (tags.some((t) => t.includes("sessao") && (t.includes("estrategica") || t.includes("estrategia"))))
-    return "Sessão Estratégica";
-  if (some("palestra")) return "Funil de Palestras";
+  let tag = find((t) => t.includes("minicurso") || t.includes("mini curso"));
+  if (tag) return { origem: "Minicurso V3", tag };
+  tag = find((t) => t.includes("ebook") || t.includes("e book"));
+  if (tag) return { origem: "Ebook V3", tag };
+  tag = find((t) => t.includes("sessao") && (t.includes("estrategica") || t.includes("estrategia")));
+  if (tag) return { origem: "Sessão Estratégica", tag };
+  tag = find((t) => t.includes("palestra"));
+  if (tag) return { origem: "Funil de Palestras", tag };
   return null;
 }
 
@@ -38,11 +42,15 @@ export function classifyOrigemV3(
   contactTags?: string[] | null,
 ): { origem: string; campanha: string } {
   const fields = (raw?.fields ?? {}) as Record<string, unknown>;
-  const campanha = String(fields["utm_campaign"] ?? "") || "(sem campanha)";
+  const utmCampanha = String(fields["utm_campaign"] ?? "") || "(sem campanha)";
   const blob = norm(
     [fields["utm_campaign"], fields["pagina_origem"], fields["utm_content"], fields["origem_funil"]].join(" "),
   );
   const hasMinicursoFields = Object.keys(fields).some((k) => k.startsWith("mc_"));
+
+  const byTag = classifyByTags(contactTags);
+  // O detalhamento é por TAG da Clint; UTM só quando o contato ainda não tem tag.
+  const campanha = byTag?.tag ?? contactTags?.[0] ?? utmCampanha;
 
   const byOrigin: Record<string, string> = {
     "MINICURSO-V3": "Minicurso V3",
@@ -53,8 +61,8 @@ export function classifyOrigemV3(
   const direct = byOrigin[originName ?? ""];
   if (direct) return { origem: direct, campanha };
 
-  const byTag = classifyByTags(contactTags);
-  if (byTag) return { origem: byTag, campanha };
+  if (byTag) return { origem: byTag.origem, campanha };
+
 
 
   if (blob.includes("minicurso") || hasMinicursoFields) return { origem: "Minicurso V3", campanha };
