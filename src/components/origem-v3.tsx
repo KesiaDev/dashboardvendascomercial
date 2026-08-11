@@ -61,7 +61,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-t border-border bg-muted/40">
-                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Origem / Campanha</th>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Origem / Tag</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Leads</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Falou c/ vendedor</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Só automação/IA</th>
@@ -86,7 +86,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                             {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                             {r.origem}
                             <span className="text-xs font-normal text-muted-foreground">
-                              ({r.campanhas.length} campanha{r.campanhas.length !== 1 ? "s" : ""})
+                              ({r.campanhas.length} tag{r.campanhas.length !== 1 ? "s" : ""})
                             </span>
                           </span>
                         </td>
