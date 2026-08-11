@@ -35,8 +35,10 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
           perdidos: a.perdidos + r.perdidos,
           ganhos: a.ganhos + r.ganhos,
           valor: a.valor + r.valor,
+          ganhosSemContato: a.ganhosSemContato + r.ganhosSemContato,
+          valorSemContato: a.valorSemContato + r.valorSemContato,
         }),
-        { leads: 0, atendidos: 0, soIa: 0, perdidos: 0, ganhos: 0, valor: 0 },
+        { leads: 0, atendidos: 0, soIa: 0, perdidos: 0, ganhos: 0, valor: 0, ganhosSemContato: 0, valorSemContato: 0 },
       ),
     [rows],
   );
@@ -140,13 +142,28 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                 </tr>
               </tfoot>
             </table>
-            <p className="text-xs text-muted-foreground px-4 py-2 border-t border-border/40">
-              Origem reconstruída pelos UTMs do lead (campanha, página de origem, conteúdo) + funil de entrada —
-              Minicurso V3, Ebook V3, Palestras e Sessão Estratégica. <strong>Vendas</strong> vêm do fechamento manual
-              dos vendedores (1ª parcela, valor em €), cruzadas pelo e-mail do cliente — não do WON da Clint.
-              <strong> Falou c/ vendedor</strong> = lead com pelo menos uma mensagem enviada por um vendedor humano no
-              WhatsApp; <strong>Só automação/IA</strong> = teve conversa, mas apenas do Agente IA / automação.
+            <p className="text-xs text-muted-foreground px-4 py-2 border-t border-border/40 leading-relaxed">
+              Origem reconstruída pelas <strong>tags do contato na Clint</strong> + funil de entrada (UTM só como
+              fallback) — Minicurso V3, Ebook V3, Palestras e Sessão Estratégica.
+              <br />
+              <strong>Vendas</strong> = fechamento manual (1ª parcela, € do período selecionado) cruzado pelo e-mail do
+              cliente <strong>e somente quando o lead falou com um vendedor humano</strong> (Gisele, Fábio, Luana, Rita,
+              João…). Por isso o total aqui pode ser menor que "Vendas por Funil", que soma todas as vendas do
+              fechamento, inclusive as sem lead correspondente no V3.
+              {totals.ganhosSemContato > 0 && (
+                <>
+                  <br />
+                  <span className="text-amber-500">
+                    {totals.ganhosSemContato} venda(s) ({eur(totals.valorSemContato)}) casaram por e-mail mas sem
+                    conversa registrada de vendedor — não contabilizadas acima.
+                  </span>
+                </>
+              )}
+              <br />
+              <strong>Falou c/ vendedor</strong> = pelo menos uma mensagem enviada por vendedor humano;{" "}
+              <strong>Só automação/IA</strong> = teve conversa apenas do Agente IA.
             </p>
+
           </div>
         )}
       </CardContent>

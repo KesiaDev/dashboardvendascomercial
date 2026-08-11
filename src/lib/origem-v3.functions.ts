@@ -9,6 +9,9 @@ export type OrigemRow = {
   ganhos: number;
   /** Valor em € das vendas do fechamento manual. */
   valor: number;
+  /** Vendas cruzadas por e-mail que NÃO tiveram conversa com vendedor humano (não contam em "Vendas"). */
+  ganhosSemContato: number;
+  valorSemContato: number;
   /** Leads que tiveram pelo menos 1 mensagem enviada por um vendedor humano. */
   atendidos: number;
   /** Leads que só tiveram conversa da automação / Agente IA. */
@@ -52,9 +55,11 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     // --- Vendas do fechamento manual (fonte de verdade de "ganho") ---
     const { data: salesRows } = await supabaseAdmin
       .from("manual_sales")
-      .select("client_email,value_eur,installment_number")
+      .select("client_email,value_eur,installment_number,sale_date")
       .eq("installment_number", 1)
       .not("client_email", "is", null)
+      .gte("sale_date", data.from)
+      .lte("sale_date", data.to)
       .limit(20000);
     const salesByEmail = new Map<string, { count: number; valor: number }>();
     for (const s of salesRows ?? []) {
@@ -108,6 +113,8 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
           perdidos: 0,
           ganhos: 0,
           valor: 0,
+          ganhosSemContato: 0,
+          valorSemContato: 0,
           atendidos: 0,
           soIa: 0,
           campanhas: [],
@@ -125,8 +132,13 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       if (atendido) r.atendidos++;
       else if (email && anyConvEmails.has(email)) r.soIa++;
       if (venda) {
-        r.ganhos += venda.count;
-        r.valor += venda.valor;
+        if (atendido) {
+          r.ganhos += venda.count;
+          r.valor += venda.valor;
+        } else {
+          r.ganhosSemContato += venda.count;
+          r.valorSemContato += venda.valor;
+        }
       }
 
       let c = r.camp.get(campanha);
@@ -136,7 +148,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       }
       c.leads++;
       if (atendido) c.atendidos++;
-      if (venda) c.ganhos += venda.count;
+      if (venda && atendido) c.ganhos += venda.count;
     }
 
     return Array.from(map.values())
