@@ -1784,6 +1784,74 @@ export type Database = {
           },
         ]
       }
+      commission_alerts: {
+        Row: {
+          client_email: string | null
+          client_name: string | null
+          created_at: string
+          hotmart_nome_afiliado: string | null
+          hours_pending: number | null
+          id: string
+          message: string
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          sale_date: string | null
+          sale_id: string
+          seller_name: string | null
+          severity: string
+          type: string
+          updated_at: string
+          value_eur: number | null
+        }
+        Insert: {
+          client_email?: string | null
+          client_name?: string | null
+          created_at?: string
+          hotmart_nome_afiliado?: string | null
+          hours_pending?: number | null
+          id?: string
+          message: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          sale_date?: string | null
+          sale_id: string
+          seller_name?: string | null
+          severity?: string
+          type: string
+          updated_at?: string
+          value_eur?: number | null
+        }
+        Update: {
+          client_email?: string | null
+          client_name?: string | null
+          created_at?: string
+          hotmart_nome_afiliado?: string | null
+          hours_pending?: number | null
+          id?: string
+          message?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          sale_date?: string | null
+          sale_id?: string
+          seller_name?: string | null
+          severity?: string
+          type?: string
+          updated_at?: string
+          value_eur?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_alerts_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "manual_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manual_sales: {
         Row: {
           affiliate_mismatch: boolean
