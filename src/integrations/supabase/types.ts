@@ -989,6 +989,7 @@ export type Database = {
           contact_id: string | null
           contact_name: string | null
           contact_phone: string | null
+          contact_tags: string[] | null
           created_at: string | null
           currency: string | null
           id: string
@@ -1019,6 +1020,7 @@ export type Database = {
           contact_id?: string | null
           contact_name?: string | null
           contact_phone?: string | null
+          contact_tags?: string[] | null
           created_at?: string | null
           currency?: string | null
           id: string
@@ -1049,6 +1051,7 @@ export type Database = {
           contact_id?: string | null
           contact_name?: string | null
           contact_phone?: string | null
+          contact_tags?: string[] | null
           created_at?: string | null
           currency?: string | null
           id?: string

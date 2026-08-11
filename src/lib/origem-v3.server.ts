@@ -11,15 +11,31 @@ const norm = (s: unknown) =>
   String(s ?? "")
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[-_]/g, " ");
+
+/** Classificação por tags do contato na Clint (mais confiável que UTM). */
+function classifyByTags(contactTags: string[] | null | undefined): string | null {
+  if (!contactTags?.length) return null;
+  const tags = contactTags.map(norm);
+  const some = (...pats: string[]) => tags.some((t) => pats.some((p) => t.includes(p)));
+
+  if (some("minicurso", "mini curso")) return "Minicurso V3";
+  if (some("ebook", "e book")) return "Ebook V3";
+  if (tags.some((t) => t.includes("sessao") && (t.includes("estrategica") || t.includes("estrategia"))))
+    return "Sessão Estratégica";
+  if (some("palestra")) return "Funil de Palestras";
+  return null;
+}
 
 /**
  * Descobre de onde o lead veio de verdade.
- * Prioridade: funil de entrada específico → campos UTM do deal.
+ * Prioridade: funil de entrada específico → tags do contato na Clint → UTM.
  */
 export function classifyOrigemV3(
   originName: string | null,
   raw: any,
+  contactTags?: string[] | null,
 ): { origem: string; campanha: string } {
   const fields = (raw?.fields ?? {}) as Record<string, unknown>;
   const campanha = String(fields["utm_campaign"] ?? "") || "(sem campanha)";
@@ -36,6 +52,10 @@ export function classifyOrigemV3(
   };
   const direct = byOrigin[originName ?? ""];
   if (direct) return { origem: direct, campanha };
+
+  const byTag = classifyByTags(contactTags);
+  if (byTag) return { origem: byTag, campanha };
+
 
   if (blob.includes("minicurso") || hasMinicursoFields) return { origem: "Minicurso V3", campanha };
   if (blob.includes("ebook")) return { origem: "Ebook V3", campanha };

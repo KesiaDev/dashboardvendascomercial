@@ -47,6 +47,7 @@ import { Route as ApiClintWebhookRouteImport } from './routes/api/clint/webhook'
 import { Route as AppCoachIdRouteImport } from './routes/_app.coach.$id'
 import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sync.trigger'
 import { Route as ApiPublicSyncHotmartRouteImport } from './routes/api/public/sync.hotmart'
+import { Route as ApiPublicSyncContactTagsRouteImport } from './routes/api/public/sync.contact-tags'
 import { Route as ApiPublicSyncCoachV3RouteImport } from './routes/api/public/sync.coach-v3'
 import { Route as ApiPublicSyncCcpbxRouteImport } from './routes/api/public/sync.ccpbx'
 import { Route as ApiPublicAuditManualSalesRouteImport } from './routes/api/public/audit/manual-sales'
@@ -245,6 +246,12 @@ const ApiPublicSyncHotmartRoute = ApiPublicSyncHotmartRouteImport.update({
   path: '/api/public/sync/hotmart',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSyncContactTagsRoute =
+  ApiPublicSyncContactTagsRouteImport.update({
+    id: '/api/public/sync/contact-tags',
+    path: '/api/public/sync/contact-tags',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicSyncCoachV3Route = ApiPublicSyncCoachV3RouteImport.update({
   id: '/api/public/sync/coach-v3',
   path: '/api/public/sync/coach-v3',
@@ -320,6 +327,7 @@ export interface FileRoutesByFullPath {
   '/api/public/audit/manual-sales': typeof ApiPublicAuditManualSalesRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/coach-v3': typeof ApiPublicSyncCoachV3Route
+  '/api/public/sync/contact-tags': typeof ApiPublicSyncContactTagsRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -365,6 +373,7 @@ export interface FileRoutesByTo {
   '/api/public/audit/manual-sales': typeof ApiPublicAuditManualSalesRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/coach-v3': typeof ApiPublicSyncCoachV3Route
+  '/api/public/sync/contact-tags': typeof ApiPublicSyncContactTagsRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -412,6 +421,7 @@ export interface FileRoutesById {
   '/api/public/audit/manual-sales': typeof ApiPublicAuditManualSalesRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
   '/api/public/sync/coach-v3': typeof ApiPublicSyncCoachV3Route
+  '/api/public/sync/contact-tags': typeof ApiPublicSyncContactTagsRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
   '/api/public/sync/trigger': typeof ApiPublicSyncTriggerRoute
 }
@@ -459,6 +469,7 @@ export interface FileRouteTypes {
     | '/api/public/audit/manual-sales'
     | '/api/public/sync/ccpbx'
     | '/api/public/sync/coach-v3'
+    | '/api/public/sync/contact-tags'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   fileRoutesByTo: FileRoutesByTo
@@ -504,6 +515,7 @@ export interface FileRouteTypes {
     | '/api/public/audit/manual-sales'
     | '/api/public/sync/ccpbx'
     | '/api/public/sync/coach-v3'
+    | '/api/public/sync/contact-tags'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   id:
@@ -550,6 +562,7 @@ export interface FileRouteTypes {
     | '/api/public/audit/manual-sales'
     | '/api/public/sync/ccpbx'
     | '/api/public/sync/coach-v3'
+    | '/api/public/sync/contact-tags'
     | '/api/public/sync/hotmart'
     | '/api/public/sync/trigger'
   fileRoutesById: FileRoutesById
@@ -570,6 +583,7 @@ export interface RootRouteChildren {
   ApiPublicAuditManualSalesRoute: typeof ApiPublicAuditManualSalesRoute
   ApiPublicSyncCcpbxRoute: typeof ApiPublicSyncCcpbxRoute
   ApiPublicSyncCoachV3Route: typeof ApiPublicSyncCoachV3Route
+  ApiPublicSyncContactTagsRoute: typeof ApiPublicSyncContactTagsRoute
   ApiPublicSyncHotmartRoute: typeof ApiPublicSyncHotmartRoute
   ApiPublicSyncTriggerRoute: typeof ApiPublicSyncTriggerRoute
 }
@@ -842,6 +856,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSyncHotmartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/sync/contact-tags': {
+      id: '/api/public/sync/contact-tags'
+      path: '/api/public/sync/contact-tags'
+      fullPath: '/api/public/sync/contact-tags'
+      preLoaderRoute: typeof ApiPublicSyncContactTagsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/sync/coach-v3': {
       id: '/api/public/sync/coach-v3'
       path: '/api/public/sync/coach-v3'
@@ -983,6 +1004,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAuditManualSalesRoute: ApiPublicAuditManualSalesRoute,
   ApiPublicSyncCcpbxRoute: ApiPublicSyncCcpbxRoute,
   ApiPublicSyncCoachV3Route: ApiPublicSyncCoachV3Route,
+  ApiPublicSyncContactTagsRoute: ApiPublicSyncContactTagsRoute,
   ApiPublicSyncHotmartRoute: ApiPublicSyncHotmartRoute,
   ApiPublicSyncTriggerRoute: ApiPublicSyncTriggerRoute,
 }
