@@ -42,11 +42,15 @@ export function classifyOrigemV3(
   contactTags?: string[] | null,
 ): { origem: string; campanha: string } {
   const fields = (raw?.fields ?? {}) as Record<string, unknown>;
-  const campanha = String(fields["utm_campaign"] ?? "") || "(sem campanha)";
+  const utmCampanha = String(fields["utm_campaign"] ?? "") || "(sem campanha)";
   const blob = norm(
     [fields["utm_campaign"], fields["pagina_origem"], fields["utm_content"], fields["origem_funil"]].join(" "),
   );
   const hasMinicursoFields = Object.keys(fields).some((k) => k.startsWith("mc_"));
+
+  const byTag = classifyByTags(contactTags);
+  // O detalhamento é por TAG da Clint; UTM só quando o contato ainda não tem tag.
+  const campanha = byTag?.tag ?? contactTags?.[0] ?? utmCampanha;
 
   const byOrigin: Record<string, string> = {
     "MINICURSO-V3": "Minicurso V3",
@@ -57,8 +61,8 @@ export function classifyOrigemV3(
   const direct = byOrigin[originName ?? ""];
   if (direct) return { origem: direct, campanha };
 
-  const byTag = classifyByTags(contactTags);
-  if (byTag) return { origem: byTag, campanha };
+  if (byTag) return { origem: byTag.origem, campanha };
+
 
 
   if (blob.includes("minicurso") || hasMinicursoFields) return { origem: "Minicurso V3", campanha };
