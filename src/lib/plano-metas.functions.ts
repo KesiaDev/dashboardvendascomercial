@@ -78,6 +78,8 @@ export const fetchPlanoMetasFn = createServerFn({ method: "GET" })
     for (const d of deals) {
       const id = funilPrincipal(d.origin_name);
       if (!id || !d.user_name) continue; // só leads assumidos por vendedor
+      const seller = canonicalSellerName(d.user_name);
+      if (isVendedorExcluido(seller)) continue; // fora: marketing / gestão
       const f = funis.get(id)!;
       const day = String(d.created_at).slice(0, 10);
       f.leads++;
@@ -91,11 +93,16 @@ export const fetchPlanoMetasFn = createServerFn({ method: "GET" })
 
     for (const s of sales) {
       if (Number(s.installment_number ?? 1) !== 1) continue;
+      // só vendas novas que contam meta (exclui renovação, accelerator, master&scale...)
+      if (s.conta_meta === false) continue;
+      const seller = canonicalSellerName(s.seller_name);
+      if (isVendedorExcluido(seller)) continue; // fora: marketing / gestão
       const id = funilPrincipal(s.funnel);
       const v = vend(s.seller_name);
       v.vendas++;
       if (!id) continue;
       v.porFunil[id]++;
+
       const f = funis.get(id)!;
       const day = String(s.sale_date).slice(0, 10);
       f.vendas++;
