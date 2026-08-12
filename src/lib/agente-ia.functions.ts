@@ -293,9 +293,21 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
 
       conversasIa += 1;
       mensagensIa += aiMsgs.length;
+      // Sessões no mesmo critério da Clint: cada bloco de atendimento da IA
+      // separado por mais de 12h sem mensagem do agente conta como nova sessão.
+      for (let i = 0; i < aiMsgs.length; i++) {
+        if (i === 0) {
+          sessoesTotal += 1;
+          continue;
+        }
+        const prev = toDate(aiMsgs[i - 1].sent_at) ?? 0;
+        const cur = toDate(aiMsgs[i].sent_at) ?? 0;
+        if (cur - prev > 12 * 3_600_000) sessoesTotal += 1;
+      }
       const startedAt = aiMsgs[0].sent_at;
       const dayKey = dayISO(startedAt);
       touch(dayKey).iniciadas += 1;
+
 
       const afterStart = msgs.filter((m) => m.sent_at >= startedAt);
       const inbound = afterStart.filter((m) => m.direction === "inbound");
