@@ -626,9 +626,12 @@ export const runAlertsScanFn = createServerFn({ method: "POST" }).handler(async 
 
 export const listCoachConversationsFn = createServerFn({ method: "GET" }).handler(async () => {
   const db = await admin();
+  // Conversas do Agente IA ficam na aba "Agente IA" — aqui só vendedores reais
   const { data: convs, error } = await db.from("coach_conversations")
-    .select("*").order("last_message_at", { ascending: false, nullsFirst: false }).limit(500);
+    .select("*").eq("is_ai_conversation", false)
+    .order("last_message_at", { ascending: false, nullsFirst: false }).limit(500);
   if (error) throw new Error(error.message);
+
   const ids = (convs ?? []).map((c: any) => c.id);
   // PostgREST .in() estoura o limite de URL com centenas de UUIDs → particiona
   const analyses: CoachAnalysis[] = [];
