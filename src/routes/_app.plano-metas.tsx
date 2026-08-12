@@ -631,6 +631,60 @@ function PlanoMetasPage() {
   );
 }
 
+// ── Blocos de apoio (só apresentação) ───────────────────────────────────────
+function SectionTitle({ n, title, desc }: { n: number; title: string; desc: string }) {
+  return (
+    <div className="pt-2">
+      <h2 className="text-base font-semibold flex items-center gap-2">
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-bold">
+          {n}
+        </span>
+        {title}
+      </h2>
+      <p className="text-xs text-muted-foreground ml-8">{desc}</p>
+    </div>
+  );
+}
+
+function ResumoExecutivo({ eng, cfg }: { eng: ReturnType<typeof engine>; cfg: Config }) {
+  const ritmoAtual = eng.funis.reduce((a, f) => a + f.ritmoVendasSemanaAtual, 0);
+  const precisa = eng.total.vendasSemana;
+  const ok = ritmoAtual >= precisa * 0.95;
+  const itens = [
+    { label: "Vendas que faltam", valor: int(eng.total.vendasNecessarias), hint: `até ${brDate(cfg.dataFinal)}` },
+    { label: "Vendas por semana", valor: num1(precisa), hint: `hoje o time faz ${num1(ritmoAtual)}/semana` },
+    { label: "Leads necessários", valor: int(eng.total.leadsNecessarios), hint: "com a conversão da meta" },
+    { label: "Reuniões a agendar", valor: int(eng.total.reunioesAgendar), hint: "para gerar essas vendas" },
+  ];
+  return (
+    <Card className="border-primary/30">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Resumo: o que precisa acontecer</CardTitle>
+        <p className="text-sm">
+          Para bater as metas de conversão até <strong>{brDate(cfg.dataFinal)}</strong>, faltam{" "}
+          <strong>{int(eng.total.vendasNecessarias)} vendas</strong> — ou seja{" "}
+          <strong>{num1(precisa)} vendas por semana</strong> nos próximos <strong>{eng.diasRestantes}</strong> dias.{" "}
+          <span className={ok ? "text-emerald-500" : "text-red-500"}>
+            {ok
+              ? "O ritmo atual está compatível com a meta."
+              : `No ritmo atual (${num1(ritmoAtual)}/semana) a meta não é atingida.`}
+          </span>
+        </p>
+      </CardHeader>
+      <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {itens.map((i) => (
+          <div key={i.label} className="rounded-lg border border-border/60 p-3">
+            <p className="text-xs text-muted-foreground">{i.label}</p>
+            <p className="text-2xl font-semibold tabular-nums">{i.valor}</p>
+            <p className="text-[11px] text-muted-foreground">{i.hint}</p>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+
 // ── Motor de cálculo ────────────────────────────────────────────────────────
 function engine(data: PlanoMetasData, cfg: Config, hoje: string) {
   const diasRestantes = Math.max(1, daysBetween(hoje, cfg.dataFinal));
