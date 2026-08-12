@@ -12,18 +12,23 @@ export async function runContactTagsBackfill(maxContacts = 100_000) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const db = supabaseAdmin as any;
 
+  // Só olha uma janela recente (últimos 180 dias) e mais recentes primeiro:
+  // são esses leads que aparecem nos relatórios. Evita varrer 80k+ linhas.
+  const since = new Date(Date.now() - 180 * 24 * 3600 * 1000).toISOString();
   const rows: any[] = [];
-  for (let from = 0; from < 100_000; from += 1000) {
+  for (let from = 0; from < 20_000; from += 1000) {
     const { data, error } = await db
       .from("clint_deals")
-      .select("id,contact_id,contact_tags")
+      .select("id,contact_id,contact_tags,created_at")
       .not("contact_id", "is", null)
       .is("contact_tags", null)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
       .range(from, from + 999);
     if (error) throw new Error(error.message);
     if (!data?.length) break;
     rows.push(...data);
-    if (data.length < 1000) break;
+    if (data.length < 1000 || rows.length >= maxContacts * 3) break;
   }
 
   const pending = rows.filter((r: any) => !r.contact_tags?.length);
