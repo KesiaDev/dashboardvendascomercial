@@ -250,6 +250,8 @@ function AgenteIaPage() {
             </Card>
           </div>
 
+          <SessoesTable sessoes={d.sessoes} resumo={d.statusResumo} />
+
           {insights.data?.text && (
             <Card>
               <CardHeader className="pb-2">
