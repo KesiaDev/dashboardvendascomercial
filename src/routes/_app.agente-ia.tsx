@@ -135,7 +135,8 @@ function AgenteIaPage() {
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Kpi icon={MessageSquare} label="Conversas atendidas pela IA" value={String(k.conversasIa)}
-              hint={`${k.coberturaPct}% das ${k.conversasTotal} conversas V3`} />
+              hint={`${k.sessoesTotal} sessões (padrão Clint) · ${k.coberturaPct}% das ${k.conversasTotal} conversas V3`} />
+
             <Kpi icon={TrendingUp} label="Taxa de resposta do lead" value={`${k.taxaRespostaPct}%`}
               hint={`${k.leadsResponderam} responderam · ${k.semResposta} sem resposta`}
               tone={k.taxaRespostaPct >= 50 ? "good" : "warn"} />
