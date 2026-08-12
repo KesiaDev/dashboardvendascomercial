@@ -64,7 +64,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-t border-border bg-muted/40">
-                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Origem / Tag</th>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Funil real / Tag da Clint</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Leads</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Falou c/ vendedor</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Só automação/IA</th>
