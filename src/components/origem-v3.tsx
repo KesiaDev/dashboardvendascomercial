@@ -24,7 +24,9 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
     staleTime: 5 * 60_000,
   });
 
-  const rows = data ?? [];
+  const rows = data?.rows ?? [];
+  const auditoria = data?.auditoria ?? [];
+
   const totals = useMemo(
     () =>
       rows.reduce(
