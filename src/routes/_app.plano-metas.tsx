@@ -391,6 +391,12 @@ function PlanoMetasPage() {
       </Card>
 
       {/* 4. Cenários */}
+      <SectionTitle
+        n={3}
+        title="Cenários: o volume atual chega lá?"
+        desc="Projeta as vendas até a data final em três ritmos de entrada de leads (últimos 7 dias, últimos 30 dias e o volume ideal)."
+      />
+
       <div className="grid gap-4 md:grid-cols-3">
         {eng.cenarios.map((c) => (
           <Card key={c.nome}>
