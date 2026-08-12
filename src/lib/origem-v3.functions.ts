@@ -5,7 +5,7 @@ export type OrigemRow = {
   leads: number;
   abertos: number;
   perdidos: number;
-  /** Vendas do fechamento manual atribuídas à origem de PRIMEIRO contato do cliente. */
+  /** Vendas do fechamento manual atribuídas ao funil onde a venda foi realmente convertida. */
   ganhos: number;
   /** Valor em € das vendas atribuídas. */
   valor: number;
@@ -19,7 +19,7 @@ export type OrigemRow = {
   campanhas: { campanha: string; leads: number; ganhos: number; atendidos: number }[];
 };
 
-/** Uma linha da auditoria automática: onde o cliente entrou ANTES de comprar. */
+/** Uma linha da auditoria automática: onde o cliente entrou e onde a venda converteu. */
 export type AuditoriaVendaRow = {
   saleId: string;
   saleDate: string;
@@ -28,8 +28,18 @@ export type AuditoriaVendaRow = {
   produto: string;
   vendedor: string;
   valor: number;
-  /** Origem classificada do primeiro contato (V3) ou nome do funil de entrada. */
+  /** Funil de CAPTAÇÃO (primeiro contato do cliente na Clint). */
   origem: string;
+  /** Funil onde a venda foi convertida (ganho na Clint / negócio do vendedor / SCK). */
+  funilConversao: string;
+  /** Como a plataforma decidiu o funil de conversão. */
+  metodo: "ganho-clint" | "negocio-vendedor" | "ultimo-toque" | "sck-hotmart" | "declarado";
+  /** Funil declarado pelo vendedor no fechamento manual. */
+  funilDeclarado: string | null;
+  /** SCK do checkout Hotmart, quando a venda foi encontrada na Hotmart. */
+  sck: string | null;
+  /** Nome do afiliado na Hotmart. */
+  afiliado: string | null;
   /** Funil onde o cliente entrou pela 1ª vez na Clint. */
   funilEntrada: string | null;
   /** Data do primeiro registro do cliente na Clint. */
@@ -64,16 +74,18 @@ const chunk = <T,>(arr: T[], size: number) => {
 /**
  * Detalhamento de origem dos leads do V3 + auditoria automática de vendas.
  *
- * Leads/atendimentos = negócios criados no período nos funis V3 e já delegados
- * a um vendedor. Vendas = fechamento manual do período, atribuído à origem do
- * PRIMEIRO contato do cliente na Clint (o cliente pode ter entrado meses antes),
- * cruzando por e-mail → telefone → nome.
+ * Leads = negócios criados no período nos funis V3 e já delegados a um vendedor.
+ * Vendas = fechamento manual do período, atribuído ao funil onde a venda foi
+ * realmente convertida (ganho na Clint → negócio do próprio vendedor → último
+ * toque antes da venda → SCK/afiliado da Hotmart → funil declarado).
  */
 export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<OrigemV3Result> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { V3_ORIGIN_NAMES, classifyOrigemV3 } = await import("@/lib/origem-v3.server");
+    const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller } = await import(
+      "@/lib/origem-v3.server"
+    );
 
     const pageSize = 1000;
     const rows: any[] = [];
@@ -96,7 +108,9 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     // --- Vendas do fechamento manual do período (fonte de verdade de "venda") ---
     const { data: salesRows } = await supabaseAdmin
       .from("manual_sales")
-      .select("id,client_name,client_email,value_eur,product,seller_name,sale_date,installment_number")
+      .select(
+        "id,client_name,client_email,value_eur,product,seller_name,sale_date,installment_number,funnel,hotmart_nome_afiliado",
+      )
       .eq("installment_number", 1)
       .gte("sale_date", data.from)
       .lte("sale_date", data.to)
@@ -104,24 +118,27 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       .limit(20000);
     const sales = salesRows ?? [];
 
-    // --- Índice de primeiro contato na Clint (e-mail / telefone / nome) ---
     const saleEmails = Array.from(new Set(sales.map((s: any) => normEmail(s.client_email)).filter(Boolean)));
     const saleNames = Array.from(new Set(sales.map((s: any) => normName(s.client_name)).filter(Boolean)));
 
+    // --- Todos os negócios do cliente na Clint (não só o primeiro) ---
     type Touch = {
       origin_name: string | null;
       created_at: string | null;
+      won_at: string | null;
+      status: string | null;
       raw: any;
       contact_tags: string[] | null;
       user_name: string | null;
     };
-    const byEmail = new Map<string, Touch>();
-    const byName = new Map<string, Touch>();
-    const byPhone = new Map<string, Touch>();
-    const keepEarliest = (m: Map<string, Touch>, k: string, t: Touch) => {
+    const byEmail = new Map<string, Touch[]>();
+    const byName = new Map<string, Touch[]>();
+    const byPhone = new Map<string, Touch[]>();
+    const push = (m: Map<string, Touch[]>, k: string, t: Touch) => {
       if (!k) return;
-      const cur = m.get(k);
-      if (!cur || String(t.created_at ?? "") < String(cur.created_at ?? "")) m.set(k, t);
+      const arr = m.get(k);
+      if (arr) arr.push(t);
+      else m.set(k, [t]);
     };
 
     const ingest = (deals: any[]) => {
@@ -129,17 +146,20 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         const t: Touch = {
           origin_name: d.origin_name,
           created_at: d.created_at,
+          won_at: d.won_at ?? null,
+          status: d.status ?? null,
           raw: d.raw,
           contact_tags: d.contact_tags,
           user_name: d.user_name,
         };
-        keepEarliest(byEmail, normEmail(d.contact_email), t);
-        keepEarliest(byName, normName(d.contact_name), t);
-        keepEarliest(byPhone, normPhone(d.contact_phone), t);
+        push(byEmail, normEmail(d.contact_email), t);
+        push(byName, normName(d.contact_name), t);
+        push(byPhone, normPhone(d.contact_phone), t);
       }
     };
 
-    const dealCols = "origin_name,created_at,raw,contact_tags,user_name,contact_email,contact_name,contact_phone";
+    const dealCols =
+      "origin_name,created_at,won_at,status,raw,contact_tags,user_name,contact_email,contact_name,contact_phone";
     for (const part of chunk(saleEmails, 100)) {
       const { data: c } = await supabaseAdmin.from("clint_deals").select(dealCols).in("contact_email", part);
       ingest(c ?? []);
@@ -147,6 +167,25 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     for (const part of chunk(saleNames, 100)) {
       const { data: c } = await supabaseAdmin.from("clint_deals").select(dealCols).in("contact_name", part);
       ingest(c ?? []);
+    }
+
+    // --- Vendas Hotmart (SCK / afiliado) para cruzar com o fechamento manual ---
+    const hotByEmail = new Map<string, { sck: string | null; afiliado: string | null; data: string | null }>();
+    for (const part of chunk(saleEmails, 100)) {
+      const { data: h } = await supabaseAdmin
+        .from("sales")
+        .select("email_cliente,origem_checkout,nome_afiliado,data_venda")
+        .in("email_cliente", part)
+        .order("data_venda", { ascending: false });
+      for (const r of h ?? []) {
+        const k = normEmail((r as any).email_cliente);
+        if (!k || hotByEmail.has(k)) continue;
+        hotByEmail.set(k, {
+          sck: (r as any).origem_checkout ?? null,
+          afiliado: (r as any).nome_afiliado ?? null,
+          data: (r as any).data_venda ?? null,
+        });
+      }
     }
 
     // --- Interação real com vendedor (mensagem enviada por humano) ---
@@ -228,56 +267,96 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       if (atendido) c.atendidos++;
     }
 
-    // --- Auditoria: para cada venda, onde o cliente entrou primeiro ---
+    const funnelLabel = (t: Touch) =>
+      V3_ORIGIN_NAMES.includes(t.origin_name ?? "")
+        ? classifyOrigemV3(t.origin_name, t.raw, t.contact_tags).origem
+        : (t.origin_name ?? "Sem funil (entrada manual)");
+
+    // --- Auditoria: captação (1º toque) + conversão (onde a venda aconteceu) ---
     const auditoria: AuditoriaVendaRow[] = [];
     for (const s of sales as any[]) {
       const email = normEmail(s.client_email);
       const nome = normName(s.client_name);
-      let touch = email ? byEmail.get(email) : undefined;
-      let match: AuditoriaVendaRow["match"] = touch ? "email" : "sem-match";
-      if (!touch && nome) {
-        touch = byName.get(nome);
-        if (touch) match = "nome";
+      let touches = (email ? byEmail.get(email) : undefined) ?? [];
+      let match: AuditoriaVendaRow["match"] = touches.length ? "email" : "sem-match";
+      if (!touches.length && nome) {
+        touches = byName.get(nome) ?? [];
+        if (touches.length) match = "nome";
       }
 
-      const origemLabel = touch
-        ? V3_ORIGIN_NAMES.includes(touch.origin_name ?? "")
-          ? classifyOrigemV3(touch.origin_name, touch.raw, touch.contact_tags).origem
-          : (touch.origin_name ?? "Sem origem (entrada manual)")
-        : "Sem origem (entrada manual)";
+      const sorted = [...touches].sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
+      const first = sorted[0];
+      const saleDay = String(s.sale_date);
+      const hot = email ? hotByEmail.get(email) : undefined;
+
+      // 1) negócio GANHO na Clint perto da data da venda
+      const won = sorted
+        .filter((t) => t.status === "WON" && t.won_at)
+        .sort((a, b) => String(b.won_at).localeCompare(String(a.won_at)))
+        .find((t) => Math.abs(new Date(t.won_at!).getTime() - new Date(`${saleDay}T12:00:00Z`).getTime()) < 60 * 864e5);
+      // 2) negócio do próprio vendedor que fechou, aberto antes da venda
+      const doVendedor = [...sorted]
+        .reverse()
+        .find((t) => sameSeller(t.user_name, s.seller_name) && String(t.created_at ?? "") <= `${saleDay}T23:59:59`);
+      // 3) último toque antes da venda
+      const ultimo = [...sorted].reverse().find((t) => String(t.created_at ?? "") <= `${saleDay}T23:59:59`);
+
+      let funilConversao: string;
+      let metodo: AuditoriaVendaRow["metodo"];
+      if (won) {
+        funilConversao = funnelLabel(won);
+        metodo = "ganho-clint";
+      } else if (doVendedor) {
+        funilConversao = funnelLabel(doVendedor);
+        metodo = "negocio-vendedor";
+      } else if (ultimo) {
+        funilConversao = funnelLabel(ultimo);
+        metodo = "ultimo-toque";
+      } else if (sckFunnel(hot?.sck)) {
+        funilConversao = sckFunnel(hot?.sck)!;
+        metodo = "sck-hotmart";
+      } else {
+        funilConversao = String(s.funnel ?? "Sem funil (entrada manual)");
+        metodo = "declarado";
+      }
+
+      const captacao = first ? funnelLabel(first) : "Sem origem (entrada manual)";
       const falou = (email && humanEmails.has(email)) || (nome && humanNames.has(nome)) || false;
 
       auditoria.push({
         saleId: String(s.id),
-        saleDate: String(s.sale_date),
+        saleDate: saleDay,
         cliente: String(s.client_name ?? "—"),
         email: s.client_email ?? null,
         produto: String(s.product ?? "—"),
         vendedor: String(s.seller_name ?? "—"),
         valor: Number(s.value_eur ?? 0),
-        origem: origemLabel,
-        funilEntrada: touch?.origin_name ?? null,
-        primeiroContato: touch?.created_at ?? null,
-        donoClint: touch?.user_name ?? null,
-        tags: touch?.contact_tags ?? [],
+        origem: captacao,
+        funilConversao,
+        metodo,
+        funilDeclarado: s.funnel ?? null,
+        sck: hot?.sck ?? null,
+        afiliado: hot?.afiliado ?? s.hotmart_nome_afiliado ?? null,
+        funilEntrada: first?.origin_name ?? null,
+        primeiroContato: first?.created_at ?? null,
+        donoClint: first?.user_name ?? null,
+        tags: first?.contact_tags ?? [],
         match,
         falouComVendedor: Boolean(falou),
       });
 
-      // Só entram na tabela de origens as vendas cujo 1º contato é um funil V3.
-      if (touch && V3_ORIGIN_NAMES.includes(touch.origin_name ?? "")) {
-        const r = ensure(origemLabel);
-        r.ganhos++;
-        r.valor += Number(s.value_eur ?? 0);
-        if (!falou) {
-          r.ganhosSemContato++;
-          r.valorSemContato += Number(s.value_eur ?? 0);
-        }
-        const tag = classifyOrigemV3(touch.origin_name, touch.raw, touch.contact_tags).campanha;
-        const c = r.camp.get(tag) ?? { leads: 0, ganhos: 0, atendidos: 0 };
-        c.ganhos++;
-        r.camp.set(tag, c);
+      // Toda venda entra em alguma linha — nada fica escondido.
+      const r = ensure(funilConversao);
+      r.ganhos++;
+      r.valor += Number(s.value_eur ?? 0);
+      if (!falou) {
+        r.ganhosSemContato++;
+        r.valorSemContato += Number(s.value_eur ?? 0);
       }
+      const tag = first ? classifyOrigemV3(first.origin_name, first.raw, first.contact_tags).campanha : "Sem tag na Clint";
+      const c = r.camp.get(tag) ?? { leads: 0, ganhos: 0, atendidos: 0 };
+      c.ganhos++;
+      r.camp.set(tag, c);
     }
 
     const result = Array.from(map.values())
@@ -285,9 +364,9 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         ...r,
         campanhas: Array.from(camp.entries())
           .map(([campanha, v]) => ({ campanha, ...v }))
-          .sort((a, b) => b.leads - a.leads),
+          .sort((a, b) => b.leads - a.leads || b.ganhos - a.ganhos),
       }))
-      .sort((a, b) => b.leads - a.leads);
+      .sort((a, b) => b.leads - a.leads || b.ganhos - a.ganhos);
 
     return {
       rows: result,
