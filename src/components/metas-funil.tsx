@@ -229,7 +229,7 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Vendas</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">
                     Meta % mês
-                    <span className="block text-[10px] font-normal opacity-70">fonte da verdade</span>
+                    <span className="block text-[10px] font-normal opacity-70">meta do trimestre</span>
                   </th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">
                     Meta % semana
