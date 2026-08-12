@@ -40,7 +40,7 @@ export const fetchPlanoMetasFn = createServerFn({ method: "GET" })
       pagedSelect(
         supabaseAdmin,
         "manual_sales",
-        "funnel,seller_name,sale_date,installment_number,categoria_produto",
+        "funnel,seller_name,sale_date,installment_number,categoria_produto,conta_meta",
         "sale_date",
         desde,
         hoje,
