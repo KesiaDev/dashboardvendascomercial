@@ -184,20 +184,29 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
       /clint|ia|agente|autom/i.test(String(a.source ?? "")),
     ).length;
 
-    // Mensagens das conversas (chunked para não estourar a URL do PostgREST)
+    // Mensagens das conversas (chunked + paginado: o PostgREST corta em 1000 linhas por request)
     const ids = convs.map((c: any) => c.id);
     const chunks: string[][] = [];
-    for (let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100));
+    for (let i = 0; i < ids.length; i += 25) chunks.push(ids.slice(i, i + 25));
     const msgChunks = await Promise.all(
-      chunks.map((chunk) =>
-        db
-          .from("coach_messages")
-          .select("conversation_id,sent_at,direction,body,clint_source")
-          .in("conversation_id", chunk)
-          .order("sent_at", { ascending: true })
-          .limit(50000),
-      ),
+      chunks.map(async (chunk) => {
+        const rows: any[] = [];
+        const page = 1000;
+        for (let from = 0; from < 20000; from += page) {
+          const res = await db
+            .from("coach_messages")
+            .select("conversation_id,sent_at,direction,body,clint_source")
+            .in("conversation_id", chunk)
+            .order("sent_at", { ascending: true })
+            .range(from, from + page - 1);
+          const batch = res.data ?? [];
+          rows.push(...batch);
+          if (batch.length < page) break;
+        }
+        return { data: rows };
+      }),
     );
+
     const byConv = new Map<
       string,
       { sent_at: string; direction: string; body: string; clint_source?: string | null }[]
