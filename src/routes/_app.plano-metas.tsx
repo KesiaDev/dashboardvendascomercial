@@ -177,90 +177,107 @@ function PlanoMetasPage() {
         </div>
       </header>
 
+      {/* Resumo em linguagem simples */}
+      <ResumoExecutivo eng={eng} cfg={cfg} />
+
       {/* 18. Definição de meta */}
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Definição de metas (recalcula tudo automaticamente)</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-4 text-xs items-end">
-          {IDS.map((id) => (
-            <label key={id} className="flex flex-col gap-1">
-              <span className="text-muted-foreground">Meta {eng.funis.find((f) => f.id === id)?.label}</span>
-              <div className="flex items-center gap-1">
+        <CardContent className="pt-4">
+          <details className="group">
+            <summary className="cursor-pointer text-sm font-medium list-none flex items-center gap-2">
+              <span className="text-muted-foreground">⚙️</span> Premissas do cálculo (metas %, prazo, taxas)
+              <span className="text-xs font-normal text-muted-foreground">
+                — clique para abrir; tudo recalcula automaticamente
+              </span>
+            </summary>
+            <div className="flex flex-wrap gap-4 text-xs items-end pt-4">
+              {IDS.map((id) => (
+                <label key={id} className="flex flex-col gap-1">
+                  <span className="text-muted-foreground">Meta {eng.funis.find((f) => f.id === id)?.label}</span>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={cfg.metas[id]}
+                      onChange={(e) => save({ ...cfg, metas: { ...cfg.metas, [id]: Number(e.target.value) } })}
+                      className="h-8 w-24 text-xs"
+                    />
+                    %
+                  </div>
+                </label>
+              ))}
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground">Data final</span>
+                <Input
+                  type="date"
+                  value={cfg.dataFinal}
+                  onChange={(e) => save({ ...cfg, dataFinal: e.target.value })}
+                  className="h-8 w-36 text-xs"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground">Início do acumulado</span>
+                <Input
+                  type="date"
+                  value={cfg.desde}
+                  onChange={(e) => save({ ...cfg, desde: e.target.value })}
+                  className="h-8 w-36 text-xs"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground">Vendedores (separados por vírgula)</span>
+                <Input
+                  value={cfg.vendedores.join(", ")}
+                  onChange={(e) =>
+                    save({ ...cfg, vendedores: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
+                  }
+                  className="h-8 w-72 text-xs"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground">Comparecimento %</span>
                 <Input
                   type="number"
-                  step="0.1"
-                  value={cfg.metas[id]}
-                  onChange={(e) => save({ ...cfg, metas: { ...cfg.metas, [id]: Number(e.target.value) } })}
-                  className="h-8 w-24 text-xs"
+                  value={cfg.comparecimento}
+                  onChange={(e) => save({ ...cfg, comparecimento: Number(e.target.value) })}
+                  className="h-8 w-20 text-xs"
                 />
-                %
-              </div>
-            </label>
-          ))}
-          <label className="flex flex-col gap-1">
-            <span className="text-muted-foreground">Data final</span>
-            <Input
-              type="date"
-              value={cfg.dataFinal}
-              onChange={(e) => save({ ...cfg, dataFinal: e.target.value })}
-              className="h-8 w-36 text-xs"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-muted-foreground">Início do acumulado</span>
-            <Input
-              type="date"
-              value={cfg.desde}
-              onChange={(e) => save({ ...cfg, desde: e.target.value })}
-              className="h-8 w-36 text-xs"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-muted-foreground">Vendedores (separados por vírgula)</span>
-            <Input
-              value={cfg.vendedores.join(", ")}
-              onChange={(e) =>
-                save({ ...cfg, vendedores: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
-              }
-              className="h-8 w-72 text-xs"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-muted-foreground">Comparecimento %</span>
-            <Input
-              type="number"
-              value={cfg.comparecimento}
-              onChange={(e) => save({ ...cfg, comparecimento: Number(e.target.value) })}
-              className="h-8 w-20 text-xs"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-muted-foreground">Reunião → venda %</span>
-            <Input
-              type="number"
-              value={cfg.fechamento}
-              onChange={(e) => save({ ...cfg, fechamento: Number(e.target.value) })}
-              className="h-8 w-20 text-xs"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-muted-foreground">Reunião → proposta %</span>
-            <Input
-              type="number"
-              value={cfg.proposta}
-              onChange={(e) => save({ ...cfg, proposta: Number(e.target.value) })}
-              className="h-8 w-20 text-xs"
-            />
-          </label>
-          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
-            <RotateCcw className="h-3.5 w-3.5 mr-1" /> Padrão
-          </Button>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground">Reunião → venda %</span>
+                <Input
+                  type="number"
+                  value={cfg.fechamento}
+                  onChange={(e) => save({ ...cfg, fechamento: Number(e.target.value) })}
+                  className="h-8 w-20 text-xs"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground">Reunião → proposta %</span>
+                <Input
+                  type="number"
+                  value={cfg.proposta}
+                  onChange={(e) => save({ ...cfg, proposta: Number(e.target.value) })}
+                  className="h-8 w-20 text-xs"
+                />
+              </label>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
+                <RotateCcw className="h-3.5 w-3.5 mr-1" /> Padrão
+              </Button>
+            </div>
+          </details>
         </CardContent>
       </Card>
 
+
       {/* 16. Cards executivos */}
+      <SectionTitle
+        n={1}
+        title="Como está cada funil hoje"
+        desc="Conversão real (vendas ÷ leads) contra a meta. O semáforo compara o ritmo de vendas atual com o ritmo necessário."
+      />
       <div className="grid gap-4 md:grid-cols-3">
+
         {funisView.map((f) => (
           <Card key={f.id}>
             <CardHeader className="pb-1">
@@ -299,9 +316,15 @@ function PlanoMetasPage() {
       </div>
 
       {/* 9. Gap + 1. Conversão detalhada */}
+      <SectionTitle
+        n={2}
+        title="Quanto falta e o que precisa acontecer"
+        desc="Cálculo reverso: a partir das vendas que faltam, quantos leads, reuniões e propostas são necessários até a data final."
+      />
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Gap para a meta e cálculo reverso do funil</CardTitle>
+
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
@@ -368,6 +391,12 @@ function PlanoMetasPage() {
       </Card>
 
       {/* 4. Cenários */}
+      <SectionTitle
+        n={3}
+        title="Cenários: o volume atual chega lá?"
+        desc="Projeta as vendas até a data final em três ritmos de entrada de leads (últimos 7 dias, últimos 30 dias e o volume ideal)."
+      />
+
       <div className="grid gap-4 md:grid-cols-3">
         {eng.cenarios.map((c) => (
           <Card key={c.nome}>
@@ -408,7 +437,8 @@ function PlanoMetasPage() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center justify-between">
-            Meta por vendedor
+            4 · Meta por vendedor
+
             {eng.distribuicaoProvisoria && (
               <Badge className="bg-amber-500/15 text-amber-500 border-0">Meta provisória (divisão igual)</Badge>
             )}
@@ -486,7 +516,11 @@ function PlanoMetasPage() {
       {/* 7. Semanas */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Plano semanal até {brDate(cfg.dataFinal)}</CardTitle>
+          <CardTitle className="text-sm">5 · Plano semanal até {brDate(cfg.dataFinal)}</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            O que a equipe inteira precisa entregar em cada semana que ainda resta.
+          </p>
+
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
@@ -524,7 +558,11 @@ function PlanoMetasPage() {
       {/* 8. Meses */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Plano mensal (realizado x meta)</CardTitle>
+          <CardTitle className="text-sm">6 · Plano mensal (realizado x meta)</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Compara o que já foi feito em cada mês com a parte da meta que cabe naquele mês.
+          </p>
+
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
@@ -592,6 +630,60 @@ function PlanoMetasPage() {
     </div>
   );
 }
+
+// ── Blocos de apoio (só apresentação) ───────────────────────────────────────
+function SectionTitle({ n, title, desc }: { n: number; title: string; desc: string }) {
+  return (
+    <div className="pt-2">
+      <h2 className="text-base font-semibold flex items-center gap-2">
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-bold">
+          {n}
+        </span>
+        {title}
+      </h2>
+      <p className="text-xs text-muted-foreground ml-8">{desc}</p>
+    </div>
+  );
+}
+
+function ResumoExecutivo({ eng, cfg }: { eng: ReturnType<typeof engine>; cfg: Config }) {
+  const ritmoAtual = eng.funis.reduce((a, f) => a + f.ritmoVendasSemanaAtual, 0);
+  const precisa = eng.total.vendasSemana;
+  const ok = ritmoAtual >= precisa * 0.95;
+  const itens = [
+    { label: "Vendas que faltam", valor: int(eng.total.vendasNecessarias), hint: `até ${brDate(cfg.dataFinal)}` },
+    { label: "Vendas por semana", valor: num1(precisa), hint: `hoje o time faz ${num1(ritmoAtual)}/semana` },
+    { label: "Leads necessários", valor: int(eng.total.leadsNecessarios), hint: "com a conversão da meta" },
+    { label: "Reuniões a agendar", valor: int(eng.total.reunioesAgendar), hint: "para gerar essas vendas" },
+  ];
+  return (
+    <Card className="border-primary/30">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Resumo: o que precisa acontecer</CardTitle>
+        <p className="text-sm">
+          Para bater as metas de conversão até <strong>{brDate(cfg.dataFinal)}</strong>, faltam{" "}
+          <strong>{int(eng.total.vendasNecessarias)} vendas</strong> — ou seja{" "}
+          <strong>{num1(precisa)} vendas por semana</strong> nos próximos <strong>{eng.diasRestantes}</strong> dias.{" "}
+          <span className={ok ? "text-emerald-500" : "text-red-500"}>
+            {ok
+              ? "O ritmo atual está compatível com a meta."
+              : `No ritmo atual (${num1(ritmoAtual)}/semana) a meta não é atingida.`}
+          </span>
+        </p>
+      </CardHeader>
+      <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {itens.map((i) => (
+          <div key={i.label} className="rounded-lg border border-border/60 p-3">
+            <p className="text-xs text-muted-foreground">{i.label}</p>
+            <p className="text-2xl font-semibold tabular-nums">{i.valor}</p>
+            <p className="text-[11px] text-muted-foreground">{i.hint}</p>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 
 // ── Motor de cálculo ────────────────────────────────────────────────────────
 function engine(data: PlanoMetasData, cfg: Config, hoje: string) {
