@@ -535,7 +535,11 @@ function PlanoMetasPage() {
       {/* 8. Meses */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Plano mensal (realizado x meta)</CardTitle>
+          <CardTitle className="text-sm">5 · Plano mensal (realizado x meta)</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Compara o que já foi feito em cada mês com a parte da meta que cabe naquele mês.
+          </p>
+
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
