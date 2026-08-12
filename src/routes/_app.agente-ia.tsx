@@ -222,33 +222,8 @@ function AgenteIaPage() {
             </Card>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Onde os leads da IA estão no funil</CardTitle></CardHeader>
-              <CardContent className="space-y-1.5">
-                {d.stages.slice(0, 12).map((s) => (
-                  <div key={s.stage} className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-1.5 text-sm">
-                    <span className="truncate">{s.stage}</span>
-                    <Badge variant="secondary">{s.total}</Badge>
-                  </div>
-                ))}
-                {!d.stages.length && <div className="text-sm text-muted-foreground">Sem dados no período.</div>}
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Aberturas sem resposta (amostra)</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                {d.amostraSemResposta.map((a, i) => (
-                  <div key={i} className="rounded-md border px-3 py-2 text-xs">
-                    <div className="font-medium">{a.contato} <span className="text-muted-foreground">· {a.data}</span></div>
-                    <div className="mt-0.5 text-muted-foreground line-clamp-2">{a.abertura}</div>
-                  </div>
-                ))}
-                {!d.amostraSemResposta.length && <div className="text-sm text-muted-foreground">Todos os leads responderam 🎉</div>}
-              </CardContent>
-            </Card>
-          </div>
+
 
           <SessoesTable sessoes={d.sessoes} resumo={d.statusResumo} />
 
