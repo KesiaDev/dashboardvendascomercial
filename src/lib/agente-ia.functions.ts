@@ -36,6 +36,15 @@ function isMeetingStage(stage: string | null | undefined): boolean {
   return /reuni(ã|a)o agendada/i.test(s) || /sess(ã|a)o agendada/i.test(s);
 }
 
+export type SessaoStatus =
+  | "Reunião agendada"
+  | "Escalada para humano"
+  | "Venda ganha"
+  | "Lead descartado"
+  | "Aguardando resposta do lead"
+  | "Sem resposta"
+  | "Em conversa";
+
 export type AgenteIaResult = {
   periodStart: string;
   periodEnd: string;
