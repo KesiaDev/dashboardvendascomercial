@@ -16,9 +16,11 @@ export async function runContactTagsBackfill(maxContacts = 100_000) {
   for (let from = 0; from < 100_000; from += 1000) {
     const { data, error } = await db
       .from("clint_deals")
-      .select("id,contact_id,contact_tags")
+      .select("id,contact_id,contact_tags,created_at")
       .not("contact_id", "is", null)
       .is("contact_tags", null)
+      // leads mais recentes primeiro — são os que aparecem nos relatórios
+      .order("created_at", { ascending: false })
       .range(from, from + 999);
     if (error) throw new Error(error.message);
     if (!data?.length) break;
