@@ -9,17 +9,42 @@ import { Button } from "@/components/ui/button";
 
 /**
  * Metas de aproveitamento (conversão lead→venda) por funil.
- * Baselines históricos informados pela liderança; meta do trimestre = 2× a baseline.
+ * Metas do TRIMESTRE definidas pela liderança (agosto/2026):
+ *  - WGT - Perpétuo ............. 1,5%
+ *  - PIPELINE_COMERCIAL-V3 ...... 10%
+ *  - Sessão Estratégica ......... 10%
+ *  - Captação (Minicurso, Ebook, Sessão) ... 5% combinado
  */
-const DEFAULT_BASELINES: Record<string, number> = {
-  "PIPELINE_COMERCIAL-V3": 2.97,
-  "Sessão Estratégica": 5,
-  "WGT - Perpétuo": 0.47,
-};
-const DEFAULT_BASELINE_FALLBACK = 2;
-const MULTIPLICADOR_META = 2;
+function normalizeFunnel(name: string) {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
 
-const STORE_KEY = "metas-funil-v1";
+/** Meta % do trimestre por funil (match por trecho do nome). */
+const META_TRIMESTRE_RULES: { match: (n: string) => boolean; meta: number }[] = [
+  { match: (n) => n.includes("wgt"), meta: 1.5 },
+  { match: (n) => n.includes("pipeline_comercial") || n.includes("pipeline comercial"), meta: 10 },
+  { match: (n) => n.includes("sessao estrategica"), meta: 10 },
+  { match: (n) => n.includes("minicurso"), meta: 5 },
+  { match: (n) => n.includes("ebook"), meta: 5 },
+];
+const DEFAULT_META_FALLBACK = 4;
+
+function metaTrimestral(funnel: string) {
+  const n = normalizeFunnel(funnel);
+  return META_TRIMESTRE_RULES.find((r) => r.match(n))?.meta ?? DEFAULT_META_FALLBACK;
+}
+
+/** Grupo de captação: meta combinada de 5% (minicurso + ebook + sessão estratégica). */
+const CAPTACAO_META = 5;
+function isCaptacao(funnel: string) {
+  const n = normalizeFunnel(funnel);
+  return n.includes("minicurso") || n.includes("ebook") || n.includes("sessao estrategica");
+}
+
+const STORE_KEY = "metas-funil-v2";
 
 type Config = {
   baselines: Record<string, number>;
@@ -28,6 +53,7 @@ type Config = {
   comparecimento: number; // % de reuniões agendadas que acontecem
   fechamento: number; // % de reuniões realizadas que viram venda
   metaGeral: number; // % de aproveitamento alvo somando todos os funis (mês)
+  metaCaptacao: number; // % combinado de minicurso + ebook + sessão
   vendedores: number; // nº de vendedores para dividir a meta
 };
 
@@ -37,9 +63,11 @@ const DEFAULT_CONFIG: Config = {
   metasSemana: {},
   comparecimento: 48.6,
   fechamento: 33,
-  metaGeral: 10,
+  metaGeral: 5,
+  metaCaptacao: CAPTACAO_META,
   vendedores: 5,
 };
+
 
 function loadConfig(): Config {
   if (typeof window === "undefined") return DEFAULT_CONFIG;
@@ -95,9 +123,9 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
     const semanas = weeksBetween(from, to);
     return Array.from(map.values())
       .map((f) => {
-        const baseline =
-          cfg.baselines[f.funnel] ?? DEFAULT_BASELINES[f.funnel] ?? DEFAULT_BASELINE_FALLBACK;
-        const metaMes = cfg.metas[f.funnel] ?? baseline * MULTIPLICADOR_META;
+        const baseline = cfg.baselines[f.funnel] ?? metaTrimestral(f.funnel);
+        const metaMes = cfg.metas[f.funnel] ?? metaTrimestral(f.funnel);
+
         // A meta da semana herda a do mês (mesma taxa de aproveitamento), salvo override manual
         const meta = cfg.metasSemana[f.funnel] ?? metaMes;
         const real = f.leads > 0 ? (f.vendas / f.leads) * 100 : 0;
@@ -181,7 +209,7 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
             </label>
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
               <RotateCcw className="h-3.5 w-3.5 mr-1" />
-              Padrões
+              Metas do trimestre
             </Button>
           </div>
         </div>
@@ -201,7 +229,7 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Vendas</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">
                     Meta % mês
-                    <span className="block text-[10px] font-normal opacity-70">fonte da verdade</span>
+                    <span className="block text-[10px] font-normal opacity-70">meta do trimestre</span>
                   </th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">
                     Meta % semana
@@ -409,6 +437,84 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                       style={{ width: `${Math.min(100, atgGeral)}%` }}
                     />
                   </div>
+                  {(() => {
+                    const cap = rows.filter((r) => isCaptacao(r.funnel));
+                    if (cap.length === 0) return null;
+                    const leads = cap.reduce((a, r) => a + r.leads, 0);
+                    const vendas = cap.reduce((a, r) => a + r.vendas, 0);
+                    const real = leads > 0 ? (vendas / leads) * 100 : 0;
+                    const meta = cfg.metaCaptacao;
+                    const atg = meta > 0 ? (real / meta) * 100 : 0;
+                    const alvo = ceil((leads * meta) / 100);
+                    const faltamCap = alvo - vendas;
+                    return (
+                      <div className="rounded-md border border-border/60 bg-background/60 p-3 space-y-2">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Captação combinada · Minicurso + Ebook + Sessão Estratégica
+                          </span>
+                          <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                            Meta
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              value={drafts.__cap ?? String(cfg.metaCaptacao)}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setDrafts((d) => ({ ...d, __cap: v }));
+                                const n = Number(v.replace(",", "."));
+                                if (v.trim() !== "" && Number.isFinite(n)) save({ ...cfg, metaCaptacao: n });
+                              }}
+                              onBlur={() => setDrafts((d) => { const n = { ...d }; delete n.__cap; return n; })}
+                              className="h-7 w-20 text-xs text-right"
+                            />
+                            %
+                          </label>
+                          {statusBadge(atg)}
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div>
+                            <p className="text-[11px] text-muted-foreground">Leads de captação</p>
+                            <p className="text-lg font-semibold tabular-nums">{leads}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] text-muted-foreground">Vendas</p>
+                            <p className="text-lg font-semibold tabular-nums">{vendas}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] text-muted-foreground">Realizado</p>
+                            <p className="text-lg font-semibold tabular-nums">{fmtPct(real)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] text-muted-foreground">Vendas necessárias</p>
+                            <p className="text-lg font-semibold tabular-nums">
+                              {alvo}
+                              <span className={`ml-1 text-xs ${faltamCap > 0 ? "text-red-500" : "text-emerald-500"}`}>
+                                ({faltamCap > 0 ? `faltam ${faltamCap}` : `+${Math.abs(faltamCap)}`})
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                        <div className="h-2 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full ${atg >= 100 ? "bg-emerald-500" : atg >= 70 ? "bg-amber-500" : "bg-red-500"}`}
+                            style={{ width: `${Math.min(100, atg)}%` }}
+                          />
+                        </div>
+                        <div className="grid gap-1">
+                          {cap.map((r) => (
+                            <div key={r.funnel} className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground truncate">{r.funnel}</span>
+                              <span className="tabular-nums">
+                                {r.vendas}/{r.leads} · {fmtPct(r.real)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div className="rounded-md border border-border/60 bg-background/60 p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                       Por vendedor · time de {cfg.vendedores} (divisão igual)
