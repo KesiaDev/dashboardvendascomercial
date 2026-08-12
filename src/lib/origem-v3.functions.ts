@@ -41,7 +41,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     for (let page = 0; page < 20; page++) {
       const { data: chunk, error } = await supabaseAdmin
         .from("clint_deals")
-        .select("id,origin_name,status,value,created_at,contact_email,raw,contact_tags")
+        .select("id,origin_name,status,value,created_at,contact_email,raw,contact_tags,user_name")
         .in("origin_name", V3_ORIGIN_NAMES)
         // Só entram leads que foram delegados a um vendedor (dono do negócio na Clint).
         .not("user_name", "is", null)
