@@ -43,6 +43,8 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         .from("clint_deals")
         .select("id,origin_name,status,value,created_at,contact_email,raw,contact_tags")
         .in("origin_name", V3_ORIGIN_NAMES)
+        // Só entram leads que foram delegados a um vendedor (dono do negócio na Clint).
+        .not("user_name", "is", null)
         .gte("created_at", data.from)
         .lte("created_at", `${data.to}T23:59:59`)
         .order("created_at", { ascending: false })
