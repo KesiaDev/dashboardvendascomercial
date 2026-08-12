@@ -1,10 +1,11 @@
-/** Funis da campanha V3 na Clint. */
+/** Funis que interessam ao comercial na Clint (V3 + Sessão Estratégica + WGT Perpétuo). */
 export const V3_ORIGIN_NAMES = [
   "PIPELINE_COMERCIAL-V3",
   "MINICURSO-V3",
   "EBOOK-V3",
   "FUNIL DE PALESTRAS",
   "Funil - Sessão Estratégica",
+  "WGT - Perpétuo",
 ];
 
 /** Nome amigável do FUNIL REAL da Clint (nunca campanha/UTM). */
@@ -14,6 +15,7 @@ const FUNIL_LABEL: Record<string, string> = {
   "EBOOK-V3": "Ebook V3",
   "FUNIL DE PALESTRAS": "Funil de Palestras",
   "Funil - Sessão Estratégica": "Sessão Estratégica (funil)",
+  "WGT - Perpétuo": "WGT Perpétuo",
 };
 
 export const SEM_TAG = "Sem tag na Clint";
@@ -26,22 +28,38 @@ const norm = (s: unknown) =>
     .replace(/[-_]/g, " ");
 
 /**
- * Escolhe a TAG principal do contato (tags reais da Clint).
- * Prioriza tags de captação; se não houver, usa a primeira tag; se o contato
- * não tem tag sincronizada, devolve "Sem tag na Clint" — nunca UTM.
+ * Sub-tags de etapa/automação que NÃO são origem do lead
+ * (ex.: "SESSAO_ESTRATEGICA-V3 - CLICOU WHATSAPP", "IGT23 - DISPARO AULA 1").
+ * Guardamos só a raiz da tag, antes do " - ".
+ */
+const tagRoot = (t: string) => String(t ?? "").split(/\s+[-–]\s+/)[0]!.trim();
+
+/** Rótulo canônico das tags que interessam ao comercial. */
+const TAG_CANON: Array<[RegExp, string]> = [
+  [/sessao\s*estrateg/, "Sessão Estratégica"],
+  [/wgt/, "WGT Perpétuo"],
+  [/minicurso|mini curso/, "Minicurso V3"],
+  [/ebook|e book/, "Ebook V3"],
+  [/palestra/, "Palestras"],
+  [/^funil\s*v3$|^funil$/, "Funil V3"],
+  [/^igt/, "IGT"],
+  [/^fgrs/, "FGRS"],
+];
+
+/**
+ * Escolhe a TAG principal do contato (tags reais da Clint), na ordem de
+ * prioridade comercial e já normalizada (sem sub-tag de automação/etapa).
+ * Sem tag sincronizada → "Sem tag na Clint". UTM nunca é usada.
  */
 export function mainTag(contactTags?: string[] | null): string {
-  const tags = (contactTags ?? []).filter((t) => String(t ?? "").trim());
-  if (!tags.length) return SEM_TAG;
-  const find = (pred: (t: string) => boolean) => tags.find((t) => pred(norm(t)));
-  return (
-    find((t) => t.includes("sessao") && t.includes("estrateg")) ??
-    find((t) => t.includes("minicurso") || t.includes("mini curso")) ??
-    find((t) => t.includes("ebook") || t.includes("e book")) ??
-    find((t) => t.includes("palestra")) ??
-    find((t) => t.includes("v3")) ??
-    tags[0]!
-  );
+  const roots = (contactTags ?? [])
+    .map((t) => tagRoot(String(t ?? "")))
+    .filter(Boolean);
+  if (!roots.length) return SEM_TAG;
+  for (const [re, label] of TAG_CANON) {
+    if (roots.some((t) => re.test(norm(t)))) return label;
+  }
+  return roots[0]!;
 }
 
 /**
