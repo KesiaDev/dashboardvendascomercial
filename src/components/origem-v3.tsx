@@ -17,6 +17,7 @@ const eur = (v: number) =>
 
 export function OrigemV3Card({ from, to, title }: { from: string; to: string; title: string }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [showAudit, setShowAudit] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["origem-v3", from, to],
@@ -24,7 +25,9 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
     staleTime: 5 * 60_000,
   });
 
-  const rows = data ?? [];
+  const rows = data?.rows ?? [];
+  const auditoria = data?.auditoria ?? [];
+
   const totals = useMemo(
     () =>
       rows.reduce(
@@ -143,6 +146,67 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
               </tfoot>
             </table>
 
+            {auditoria.length > 0 && (
+              <div className="border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setShowAudit((v) => !v)}
+                  className="w-full flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted/30"
+                >
+                  {showAudit ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                  Auditoria automática das vendas do período ({auditoria.length}) — onde o cliente entrou primeiro
+                </button>
+                {showAudit && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-muted/40">
+                          <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Data venda</th>
+                          <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Cliente</th>
+                          <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Produto</th>
+                          <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Vendedor</th>
+                          <th className="px-3 py-1.5 text-right font-medium text-muted-foreground">Valor</th>
+                          <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">1ª origem</th>
+                          <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Entrou em</th>
+                          <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Match</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {auditoria.map((a) => (
+                          <tr key={a.saleId} className="border-t border-border/30 hover:bg-muted/10">
+                            <td className="px-3 py-1.5 whitespace-nowrap">
+                              {new Date(`${a.saleDate}T00:00:00`).toLocaleDateString("pt-BR")}
+                            </td>
+                            <td className="px-3 py-1.5 truncate max-w-[200px]" title={a.email ?? ""}>
+                              {a.cliente}
+                            </td>
+                            <td className="px-3 py-1.5 truncate max-w-[180px]">{a.produto}</td>
+                            <td className="px-3 py-1.5 whitespace-nowrap">{a.vendedor}</td>
+                            <td className="px-3 py-1.5 text-right tabular-nums">{eur(a.valor)}</td>
+                            <td className="px-3 py-1.5 truncate max-w-[200px]" title={a.tags.join(" | ")}>
+                              {a.origem}
+                            </td>
+                            <td className="px-3 py-1.5 whitespace-nowrap text-muted-foreground">
+                              {a.primeiroContato
+                                ? new Date(a.primeiroContato).toLocaleDateString("pt-BR")
+                                : "—"}
+                            </td>
+                            <td
+                              className={`px-3 py-1.5 whitespace-nowrap ${
+                                a.match === "sem-match" ? "text-red-500" : a.match === "email" ? "text-emerald-500" : "text-amber-500"
+                              }`}
+                            >
+                              {a.match}
+                              {!a.falouComVendedor && <span className="text-muted-foreground"> · sem conversa</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </CardContent>
