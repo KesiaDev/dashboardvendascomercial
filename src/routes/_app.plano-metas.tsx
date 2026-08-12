@@ -150,6 +150,10 @@ function PlanoMetasPage() {
             Acumulado desde {brDate(cfg.desde)} · faltam <strong>{eng.diasRestantes}</strong> dias (
             {num1(eng.semanasRestantes)} semanas)
           </p>
+          <p className="text-xs text-muted-foreground">
+            Considera apenas leads assumidos pelos 5 vendedores e vendas novas que contam meta (sem
+            renovação, Accelerator, Master &amp; Scale e sem leads/vendas de marketing ou gestão).
+          </p>
         </div>
         <div className="flex gap-2 flex-wrap text-xs">
           <select
