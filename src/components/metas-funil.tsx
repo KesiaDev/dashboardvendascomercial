@@ -9,17 +9,42 @@ import { Button } from "@/components/ui/button";
 
 /**
  * Metas de aproveitamento (conversão lead→venda) por funil.
- * Baselines históricos informados pela liderança; meta do trimestre = 2× a baseline.
+ * Metas do TRIMESTRE definidas pela liderança (agosto/2026):
+ *  - WGT - Perpétuo ............. 1,5%
+ *  - PIPELINE_COMERCIAL-V3 ...... 10%
+ *  - Sessão Estratégica ......... 10%
+ *  - Captação (Minicurso, Ebook, Sessão) ... 5% combinado
  */
-const DEFAULT_BASELINES: Record<string, number> = {
-  "PIPELINE_COMERCIAL-V3": 2.97,
-  "Sessão Estratégica": 5,
-  "WGT - Perpétuo": 0.47,
-};
-const DEFAULT_BASELINE_FALLBACK = 2;
-const MULTIPLICADOR_META = 2;
+function normalizeFunnel(name: string) {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
 
-const STORE_KEY = "metas-funil-v1";
+/** Meta % do trimestre por funil (match por trecho do nome). */
+const META_TRIMESTRE_RULES: { match: (n: string) => boolean; meta: number }[] = [
+  { match: (n) => n.includes("wgt"), meta: 1.5 },
+  { match: (n) => n.includes("pipeline_comercial") || n.includes("pipeline comercial"), meta: 10 },
+  { match: (n) => n.includes("sessao estrategica"), meta: 10 },
+  { match: (n) => n.includes("minicurso"), meta: 5 },
+  { match: (n) => n.includes("ebook"), meta: 5 },
+];
+const DEFAULT_META_FALLBACK = 4;
+
+function metaTrimestral(funnel: string) {
+  const n = normalizeFunnel(funnel);
+  return META_TRIMESTRE_RULES.find((r) => r.match(n))?.meta ?? DEFAULT_META_FALLBACK;
+}
+
+/** Grupo de captação: meta combinada de 5% (minicurso + ebook + sessão estratégica). */
+const CAPTACAO_META = 5;
+function isCaptacao(funnel: string) {
+  const n = normalizeFunnel(funnel);
+  return n.includes("minicurso") || n.includes("ebook") || n.includes("sessao estrategica");
+}
+
+const STORE_KEY = "metas-funil-v2";
 
 type Config = {
   baselines: Record<string, number>;
@@ -28,6 +53,7 @@ type Config = {
   comparecimento: number; // % de reuniões agendadas que acontecem
   fechamento: number; // % de reuniões realizadas que viram venda
   metaGeral: number; // % de aproveitamento alvo somando todos os funis (mês)
+  metaCaptacao: number; // % combinado de minicurso + ebook + sessão
   vendedores: number; // nº de vendedores para dividir a meta
 };
 
@@ -37,9 +63,11 @@ const DEFAULT_CONFIG: Config = {
   metasSemana: {},
   comparecimento: 48.6,
   fechamento: 33,
-  metaGeral: 10,
+  metaGeral: 5,
+  metaCaptacao: CAPTACAO_META,
   vendedores: 5,
 };
+
 
 function loadConfig(): Config {
   if (typeof window === "undefined") return DEFAULT_CONFIG;
