@@ -123,9 +123,9 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
     const semanas = weeksBetween(from, to);
     return Array.from(map.values())
       .map((f) => {
-        const baseline =
-          cfg.baselines[f.funnel] ?? DEFAULT_BASELINES[f.funnel] ?? DEFAULT_BASELINE_FALLBACK;
-        const metaMes = cfg.metas[f.funnel] ?? baseline * MULTIPLICADOR_META;
+        const baseline = cfg.baselines[f.funnel] ?? metaTrimestral(f.funnel);
+        const metaMes = cfg.metas[f.funnel] ?? metaTrimestral(f.funnel);
+
         // A meta da semana herda a do mês (mesma taxa de aproveitamento), salvo override manual
         const meta = cfg.metasSemana[f.funnel] ?? metaMes;
         const real = f.leads > 0 ? (f.vendas / f.leads) * 100 : 0;
