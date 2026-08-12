@@ -510,6 +510,10 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
       respostaBuckets: buckets.map((b) => ({ faixa: b.faixa, total: b.total })),
       amostraSemResposta,
       amostraConvertida,
+      sessoes: sessoes.sort((a, b) => b.inicio.localeCompare(a.inicio)),
+      statusResumo: Array.from(statusCount.entries())
+        .map(([status, total]) => ({ status, total }))
+        .sort((a, b) => b.total - a.total),
       vendas: {
         ganhosClint: vendasLista.filter((v) => v.origem === "Clint (ganho)").length,
         vendasManuais: vendasLista.filter((v) => v.origem === "Fechamento manual").length,
