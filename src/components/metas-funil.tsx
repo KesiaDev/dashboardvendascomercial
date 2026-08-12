@@ -209,7 +209,7 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
             </label>
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
               <RotateCcw className="h-3.5 w-3.5 mr-1" />
-              Padrões
+              Metas do trimestre
             </Button>
           </div>
         </div>
