@@ -271,7 +271,13 @@ function PlanoMetasPage() {
 
 
       {/* 16. Cards executivos */}
+      <SectionTitle
+        n={1}
+        title="Como está cada funil hoje"
+        desc="Conversão real (vendas ÷ leads) contra a meta. O semáforo compara o ritmo de vendas atual com o ritmo necessário."
+      />
       <div className="grid gap-4 md:grid-cols-3">
+
         {funisView.map((f) => (
           <Card key={f.id}>
             <CardHeader className="pb-1">
