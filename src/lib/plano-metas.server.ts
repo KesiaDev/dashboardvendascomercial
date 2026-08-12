@@ -31,22 +31,34 @@ export async function pagedSelect(
   to: string,
   maxPages = 60,
 ) {
+  const { count, error: countErr } = await db
+    .from(table)
+    .select("*", { count: "exact", head: true })
+    .gte(column, from)
+    .lte(column, to);
+  if (countErr) throw new Error(countErr.message);
+  const total = Math.min(count ?? 0, maxPages * PAGE);
+  if (total === 0) return [] as any[];
+  const pages = Math.ceil(total / PAGE);
+  const results = await Promise.all(
+    Array.from({ length: pages }, (_, i) =>
+      db
+        .from(table)
+        .select(cols)
+        .gte(column, from)
+        .lte(column, to)
+        .order(column, { ascending: true })
+        .range(i * PAGE, (i + 1) * PAGE - 1),
+    ),
+  );
   const rows: any[] = [];
-  for (let page = 0; page < maxPages; page++) {
-    const { data, error } = await db
-      .from(table)
-      .select(cols)
-      .gte(column, from)
-      .lte(column, to)
-      .order(column, { ascending: true })
-      .range(page * PAGE, (page + 1) * PAGE - 1);
+  for (const { data, error } of results) {
     if (error) throw new Error(error.message);
-    const batch = data ?? [];
-    rows.push(...batch);
-    if (batch.length < PAGE) break;
+    rows.push(...(data ?? []));
   }
   return rows;
 }
+
 
 export type FunilAgg = {
   id: FunilId;
