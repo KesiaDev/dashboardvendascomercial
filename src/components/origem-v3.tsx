@@ -17,6 +17,7 @@ const eur = (v: number) =>
 
 export function OrigemV3Card({ from, to, title }: { from: string; to: string; title: string }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [showAudit, setShowAudit] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["origem-v3", from, to],
