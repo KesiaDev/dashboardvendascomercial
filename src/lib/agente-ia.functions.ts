@@ -254,6 +254,8 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
     };
 
     let conversasIa = 0;
+    let sessoesTotal = 0;
+
     let mensagensIa = 0;
     let leadsResponderam = 0;
     let qualificados = 0;
