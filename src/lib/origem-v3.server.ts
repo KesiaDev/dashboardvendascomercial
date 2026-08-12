@@ -1,10 +1,11 @@
-/** Funis da campanha V3 na Clint. */
+/** Funis que interessam ao comercial na Clint (V3 + Sessão Estratégica + WGT Perpétuo). */
 export const V3_ORIGIN_NAMES = [
   "PIPELINE_COMERCIAL-V3",
   "MINICURSO-V3",
   "EBOOK-V3",
   "FUNIL DE PALESTRAS",
   "Funil - Sessão Estratégica",
+  "WGT - Perpétuo",
 ];
 
 /** Nome amigável do FUNIL REAL da Clint (nunca campanha/UTM). */
@@ -14,6 +15,7 @@ const FUNIL_LABEL: Record<string, string> = {
   "EBOOK-V3": "Ebook V3",
   "FUNIL DE PALESTRAS": "Funil de Palestras",
   "Funil - Sessão Estratégica": "Sessão Estratégica (funil)",
+  "WGT - Perpétuo": "WGT Perpétuo",
 };
 
 export const SEM_TAG = "Sem tag na Clint";
