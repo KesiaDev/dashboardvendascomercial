@@ -67,12 +67,10 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                   <th className="px-4 py-2 text-left font-medium text-muted-foreground">Funil real / Tag da Clint</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Leads</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Falou c/ vendedor</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Só automação/IA</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Fora (só IA/automação)</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Perdidos</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Vendas</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Valor (€)</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Conv. lead→venda</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Conv. atend.→venda</th>
                 </tr>
               </thead>
               <tbody>
@@ -102,12 +100,6 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                         <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{r.perdidos}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-emerald-500 font-medium">{r.ganhos}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{eur(r.valor)}</td>
-                        <td className={`px-3 py-2 text-right tabular-nums font-semibold ${pctColor(pct(r.ganhos, r.leads))}`}>
-                          {r.leads > 0 ? `${pct(r.ganhos, r.leads).toFixed(1)}%` : "—"}
-                        </td>
-                        <td className={`px-3 py-2 text-right tabular-nums ${pctColor(pct(r.ganhos, r.atendidos))}`}>
-                          {r.atendidos > 0 ? `${pct(r.ganhos, r.atendidos).toFixed(1)}%` : "—"}
-                        </td>
                       </tr>
                       {isOpen &&
                         r.campanhas.map((c) => (
@@ -119,12 +111,6 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                             <td className="px-3 py-1.5 text-right tabular-nums">—</td>
                             <td className="px-3 py-1.5 text-right tabular-nums text-emerald-500">{c.ganhos}</td>
                             <td className="px-3 py-1.5 text-right tabular-nums">—</td>
-                            <td className={`px-3 py-1.5 text-right tabular-nums ${pctColor(pct(c.ganhos, c.leads))}`}>
-                              {c.leads > 0 ? `${pct(c.ganhos, c.leads).toFixed(1)}%` : "—"}
-                            </td>
-                            <td className={`px-3 py-1.5 text-right tabular-nums ${pctColor(pct(c.ganhos, c.atendidos))}`}>
-                              {c.atendidos > 0 ? `${pct(c.ganhos, c.atendidos).toFixed(1)}%` : "—"}
-                            </td>
                           </tr>
                         ))}
                     </React.Fragment>
@@ -140,8 +126,6 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                   <td className="px-3 py-2 text-right tabular-nums">{totals.perdidos}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.ganhos}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{eur(totals.valor)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{pct(totals.ganhos, totals.leads).toFixed(1)}%</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{pct(totals.ganhos, totals.atendidos).toFixed(1)}%</td>
                 </tr>
               </tfoot>
             </table>
