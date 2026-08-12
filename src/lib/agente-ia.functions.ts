@@ -491,6 +491,8 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
       kpis: {
         conversasTotal: totalV3,
         conversasIa,
+        sessoesTotal,
+
         coberturaPct: pct(conversasIa, totalV3),
         mensagensIa,
         leadsResponderam,
