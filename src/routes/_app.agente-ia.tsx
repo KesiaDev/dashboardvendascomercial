@@ -250,6 +250,8 @@ function AgenteIaPage() {
             </Card>
           </div>
 
+          <SessoesTable sessoes={d.sessoes} resumo={d.statusResumo} />
+
           {insights.data?.text && (
             <Card>
               <CardHeader className="pb-2">
@@ -265,5 +267,143 @@ function AgenteIaPage() {
         </>
       )}
     </div>
+  );
+}
+
+const STATUS_TONE: Record<string, string> = {
+  "Venda ganha": "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+  "Reunião agendada": "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30",
+  "Escalada para humano": "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30",
+  "Aguardando resposta do lead": "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30",
+  "Em conversa": "bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/30",
+  "Lead descartado": "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30",
+  "Sem resposta": "bg-muted text-muted-foreground border-border",
+};
+
+function fmtDT(ts: string) {
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+function SessoesTable({
+  sessoes,
+  resumo,
+}: {
+  sessoes: NonNullable<Awaited<ReturnType<typeof fetchAgenteIaFn>>>["sessoes"];
+  resumo: NonNullable<Awaited<ReturnType<typeof fetchAgenteIaFn>>>["statusResumo"];
+}) {
+  const [busca, setBusca] = useState("");
+  const [status, setStatus] = useState("todos");
+  const [limite, setLimite] = useState(50);
+
+  const filtradas = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    return sessoes.filter(
+      (s) =>
+        (status === "todos" || s.status === status) &&
+        (!q || s.contato.toLowerCase().includes(q) || (s.ultimaMensagem ?? "").toLowerCase().includes(q)),
+    );
+  }, [sessoes, busca, status, limite]);
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 text-primary" /> Sessões do agente ({sessoes.length})
+          </span>
+          <span className="text-xs font-normal text-muted-foreground">
+            Detalhe conversa a conversa, como no painel da Clint
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap gap-1.5">
+          {resumo.map((r) => (
+            <button
+              key={r.status}
+              onClick={() => setStatus(status === r.status ? "todos" : r.status)}
+              className={`rounded-full border px-2.5 py-1 text-xs transition ${
+                status === r.status ? "ring-2 ring-primary/40 " : ""
+              }${STATUS_TONE[r.status] ?? "bg-muted text-muted-foreground border-border"}`}
+            >
+              {r.status} · {r.total}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar contato ou mensagem..."
+            className="h-9 w-64 rounded-md border bg-background px-3 text-sm"
+          />
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="h-9 rounded-md border bg-background px-2 text-sm"
+          >
+            <option value="todos">Todos os status</option>
+            {resumo.map((r) => (
+              <option key={r.status} value={r.status}>{r.status}</option>
+            ))}
+          </select>
+          <span className="text-xs text-muted-foreground">{filtradas.length} sessões</span>
+        </div>
+
+        <div className="overflow-x-auto rounded-md border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium">Quando</th>
+                <th className="px-3 py-2 text-left font-medium">Contato</th>
+                <th className="px-3 py-2 text-left font-medium">Status</th>
+                <th className="px-3 py-2 text-right font-medium">Turnos</th>
+                <th className="px-3 py-2 text-right font-medium">Msgs IA</th>
+                <th className="px-3 py-2 text-right font-medium">Respostas</th>
+                <th className="px-3 py-2 text-right font-medium">1ª resp.</th>
+                <th className="px-3 py-2 text-left font-medium">Etapa</th>
+                <th className="px-3 py-2 text-left font-medium">Última msg</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtradas.slice(0, limite).map((s) => (
+                <tr key={s.id} className="border-t hover:bg-muted/30">
+                  <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{fmtDT(s.inicio)}</td>
+                  <td className="px-3 py-2">
+                    <span className="font-medium">{s.contato}</span>
+                    {s.iaIniciou ? <span className="ml-1.5 text-[10px] text-muted-foreground">IA iniciou</span> : null}
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className={`rounded-full border px-2 py-0.5 text-xs ${STATUS_TONE[s.status] ?? ""}`}>
+                      {s.status}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">{s.turnos}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{s.msgsIa}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{s.respostasLead}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-xs">
+                    {s.tempo1aRespostaMin === null ? "—" : `${s.tempo1aRespostaMin} min`}
+                  </td>
+                  <td className="max-w-[180px] truncate px-3 py-2 text-xs text-muted-foreground">{s.stage}</td>
+                  <td className="max-w-[280px] truncate px-3 py-2 text-xs text-muted-foreground">{s.ultimaMensagem}</td>
+                </tr>
+              ))}
+              {!filtradas.length && (
+                <tr><td colSpan={9} className="px-3 py-6 text-center text-sm text-muted-foreground">Nenhuma sessão encontrada.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {filtradas.length > limite && (
+          <Button variant="outline" size="sm" onClick={() => setLimite((l) => l + 50)}>
+            Ver mais ({filtradas.length - limite} restantes)
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
 }

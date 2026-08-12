@@ -36,6 +36,15 @@ function isMeetingStage(stage: string | null | undefined): boolean {
   return /reuni(ã|a)o agendada/i.test(s) || /sess(ã|a)o agendada/i.test(s);
 }
 
+export type SessaoStatus =
+  | "Reunião agendada"
+  | "Escalada para humano"
+  | "Venda ganha"
+  | "Lead descartado"
+  | "Aguardando resposta do lead"
+  | "Sem resposta"
+  | "Em conversa";
+
 export type AgenteIaResult = {
   periodStart: string;
   periodEnd: string;
@@ -64,6 +73,22 @@ export type AgenteIaResult = {
   stages: { stage: string; total: number }[];
   respostaBuckets: { faixa: string; total: number }[];
   amostraSemResposta: { contato: string; abertura: string; data: string }[];
+  sessoes: {
+    id: string;
+    contato: string;
+    inicio: string;
+    ultima: string;
+    turnos: number;
+    msgsIa: number;
+    respostasLead: number;
+    status: SessaoStatus;
+    stage: string;
+    tempo1aRespostaMin: number | null;
+    iaIniciou: boolean;
+    vendeu: boolean;
+    ultimaMensagem: string;
+  }[];
+  statusResumo: { status: SessaoStatus; total: number }[];
   amostraConvertida: { contato: string; mensagens: number; data: string; stage: string }[];
   vendas: {
     ganhosClint: number;
@@ -250,6 +275,8 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
     ];
     const amostraSemResposta: AgenteIaResult["amostraSemResposta"] = [];
     const amostraConvertida: AgenteIaResult["amostraConvertida"] = [];
+    const sessoes: AgenteIaResult["sessoes"] = [];
+    const statusCount = new Map<SessaoStatus, number>();
 
     for (const c of convs as any[]) {
       const msgs = (byConv.get(c.id) ?? []).sort((a, b) => a.sent_at.localeCompare(b.sent_at));
@@ -400,6 +427,43 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
           email && manualByEmail.get(email) ? "e-mail do contacto" : "nome do contacto",
         );
       }
+
+      // ---- Sessão (visão detalhada estilo Clint) ----
+      const vendeu = ganhou || !!ms;
+      const stageLow = String(stage).toLowerCase();
+      const descartado =
+        String(deal?.status ?? "").toUpperCase() === "LOST" ||
+        /perdid|descart|sem interesse|n(ã|a)o qualific/i.test(stageLow);
+      const last = afterStart[afterStart.length - 1];
+      const status: SessaoStatus = vendeu
+        ? "Venda ganha"
+        : isReuniao
+          ? "Reunião agendada"
+          : humano && respondeu
+            ? "Escalada para humano"
+            : descartado
+              ? "Lead descartado"
+              : !respondeu
+                ? "Sem resposta"
+                : last?.direction === "outbound"
+                  ? "Aguardando resposta do lead"
+                  : "Em conversa";
+      statusCount.set(status, (statusCount.get(status) ?? 0) + 1);
+      sessoes.push({
+        id: String(c.id),
+        contato: c.contact_name ?? c.contact_email ?? "—",
+        inicio: startedAt,
+        ultima: last?.sent_at ?? startedAt,
+        turnos: afterStart.length,
+        msgsIa: aiMsgs.length,
+        respostasLead: inbound.length,
+        status,
+        stage,
+        tempo1aRespostaMin: first.length && firstDone ? Number(first[first.length - 1].toFixed(1)) : null,
+        iaIniciou,
+        vendeu,
+        ultimaMensagem: (last?.body ?? "").slice(0, 200),
+      });
     }
 
 
@@ -446,6 +510,10 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
       respostaBuckets: buckets.map((b) => ({ faixa: b.faixa, total: b.total })),
       amostraSemResposta,
       amostraConvertida,
+      sessoes: sessoes.sort((a, b) => b.inicio.localeCompare(a.inicio)),
+      statusResumo: Array.from(statusCount.entries())
+        .map(([status, total]) => ({ status, total }))
+        .sort((a, b) => b.total - a.total),
       vendas: {
         ganhosClint: vendasLista.filter((v) => v.origem === "Clint (ganho)").length,
         vendasManuais: vendasLista.filter((v) => v.origem === "Fechamento manual").length,
