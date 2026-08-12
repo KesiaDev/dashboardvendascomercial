@@ -177,87 +177,98 @@ function PlanoMetasPage() {
         </div>
       </header>
 
+      {/* Resumo em linguagem simples */}
+      <ResumoExecutivo eng={eng} cfg={cfg} />
+
       {/* 18. Definição de meta */}
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Definição de metas (recalcula tudo automaticamente)</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-4 text-xs items-end">
-          {IDS.map((id) => (
-            <label key={id} className="flex flex-col gap-1">
-              <span className="text-muted-foreground">Meta {eng.funis.find((f) => f.id === id)?.label}</span>
-              <div className="flex items-center gap-1">
+        <CardContent className="pt-4">
+          <details className="group">
+            <summary className="cursor-pointer text-sm font-medium list-none flex items-center gap-2">
+              <span className="text-muted-foreground">⚙️</span> Premissas do cálculo (metas %, prazo, taxas)
+              <span className="text-xs font-normal text-muted-foreground">
+                — clique para abrir; tudo recalcula automaticamente
+              </span>
+            </summary>
+            <div className="flex flex-wrap gap-4 text-xs items-end pt-4">
+              {IDS.map((id) => (
+                <label key={id} className="flex flex-col gap-1">
+                  <span className="text-muted-foreground">Meta {eng.funis.find((f) => f.id === id)?.label}</span>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={cfg.metas[id]}
+                      onChange={(e) => save({ ...cfg, metas: { ...cfg.metas, [id]: Number(e.target.value) } })}
+                      className="h-8 w-24 text-xs"
+                    />
+                    %
+                  </div>
+                </label>
+              ))}
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground">Data final</span>
+                <Input
+                  type="date"
+                  value={cfg.dataFinal}
+                  onChange={(e) => save({ ...cfg, dataFinal: e.target.value })}
+                  className="h-8 w-36 text-xs"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground">Início do acumulado</span>
+                <Input
+                  type="date"
+                  value={cfg.desde}
+                  onChange={(e) => save({ ...cfg, desde: e.target.value })}
+                  className="h-8 w-36 text-xs"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground">Vendedores (separados por vírgula)</span>
+                <Input
+                  value={cfg.vendedores.join(", ")}
+                  onChange={(e) =>
+                    save({ ...cfg, vendedores: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
+                  }
+                  className="h-8 w-72 text-xs"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground">Comparecimento %</span>
                 <Input
                   type="number"
-                  step="0.1"
-                  value={cfg.metas[id]}
-                  onChange={(e) => save({ ...cfg, metas: { ...cfg.metas, [id]: Number(e.target.value) } })}
-                  className="h-8 w-24 text-xs"
+                  value={cfg.comparecimento}
+                  onChange={(e) => save({ ...cfg, comparecimento: Number(e.target.value) })}
+                  className="h-8 w-20 text-xs"
                 />
-                %
-              </div>
-            </label>
-          ))}
-          <label className="flex flex-col gap-1">
-            <span className="text-muted-foreground">Data final</span>
-            <Input
-              type="date"
-              value={cfg.dataFinal}
-              onChange={(e) => save({ ...cfg, dataFinal: e.target.value })}
-              className="h-8 w-36 text-xs"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-muted-foreground">Início do acumulado</span>
-            <Input
-              type="date"
-              value={cfg.desde}
-              onChange={(e) => save({ ...cfg, desde: e.target.value })}
-              className="h-8 w-36 text-xs"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-muted-foreground">Vendedores (separados por vírgula)</span>
-            <Input
-              value={cfg.vendedores.join(", ")}
-              onChange={(e) =>
-                save({ ...cfg, vendedores: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
-              }
-              className="h-8 w-72 text-xs"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-muted-foreground">Comparecimento %</span>
-            <Input
-              type="number"
-              value={cfg.comparecimento}
-              onChange={(e) => save({ ...cfg, comparecimento: Number(e.target.value) })}
-              className="h-8 w-20 text-xs"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-muted-foreground">Reunião → venda %</span>
-            <Input
-              type="number"
-              value={cfg.fechamento}
-              onChange={(e) => save({ ...cfg, fechamento: Number(e.target.value) })}
-              className="h-8 w-20 text-xs"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-muted-foreground">Reunião → proposta %</span>
-            <Input
-              type="number"
-              value={cfg.proposta}
-              onChange={(e) => save({ ...cfg, proposta: Number(e.target.value) })}
-              className="h-8 w-20 text-xs"
-            />
-          </label>
-          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
-            <RotateCcw className="h-3.5 w-3.5 mr-1" /> Padrão
-          </Button>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground">Reunião → venda %</span>
+                <Input
+                  type="number"
+                  value={cfg.fechamento}
+                  onChange={(e) => save({ ...cfg, fechamento: Number(e.target.value) })}
+                  className="h-8 w-20 text-xs"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground">Reunião → proposta %</span>
+                <Input
+                  type="number"
+                  value={cfg.proposta}
+                  onChange={(e) => save({ ...cfg, proposta: Number(e.target.value) })}
+                  className="h-8 w-20 text-xs"
+                />
+              </label>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
+                <RotateCcw className="h-3.5 w-3.5 mr-1" /> Padrão
+              </Button>
+            </div>
+          </details>
         </CardContent>
       </Card>
+
 
       {/* 16. Cards executivos */}
       <div className="grid gap-4 md:grid-cols-3">
