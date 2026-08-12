@@ -431,7 +431,8 @@ function PlanoMetasPage() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center justify-between">
-            Meta por vendedor
+            3 · Meta por vendedor
+
             {eng.distribuicaoProvisoria && (
               <Badge className="bg-amber-500/15 text-amber-500 border-0">Meta provisória (divisão igual)</Badge>
             )}
