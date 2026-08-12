@@ -140,18 +140,74 @@ async function runCoachV3Sync(sinceDays: number) {
         // Check if conversation already exists (unique by clint_conversation_id)
         const { data: existing } = await db
           .from("coach_conversations")
-          .select("id")
+          .select("id, is_ai_conversation")
           .eq("clint_conversation_id", chat.id)
           .maybeSingle();
 
         if (existing) {
-          await db
-            .from("coach_conversations")
-            .update({ stage: deal.stage ?? null })
-            .eq("id", existing.id);
+          // Conversa já existe → buscar mensagens novas (follow-ups, agendamentos, respostas)
+          const msgResp2 = await clintGet(`/v2/messages/chat/${chat.id}?limit=500`, token!);
+          const realMsgs2 = ((msgResp2?.data ?? []) as any[])
+            .filter((m: any) => m.type === "USER" || m.type === "CUSTOMER")
+            .sort((a: any, b: any) => Date.parse(a.created_at) - Date.parse(b.created_at));
+
+          if (realMsgs2.length) {
+            const { data: knownMsgs } = await db
+              .from("coach_messages")
+              .select("clint_message_id")
+              .eq("conversation_id", existing.id)
+              .not("clint_message_id", "is", null);
+            const known = new Set((knownMsgs ?? []).map((m: any) => m.clint_message_id));
+            const newMsgs = realMsgs2.filter((m: any) => !known.has(m.id));
+
+            if (newMsgs.length) {
+              const sellerFromChat2 = chat.user_id ? userMap.get(chat.user_id) : null;
+              const sellerName2 = sellerFromChat2?.name ?? deal.user_name ?? null;
+              const rows = newMsgs.map((m: any) => {
+                const direction = m.type === "USER" ? "outbound" : "inbound";
+                const msgSeller = m.user_id ? userMap.get(m.user_id) : null;
+                return {
+                  conversation_id: existing.id,
+                  clint_message_id: m.id,
+                  sent_at: m.created_at,
+                  direction,
+                  sender_name:
+                    direction === "outbound" && m.source === "AI_CONVERSATION"
+                      ? "SDR COMERCIAL IA"
+                      : direction === "outbound"
+                      ? (msgSeller?.name ?? sellerName2)
+                      : (deal.contact_name ?? null),
+                  body: extractText(m),
+                  clint_source: m.source ?? null,
+                };
+              });
+              for (let i = 0; i < rows.length; i += 200) {
+                const { error: mErr } = await db.from("coach_messages").insert(rows.slice(i, i + 200));
+                if (mErr && mErr.code !== "23505") throw new Error(`insert msgs: ${mErr.message}`);
+              }
+            }
+
+            const last2 = realMsgs2[realMsgs2.length - 1];
+            const isAi2 = realMsgs2.some((m: any) => m.source === "AI_CONVERSATION");
+            await db
+              .from("coach_conversations")
+              .update({
+                stage: deal.stage ?? null,
+                message_count: realMsgs2.length,
+                last_message_at: last2?.created_at ?? null,
+                is_ai_conversation: existing.is_ai_conversation || isAi2,
+              })
+              .eq("id", existing.id);
+          } else {
+            await db
+              .from("coach_conversations")
+              .update({ stage: deal.stage ?? null })
+              .eq("id", existing.id);
+          }
           updated++;
           continue;
         }
+
 
         // Fetch messages for this chat
         const msgResp = await clintGet(`/v2/messages/chat/${chat.id}?limit=500`, token!);
