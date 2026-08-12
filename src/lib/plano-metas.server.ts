@@ -3,7 +3,7 @@ import { canonicalFunnel, canonicalSellerName, isVendedorExcluido } from "@/lib/
 export type FunilId = "WEBINAR" | "V3" | "SESSAO";
 
 export const FUNIL_LABEL: Record<FunilId, string> = {
-  WEBINAR: "Webinar (WGT)",
+  WEBINAR: "WGT (Webinar)",
   V3: "Pipeline V3",
   SESSAO: "Sessão Estratégica",
 };
