@@ -425,6 +425,43 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
           email && manualByEmail.get(email) ? "e-mail do contacto" : "nome do contacto",
         );
       }
+
+      // ---- Sessão (visão detalhada estilo Clint) ----
+      const vendeu = ganhou || !!ms;
+      const stageLow = String(stage).toLowerCase();
+      const descartado =
+        String(deal?.status ?? "").toUpperCase() === "LOST" ||
+        /perdid|descart|sem interesse|n(ã|a)o qualific/i.test(stageLow);
+      const last = afterStart[afterStart.length - 1];
+      const status: SessaoStatus = vendeu
+        ? "Venda ganha"
+        : isReuniao
+          ? "Reunião agendada"
+          : humano && respondeu
+            ? "Escalada para humano"
+            : descartado
+              ? "Lead descartado"
+              : !respondeu
+                ? "Sem resposta"
+                : last?.direction === "outbound"
+                  ? "Aguardando resposta do lead"
+                  : "Em conversa";
+      statusCount.set(status, (statusCount.get(status) ?? 0) + 1);
+      sessoes.push({
+        id: String(c.id),
+        contato: c.contact_name ?? c.contact_email ?? "—",
+        inicio: startedAt,
+        ultima: last?.sent_at ?? startedAt,
+        turnos: afterStart.length,
+        msgsIa: aiMsgs.length,
+        respostasLead: inbound.length,
+        status,
+        stage,
+        tempo1aRespostaMin: first.length && firstDone ? Number(first[first.length - 1].toFixed(1)) : null,
+        iaIniciou,
+        vendeu,
+        ultimaMensagem: (last?.body ?? "").slice(0, 200),
+      });
     }
 
 
