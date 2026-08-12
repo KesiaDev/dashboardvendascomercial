@@ -51,6 +51,8 @@ export type AgenteIaResult = {
   kpis: {
     conversasTotal: number;
     conversasIa: number;
+    sessoesTotal: number;
+
     coberturaPct: number;
     mensagensIa: number;
     leadsResponderam: number;
