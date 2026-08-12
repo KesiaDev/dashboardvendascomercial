@@ -437,7 +437,7 @@ function PlanoMetasPage() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center justify-between">
-            3 · Meta por vendedor
+            4 · Meta por vendedor
 
             {eng.distribuicaoProvisoria && (
               <Badge className="bg-amber-500/15 text-amber-500 border-0">Meta provisória (divisão igual)</Badge>
@@ -516,7 +516,7 @@ function PlanoMetasPage() {
       {/* 7. Semanas */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">4 · Plano semanal até {brDate(cfg.dataFinal)}</CardTitle>
+          <CardTitle className="text-sm">5 · Plano semanal até {brDate(cfg.dataFinal)}</CardTitle>
           <p className="text-xs text-muted-foreground">
             O que a equipe inteira precisa entregar em cada semana que ainda resta.
           </p>
@@ -558,7 +558,7 @@ function PlanoMetasPage() {
       {/* 8. Meses */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">5 · Plano mensal (realizado x meta)</CardTitle>
+          <CardTitle className="text-sm">6 · Plano mensal (realizado x meta)</CardTitle>
           <p className="text-xs text-muted-foreground">
             Compara o que já foi feito em cada mês com a parte da meta que cabe naquele mês.
           </p>
