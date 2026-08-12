@@ -51,6 +51,8 @@ export type AgenteIaResult = {
   kpis: {
     conversasTotal: number;
     conversasIa: number;
+    sessoesTotal: number;
+
     coberturaPct: number;
     mensagensIa: number;
     leadsResponderam: number;
@@ -182,20 +184,29 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
       /clint|ia|agente|autom/i.test(String(a.source ?? "")),
     ).length;
 
-    // Mensagens das conversas (chunked para não estourar a URL do PostgREST)
+    // Mensagens das conversas (chunked + paginado: o PostgREST corta em 1000 linhas por request)
     const ids = convs.map((c: any) => c.id);
     const chunks: string[][] = [];
-    for (let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100));
+    for (let i = 0; i < ids.length; i += 25) chunks.push(ids.slice(i, i + 25));
     const msgChunks = await Promise.all(
-      chunks.map((chunk) =>
-        db
-          .from("coach_messages")
-          .select("conversation_id,sent_at,direction,body,clint_source")
-          .in("conversation_id", chunk)
-          .order("sent_at", { ascending: true })
-          .limit(50000),
-      ),
+      chunks.map(async (chunk) => {
+        const rows: any[] = [];
+        const page = 1000;
+        for (let from = 0; from < 20000; from += page) {
+          const res = await db
+            .from("coach_messages")
+            .select("conversation_id,sent_at,direction,body,clint_source")
+            .in("conversation_id", chunk)
+            .order("sent_at", { ascending: true })
+            .range(from, from + page - 1);
+          const batch = res.data ?? [];
+          rows.push(...batch);
+          if (batch.length < page) break;
+        }
+        return { data: rows };
+      }),
     );
+
     const byConv = new Map<
       string,
       { sent_at: string; direction: string; body: string; clint_source?: string | null }[]
@@ -254,6 +265,8 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
     };
 
     let conversasIa = 0;
+    let sessoesTotal = 0;
+
     let mensagensIa = 0;
     let leadsResponderam = 0;
     let qualificados = 0;
@@ -293,9 +306,21 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
 
       conversasIa += 1;
       mensagensIa += aiMsgs.length;
+      // Sessões no mesmo critério da Clint: cada bloco de atendimento da IA
+      // separado por mais de 12h sem mensagem do agente conta como nova sessão.
+      for (let i = 0; i < aiMsgs.length; i++) {
+        if (i === 0) {
+          sessoesTotal += 1;
+          continue;
+        }
+        const prev = toDate(aiMsgs[i - 1].sent_at) ?? 0;
+        const cur = toDate(aiMsgs[i].sent_at) ?? 0;
+        if (cur - prev > 12 * 3_600_000) sessoesTotal += 1;
+      }
       const startedAt = aiMsgs[0].sent_at;
       const dayKey = dayISO(startedAt);
       touch(dayKey).iniciadas += 1;
+
 
       const afterStart = msgs.filter((m) => m.sent_at >= startedAt);
       const inbound = afterStart.filter((m) => m.direction === "inbound");
@@ -475,6 +500,8 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
       kpis: {
         conversasTotal: totalV3,
         conversasIa,
+        sessoesTotal,
+
         coberturaPct: pct(conversasIa, totalV3),
         mensagensIa,
         leadsResponderam,
