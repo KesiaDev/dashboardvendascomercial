@@ -249,14 +249,19 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     for (const d of rows) {
       const { origem, campanha } = classifyOrigemV3(d.origin_name, d.raw, d.contact_tags);
       const r = ensure(origem);
-      r.leads++;
-      if (d.status === "LOST") r.perdidos++;
-      else r.abertos++;
 
       const email = normEmail(d.contact_email);
       const atendido = email ? humanEmails.has(email) : false;
-      if (atendido) r.atendidos++;
-      else if (email && anyConvEmails.has(email)) r.soIa++;
+      // Só contam leads efetivamente transferidos ao comercial (vendedor assumiu o atendimento).
+      if (!atendido) {
+        r.soIa++;
+        continue;
+      }
+
+      r.leads++;
+      r.atendidos++;
+      if (d.status === "LOST") r.perdidos++;
+      else r.abertos++;
 
       let c = r.camp.get(campanha);
       if (!c) {
@@ -264,8 +269,9 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         r.camp.set(campanha, c);
       }
       c.leads++;
-      if (atendido) c.atendidos++;
+      c.atendidos++;
     }
+
 
     const funnelLabel = (t: Touch) =>
       V3_ORIGIN_NAMES.includes(t.origin_name ?? "")
