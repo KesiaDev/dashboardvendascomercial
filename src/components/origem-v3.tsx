@@ -7,7 +7,6 @@ import { ChevronDown, ChevronRight, Route as RouteIcon } from "lucide-react";
 function pct(n: number, d: number) {
   return d > 0 ? (n / d) * 100 : 0;
 }
-}
 const eur = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
