@@ -497,7 +497,11 @@ function PlanoMetasPage() {
       {/* 7. Semanas */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Plano semanal até {brDate(cfg.dataFinal)}</CardTitle>
+          <CardTitle className="text-sm">4 · Plano semanal até {brDate(cfg.dataFinal)}</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            O que a equipe inteira precisa entregar em cada semana que ainda resta.
+          </p>
+
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
