@@ -20,6 +20,8 @@ const ALL_NAV_ITEMS = [
   { to: "/ferias",              label: "Férias da Equipe",   icon: Plane,            adminOnly: false },
   { to: "/ranking",             label: "Ranking",            icon: Trophy,           adminOnly: true },
   { to: "/metas-comercial",     label: "Metas Comercial",    icon: Target,           adminOnly: true },
+  { to: "/plano-metas",         label: "Plano de Metas",     icon: Gauge,            adminOnly: true },
+
   { to: "/comissionamento",     label: "Comissionamento",    icon: DollarSign,       adminOnly: true },
   { to: "/coach",               label: "Análise Comercial",  icon: Sparkles,         adminOnly: false },
   { to: "/agente-ia",           label: "Agente IA",          icon: Bot,              adminOnly: true },
