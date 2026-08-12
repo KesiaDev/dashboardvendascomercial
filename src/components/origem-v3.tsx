@@ -154,7 +154,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                   className="w-full flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted/30"
                 >
                   {showAudit ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                  Auditoria automática das vendas do período ({auditoria.length}) — onde o cliente entrou primeiro
+                  Auditoria automática das vendas do período ({auditoria.length}) — captação × funil de conversão (SCK/afiliado)
                 </button>
                 {showAudit && (
                   <div className="overflow-x-auto">
@@ -166,7 +166,9 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                           <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Produto</th>
                           <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Vendedor</th>
                           <th className="px-3 py-1.5 text-right font-medium text-muted-foreground">Valor</th>
-                          <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">1ª origem</th>
+                          <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Captação (1º toque)</th>
+                          <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Funil da conversão</th>
+                          <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">SCK / Afiliado</th>
                           <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Entrou em</th>
                           <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Match</th>
                         </tr>
@@ -185,6 +187,20 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                             <td className="px-3 py-1.5 text-right tabular-nums">{eur(a.valor)}</td>
                             <td className="px-3 py-1.5 truncate max-w-[200px]" title={a.tags.join(" | ")}>
                               {a.origem}
+                            </td>
+                            <td className="px-3 py-1.5 truncate max-w-[220px]">
+                              {a.funilConversao}
+                              <span className="text-muted-foreground"> · {a.metodo}</span>
+                              {a.funilDeclarado && a.funilDeclarado !== a.funilConversao && (
+                                <span className="text-amber-500"> (declarado: {a.funilDeclarado})</span>
+                              )}
+                            </td>
+                            <td
+                              className="px-3 py-1.5 truncate max-w-[200px] text-muted-foreground"
+                              title={a.afiliado ?? ""}
+                            >
+                              {a.sck ?? "—"}
+                              {a.afiliado ? ` · ${a.afiliado.split(" ")[0]}` : ""}
                             </td>
                             <td className="px-3 py-1.5 whitespace-nowrap text-muted-foreground">
                               {a.primeiroContato
@@ -205,6 +221,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                     </table>
                   </div>
                 )}
+
               </div>
             )}
           </div>
