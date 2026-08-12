@@ -19,6 +19,7 @@ import { Route as AppUsuariosRouteImport } from './routes/_app.usuarios'
 import { Route as AppResultadosRouteImport } from './routes/_app.resultados'
 import { Route as AppRankingRouteImport } from './routes/_app.ranking'
 import { Route as AppProdutividadeRouteImport } from './routes/_app.produtividade'
+import { Route as AppPlanoMetasRouteImport } from './routes/_app.plano-metas'
 import { Route as AppMetasComercialRouteImport } from './routes/_app.metas-comercial'
 import { Route as AppIndicacoesRouteImport } from './routes/_app.indicacoes'
 import { Route as AppImportRouteImport } from './routes/_app.import'
@@ -102,6 +103,11 @@ const AppRankingRoute = AppRankingRouteImport.update({
 const AppProdutividadeRoute = AppProdutividadeRouteImport.update({
   id: '/produtividade',
   path: '/produtividade',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlanoMetasRoute = AppPlanoMetasRouteImport.update({
+  id: '/plano-metas',
+  path: '/plano-metas',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMetasComercialRoute = AppMetasComercialRouteImport.update({
@@ -304,6 +310,7 @@ export interface FileRoutesByFullPath {
   '/import': typeof AppImportRoute
   '/indicacoes': typeof AppIndicacoesRoute
   '/metas-comercial': typeof AppMetasComercialRoute
+  '/plano-metas': typeof AppPlanoMetasRoute
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
   '/resultados': typeof AppResultadosRoute
@@ -349,6 +356,7 @@ export interface FileRoutesByTo {
   '/import': typeof AppImportRoute
   '/indicacoes': typeof AppIndicacoesRoute
   '/metas-comercial': typeof AppMetasComercialRoute
+  '/plano-metas': typeof AppPlanoMetasRoute
   '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
   '/resultados': typeof AppResultadosRoute
@@ -397,6 +405,7 @@ export interface FileRoutesById {
   '/_app/import': typeof AppImportRoute
   '/_app/indicacoes': typeof AppIndicacoesRoute
   '/_app/metas-comercial': typeof AppMetasComercialRoute
+  '/_app/plano-metas': typeof AppPlanoMetasRoute
   '/_app/produtividade': typeof AppProdutividadeRoute
   '/_app/ranking': typeof AppRankingRoute
   '/_app/resultados': typeof AppResultadosRoute
@@ -446,6 +455,7 @@ export interface FileRouteTypes {
     | '/import'
     | '/indicacoes'
     | '/metas-comercial'
+    | '/plano-metas'
     | '/produtividade'
     | '/ranking'
     | '/resultados'
@@ -491,6 +501,7 @@ export interface FileRouteTypes {
     | '/import'
     | '/indicacoes'
     | '/metas-comercial'
+    | '/plano-metas'
     | '/produtividade'
     | '/ranking'
     | '/resultados'
@@ -538,6 +549,7 @@ export interface FileRouteTypes {
     | '/_app/import'
     | '/_app/indicacoes'
     | '/_app/metas-comercial'
+    | '/_app/plano-metas'
     | '/_app/produtividade'
     | '/_app/ranking'
     | '/_app/resultados'
@@ -658,6 +670,13 @@ declare module '@tanstack/react-router' {
       path: '/produtividade'
       fullPath: '/produtividade'
       preLoaderRoute: typeof AppProdutividadeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/plano-metas': {
+      id: '/_app/plano-metas'
+      path: '/plano-metas'
+      fullPath: '/plano-metas'
+      preLoaderRoute: typeof AppPlanoMetasRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/metas-comercial': {
@@ -937,6 +956,7 @@ interface AppRouteChildren {
   AppImportRoute: typeof AppImportRoute
   AppIndicacoesRoute: typeof AppIndicacoesRoute
   AppMetasComercialRoute: typeof AppMetasComercialRoute
+  AppPlanoMetasRoute: typeof AppPlanoMetasRoute
   AppProdutividadeRoute: typeof AppProdutividadeRoute
   AppRankingRoute: typeof AppRankingRoute
   AppResultadosRoute: typeof AppResultadosRoute
@@ -965,6 +985,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppImportRoute: AppImportRoute,
   AppIndicacoesRoute: AppIndicacoesRoute,
   AppMetasComercialRoute: AppMetasComercialRoute,
+  AppPlanoMetasRoute: AppPlanoMetasRoute,
   AppProdutividadeRoute: AppProdutividadeRoute,
   AppRankingRoute: AppRankingRoute,
   AppResultadosRoute: AppResultadosRoute,

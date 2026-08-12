@@ -1,6 +1,6 @@
 import { Link, Outlet, createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ClipboardCheck, CalendarDays, CalendarClock, Trophy, DollarSign, Menu, Sparkles, Share2, LogOut, Users, Target, Plane, Swords, Bot } from "lucide-react";
+import { ClipboardCheck, CalendarDays, CalendarClock, Trophy, DollarSign, Menu, Sparkles, Share2, LogOut, Users, Target, Plane, Swords, Bot, Gauge } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -20,6 +20,8 @@ const ALL_NAV_ITEMS = [
   { to: "/ferias",              label: "Férias da Equipe",   icon: Plane,            adminOnly: false },
   { to: "/ranking",             label: "Ranking",            icon: Trophy,           adminOnly: true },
   { to: "/metas-comercial",     label: "Metas Comercial",    icon: Target,           adminOnly: true },
+  { to: "/plano-metas",         label: "Plano de Metas",     icon: Gauge,            adminOnly: true },
+
   { to: "/comissionamento",     label: "Comissionamento",    icon: DollarSign,       adminOnly: true },
   { to: "/coach",               label: "Análise Comercial",  icon: Sparkles,         adminOnly: false },
   { to: "/agente-ia",           label: "Agente IA",          icon: Bot,              adminOnly: true },
