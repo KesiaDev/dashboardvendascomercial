@@ -17,8 +17,11 @@ export async function runContactTagsBackfill(maxContacts = 100_000) {
   const since = new Date(Date.now() - 180 * 24 * 3600 * 1000).toISOString();
   const { V3_ORIGIN_NAMES } = await import("@/lib/origem-v3.server");
   const rows: any[] = [];
-  for (let from = 0; from < 20_000; from += 500) {
-    const { data, error } = await db
+  const PAGE = 200;
+  // paginação por keyset (created_at) — offsets altos estouram o statement timeout
+  let cursor: string | null = null;
+  for (let page = 0; page < 50; page++) {
+    let q = db
       .from("clint_deals")
       .select("id,contact_id,contact_tags,created_at")
       .not("contact_id", "is", null)
@@ -27,11 +30,18 @@ export async function runContactTagsBackfill(maxContacts = 100_000) {
       .in("origin_name", V3_ORIGIN_NAMES)
       .gte("created_at", since)
       .order("created_at", { ascending: false })
-      .range(from, from + 499);
-    if (error) throw new Error(error.message);
+      .limit(PAGE);
+    if (cursor) q = q.lt("created_at", cursor);
+    const { data, error } = await q;
+    if (error) {
+      // timeout/erro parcial: segue com o que já veio em vez de derrubar a rota
+      console.error("contact-tags: page query failed:", error.message);
+      break;
+    }
     if (!data?.length) break;
     rows.push(...data);
-    if (data.length < 500 || rows.length >= maxContacts * 3) break;
+    cursor = data[data.length - 1]!.created_at as string;
+    if (data.length < PAGE || rows.length >= maxContacts) break;
   }
 
   const pending = rows.filter((r: any) => !r.contact_tags?.length);
