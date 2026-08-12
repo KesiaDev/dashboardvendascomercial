@@ -316,9 +316,15 @@ function PlanoMetasPage() {
       </div>
 
       {/* 9. Gap + 1. Conversão detalhada */}
+      <SectionTitle
+        n={2}
+        title="Quanto falta e o que precisa acontecer"
+        desc="Cálculo reverso: a partir das vendas que faltam, quantos leads, reuniões e propostas são necessários até a data final."
+      />
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Gap para a meta e cálculo reverso do funil</CardTitle>
+
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
