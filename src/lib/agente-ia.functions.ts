@@ -64,6 +64,22 @@ export type AgenteIaResult = {
   stages: { stage: string; total: number }[];
   respostaBuckets: { faixa: string; total: number }[];
   amostraSemResposta: { contato: string; abertura: string; data: string }[];
+  sessoes: {
+    id: string;
+    contato: string;
+    inicio: string;
+    ultima: string;
+    turnos: number;
+    msgsIa: number;
+    respostasLead: number;
+    status: SessaoStatus;
+    stage: string;
+    tempo1aRespostaMin: number | null;
+    iaIniciou: boolean;
+    vendeu: boolean;
+    ultimaMensagem: string;
+  }[];
+  statusResumo: { status: SessaoStatus; total: number }[];
   amostraConvertida: { contato: string; mensagens: number; data: string; stage: string }[];
   vendas: {
     ganhosClint: number;
