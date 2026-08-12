@@ -56,3 +56,34 @@ export function classifyOrigemV3(
   const origem = FUNIL_LABEL[originName ?? ""] ?? originName ?? "Sem funil (entrada manual)";
   return { origem, campanha: mainTag(contactTags) };
 }
+
+/** Nome do funil/campanha embutido no SCK do checkout Hotmart (ex.: "igt23.rita" → IGT 23). */
+const SCK_FUNNEL_LABEL: Array<[RegExp, string]> = [
+  [/^igt\s*2?3/, "IGT 23"],
+  [/^igt\s*2?2/, "IGT 22"],
+  [/^igt/, "IGT"],
+  [/^wgt/, "WGT - Perpétuo"],
+  [/^mse/, "Sessão Estratégica (MSE)"],
+  [/^irr/, "Retomada / Reativação"],
+  [/^upsell/, "Upsell"],
+  [/^mas/, "Master and Scale"],
+  [/^renov/, "Renovação"],
+];
+
+/** Extrai o funil de checkout a partir do SCK. Ignora tokens que são nomes de vendedor. */
+export function sckFunnel(origemCheckout: string | null | undefined): string | null {
+  const raw = String(origemCheckout ?? "").trim();
+  if (!raw) return null;
+  const tokens = norm(raw).split(/[^a-z0-9]+/).filter(Boolean);
+  for (const t of tokens) {
+    for (const [re, label] of SCK_FUNNEL_LABEL) if (re.test(t)) return label;
+  }
+  return null;
+}
+
+/** Compara nomes de vendedor por token (ex.: "João Pessoa" ≈ "joao"). */
+export function sameSeller(a: string | null | undefined, b: string | null | undefined): boolean {
+  const ta = new Set(norm(a).split(/[^a-z0-9]+/).filter((t) => t.length > 2));
+  const tb = norm(b).split(/[^a-z0-9]+/).filter((t) => t.length > 2);
+  return tb.some((t) => ta.has(t));
+}
