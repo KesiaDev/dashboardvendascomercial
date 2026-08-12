@@ -275,6 +275,8 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
     ];
     const amostraSemResposta: AgenteIaResult["amostraSemResposta"] = [];
     const amostraConvertida: AgenteIaResult["amostraConvertida"] = [];
+    const sessoes: AgenteIaResult["sessoes"] = [];
+    const statusCount = new Map<SessaoStatus, number>();
 
     for (const c of convs as any[]) {
       const msgs = (byConv.get(c.id) ?? []).sort((a, b) => a.sent_at.localeCompare(b.sent_at));
