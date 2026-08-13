@@ -362,6 +362,7 @@ function Conversas() {
   const [q, setQ] = useState("");
   const [minScore, setMinScore] = useState("");
   const [sellerFilter, setSellerFilter] = useState("");
+  const [atendFilter, setAtendFilter] = useState<"humano" | "misto" | "todas">("humano");
 
   const analyze = useMutation({
     mutationFn: (id: string) => analyzeConversationFn({ data: { conversationId: id, force: true } }),
