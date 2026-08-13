@@ -477,10 +477,20 @@ function Conversas() {
             ))}
           </select>
         )}
+        <select
+          value={atendFilter}
+          onChange={(e) => setAtendFilter(e.target.value as any)}
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          title="Separar conversas trabalhadas pela IA"
+        >
+          <option value="humano">Só vendedor (sem IA)</option>
+          <option value="misto">Vendedor + IA</option>
+          <option value="todas">Todas</option>
+        </select>
         <Input placeholder="Buscar por vendedor, cliente, deal…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
         <Input placeholder="Nota mínima" type="number" min={0} max={10} value={minScore} onChange={(e) => setMinScore(e.target.value)} className="max-w-[120px]" />
-        {(sellerFilter || q || minScore) && (
-          <Button size="sm" variant="ghost" onClick={() => { setSellerFilter(""); setQ(""); setMinScore(""); }}>Limpar</Button>
+        {(sellerFilter || q || minScore || atendFilter !== "humano") && (
+          <Button size="sm" variant="ghost" onClick={() => { setSellerFilter(""); setQ(""); setMinScore(""); setAtendFilter("humano"); }}>Limpar</Button>
         )}
         <span className="text-xs text-muted-foreground ml-auto">{filtered.length} de {convs.length}</span>
       </div>
