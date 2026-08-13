@@ -83,7 +83,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<OrigemV3Result> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller } = await import(
+    const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller, canonOrigem } = await import(
       "@/lib/origem-v3.server"
     );
 
@@ -247,7 +247,10 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     };
 
     for (const d of rows) {
-      const { origem, campanha } = classifyOrigemV3(d.origin_name, d.raw, d.contact_tags);
+      const { origem: origemBruta, campanha } = classifyOrigemV3(d.origin_name, d.raw, d.contact_tags);
+      // Só os 4 funis/tags que o comercial acompanha (duplicados unificados).
+      const origem = canonOrigem(origemBruta) ?? canonOrigem(campanha);
+      if (!origem) continue;
       const r = ensure(origem);
 
       const email = normEmail(d.contact_email);
@@ -351,8 +354,10 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         falouComVendedor: Boolean(falou),
       });
 
-      // Toda venda entra em alguma linha — nada fica escondido.
-      const r = ensure(funilConversao);
+      // Só entram vendas atribuíveis aos 4 funis/tags do comercial.
+      const linha = canonOrigem(funilConversao) ?? canonOrigem(captacao);
+      if (!linha) continue;
+      const r = ensure(linha);
       r.ganhos++;
       r.valor += Number(s.value_eur ?? 0);
       if (!falou) {

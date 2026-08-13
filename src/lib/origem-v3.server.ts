@@ -20,6 +20,29 @@ const FUNIL_LABEL: Record<string, string> = {
 
 export const SEM_TAG = "Sem tag na Clint";
 
+/** Únicos funis/tags que o comercial acompanha no card "Origem dos leads V3". */
+export const ORIGENS_PERMITIDAS = [
+  "Pipeline Comercial V3",
+  "Minicurso V3",
+  "Ebook V3",
+  "Sessão Estratégica",
+] as const;
+
+/** Unifica rótulos duplicados (ex.: "Sessão Estratégica (funil)"/"(MSE)") e descarta o resto. */
+export function canonOrigem(label: string | null | undefined): string | null {
+  const n = String(label ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[-_]/g, " ");
+  if (!n) return null;
+  if (/sessao\s*estrateg|(^|\W)mse(\W|$)/.test(n)) return "Sessão Estratégica";
+  if (/minicurso|mini curso/.test(n)) return "Minicurso V3";
+  if (/ebook|e book/.test(n)) return "Ebook V3";
+  if (/pipeline\s*comercial|funil\s*v3/.test(n)) return "Pipeline Comercial V3";
+  return null;
+}
+
 const norm = (s: unknown) =>
   String(s ?? "")
     .toLowerCase()
