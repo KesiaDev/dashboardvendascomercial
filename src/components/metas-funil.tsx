@@ -221,39 +221,39 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
           <p className="text-sm text-muted-foreground px-4 py-6">Sem dados no período.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[1180px]">
+            <table className="w-full text-xs table-fixed">
+              <colgroup>
+                <col className="w-[17%]" />
+                <col className="w-[6%]" />
+                <col className="w-[6%]" />
+                <col className="w-[9%]" />
+                <col className="w-[9%]" />
+                <col className="w-[8%]" />
+                <col className="w-[16%]" />
+                <col className="w-[8%]" />
+                <col className="w-[8%]" />
+                <col className="w-[13%]" />
+              </colgroup>
               <thead>
                 <tr className="border-t border-border bg-muted/40 align-bottom">
-                  <th className="sticky left-0 z-10 bg-muted/95 backdrop-blur px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[190px]">
+                  <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">
                     Funil
                   </th>
-                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">Leads</th>
-                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Vendas</th>
-                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">
+                  <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">Leads</th>
+                  <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Vendas</th>
+                  <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">
                     Meta % mês
-                    <span className="block text-[10px] font-normal opacity-70">meta do trimestre</span>
                   </th>
-                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">
-                    Meta % semana
-                    <span className="block text-[10px] font-normal opacity-70">herda do mês</span>
+                  <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">
+                    Meta % sem
                   </th>
-                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Realizado %</th>
-                  <th className="px-3 py-3 text-left font-medium text-muted-foreground w-[15%] min-w-[170px] whitespace-nowrap">Atingimento</th>
-                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">
-                    Meta de vendas
-                    <span className="block text-[10px] font-normal opacity-70">no período</span>
-                  </th>
-                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">
-                    Faltam vender
-                    <span className="block text-[10px] font-normal opacity-70">para bater a meta</span>
-                  </th>
-                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">
-                    Reuniões a realizar
-                    <span className="block text-[10px] font-normal opacity-70">por semana</span>
-                  </th>
-                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">
-                    Reuniões a agendar
-                    <span className="block text-[10px] font-normal opacity-70">por semana</span>
+                  <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Realizado</th>
+                  <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">Atingimento</th>
+                  <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">Vendas meta</th>
+                  <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Faltam</th>
+                  <th className="px-2 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">
+                    Reuniões/semana
+                    <span className="block text-[9px] font-normal opacity-70">realizar · agendar</span>
                   </th>
                 </tr>
               </thead>
@@ -261,10 +261,10 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.funnel} className="border-t border-border/40 hover:bg-muted/20 transition-colors">
-                    <td className="sticky left-0 z-10 bg-card px-4 py-3.5 font-medium whitespace-nowrap">{r.funnel}</td>
-                    <td className="px-3 py-3.5 text-right tabular-nums border-l border-border/30">{r.leads}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-emerald-500 font-medium">{r.vendas}</td>
-                    <td className="px-3 py-2 text-right border-l border-border/30">
+                    <td className="px-2 py-2 font-medium whitespace-nowrap truncate" title={r.funnel}>{r.funnel}</td>
+                    <td className="px-1.5 py-2 text-right tabular-nums border-l border-border/30">{r.leads}</td>
+                    <td className="px-1.5 py-2 text-right tabular-nums text-emerald-500 font-medium">{r.vendas}</td>
+                    <td className="px-1 py-2 text-right border-l border-border/30">
                       <Input
                         type="text"
                         inputMode="decimal"
@@ -281,10 +281,10 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                           }
                         }}
                         onBlur={() => setDrafts((d) => { const n = { ...d }; delete n[`m:${r.funnel}`]; return n; })}
-                        className="h-7 w-20 text-xs text-right ml-auto"
+                        className="h-7 w-full text-xs text-right"
                       />
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-1 py-2 text-right">
                       <Input
                         type="text"
                         inputMode="decimal"
@@ -298,12 +298,12 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                           }
                         }}
                         onBlur={() => setDrafts((d) => { const n = { ...d }; delete n[`s:${r.funnel}`]; return n; })}
-                        className={`h-7 w-20 text-xs text-right ml-auto ${cfg.metasSemana[r.funnel] != null ? "border-amber-500" : ""}`}
+                        className={`h-7 w-full text-xs text-right ${cfg.metasSemana[r.funnel] != null ? "border-amber-500" : ""}`}
                       />
                       {cfg.metasSemana[r.funnel] != null && (
                         <button
                           type="button"
-                          className="block ml-auto text-[10px] text-amber-500 hover:underline"
+                          className="block ml-auto text-[9px] text-amber-500 hover:underline"
                           onClick={() => {
                             const semana = { ...cfg.metasSemana };
                             delete semana[r.funnel];
@@ -315,10 +315,10 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                         </button>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums font-semibold">{fmtPct(r.real)}</td>
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                    <td className="px-1.5 py-2 text-right tabular-nums font-semibold">{fmtPct(r.real)}</td>
+                    <td className="px-2 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden min-w-0">
                           <div
                             className={`h-full ${r.atingimento >= 100 ? "bg-emerald-500" : r.atingimento >= 70 ? "bg-amber-500" : "bg-red-500"}`}
                             style={{ width: `${Math.min(100, r.atingimento)}%` }}
@@ -327,24 +327,20 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                         {statusBadge(r.atingimento)}
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums border-l border-border/30">{r.vendasMeta.toFixed(0)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">
+                    <td className="px-1.5 py-2 text-right tabular-nums border-l border-border/30">{r.vendasMeta.toFixed(0)}</td>
+                    <td className="px-1.5 py-2 text-right tabular-nums">
                       {r.gap >= 0 ? (
-                        <span className="text-emerald-500 font-medium">Meta batida</span>
+                        <span className="text-emerald-500 font-medium">✓</span>
                       ) : (
                         <span className="text-red-500 font-medium">{Math.abs(r.gap).toFixed(0)}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums border-l border-border/30">
-                      {r.reunioesSemana.toFixed(0)}
-                      <span className="block text-[10px] opacity-60">
-                        {ceil(r.reunioesSemana / cfg.vendedores)}/vendedor
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      {r.agendamentosSemana.toFixed(0)}
-                      <span className="block text-[10px] opacity-60">
-                        {ceil(r.agendamentosSemana / cfg.vendedores)}/vendedor
+                    <td className="px-2 py-2 text-right tabular-nums border-l border-border/30 leading-tight">
+                      <span className="text-emerald-500">{r.reunioesSemana.toFixed(0)}</span>
+                      <span className="text-muted-foreground mx-1">·</span>
+                      <span className="text-sky-500">{r.agendamentosSemana.toFixed(0)}</span>
+                      <span className="block text-[9px] opacity-60">
+                        {ceil(r.reunioesSemana / cfg.vendedores)}/{ceil(r.agendamentosSemana / cfg.vendedores)} por vendedor
                       </span>
                     </td>
                   </tr>
@@ -352,27 +348,23 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-border bg-muted/40 font-semibold">
-                  <td className="sticky left-0 z-10 bg-muted/95 px-4 py-3">Total</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{totals.leads}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{totals.vendas}</td>
-                  <td className="px-3 py-2" />
-                  <td className="px-3 py-2" />
-                  <td className="px-3 py-2 text-right tabular-nums">
+                  <td className="px-2 py-2">Total</td>
+                  <td className="px-1.5 py-2 text-right tabular-nums">{totals.leads}</td>
+                  <td className="px-1.5 py-2 text-right tabular-nums">{totals.vendas}</td>
+                  <td className="px-1.5 py-2" />
+                  <td className="px-1.5 py-2" />
+                  <td className="px-1.5 py-2 text-right tabular-nums">
                     {fmtPct(totals.leads > 0 ? (totals.vendas / totals.leads) * 100 : 0)}
                   </td>
-                  <td className="px-3 py-2" />
-                  <td className="px-3 py-2 text-right tabular-nums">{totals.vendasMeta.toFixed(0)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
+                  <td className="px-2 py-2" />
+                  <td className="px-1.5 py-2 text-right tabular-nums">{totals.vendasMeta.toFixed(0)}</td>
+                  <td className="px-1.5 py-2 text-right tabular-nums">
                     {Math.max(0, totals.vendasMeta - totals.vendas)}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {totals.reunioesSemana.toFixed(0)}
-                    <span className="block text-[10px] font-normal opacity-60">
-                      {ceil(totals.reunioesSemana / cfg.vendedores)}/vendedor
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {totals.agendamentosSemana.toFixed(0)}
+                  <td className="px-2 py-2 text-right tabular-nums leading-tight">
+                    <span className="text-emerald-500">{totals.reunioesSemana.toFixed(0)}</span>
+                    <span className="text-muted-foreground mx-1">·</span>
+                    <span className="text-sky-500">{totals.agendamentosSemana.toFixed(0)}
                     <span className="block text-[10px] font-normal opacity-60">
                       {ceil(totals.agendamentosSemana / cfg.vendedores)}/vendedor
                     </span>
