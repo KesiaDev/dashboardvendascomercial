@@ -425,6 +425,9 @@ function Conversas() {
 
   const filtered = useMemo(() => {
     let list = convs;
+    // Conversas trabalhadas pela IA/automação ficam fora por padrão
+    if (atendFilter === "humano") list = list.filter((c: any) => (c.atendimento ?? "humano") === "humano");
+    else if (atendFilter === "misto") list = list.filter((c: any) => c.atendimento === "misto");
     if (!isAdmin && sellerNameGuess) {
       const target = sellerNameGuess.toLowerCase();
       list = list.filter((c: any) =>
@@ -445,7 +448,7 @@ function Conversas() {
       list = list.filter((c: any) => (c.analysis?.score_geral ?? 0) >= m);
     }
     return list;
-  }, [convs, q, minScore, sellerFilter, isAdmin, sellerNameGuess]);
+  }, [convs, q, minScore, sellerFilter, atendFilter, isAdmin, sellerNameGuess]);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const toggleSel = (id: string) =>
