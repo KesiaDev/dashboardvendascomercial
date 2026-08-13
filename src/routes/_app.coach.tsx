@@ -87,7 +87,15 @@ function displaySellerName(nameOrEmail: string | null | undefined): string {
   if (raw.includes("@")) return raw.split("@")[0];
   return raw;
 }
+// Nomes que não fazem parte da equipa comercial (não entram nas métricas)
+const EXCLUDED_SELLER_KEYS = ["camila", "aline", "kesia", "késia", "—"];
+function isMetricSeller(nameOrEmail: string | null | undefined): boolean {
+  const n = displaySellerName(nameOrEmail).toLowerCase().trim();
+  if (!n || n === "—") return false;
+  return !EXCLUDED_SELLER_KEYS.some((k) => n.includes(k));
+}
 function scoreColor(n: number | null | undefined) {
+
   if (n == null) return "text-muted-foreground";
   if (n >= 8) return "text-emerald-600 dark:text-emerald-400";
   if (n >= 6) return "text-amber-600 dark:text-amber-400";
