@@ -83,7 +83,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<OrigemV3Result> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller } = await import(
+    const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller, canonOrigem } = await import(
       "@/lib/origem-v3.server"
     );
 
