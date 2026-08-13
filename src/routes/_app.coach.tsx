@@ -271,7 +271,13 @@ function VisaoGeral() {
   const { data: alerts = [] } = useQuery({ queryKey: ["coach-alerts"], queryFn: () => listCoachAlertsFn() });
   const { data: weekly = [] } = useQuery({ queryKey: ["coach-weekly"], queryFn: () => fetchWeeklyStatsFn(), staleTime: 5 * 60_000 });
 
-  const analyzed = convs.filter((c: any) => c.analysis && c.analysis.status === "ok");
+  const analyzed = convs.filter(
+    (c: any) =>
+      c.analysis &&
+      c.analysis.status === "ok" &&
+      isMetricSeller(c.seller_name ?? c.seller_email),
+  );
+
   const avgScore = analyzed.length
     ? Number((analyzed.reduce((s: number, c: any) => s + Number(c.analysis.score_geral ?? 0), 0) / analyzed.length).toFixed(1))
     : null;
