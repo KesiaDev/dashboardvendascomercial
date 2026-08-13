@@ -214,6 +214,8 @@ function WeeklyChart({ stats }: { stats: WeeklyStats[] }) {
   for (const s of stats) {
     const canonical = displaySellerName(s.seller_name ?? s.seller_email ?? "—");
     if (!isMetricSeller(canonical)) continue;
+    let weekMap = byCanonical.get(canonical);
+
 
     if (!weekMap) { weekMap = new Map(); byCanonical.set(canonical, weekMap); }
     const w = s.week_start;
