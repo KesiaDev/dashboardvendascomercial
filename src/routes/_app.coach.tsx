@@ -613,6 +613,12 @@ function Conversas() {
                   <span className="font-semibold text-sm">{c.contact_name ?? "Contacto —"}</span>
                   <span className="text-xs text-muted-foreground">•</span>
                   <span className="text-xs text-muted-foreground">{c.seller_name ?? c.seller_email ?? "sem vendedor"}</span>
+                  {c.atendimento === "misto" && (
+                    <Badge variant="outline" className="text-[10px] text-sky-600 border-sky-500/40">IA + vendedor ({c.ia_msgs})</Badge>
+                  )}
+                  {c.atendimento === "ia" && (
+                    <Badge variant="outline" className="text-[10px] text-sky-600 border-sky-500/40">só IA</Badge>
+                  )}
                   {c.analysis?.sentimento && (
                     <span className={"text-[10px] px-1.5 py-0.5 rounded " + sentimentColor(c.analysis.sentimento)}>{c.analysis.sentimento}</span>
                   )}
