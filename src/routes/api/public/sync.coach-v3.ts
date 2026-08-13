@@ -39,7 +39,7 @@ function extractText(msg: any): string {
   return "[sem texto]";
 }
 
-async function runCoachV3Sync(sinceDays: number) {
+export async function runCoachV3Sync(sinceDays: number) {
   const token = process.env.CLINT_API_TOKEN;
   if (!token) throw new Error("CLINT_API_TOKEN not configured");
 
