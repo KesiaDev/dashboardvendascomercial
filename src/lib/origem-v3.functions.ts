@@ -247,7 +247,10 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     };
 
     for (const d of rows) {
-      const { origem, campanha } = classifyOrigemV3(d.origin_name, d.raw, d.contact_tags);
+      const { origem: origemBruta, campanha } = classifyOrigemV3(d.origin_name, d.raw, d.contact_tags);
+      // Só os 4 funis/tags que o comercial acompanha (duplicados unificados).
+      const origem = canonOrigem(origemBruta) ?? canonOrigem(campanha);
+      if (!origem) continue;
       const r = ensure(origem);
 
       const email = normEmail(d.contact_email);
