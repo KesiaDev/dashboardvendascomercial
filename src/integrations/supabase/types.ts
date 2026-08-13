@@ -2311,6 +2311,23 @@ export type Database = {
       }
     }
     Views: {
+      coach_conv_outbound_sources: {
+        Row: {
+          bot_out: number | null
+          conversation_id: string | null
+          human_out: number | null
+          unknown_out: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "coach_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_weekly_summary: {
         Row: {
           avg_resp_min: number | null

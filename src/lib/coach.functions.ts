@@ -642,8 +642,40 @@ export const listCoachConversationsFn = createServerFn({ method: "GET" }).handle
   }
   const byConv = new Map<string, CoachAnalysis>();
   for (const a of analyses) byConv.set(a.conversation_id, a);
-  return (convs ?? []).map((c: any) => ({ ...c, analysis: byConv.get(c.id) ?? null }));
 
+  // Quem enviou as mensagens: vendedor (CHAT) vs IA/automação (AUTOMATION/CAMPAIGN/AI)
+  const srcMap = new Map<string, { bot: number; human: number; unknown: number }>();
+  for (let i = 0; i < ids.length; i += 200) {
+    const chunk = ids.slice(i, i + 200);
+    const { data } = await db
+      .from("coach_conv_outbound_sources")
+      .select("conversation_id,bot_out,human_out,unknown_out")
+      .in("conversation_id", chunk);
+    for (const r of (data ?? []) as any[]) {
+      srcMap.set(r.conversation_id, {
+        bot: Number(r.bot_out ?? 0),
+        human: Number(r.human_out ?? 0),
+        unknown: Number(r.unknown_out ?? 0),
+      });
+    }
+  }
+
+  return (convs ?? []).map((c: any) => {
+    const s = srcMap.get(c.id) ?? { bot: 0, human: 0, unknown: 0 };
+    const atendimento: "humano" | "misto" | "ia" =
+      s.bot > 0 && s.human === 0 && s.unknown === 0
+        ? "ia"
+        : s.bot > 0
+        ? "misto"
+        : "humano";
+    return {
+      ...c,
+      analysis: byConv.get(c.id) ?? null,
+      ia_msgs: s.bot,
+      vendedor_msgs: s.human + s.unknown,
+      atendimento,
+    };
+  });
 });
 
 export const getCoachConversationFn = createServerFn({ method: "GET" })

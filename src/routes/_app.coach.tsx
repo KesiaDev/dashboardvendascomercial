@@ -362,6 +362,7 @@ function Conversas() {
   const [q, setQ] = useState("");
   const [minScore, setMinScore] = useState("");
   const [sellerFilter, setSellerFilter] = useState("");
+  const [atendFilter, setAtendFilter] = useState<"humano" | "misto" | "todas">("humano");
 
   const analyze = useMutation({
     mutationFn: (id: string) => analyzeConversationFn({ data: { conversationId: id, force: true } }),
@@ -424,6 +425,9 @@ function Conversas() {
 
   const filtered = useMemo(() => {
     let list = convs;
+    // Conversas trabalhadas pela IA/automação ficam fora por padrão
+    if (atendFilter === "humano") list = list.filter((c: any) => (c.atendimento ?? "humano") === "humano");
+    else if (atendFilter === "misto") list = list.filter((c: any) => c.atendimento === "misto");
     if (!isAdmin && sellerNameGuess) {
       const target = sellerNameGuess.toLowerCase();
       list = list.filter((c: any) =>
@@ -444,7 +448,7 @@ function Conversas() {
       list = list.filter((c: any) => (c.analysis?.score_geral ?? 0) >= m);
     }
     return list;
-  }, [convs, q, minScore, sellerFilter, isAdmin, sellerNameGuess]);
+  }, [convs, q, minScore, sellerFilter, atendFilter, isAdmin, sellerNameGuess]);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const toggleSel = (id: string) =>
@@ -473,10 +477,20 @@ function Conversas() {
             ))}
           </select>
         )}
+        <select
+          value={atendFilter}
+          onChange={(e) => setAtendFilter(e.target.value as any)}
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          title="Separar conversas trabalhadas pela IA"
+        >
+          <option value="humano">Só vendedor (sem IA)</option>
+          <option value="misto">Vendedor + IA</option>
+          <option value="todas">Todas</option>
+        </select>
         <Input placeholder="Buscar por vendedor, cliente, deal…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
         <Input placeholder="Nota mínima" type="number" min={0} max={10} value={minScore} onChange={(e) => setMinScore(e.target.value)} className="max-w-[120px]" />
-        {(sellerFilter || q || minScore) && (
-          <Button size="sm" variant="ghost" onClick={() => { setSellerFilter(""); setQ(""); setMinScore(""); }}>Limpar</Button>
+        {(sellerFilter || q || minScore || atendFilter !== "humano") && (
+          <Button size="sm" variant="ghost" onClick={() => { setSellerFilter(""); setQ(""); setMinScore(""); setAtendFilter("humano"); }}>Limpar</Button>
         )}
         <span className="text-xs text-muted-foreground ml-auto">{filtered.length} de {convs.length}</span>
       </div>
@@ -599,6 +613,12 @@ function Conversas() {
                   <span className="font-semibold text-sm">{c.contact_name ?? "Contacto —"}</span>
                   <span className="text-xs text-muted-foreground">•</span>
                   <span className="text-xs text-muted-foreground">{c.seller_name ?? c.seller_email ?? "sem vendedor"}</span>
+                  {c.atendimento === "misto" && (
+                    <Badge variant="outline" className="text-[10px] text-sky-600 border-sky-500/40">IA + vendedor ({c.ia_msgs})</Badge>
+                  )}
+                  {c.atendimento === "ia" && (
+                    <Badge variant="outline" className="text-[10px] text-sky-600 border-sky-500/40">só IA</Badge>
+                  )}
                   {c.analysis?.sentimento && (
                     <span className={"text-[10px] px-1.5 py-0.5 rounded " + sentimentColor(c.analysis.sentimento)}>{c.analysis.sentimento}</span>
                   )}
