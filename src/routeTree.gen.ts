@@ -50,6 +50,7 @@ import { Route as ApiPublicSyncTriggerRouteImport } from './routes/api/public/sy
 import { Route as ApiPublicSyncHotmartRouteImport } from './routes/api/public/sync.hotmart'
 import { Route as ApiPublicSyncContactTagsRouteImport } from './routes/api/public/sync.contact-tags'
 import { Route as ApiPublicSyncCoachV3RouteImport } from './routes/api/public/sync.coach-v3'
+import { Route as ApiPublicSyncCoachAutoRouteImport } from './routes/api/public/sync.coach-auto'
 import { Route as ApiPublicSyncCcpbxRouteImport } from './routes/api/public/sync.ccpbx'
 import { Route as ApiPublicAuditManualSalesRouteImport } from './routes/api/public/audit/manual-sales'
 import { Route as ApiPublicAgendaBookRouteImport } from './routes/api/public/agenda.book'
@@ -263,6 +264,11 @@ const ApiPublicSyncCoachV3Route = ApiPublicSyncCoachV3RouteImport.update({
   path: '/api/public/sync/coach-v3',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSyncCoachAutoRoute = ApiPublicSyncCoachAutoRouteImport.update({
+  id: '/api/public/sync/coach-auto',
+  path: '/api/public/sync/coach-auto',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicSyncCcpbxRoute = ApiPublicSyncCcpbxRouteImport.update({
   id: '/api/public/sync/ccpbx',
   path: '/api/public/sync/ccpbx',
@@ -333,6 +339,7 @@ export interface FileRoutesByFullPath {
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/audit/manual-sales': typeof ApiPublicAuditManualSalesRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
+  '/api/public/sync/coach-auto': typeof ApiPublicSyncCoachAutoRoute
   '/api/public/sync/coach-v3': typeof ApiPublicSyncCoachV3Route
   '/api/public/sync/contact-tags': typeof ApiPublicSyncContactTagsRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
@@ -380,6 +387,7 @@ export interface FileRoutesByTo {
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/audit/manual-sales': typeof ApiPublicAuditManualSalesRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
+  '/api/public/sync/coach-auto': typeof ApiPublicSyncCoachAutoRoute
   '/api/public/sync/coach-v3': typeof ApiPublicSyncCoachV3Route
   '/api/public/sync/contact-tags': typeof ApiPublicSyncContactTagsRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
@@ -429,6 +437,7 @@ export interface FileRoutesById {
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/audit/manual-sales': typeof ApiPublicAuditManualSalesRoute
   '/api/public/sync/ccpbx': typeof ApiPublicSyncCcpbxRoute
+  '/api/public/sync/coach-auto': typeof ApiPublicSyncCoachAutoRoute
   '/api/public/sync/coach-v3': typeof ApiPublicSyncCoachV3Route
   '/api/public/sync/contact-tags': typeof ApiPublicSyncContactTagsRoute
   '/api/public/sync/hotmart': typeof ApiPublicSyncHotmartRoute
@@ -478,6 +487,7 @@ export interface FileRouteTypes {
     | '/api/public/agenda/book'
     | '/api/public/audit/manual-sales'
     | '/api/public/sync/ccpbx'
+    | '/api/public/sync/coach-auto'
     | '/api/public/sync/coach-v3'
     | '/api/public/sync/contact-tags'
     | '/api/public/sync/hotmart'
@@ -525,6 +535,7 @@ export interface FileRouteTypes {
     | '/api/public/agenda/book'
     | '/api/public/audit/manual-sales'
     | '/api/public/sync/ccpbx'
+    | '/api/public/sync/coach-auto'
     | '/api/public/sync/coach-v3'
     | '/api/public/sync/contact-tags'
     | '/api/public/sync/hotmart'
@@ -573,6 +584,7 @@ export interface FileRouteTypes {
     | '/api/public/agenda/book'
     | '/api/public/audit/manual-sales'
     | '/api/public/sync/ccpbx'
+    | '/api/public/sync/coach-auto'
     | '/api/public/sync/coach-v3'
     | '/api/public/sync/contact-tags'
     | '/api/public/sync/hotmart'
@@ -594,6 +606,7 @@ export interface RootRouteChildren {
   ApiPublicAgendaBookRoute: typeof ApiPublicAgendaBookRoute
   ApiPublicAuditManualSalesRoute: typeof ApiPublicAuditManualSalesRoute
   ApiPublicSyncCcpbxRoute: typeof ApiPublicSyncCcpbxRoute
+  ApiPublicSyncCoachAutoRoute: typeof ApiPublicSyncCoachAutoRoute
   ApiPublicSyncCoachV3Route: typeof ApiPublicSyncCoachV3Route
   ApiPublicSyncContactTagsRoute: typeof ApiPublicSyncContactTagsRoute
   ApiPublicSyncHotmartRoute: typeof ApiPublicSyncHotmartRoute
@@ -889,6 +902,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSyncCoachV3RouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/sync/coach-auto': {
+      id: '/api/public/sync/coach-auto'
+      path: '/api/public/sync/coach-auto'
+      fullPath: '/api/public/sync/coach-auto'
+      preLoaderRoute: typeof ApiPublicSyncCoachAutoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/sync/ccpbx': {
       id: '/api/public/sync/ccpbx'
       path: '/api/public/sync/ccpbx'
@@ -1024,6 +1044,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAgendaBookRoute: ApiPublicAgendaBookRoute,
   ApiPublicAuditManualSalesRoute: ApiPublicAuditManualSalesRoute,
   ApiPublicSyncCcpbxRoute: ApiPublicSyncCcpbxRoute,
+  ApiPublicSyncCoachAutoRoute: ApiPublicSyncCoachAutoRoute,
   ApiPublicSyncCoachV3Route: ApiPublicSyncCoachV3Route,
   ApiPublicSyncContactTagsRoute: ApiPublicSyncContactTagsRoute,
   ApiPublicSyncHotmartRoute: ApiPublicSyncHotmartRoute,
