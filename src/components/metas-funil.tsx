@@ -261,10 +261,10 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.funnel} className="border-t border-border/40 hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-2 font-medium truncate max-w-[200px]">{r.funnel}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{r.leads}</td>
+                    <td className="sticky left-0 z-10 bg-card px-4 py-3.5 font-medium whitespace-nowrap">{r.funnel}</td>
+                    <td className="px-3 py-3.5 text-right tabular-nums border-l border-border/30">{r.leads}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-emerald-500 font-medium">{r.vendas}</td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-3 py-2 text-right border-l border-border/30">
                       <Input
                         type="text"
                         inputMode="decimal"
@@ -327,7 +327,7 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                         {statusBadge(r.atingimento)}
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{r.vendasMeta.toFixed(0)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums border-l border-border/30">{r.vendasMeta.toFixed(0)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">
                       {r.gap >= 0 ? (
                         <span className="text-emerald-500 font-medium">Meta batida</span>
@@ -335,7 +335,7 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                         <span className="text-red-500 font-medium">{Math.abs(r.gap).toFixed(0)}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
+                    <td className="px-3 py-2 text-right tabular-nums border-l border-border/30">
                       {r.reunioesSemana.toFixed(0)}
                       <span className="block text-[10px] opacity-60">
                         {ceil(r.reunioesSemana / cfg.vendedores)}/vendedor
@@ -352,7 +352,7 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-border bg-muted/40 font-semibold">
-                  <td className="px-4 py-2">Total</td>
+                  <td className="sticky left-0 z-10 bg-muted/95 px-4 py-3">Total</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.leads}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.vendas}</td>
                   <td className="px-3 py-2" />
