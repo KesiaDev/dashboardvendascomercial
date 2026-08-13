@@ -354,8 +354,10 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         falouComVendedor: Boolean(falou),
       });
 
-      // Toda venda entra em alguma linha — nada fica escondido.
-      const r = ensure(funilConversao);
+      // Só entram vendas atribuíveis aos 4 funis/tags do comercial.
+      const linha = canonOrigem(funilConversao) ?? canonOrigem(captacao);
+      if (!linha) continue;
+      const r = ensure(linha);
       r.ganhos++;
       r.valor += Number(s.value_eur ?? 0);
       if (!falou) {
