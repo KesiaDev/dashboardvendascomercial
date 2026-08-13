@@ -221,40 +221,43 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
           <p className="text-sm text-muted-foreground px-4 py-6">Sem dados no período.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[1180px]">
               <thead>
-                <tr className="border-t border-border bg-muted/40">
-                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Funil</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Leads</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Vendas</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                <tr className="border-t border-border bg-muted/40 align-bottom">
+                  <th className="sticky left-0 z-10 bg-muted/95 backdrop-blur px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[190px]">
+                    Funil
+                  </th>
+                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">Leads</th>
+                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Vendas</th>
+                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">
                     Meta % mês
                     <span className="block text-[10px] font-normal opacity-70">meta do trimestre</span>
                   </th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">
                     Meta % semana
                     <span className="block text-[10px] font-normal opacity-70">herda do mês</span>
                   </th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Realizado %</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-[16%]">Atingimento</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Realizado %</th>
+                  <th className="px-3 py-3 text-left font-medium text-muted-foreground w-[15%] min-w-[170px] whitespace-nowrap">Atingimento</th>
+                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">
                     Meta de vendas
                     <span className="block text-[10px] font-normal opacity-70">no período</span>
                   </th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">
                     Faltam vender
                     <span className="block text-[10px] font-normal opacity-70">para bater a meta</span>
                   </th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">
                     Reuniões a realizar
                     <span className="block text-[10px] font-normal opacity-70">por semana</span>
                   </th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                  <th className="px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">
                     Reuniões a agendar
                     <span className="block text-[10px] font-normal opacity-70">por semana</span>
                   </th>
                 </tr>
               </thead>
+
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.funnel} className="border-t border-border/40 hover:bg-muted/20 transition-colors">
