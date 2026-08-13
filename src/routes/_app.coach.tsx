@@ -87,7 +87,15 @@ function displaySellerName(nameOrEmail: string | null | undefined): string {
   if (raw.includes("@")) return raw.split("@")[0];
   return raw;
 }
+// Nomes que não fazem parte da equipa comercial (não entram nas métricas)
+const EXCLUDED_SELLER_KEYS = ["camila", "aline", "kesia", "késia", "—"];
+function isMetricSeller(nameOrEmail: string | null | undefined): boolean {
+  const n = displaySellerName(nameOrEmail).toLowerCase().trim();
+  if (!n || n === "—") return false;
+  return !EXCLUDED_SELLER_KEYS.some((k) => n.includes(k));
+}
 function scoreColor(n: number | null | undefined) {
+
   if (n == null) return "text-muted-foreground";
   if (n >= 8) return "text-emerald-600 dark:text-emerald-400";
   if (n >= 6) return "text-amber-600 dark:text-amber-400";
@@ -205,7 +213,10 @@ function WeeklyChart({ stats }: { stats: WeeklyStats[] }) {
   const byCanonical = new Map<string, Map<string, Agg>>(); // canonical → week → agg
   for (const s of stats) {
     const canonical = displaySellerName(s.seller_name ?? s.seller_email ?? "—");
+    if (!isMetricSeller(canonical)) continue;
     let weekMap = byCanonical.get(canonical);
+
+
     if (!weekMap) { weekMap = new Map(); byCanonical.set(canonical, weekMap); }
     const w = s.week_start;
     const cur = weekMap.get(w) ?? { sum: 0, n: 0 };
@@ -260,7 +271,13 @@ function VisaoGeral() {
   const { data: alerts = [] } = useQuery({ queryKey: ["coach-alerts"], queryFn: () => listCoachAlertsFn() });
   const { data: weekly = [] } = useQuery({ queryKey: ["coach-weekly"], queryFn: () => fetchWeeklyStatsFn(), staleTime: 5 * 60_000 });
 
-  const analyzed = convs.filter((c: any) => c.analysis && c.analysis.status === "ok");
+  const analyzed = convs.filter(
+    (c: any) =>
+      c.analysis &&
+      c.analysis.status === "ok" &&
+      isMetricSeller(c.seller_name ?? c.seller_email),
+  );
+
   const avgScore = analyzed.length
     ? Number((analyzed.reduce((s: number, c: any) => s + Number(c.analysis.score_geral ?? 0), 0) / analyzed.length).toFixed(1))
     : null;
@@ -278,7 +295,9 @@ function VisaoGeral() {
     const a: any = c.analysis;
     const raw = (c as any).seller_name ?? (c as any).seller_email ?? "—";
     const canonical = displaySellerName(raw);
+    if (!isMetricSeller(canonical)) continue;
     const cur = bySeller.get(canonical) ?? { name: canonical, count: 0, sum: 0, wins: 0 };
+
     cur.count += 1; cur.sum += Number(a.score_geral ?? 0);
     if (a.tentou_fechar) cur.wins += 1;
     bySeller.set(canonical, cur);
