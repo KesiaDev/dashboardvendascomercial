@@ -289,7 +289,9 @@ function VisaoGeral() {
     const a: any = c.analysis;
     const raw = (c as any).seller_name ?? (c as any).seller_email ?? "—";
     const canonical = displaySellerName(raw);
+    if (!isMetricSeller(canonical)) continue;
     const cur = bySeller.get(canonical) ?? { name: canonical, count: 0, sum: 0, wins: 0 };
+
     cur.count += 1; cur.sum += Number(a.score_geral ?? 0);
     if (a.tentou_fechar) cur.wins += 1;
     bySeller.set(canonical, cur);
