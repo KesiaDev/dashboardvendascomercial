@@ -134,12 +134,11 @@ function AgenteIaPage() {
       ) : !k || !d ? null : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Kpi icon={MessageSquare} label="Conversas atendidas pela IA" value={String(k.conversasIa)}
-              hint={`${k.sessoesTotal} sessões (padrão Clint) · ${k.coberturaPct}% das ${k.conversasTotal} conversas V3`} />
+            <Kpi icon={MessageSquare} label="Conversas atendidas pela IA" value={String(k.conversasIa)} />
 
             <Kpi icon={TrendingUp} label="Taxa de resposta do lead" value={`${k.taxaRespostaPct}%`}
-              hint={`${k.leadsResponderam} responderam · ${k.semResposta} sem resposta`}
               tone={k.taxaRespostaPct >= 50 ? "good" : "warn"} />
+
             <Kpi icon={Clock} label="Tempo de 1ª resposta (mediana)"
               value={k.tempo1aRespostaMin === null ? "—" : `${k.tempo1aRespostaMin} min`}
               hint={`${k.velocidadePct}% das respostas em < 5 min`}
