@@ -90,17 +90,26 @@ const TIMING_CONCRETO = [
   "data", "dia x", "semana que vem", "proximo mes", "mes que vem",
   "outubro", "novembro", "dezembro", "setembro", "agosto",
 ];
-function labelFor(raw: string) {
+// Regex de motivo concreto de agenda/data no texto da análise (resumo, justificativa, próxima ação)
+const TIMING_CTX =
+  /(ferias|viagem|viaj|cirurgia|exame|consulta|congresso|casamento|mudanc|semana que vem|proxima semana|mes que vem|depois do|apos o|aguardar|retorno|agendad|remarc|reagend|feriado|final do mes|no dia|data marcada)/;
+
+function labelFor(raw: string, ctx = "") {
   const n = normalize(raw);
-  // Timing CONCRETO (agenda/férias/viagem/cirurgia/datas) → permanece Timing
-  if (TIMING_CONCRETO.some((k) => n.includes(k))) return "Timing / momento";
-  // Adiamento genérico (timing/tempo/momento/adiar/depois/agora não) → Medo
-  if (["timing", "tempo", "momento", "adiar", "depois", "agora nao", "nao agora"].some((k) => n.includes(k))) {
+  const c = normalize(ctx);
+  const genericoTiming = ["timing", "tempo", "momento", "adiar", "depois", "agora nao", "nao agora"].some((k) =>
+    n.includes(k),
+  );
+  if (genericoTiming) {
+    // Timing só quando há motivo/data CONCRETA na própria objeção ou no contexto da análise
+    if (TIMING_CONCRETO.some((k) => n.includes(k)) || TIMING_CTX.test(c)) return "Timing / momento";
     return MEDO;
   }
+  if (TIMING_CONCRETO.some((k) => n.includes(k))) return "Timing / momento";
   for (const k of Object.keys(LABELS)) if (n.includes(k)) return LABELS[k];
   return "Não foi claro em declarar objeção";
 }
+
 
 
 export const fetchObjecoesFn = createServerFn({ method: "GET" })
