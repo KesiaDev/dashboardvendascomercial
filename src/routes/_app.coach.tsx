@@ -174,6 +174,7 @@ function CoachPage() {
           <TabsTrigger value="performance"><Award className="h-4 w-4 mr-1" />Performance</TabsTrigger>
           <TabsTrigger value="conversas"><MessageSquare className="h-4 w-4 mr-1" />Conversas</TabsTrigger>
           <TabsTrigger value="ligacoes"><Phone className="h-4 w-4 mr-1" />Ligações</TabsTrigger>
+          {isAdmin && <TabsTrigger value="objecoes"><TrendingDown className="h-4 w-4 mr-1" />Objeções</TabsTrigger>}
           {isCaseOwner && <TabsTrigger value="cases"><GraduationCap className="h-4 w-4 mr-1" />Cases</TabsTrigger>}
           {isAdmin && <TabsTrigger value="alertas"><AlertTriangle className="h-4 w-4 mr-1" />Alertas</TabsTrigger>}
           {isAdmin && <TabsTrigger value="upload"><Upload className="h-4 w-4 mr-1" />Nova análise</TabsTrigger>}
