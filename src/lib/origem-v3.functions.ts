@@ -83,7 +83,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<OrigemV3Result> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller, tagBucket, SEM_TAG } = await import(
+    const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller, tagBucket } = await import(
       "@/lib/origem-v3.server"
     );
 
@@ -364,7 +364,8 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
             Boolean(tagBucket(t.contact_tags)),
         );
       const hitTag = v3Touch ? tagBucket(v3Touch.contact_tags) : null;
-      const linha = hitTag?.bucket ?? (email ? bucketByEmail.get(email) : undefined) ?? SEM_TAG;
+      // Sem tag identificada na Clint → conta como Sessão Estratégica (padrão do V3).
+      const linha = hitTag?.bucket ?? (email ? bucketByEmail.get(email) : undefined) ?? "Sessão Estratégica";
       const r = ensure(linha);
       r.ganhos++;
       r.valor += Number(s.value_eur ?? 0);
