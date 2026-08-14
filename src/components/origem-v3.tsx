@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchOrigemV3Fn } from "@/lib/origem-v3.functions";
 import { ChevronDown, ChevronRight, Route as RouteIcon } from "lucide-react";
 
+const pct = (n: number, d: number) => (d > 0 ? `${((n / d) * 100).toFixed(1)}%` : "—");
+
 const eur = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
