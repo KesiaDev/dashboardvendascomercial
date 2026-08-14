@@ -607,8 +607,16 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       {/* ---------- Rampa editável ---------- */}
       <Card>
         <CardHeader className="pb-1">
-          <CardTitle className="text-sm font-semibold">Rampa de metas mensais (%)</CardTitle>
+          <button
+            type="button"
+            onClick={() => setOpenRampa((v) => !v)}
+            className="flex w-full items-center justify-between text-left"
+          >
+            <CardTitle className="text-sm font-semibold">Rampa de metas mensais (%)</CardTitle>
+            <span className="text-xs text-muted-foreground">{openRampa ? "Ocultar" : "Mostrar"}</span>
+          </button>
         </CardHeader>
+        {openRampa && (
         <CardContent className="p-0">
           <table className="w-full text-xs">
             <thead>
