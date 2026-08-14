@@ -350,16 +350,35 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         falouComVendedor: Boolean(falou),
       });
 
-      // Venda atribuída à tag do lead (quando o cliente entrou pelo V3 no período).
-      const linha = email ? bucketByEmail.get(email) : undefined;
+      // Venda atribuída pela tag do negócio V3 do cliente (independente do mês
+      // em que o lead entrou); fallback: lead que entrou no período.
+      const v3Touch = [...sorted]
+        .reverse()
+        .find(
+          (t) =>
+            t.origin_name === "PIPELINE_COMERCIAL-V3" &&
+            String(t.created_at ?? "") <= `${saleDay}T23:59:59` &&
+            Boolean(tagBucket(t.contact_tags)),
+        );
+      const hitTag = v3Touch ? tagBucket(v3Touch.contact_tags) : null;
+      const linha = hitTag?.bucket ?? (email ? bucketByEmail.get(email) : undefined);
       if (!linha) continue;
       const r = ensure(linha);
       r.ganhos++;
       r.valor += Number(s.value_eur ?? 0);
+      if (hitTag) {
+        let c = r.camp.get(hitTag.tag);
+        if (!c) {
+          c = { leads: 0, ganhos: 0, atendidos: 0 };
+          r.camp.set(hitTag.tag, c);
+        }
+        c.ganhos++;
+      }
       if (!falou) {
         r.ganhosSemContato++;
         r.valorSemContato += Number(s.value_eur ?? 0);
       }
+
     }
 
 
