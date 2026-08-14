@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
 import { Gauge, RotateCcw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MetasTrimestreCard } from "@/components/metas-trimestre";
+
 
 /**
  * Metas de aproveitamento (conversão lead→venda) por funil.
@@ -95,7 +97,9 @@ function weeksBetween(from: string, to: string) {
 export function MetasFunilCard({ from, to, title, period = "mes" }: { from: string; to: string; title: string; period?: "semana" | "mes" }) {
   const isWeek = period === "semana";
   const [cfg, setCfg] = useState<Config>(DEFAULT_CONFIG);
+  const [view, setView] = useState<"periodo" | "trimestre">("periodo");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+
   const [dirty, setDirty] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   useEffect(() => setCfg(loadConfig()), []);
@@ -178,8 +182,41 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
     return <Badge className="bg-red-500/15 text-red-500 border-0">Abaixo</Badge>;
   };
 
+  const toggle = (
+    <div className="inline-flex rounded-md border border-border p-0.5">
+      {(["periodo", "trimestre"] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => setView(v)}
+          className={`px-2.5 py-1 text-[11px] rounded-sm transition-colors ${
+            view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+          }`}
+        >
+          {v === "periodo" ? (isWeek ? "Semana" : "Mês") : "Trimestre"}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (view === "trimestre") {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold flex items-center gap-1.5">
+            <Gauge className="h-4 w-4 text-muted-foreground" />
+            Meta de Aproveitamento — visão trimestral
+          </h3>
+          {toggle}
+        </div>
+        <MetasTrimestreCard refDate={to} />
+      </div>
+    );
+  }
+
   return (
     <Card>
+
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
@@ -217,7 +254,9 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                 className="h-7 w-14 text-xs"
               />
             </label>
+            {toggle}
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
+
               <RotateCcw className="h-3.5 w-3.5 mr-1" />
               Metas do trimestre
             </Button>
