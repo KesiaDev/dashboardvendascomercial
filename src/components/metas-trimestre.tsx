@@ -663,16 +663,25 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
             (vendas do trimestre ÷ leads do trimestre).
           </p>
         </CardContent>
+        )}
       </Card>
 
       {/* ---------- Atenção da gestão ---------- */}
       <Card>
         <CardHeader className="pb-1">
-          <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            Atenção da Gestão
-          </CardTitle>
+          <button
+            type="button"
+            onClick={() => setOpenAlertas((v) => !v)}
+            className="flex w-full items-center justify-between text-left"
+          >
+            <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              Atenção da Gestão
+            </CardTitle>
+            <span className="text-xs text-muted-foreground">{openAlertas ? "Ocultar" : "Mostrar"}</span>
+          </button>
         </CardHeader>
+        {openAlertas && (
         <CardContent className="space-y-2 pt-0">
           {alertas.map((a) => (
             <div
@@ -689,6 +698,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
             </div>
           ))}
         </CardContent>
+        )}
       </Card>
     </div>
   );
