@@ -140,8 +140,8 @@ export const TAG_BUCKETS: Array<[RegExp, string]> = [
 export function tagBucket(contactTags?: string[] | null): { bucket: string; tag: string } | null {
   const tags = (contactTags ?? []).map((t) => String(t ?? "").trim()).filter(Boolean);
   for (const [re, label] of TAG_BUCKETS) {
-    const hit = tags.find((t) => re.test(norm(t)));
-    if (hit) return { bucket: label, tag: hit };
+    const hits = tags.filter((t) => re.test(norm(t))).sort((a, b) => b.length - a.length);
+    if (hits.length) return { bucket: label, tag: hits[0]! };
   }
   return null;
 }
