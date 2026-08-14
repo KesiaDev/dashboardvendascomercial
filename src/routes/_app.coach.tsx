@@ -7,7 +7,7 @@ import { ptBR } from "date-fns/locale";
 import {
   Sparkles, Upload, AlertTriangle, Settings, MessageSquare,
   TrendingUp, Clock, Target, Users, RefreshCw, Trash2, CheckCircle2,
-  Zap, Copy, Eye, BarChart2, Phone, Plus, X, Award, CalendarIcon, GraduationCap,
+  Zap, Copy, Eye, BarChart2, TrendingDown, Phone, Plus, X, Award, CalendarIcon, GraduationCap,
 } from "lucide-react";
 import { fetchPerformanceFn, generatePerformanceFeedbackFn, rangeBoundsFor, type PerfRange, type SellerPerf, type PerfResult } from "@/lib/performance.functions";
 import { getSellerPhoto } from "@/lib/seller-photos";
@@ -37,6 +37,7 @@ import { syncCcpbxCallsFn, listCcpbxCallsFn, analyzeCallFn, type CallRow } from 
 import { supabase } from "@/integrations/supabase/client";
 import { isAdminUser, isAllowedSellerEmail, isCaseOwnerEmail } from "@/lib/auth";
 import { CasesTab } from "@/components/coach-cases";
+import { ObjecoesTab } from "@/components/coach-objecoes";
 
 
 export const Route = createFileRoute("/_app/coach")({
@@ -185,6 +186,7 @@ function CoachPage() {
         <TabsContent value="performance">{isAdmin || isAllowedSeller ? <PerformanceTab /> : <SemAcessoIndividual />}</TabsContent>
         <TabsContent value="conversas">{isAdmin || isAllowedSeller ? <Conversas /> : <SemAcessoIndividual />}</TabsContent>
         <TabsContent value="ligacoes">{isAdmin || isAllowedSeller ? <LigacoesTab /> : <SemAcessoIndividual />}</TabsContent>
+        {isAdmin && <TabsContent value="objecoes"><ObjecoesTab /></TabsContent>}
         {isCaseOwner && <TabsContent value="cases"><CasesTab /></TabsContent>}
         {isAdmin && <TabsContent value="alertas"><Alertas /></TabsContent>}
         {isAdmin && <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>}
