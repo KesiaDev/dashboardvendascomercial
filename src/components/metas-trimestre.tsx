@@ -378,11 +378,8 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
             {linhas.map((l) => (
               <div key={l.id} className="flex items-center justify-between gap-2 text-sm">
                 <span className="truncate text-muted-foreground">{l.label}</span>
-                <span className="tabular-nums font-semibold">
+                <span className="tabular-nums font-semibold" title={`${l.vendasTri}/${l.leadsTri}`}>
                   {pct(l.convTri)}
-                  <span className="ml-1 text-[11px] font-normal text-muted-foreground">
-                    {l.vendasTri}/{l.leadsTri}
-                  </span>
                 </span>
               </div>
             ))}
