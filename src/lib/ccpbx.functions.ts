@@ -31,7 +31,7 @@ export type CallRow = {
 // Mapa fixo extensão -> e-mail canônico do vendedor (fonte: painel CCPBX + Clint).
 const EXTENSION_TO_EMAIL: Record<string, string> = {
   "200": "ritabandeira@lucianolarrossa.com",
-  "201": "joaopessoa@lucianolarrossa.com",
+  "201": "joaopessoa@llmidiaco.com",
   "202": "giselegagliano@lucianolarrossa.com",
   "203": "fabionadal@lucianolarrossa.com",
   "204": "luanaguimaraes@lucianolarrossa.com",
