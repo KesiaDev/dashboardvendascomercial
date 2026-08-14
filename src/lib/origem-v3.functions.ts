@@ -352,8 +352,8 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         falouComVendedor: Boolean(falou),
       });
 
-      // Só entram vendas atribuíveis aos 4 funis/tags do comercial.
-      const linha = canonOrigem(funilConversao) ?? canonOrigem(captacao);
+      // Venda atribuída à tag do lead (quando o cliente entrou pelo V3 no período).
+      const linha = email ? bucketByEmail.get(email) : undefined;
       if (!linha) continue;
       const r = ensure(linha);
       r.ganhos++;
@@ -362,11 +362,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         r.ganhosSemContato++;
         r.valorSemContato += Number(s.value_eur ?? 0);
       }
-      const tag = first ? classifyOrigemV3(first.origin_name, first.raw, first.contact_tags).campanha : "Sem tag na Clint";
-      const c = r.camp.get(tag) ?? { leads: 0, ganhos: 0, atendidos: 0 };
-      c.ganhos++;
-      r.camp.set(tag, c);
-    }
+
 
     const result = Array.from(map.values())
       .map(({ camp, ...r }) => ({
