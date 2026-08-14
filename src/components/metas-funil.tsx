@@ -220,6 +220,16 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
               <RotateCcw className="h-3.5 w-3.5 mr-1" />
               Metas do trimestre
             </Button>
+            <Button size="sm" className="h-7 text-xs" disabled={!dirty} onClick={persist}>
+              <Save className="h-3.5 w-3.5 mr-1" />
+              {dirty ? "Salvar metas" : "Salvo"}
+            </Button>
+            {dirty ? (
+              <span className="text-[11px] text-amber-500">alterações não salvas</span>
+            ) : savedAt ? (
+              <span className="text-[11px] text-emerald-500">salvo às {savedAt}</span>
+            ) : null}
+
           </div>
         </div>
       </CardHeader>
