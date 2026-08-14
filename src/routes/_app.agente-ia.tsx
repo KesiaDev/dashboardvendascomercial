@@ -161,12 +161,20 @@ function AgenteIaPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Kpi icon={Trophy} label="Vendas com passagem pela IA"
-                  value={String(Math.max(d.vendas.vendasTotal, DEMO_VENDAS))}
-                  hint="Ganhos atribuídos ao agente IA no período"
-                  tone="good" />
-              </div>
+              {(() => {
+                const reunioes = Math.max(k.reunioes, DEMO_REUNIOES);
+                const vendas = Math.max(d.vendas.vendasTotal, DEMO_VENDAS);
+                const aprov = reunioes > 0 ? (vendas / reunioes) * 100 : 0;
+                return (
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <Kpi icon={CalendarCheck} label="Reuniões agendadas" value={String(reunioes)} />
+                    <Kpi icon={Trophy} label="Vendas com passagem pela IA" value={String(vendas)} tone="good" />
+                    <Kpi icon={TrendingUp} label="Aproveitamento (vendas/reuniões)"
+                      value={`${aprov.toFixed(1)}%`} tone={aprov >= 25 ? "good" : "warn"} />
+                  </div>
+                );
+              })()}
+
             </CardContent>
           </Card>
 
