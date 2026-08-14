@@ -541,16 +541,6 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                       </div>
                     </div>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Como ler: a <strong>Meta % mês</strong> é a fonte da verdade — a <strong>Meta % semana</strong>
-                    {" "}herda automaticamente esse valor (a taxa de aproveitamento é a mesma; o que muda é o volume de
-                    leads da semana). Você pode sobrescrever a semana pontualmente e voltar ao mês com um clique.{" "}
-                    <strong>Meta de vendas</strong> = leads × meta % (arredondado pra cima).{" "}
-                    <strong>Faltam vender</strong> = quanto ainda falta para bater a meta.{" "}
-                    <strong>Reuniões a realizar</strong> = por semana, com fechamento de {cfg.fechamento}%;{" "}
-                    <strong>Reuniões a agendar</strong> já considera {cfg.comparecimento}% de comparecimento. O bloco
-                    "por vendedor" divide tudo igualmente entre os {cfg.vendedores} vendedores.
-                  </p>
 
                 </div>
               );
