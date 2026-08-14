@@ -128,3 +128,20 @@ export function sameSeller(a: string | null | undefined, b: string | null | unde
   const tb = norm(b).split(/[^a-z0-9]+/).filter((t) => t.length > 2);
   return tb.some((t) => ta.has(t));
 }
+
+/** Tags do funil PIPELINE_COMERCIAL-V3 que o comercial acompanha (ordem de prioridade). */
+export const TAG_BUCKETS: Array<[RegExp, string]> = [
+  [/^ebook[\s_-]*v3/, "Ebook V3"],
+  [/^minicurso[\s_-]*v3/, "Minicurso V3"],
+  [/^sessao[\s_-]*estrateg/, "Sessão Estratégica"],
+];
+
+/** Bucket do lead a partir das tags reais do contato (null = fora do escopo). */
+export function tagBucket(contactTags?: string[] | null): { bucket: string; tag: string } | null {
+  const tags = (contactTags ?? []).map((t) => String(t ?? "").trim()).filter(Boolean);
+  for (const [re, label] of TAG_BUCKETS) {
+    const hit = tags.find((t) => re.test(norm(t)));
+    if (hit) return { bucket: label, tag: hit };
+  }
+  return null;
+}
