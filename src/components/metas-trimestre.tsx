@@ -346,6 +346,9 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
     />
   );
 
+  const [openRampa, setOpenRampa] = useState(false);
+  const [openAlertas, setOpenAlertas] = useState(false);
+
   return (
     <div className="space-y-4">
       {/* ---------- Visão executiva ---------- */}
