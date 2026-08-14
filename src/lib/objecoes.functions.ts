@@ -147,6 +147,7 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
       }
     }
 
+    const PRIORITARIA = "Medo de não conseguir na profissão";
     const ranking: ObjecaoRow[] = Array.from(agg.entries())
       .map(([objecao, a]) => ({
         objecao,
@@ -162,7 +163,12 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
           .sort((x, y) => y.total - x.total)
           .slice(0, 4),
       }))
-      .sort((a, b) => b.total - a.total);
+      .sort((a, b) => {
+        // "Medo de não conseguir na profissão" sempre em primeiro lugar
+        if (a.objecao === PRIORITARIA) return -1;
+        if (b.objecao === PRIORITARIA) return 1;
+        return b.total - a.total;
+      });
 
     const top = ranking.slice(0, 5).map((r) => r.objecao);
     const evolucao = Array.from(evoMap.entries())
