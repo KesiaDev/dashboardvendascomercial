@@ -473,7 +473,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
       <OrigemV3Card from={start} to={end} title={`Origem dos leads V3 — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
 
       {/* Meta de aproveitamento por funil */}
-      <MetasFunilCard from={start} to={end} title={`Meta de Aproveitamento por Funil — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
+      <MetasFunilCard from={start} to={end} period="semana" title={`Meta de Aproveitamento por Funil — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
 
       {/* Conversão por vendedor × funil */}
       <ConversaoFunilCard from={start} to={end} title={`Conversão por Vendedor × Funil — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
@@ -754,7 +754,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
       <OrigemV3Card from={`${yearMonth}-01`} to={monthEndISO} title={`Origem dos leads V3 — ${monthLabel}`}/>
 
       {/* Meta de aproveitamento por funil */}
-      <MetasFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Meta de Aproveitamento por Funil — ${monthLabel}`}/>
+      <MetasFunilCard from={`${yearMonth}-01`} to={monthEndISO} period="mes" title={`Meta de Aproveitamento por Funil — ${monthLabel}`}/>
 
       {/* Conversão por vendedor × funil */}
       <ConversaoFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Conversão por Vendedor × Funil — ${monthLabel}`}/>
