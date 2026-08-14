@@ -189,7 +189,17 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
     })),
   });
 
-  const isLoading = results.some((r) => r.isFetching);
+  /** leads/vendas com a tag "Sessão Estratégica" dentro do PIPELINE_COMERCIAL-V3 */
+  const v3Sessao = useQueries({
+    queries: qi.months.map((m) => ({
+      queryKey: ["origem-v3-sessao", m.from, m.to > refDate ? refDate : m.to],
+      queryFn: () => fetchOrigemV3Fn({ data: { from: m.from, to: m.to > refDate ? refDate : m.to } }),
+      staleTime: 5 * 60_000,
+      enabled: m.from <= refDate,
+    })),
+  });
+
+  const isLoading = results.some((r) => r.isFetching) || v3Sessao.some((r) => r.isFetching);
 
   /** leads/vendas por funil × mês */
   const porFunil = useMemo(() => {
@@ -207,8 +217,15 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
         base[id].meses[i].vendas += r.vendas;
       }
     });
+    // Sessão Estratégica soma também a parte "Sessão" que vive dentro do V3
+    v3Sessao.forEach((res, i) => {
+      const row = (res.data?.rows ?? []).find((r) => norm(r.origem).includes("sessao estrategica"));
+      if (!row) return;
+      base.SESSAO.meses[i].leads += row.leads;
+      base.SESSAO.meses[i].vendas += row.ganhos;
+    });
     return base;
-  }, [results.map((r) => r.dataUpdatedAt).join("|"), qi]);
+  }, [results.map((r) => r.dataUpdatedAt).join("|"), v3Sessao.map((r) => r.dataUpdatedAt).join("|"), qi]);
 
   const mesAtualIdx = Math.max(
     0,
