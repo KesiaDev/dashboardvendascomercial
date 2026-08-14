@@ -258,7 +258,7 @@ function FechamentoForm({ session }: { session: any }) {
       else
         toast.success(`${count} venda(s) registrada(s)! Aguardando confirmação no Hotmart ⏳`);
       setItems([emptyItem()]); setNotes("");
-      qc.invalidateQueries({ queryKey: ["manual-sales"] });
+      qc.invalidateQueries();
     },
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
@@ -268,7 +268,7 @@ function FechamentoForm({ session }: { session: any }) {
     onSuccess: () => {
       toast.success("Venda apagada");
       setDeleting(null);
-      qc.invalidateQueries({ queryKey: ["manual-sales"] });
+      qc.invalidateQueries();
     },
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
@@ -279,7 +279,7 @@ function FechamentoForm({ session }: { session: any }) {
     onSuccess: () => {
       toast.success("Status atualizado");
       setConfirmingId(null);
-      qc.invalidateQueries({ queryKey: ["manual-sales"] });
+      qc.invalidateQueries();
     },
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
@@ -289,7 +289,7 @@ function FechamentoForm({ session }: { session: any }) {
     onSuccess: (r: any) => {
       const extra = r.mismatches ? ` · ${r.mismatches} com afiliado divergente` : "";
       toast.success(`Re-confirmação: ${r.confirmed}/${r.total} confirmadas no Hotmart${extra}`);
-      qc.invalidateQueries({ queryKey: ["manual-sales"] });
+      qc.invalidateQueries();
     },
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
@@ -298,7 +298,7 @@ function FechamentoForm({ session }: { session: any }) {
     mutationFn: (d: { id: string; paid: boolean }) => markInstallmentPaidFn({ data: d }),
     onSuccess: (_r, v) => {
       toast.success(v.paid ? "Parcela marcada como paga ✅" : "Parcela reaberta");
-      qc.invalidateQueries({ queryKey: ["manual-sales"] });
+      qc.invalidateQueries();
     },
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
@@ -833,7 +833,7 @@ function EditDialog({ sale, isAdmin, onClose }: { sale: SaleRow | null; isAdmin:
 
     onSuccess: () => {
       toast.success("Venda atualizada");
-      qc.invalidateQueries({ queryKey: ["manual-sales"] });
+      qc.invalidateQueries();
       onClose();
     },
     onError: (e: any) => toast.error(String(e?.message ?? e)),
