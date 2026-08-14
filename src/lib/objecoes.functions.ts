@@ -174,6 +174,7 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
     }
 
     const PRIORITARIA = "Medo de não conseguir seguir na profissão";
+    const SEGUNDA = "Timing / momento";
     const ranking: ObjecaoRow[] = Array.from(agg.entries())
       .map(([objecao, a]) => ({
         objecao,
@@ -190,9 +191,13 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
           .slice(0, 4),
       }))
       .sort((a, b) => {
-        // "Medo de não conseguir seguir na profissão" sempre em primeiro lugar
+        // 1º: "Medo de não conseguir seguir na profissão" (sempre)
         if (a.objecao === PRIORITARIA) return -1;
         if (b.objecao === PRIORITARIA) return 1;
+        // 2º: "Timing / momento" (neste mês, não como prioridade)
+        if (a.objecao === SEGUNDA) return -1;
+        if (b.objecao === SEGUNDA) return 1;
+        // Demais por frequência
         return b.total - a.total;
       });
 
