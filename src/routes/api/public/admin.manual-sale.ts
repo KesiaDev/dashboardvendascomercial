@@ -29,6 +29,13 @@ async function handle(request: Request) {
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+  // Busca o UUID do admin para preencher created_by
+  const { data: users } = await (supabaseAdmin as any).auth.admin.listUsers({ perPage: 100 });
+  const adminUser = (users?.users ?? []).find(
+    (u: any) => u.email === "b.lindanoite@gmail.com" || u.role === "service_role"
+  ) ?? (users?.users ?? [])[0];
+  const created_by = body.created_by ?? adminUser?.id ?? null;
+
   const { data, error } = await (supabaseAdmin as any)
     .from("manual_sales")
     .insert({
@@ -40,6 +47,7 @@ async function handle(request: Request) {
       sale_date,
       product: product ?? "Outros",
       installment_number: installment_number ?? 1,
+      created_by,
     })
     .select()
     .single();
