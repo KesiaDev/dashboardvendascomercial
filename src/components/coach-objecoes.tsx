@@ -180,7 +180,7 @@ export function ObjecoesTab() {
                       <div className="h-[3px] bg-primary/40 w-full" />
                     </td></tr>
                   )}
-                </>
+                </Fragment>
               ))}
               {(data?.ranking?.length ?? 0) === 0 && (
                 <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Sem dados."}</td></tr>
