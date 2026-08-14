@@ -245,34 +245,33 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       return r;
     };
 
+    // Leads recebidos no PIPELINE_COMERCIAL-V3, agrupados pelas tags reais da Clint.
+    const bucketByEmail = new Map<string, string>();
     for (const d of rows) {
-      const { origem: origemBruta, campanha } = classifyOrigemV3(d.origin_name, d.raw, d.contact_tags);
-      // Só os 4 funis/tags que o comercial acompanha (duplicados unificados).
-      const origem = canonOrigem(origemBruta) ?? canonOrigem(campanha);
-      if (!origem) continue;
-      const r = ensure(origem);
-
+      const hit = tagBucket(d.contact_tags);
+      if (!hit) continue;
+      const r = ensure(hit.bucket);
       const email = normEmail(d.contact_email);
-      const atendido = email ? humanEmails.has(email) : false;
-      // Só contam leads efetivamente transferidos ao comercial (vendedor assumiu o atendimento).
-      if (!atendido) {
-        r.soIa++;
-        continue;
-      }
+      if (email) bucketByEmail.set(email, hit.bucket);
 
       r.leads++;
-      r.atendidos++;
+      if (email && humanEmails.has(email)) r.atendidos++;
+      else r.soIa++;
       if (d.status === "LOST") r.perdidos++;
-      else r.abertos++;
+      else if (d.status === "WON") {
+        r.ganhos++;
+        r.valor += Number(d.value ?? 0);
+      } else r.abertos++;
 
-      let c = r.camp.get(campanha);
+      let c = r.camp.get(hit.tag);
       if (!c) {
         c = { leads: 0, ganhos: 0, atendidos: 0 };
-        r.camp.set(campanha, c);
+        r.camp.set(hit.tag, c);
       }
       c.leads++;
-      c.atendidos++;
+      if (d.status === "WON") c.ganhos++;
     }
+
 
 
     const funnelLabel = (t: Touch) =>
