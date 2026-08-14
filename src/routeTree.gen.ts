@@ -55,6 +55,7 @@ import { Route as ApiPublicSyncCcpbxRouteImport } from './routes/api/public/sync
 import { Route as ApiPublicAuditManualSalesRouteImport } from './routes/api/public/audit/manual-sales'
 import { Route as ApiPublicAgendaBookRouteImport } from './routes/api/public/agenda.book'
 import { Route as ApiPublicAgendaAvailabilityRouteImport } from './routes/api/public/agenda.availability'
+import { Route as ApiPublicAdminManualSaleRouteImport } from './routes/api/public/admin.manual-sale'
 import { Route as AppArenaSimIdRouteImport } from './routes/_app.arena.sim.$id'
 
 const AuthRoute = AuthRouteImport.update({
@@ -291,6 +292,12 @@ const ApiPublicAgendaAvailabilityRoute =
     path: '/api/public/agenda/availability',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicAdminManualSaleRoute =
+  ApiPublicAdminManualSaleRouteImport.update({
+    id: '/api/public/admin/manual-sale',
+    path: '/api/public/admin/manual-sale',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AppArenaSimIdRoute = AppArenaSimIdRouteImport.update({
   id: '/arena/sim/$id',
   path: '/arena/sim/$id',
@@ -335,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/arena/': typeof AppArenaIndexRoute
   '/arena/sim/$id': typeof AppArenaSimIdRoute
+  '/api/public/admin/manual-sale': typeof ApiPublicAdminManualSaleRoute
   '/api/public/agenda/availability': typeof ApiPublicAgendaAvailabilityRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/audit/manual-sales': typeof ApiPublicAuditManualSalesRoute
@@ -383,6 +391,7 @@ export interface FileRoutesByTo {
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/arena': typeof AppArenaIndexRoute
   '/arena/sim/$id': typeof AppArenaSimIdRoute
+  '/api/public/admin/manual-sale': typeof ApiPublicAdminManualSaleRoute
   '/api/public/agenda/availability': typeof ApiPublicAgendaAvailabilityRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/audit/manual-sales': typeof ApiPublicAuditManualSalesRoute
@@ -433,6 +442,7 @@ export interface FileRoutesById {
   '/api/public/hotmart-raw': typeof ApiPublicHotmartRawRoute
   '/_app/arena/': typeof AppArenaIndexRoute
   '/_app/arena/sim/$id': typeof AppArenaSimIdRoute
+  '/api/public/admin/manual-sale': typeof ApiPublicAdminManualSaleRoute
   '/api/public/agenda/availability': typeof ApiPublicAgendaAvailabilityRoute
   '/api/public/agenda/book': typeof ApiPublicAgendaBookRoute
   '/api/public/audit/manual-sales': typeof ApiPublicAuditManualSalesRoute
@@ -483,6 +493,7 @@ export interface FileRouteTypes {
     | '/api/public/hotmart-raw'
     | '/arena/'
     | '/arena/sim/$id'
+    | '/api/public/admin/manual-sale'
     | '/api/public/agenda/availability'
     | '/api/public/agenda/book'
     | '/api/public/audit/manual-sales'
@@ -531,6 +542,7 @@ export interface FileRouteTypes {
     | '/api/public/hotmart-raw'
     | '/arena'
     | '/arena/sim/$id'
+    | '/api/public/admin/manual-sale'
     | '/api/public/agenda/availability'
     | '/api/public/agenda/book'
     | '/api/public/audit/manual-sales'
@@ -580,6 +592,7 @@ export interface FileRouteTypes {
     | '/api/public/hotmart-raw'
     | '/_app/arena/'
     | '/_app/arena/sim/$id'
+    | '/api/public/admin/manual-sale'
     | '/api/public/agenda/availability'
     | '/api/public/agenda/book'
     | '/api/public/audit/manual-sales'
@@ -602,6 +615,7 @@ export interface RootRouteChildren {
   ApiPublicHotmartDebugRoute: typeof ApiPublicHotmartDebugRoute
   ApiPublicHotmartProbeRoute: typeof ApiPublicHotmartProbeRoute
   ApiPublicHotmartRawRoute: typeof ApiPublicHotmartRawRoute
+  ApiPublicAdminManualSaleRoute: typeof ApiPublicAdminManualSaleRoute
   ApiPublicAgendaAvailabilityRoute: typeof ApiPublicAgendaAvailabilityRoute
   ApiPublicAgendaBookRoute: typeof ApiPublicAgendaBookRoute
   ApiPublicAuditManualSalesRoute: typeof ApiPublicAuditManualSalesRoute
@@ -937,6 +951,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAgendaAvailabilityRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/admin/manual-sale': {
+      id: '/api/public/admin/manual-sale'
+      path: '/api/public/admin/manual-sale'
+      fullPath: '/api/public/admin/manual-sale'
+      preLoaderRoute: typeof ApiPublicAdminManualSaleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/arena/sim/$id': {
       id: '/_app/arena/sim/$id'
       path: '/arena/sim/$id'
@@ -1040,6 +1061,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHotmartDebugRoute: ApiPublicHotmartDebugRoute,
   ApiPublicHotmartProbeRoute: ApiPublicHotmartProbeRoute,
   ApiPublicHotmartRawRoute: ApiPublicHotmartRawRoute,
+  ApiPublicAdminManualSaleRoute: ApiPublicAdminManualSaleRoute,
   ApiPublicAgendaAvailabilityRoute: ApiPublicAgendaAvailabilityRoute,
   ApiPublicAgendaBookRoute: ApiPublicAgendaBookRoute,
   ApiPublicAuditManualSalesRoute: ApiPublicAuditManualSalesRoute,
