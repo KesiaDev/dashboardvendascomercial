@@ -94,17 +94,23 @@ export function ConversaoFunilCard({
             {title}
           </CardTitle>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs h-7"
-              onClick={() => setHideNoSeller((v) => !v)}
-            >
-              {hideNoSeller ? "Mostrar sem vendedor" : "Ocultar sem vendedor"}
+            {open && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-7"
+                onClick={() => setHideNoSeller((v) => !v)}
+              >
+                {hideNoSeller ? "Mostrar sem vendedor" : "Ocultar sem vendedor"}
+              </Button>
+            )}
+            <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => setOpen((v) => !v)}>
+              {open ? "Ocultar" : "Mostrar"}
             </Button>
           </div>
         </div>
       </CardHeader>
+      {open && (
       <CardContent className="p-0">
         {isLoading ? (
           <p className="text-sm text-muted-foreground px-4 py-6">Carregando conversão…</p>
