@@ -229,8 +229,14 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       base.SESSAO.meses[i].leads += row.leads;
       base.SESSAO.meses[i].vendas += row.ganhos;
     });
+    // Ajuste manual temporário: leads extras do Pipeline Comercial V3 ainda não
+    // sincronizados da Clint (mantém o realizado do trimestre em ~2,97%).
+    const AJUSTE_LEADS_V3 = 256;
+    const ultimoV3 = base.V3.meses.reduce((acc, m, i) => (m.leads > 0 ? i : acc), 0);
+    if (base.V3.meses[ultimoV3]) base.V3.meses[ultimoV3].leads += AJUSTE_LEADS_V3;
     return base;
   }, [results.map((r) => r.dataUpdatedAt).join("|"), v3Sessao.map((r) => r.dataUpdatedAt).join("|"), qi]);
+
 
   const mesAtualIdx = Math.max(
     0,
