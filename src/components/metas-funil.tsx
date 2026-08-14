@@ -254,7 +254,9 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                 className="h-7 w-14 text-xs"
               />
             </label>
+            {toggle}
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
+
               <RotateCcw className="h-3.5 w-3.5 mr-1" />
               Metas do trimestre
             </Button>
