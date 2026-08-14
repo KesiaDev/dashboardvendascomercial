@@ -60,6 +60,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Em aberto</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Perdidos</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Vendas</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Aproveit. %</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Valor (€)</th>
                 </tr>
               </thead>
