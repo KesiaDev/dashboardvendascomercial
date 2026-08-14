@@ -188,7 +188,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
     })),
   });
 
-  const isLoading = results.some((r) => r.isLoading);
+  const isLoading = results.some((r) => r.isFetching);
 
   /** leads/vendas por funil × mês */
   const porFunil = useMemo(() => {
