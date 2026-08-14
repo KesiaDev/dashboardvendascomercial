@@ -83,7 +83,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<OrigemV3Result> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller, canonOrigem } = await import(
+    const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller, tagBucket } = await import(
       "@/lib/origem-v3.server"
     );
 
@@ -93,9 +93,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       const { data: c, error } = await supabaseAdmin
         .from("clint_deals")
         .select("id,origin_name,status,value,created_at,contact_email,raw,contact_tags,user_name")
-        .in("origin_name", V3_ORIGIN_NAMES)
-        // Só entram leads que foram delegados a um vendedor (dono do negócio na Clint).
-        .not("user_name", "is", null)
+        .eq("origin_name", "PIPELINE_COMERCIAL-V3")
         .gte("created_at", data.from)
         .lte("created_at", `${data.to}T23:59:59`)
         .order("created_at", { ascending: false })
@@ -104,6 +102,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       rows.push(...(c ?? []));
       if ((c ?? []).length < pageSize) break;
     }
+
 
     // --- Vendas do fechamento manual do período (fonte de verdade de "venda") ---
     const { data: salesRows } = await supabaseAdmin
@@ -246,34 +245,31 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       return r;
     };
 
+    // Leads recebidos no PIPELINE_COMERCIAL-V3, agrupados pelas tags reais da Clint.
+    const bucketByEmail = new Map<string, string>();
     for (const d of rows) {
-      const { origem: origemBruta, campanha } = classifyOrigemV3(d.origin_name, d.raw, d.contact_tags);
-      // Só os 4 funis/tags que o comercial acompanha (duplicados unificados).
-      const origem = canonOrigem(origemBruta) ?? canonOrigem(campanha);
-      if (!origem) continue;
-      const r = ensure(origem);
-
+      const hit = tagBucket(d.contact_tags);
+      if (!hit) continue;
+      const r = ensure(hit.bucket);
       const email = normEmail(d.contact_email);
-      const atendido = email ? humanEmails.has(email) : false;
-      // Só contam leads efetivamente transferidos ao comercial (vendedor assumiu o atendimento).
-      if (!atendido) {
-        r.soIa++;
-        continue;
-      }
+      if (email) bucketByEmail.set(email, hit.bucket);
 
       r.leads++;
-      r.atendidos++;
+      if (email && humanEmails.has(email)) r.atendidos++;
+      else r.soIa++;
       if (d.status === "LOST") r.perdidos++;
       else r.abertos++;
 
-      let c = r.camp.get(campanha);
+
+      let c = r.camp.get(hit.tag);
       if (!c) {
         c = { leads: 0, ganhos: 0, atendidos: 0 };
-        r.camp.set(campanha, c);
+        r.camp.set(hit.tag, c);
       }
       c.leads++;
-      c.atendidos++;
+
     }
+
 
 
     const funnelLabel = (t: Touch) =>
@@ -354,8 +350,8 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         falouComVendedor: Boolean(falou),
       });
 
-      // Só entram vendas atribuíveis aos 4 funis/tags do comercial.
-      const linha = canonOrigem(funilConversao) ?? canonOrigem(captacao);
+      // Venda atribuída à tag do lead (quando o cliente entrou pelo V3 no período).
+      const linha = email ? bucketByEmail.get(email) : undefined;
       if (!linha) continue;
       const r = ensure(linha);
       r.ganhos++;
@@ -364,11 +360,10 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         r.ganhosSemContato++;
         r.valorSemContato += Number(s.value_eur ?? 0);
       }
-      const tag = first ? classifyOrigemV3(first.origin_name, first.raw, first.contact_tags).campanha : "Sem tag na Clint";
-      const c = r.camp.get(tag) ?? { leads: 0, ganhos: 0, atendidos: 0 };
-      c.ganhos++;
-      r.camp.set(tag, c);
     }
+
+
+
 
     const result = Array.from(map.values())
       .map(({ camp, ...r }) => ({

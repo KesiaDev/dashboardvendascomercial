@@ -4,9 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchOrigemV3Fn } from "@/lib/origem-v3.functions";
 import { ChevronDown, ChevronRight, Route as RouteIcon } from "lucide-react";
 
-function pct(n: number, d: number) {
-  return d > 0 ? (n / d) * 100 : 0;
-}
 const eur = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
@@ -28,15 +25,14 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
       rows.reduce(
         (a, r) => ({
           leads: a.leads + r.leads,
-          atendidos: a.atendidos + r.atendidos,
-          soIa: a.soIa + r.soIa,
+          abertos: a.abertos + r.abertos,
           perdidos: a.perdidos + r.perdidos,
           ganhos: a.ganhos + r.ganhos,
           valor: a.valor + r.valor,
           ganhosSemContato: a.ganhosSemContato + r.ganhosSemContato,
           valorSemContato: a.valorSemContato + r.valorSemContato,
         }),
-        { leads: 0, atendidos: 0, soIa: 0, perdidos: 0, ganhos: 0, valor: 0, ganhosSemContato: 0, valorSemContato: 0 },
+        { leads: 0, abertos: 0, perdidos: 0, ganhos: 0, valor: 0, ganhosSemContato: 0, valorSemContato: 0 },
       ),
     [rows],
   );
@@ -59,10 +55,9 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-t border-border bg-muted/40">
-                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Funil real / Tag da Clint</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Leads</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Falou c/ vendedor</th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Fora (só IA/automação)</th>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Tag da Clint (PIPELINE_COMERCIAL-V3)</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Leads recebidos</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Em aberto</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Perdidos</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Vendas</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Valor (€)</th>
@@ -87,11 +82,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                           </span>
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">{r.leads}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">
-                          {r.atendidos}
-                          <span className="text-xs text-muted-foreground"> ({pct(r.atendidos, r.leads).toFixed(0)}%)</span>
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{r.soIa}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{r.abertos}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{r.perdidos}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-emerald-500 font-medium">{r.ganhos}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{eur(r.valor)}</td>
@@ -101,7 +92,6 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                           <tr key={`${r.origem}-${c.campanha}`} className="border-t border-border/30 hover:bg-muted/10">
                             <td className="px-4 py-1.5 pl-10 text-muted-foreground truncate max-w-[320px]">{c.campanha}</td>
                             <td className="px-3 py-1.5 text-right tabular-nums">{c.leads}</td>
-                            <td className="px-3 py-1.5 text-right tabular-nums">{c.atendidos}</td>
                             <td className="px-3 py-1.5 text-right tabular-nums">—</td>
                             <td className="px-3 py-1.5 text-right tabular-nums">—</td>
                             <td className="px-3 py-1.5 text-right tabular-nums text-emerald-500">{c.ganhos}</td>
@@ -116,8 +106,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                 <tr className="border-t-2 border-border bg-muted/40 font-semibold">
                   <td className="px-4 py-2">Total</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.leads}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{totals.atendidos}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{totals.soIa}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{totals.abertos}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.perdidos}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.ganhos}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{eur(totals.valor)}</td>
