@@ -164,6 +164,7 @@ function isAdminEmail(e: string) { return ADMIN_EMAILS.includes((e ?? "").trim()
 // Normaliza vendedor: mapeia e-mails corporativos para o nome canônico
 const SELLER_CANONICAL: Record<string, string> = {
   "joaopessoa@llmidiaco.com": "João Pessoa",
+  "joaopessoa@lucianolarrossa.com": "João Pessoa",
   "giselegagliano@lucianolarrossa.com": "Gisele Pimentel",
   "fabionadal@lucianolarrossa.com": "Fabio Nadal",
   "ritabandeira@lucianolarrossa.com": "Rita Bandeira",

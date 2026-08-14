@@ -11,6 +11,11 @@ export const SELLER_ALIASES: SellerAlias[] = [
     name: "Gisele Pimentel",
     aliases: ["giselegagliano@lucianolarrossa.com"],
   },
+  {
+    canonical: "joaopessoa@llmidiaco.com",
+    name: "João Pessoa",
+    aliases: ["joaopessoa@lucianolarrossa.com"],
+  },
 ];
 
 const lower = (v?: string | null) => (v ?? "").trim().toLowerCase();
