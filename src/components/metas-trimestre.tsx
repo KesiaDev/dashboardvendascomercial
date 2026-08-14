@@ -234,6 +234,13 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
     const AJUSTE_LEADS_V3 = 256;
     const ultimoV3 = base.V3.meses.reduce((acc, m, i) => (m.leads > 0 ? i : acc), 0);
     if (base.V3.meses[ultimoV3]) base.V3.meses[ultimoV3].leads += AJUSTE_LEADS_V3;
+
+    // Ajuste manual temporário: leva a Sessão Estratégica ao patamar de 5%
+    // (20 vendas / 400 leads = 5%) até sincronização completa da Clint.
+    const AJUSTE_LEADS_SESSAO = 163;
+    const ultimoSessao = base.SESSAO.meses.reduce((acc, m, i) => (m.leads > 0 ? i : acc), 0);
+    if (base.SESSAO.meses[ultimoSessao]) base.SESSAO.meses[ultimoSessao].leads += AJUSTE_LEADS_SESSAO;
+
     return base;
   }, [results.map((r) => r.dataUpdatedAt).join("|"), v3Sessao.map((r) => r.dataUpdatedAt).join("|"), qi]);
 
