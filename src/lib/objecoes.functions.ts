@@ -81,18 +81,12 @@ const LABELS: Record<string, string> = {
 };
 
 const MEDO = "Medo de não conseguir seguir na profissão";
-// Adiamento genérico ("timing", "não é o momento") é, na prática, medo de não
-// conseguir seguir na profissão. Só fica em "Timing / momento" quando há um
-// motivo concreto de agenda declarado.
-const TIMING_CONCRETO = [
-  "agenda", "viagem", "ferias", "mudanca", "obra", "cirurgia", "doenca",
-  "casamento", "gravidez", "luto", "trabalho fixo", "clt", "compromisso",
-];
+// "Timing / momento" volta a ser categoria própria (adiamento genérico e
+// motivos concretos de agenda). Não é mais dobrado em "Medo".
 function labelFor(raw: string) {
   const n = normalize(raw);
-  const isTiming = ["timing", "tempo", "momento", "adiar", "depois"].some((k) => n.includes(k));
-  if (isTiming) {
-    return TIMING_CONCRETO.some((k) => n.includes(k)) ? "Timing / momento" : MEDO;
+  if (["timing", "tempo", "momento", "adiar", "depois"].some((k) => n.includes(k))) {
+    return "Timing / momento";
   }
   for (const k of Object.keys(LABELS)) if (n.includes(k)) return LABELS[k];
   return "Não foi claro em declarar objeção";
@@ -180,6 +174,7 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
     }
 
     const PRIORITARIA = "Medo de não conseguir seguir na profissão";
+    const SEGUNDA = "Timing / momento";
     const ranking: ObjecaoRow[] = Array.from(agg.entries())
       .map(([objecao, a]) => ({
         objecao,
@@ -196,9 +191,13 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
           .slice(0, 4),
       }))
       .sort((a, b) => {
-        // "Medo de não conseguir seguir na profissão" sempre em primeiro lugar
+        // 1º: "Medo de não conseguir seguir na profissão" (sempre)
         if (a.objecao === PRIORITARIA) return -1;
         if (b.objecao === PRIORITARIA) return 1;
+        // 2º: "Timing / momento" (neste mês, não como prioridade)
+        if (a.objecao === SEGUNDA) return -1;
+        if (b.objecao === SEGUNDA) return 1;
+        // Demais por frequência
         return b.total - a.total;
       });
 
@@ -246,7 +245,7 @@ export const generateObjecoesPlaybookFn = createServerFn({ method: "POST" })
     if (!key) throw new Error("LOVABLE_API_KEY não configurada");
     const sys =
       "Você é uma líder comercial sênior da LLMídia (infoprodutos/mentorias de tráfego, ticket alto, venda por WhatsApp e call). " +
-      "Recebe o ranking de objeções detectadas por IA nas conversas do time. A objeção nº1 do público é o MEDO DE NÃO CONSEGUIR VIVER DA PROFISSÃO DE GESTOR DE TRÁFEGO (insegurança sobre conseguir clientes e resultados) — trate-a sempre como prioridade alta e primeiro item da lista. Para cada objeção, diga a causa raiz provável no atendimento, " +
+      "Recebe o ranking de objeções detectadas por IA nas conversas do time. A objeção nº1 do público é o MEDO DE NÃO CONSEGUIR SEGUIR NA PROFISSÃO DE GESTOR DE TRÁFEGO (insegurança sobre conseguir clientes e resultados) — trate-a sempre como prioridade alta e primeiro item da lista. A objeção nº2 é TIMING / MOMENTO (adiamento) — trate como prioridade média, não como foco principal deste mês. Para cada objeção, diga a causa raiz provável no atendimento, " +
       "como contornar, um script pronto em português do Brasil (linguagem de WhatsApp, humana, sem parecer robô) e como PREVENIR a objeção antes dela aparecer. " +
       "Responda SOMENTE JSON válido: " +
       `{"resumo":"3-4 frases para a gestão","itens":[{"objecao":"string","causa_raiz":"string","contorno":"string","script":"string","prevencao":"string","prioridade":"alta|media|baixa"}],"acoes_gestao":["string"]}. ` +
