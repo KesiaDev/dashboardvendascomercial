@@ -346,6 +346,9 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
     />
   );
 
+  const [openRampa, setOpenRampa] = useState(false);
+  const [openAlertas, setOpenAlertas] = useState(false);
+
   return (
     <div className="space-y-4">
       {/* ---------- Visão executiva ---------- */}
@@ -528,31 +531,6 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                 </tbody>
               </table>
 
-              {/* Gap traduzido em ação comercial */}
-              <div className="grid gap-3 border-t border-border bg-muted/20 p-4 md:grid-cols-3">
-                {linhas.map((l) => (
-                  <div key={l.id} className="rounded-md border border-border/60 bg-background p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-semibold">{l.label}</p>
-                      <Badge className={`${STATUS_UI[l.status].cls} border-0`}>{STATUS_UI[l.status].dot}</Badge>
-                    </div>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={`h-full ${STATUS_UI[l.status].bar}`}
-                        style={{ width: `${Math.min(100, Math.max(0, l.atgTri))}%` }}
-                      />
-                    </div>
-                    <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                      Meta {pct(l.metaTri)} · Realizado {pct(l.convTri)} · Projeção {pct(l.projecao)}
-                    </p>
-                    <p className="mt-1 text-[11px] leading-relaxed">
-                      {l.vendasFaltam > 0
-                        ? `Precisamos de ${l.vendasFaltam} venda(s) nos próximos ~${l.leadsRestantes} leads (converter ${pct(l.ritmoNecessario)}).`
-                        : "Meta trimestral já assegurada no ritmo atual."}
-                    </p>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </CardContent>
@@ -629,8 +607,16 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       {/* ---------- Rampa editável ---------- */}
       <Card>
         <CardHeader className="pb-1">
-          <CardTitle className="text-sm font-semibold">Rampa de metas mensais (%)</CardTitle>
+          <button
+            type="button"
+            onClick={() => setOpenRampa((v) => !v)}
+            className="flex w-full items-center justify-between text-left"
+          >
+            <CardTitle className="text-sm font-semibold">Rampa de metas mensais (%)</CardTitle>
+            <span className="text-xs text-muted-foreground">{openRampa ? "Ocultar" : "Mostrar"}</span>
+          </button>
         </CardHeader>
+        {openRampa && (
         <CardContent className="p-0">
           <table className="w-full text-xs">
             <thead>
@@ -677,16 +663,25 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
             (vendas do trimestre ÷ leads do trimestre).
           </p>
         </CardContent>
+        )}
       </Card>
 
       {/* ---------- Atenção da gestão ---------- */}
       <Card>
         <CardHeader className="pb-1">
-          <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            Atenção da Gestão
-          </CardTitle>
+          <button
+            type="button"
+            onClick={() => setOpenAlertas((v) => !v)}
+            className="flex w-full items-center justify-between text-left"
+          >
+            <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              Atenção da Gestão
+            </CardTitle>
+            <span className="text-xs text-muted-foreground">{openAlertas ? "Ocultar" : "Mostrar"}</span>
+          </button>
         </CardHeader>
+        {openAlertas && (
         <CardContent className="space-y-2 pt-0">
           {alertas.map((a) => (
             <div
@@ -703,6 +698,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
             </div>
           ))}
         </CardContent>
+        )}
       </Card>
     </div>
   );
