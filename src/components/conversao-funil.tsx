@@ -40,11 +40,15 @@ export function ConversaoFunilCard({
 }) {
   const [hideNoSeller, setHideNoSeller] = useState(true);
   const [openFunnels, setOpenFunnels] = useState<Record<string, boolean>>({});
+  const [open, setOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["conversao-funil", from, to],
     queryFn: () => fetchConversaoFunilFn({ data: { from, to } }),
-    staleTime: 5 * 60_000,
+    enabled: open,
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000,
+    refetchOnWindowFocus: true,
   });
 
   const funnels = useMemo<FunnelAgg[]>(() => {
