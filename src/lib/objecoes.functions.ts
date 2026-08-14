@@ -208,7 +208,7 @@ export const generateObjecoesPlaybookFn = createServerFn({ method: "POST" })
     if (!key) throw new Error("LOVABLE_API_KEY não configurada");
     const sys =
       "Você é uma líder comercial sênior da LLMídia (infoprodutos/mentorias de tráfego, ticket alto, venda por WhatsApp e call). " +
-      "Recebe o ranking de objeções detectadas por IA nas conversas do time. Para cada objeção, diga a causa raiz provável no atendimento, " +
+      "Recebe o ranking de objeções detectadas por IA nas conversas do time. A objeção nº1 do público é o MEDO DE NÃO CONSEGUIR VIVER DA PROFISSÃO DE GESTOR DE TRÁFEGO (insegurança sobre conseguir clientes e resultados) — trate-a sempre como prioridade alta e primeiro item da lista. Para cada objeção, diga a causa raiz provável no atendimento, " +
       "como contornar, um script pronto em português do Brasil (linguagem de WhatsApp, humana, sem parecer robô) e como PREVENIR a objeção antes dela aparecer. " +
       "Responda SOMENTE JSON válido: " +
       `{"resumo":"3-4 frases para a gestão","itens":[{"objecao":"string","causa_raiz":"string","contorno":"string","script":"string","prevencao":"string","prioridade":"alta|media|baixa"}],"acoes_gestao":["string"]}. ` +
