@@ -200,6 +200,7 @@ export function ConversaoFunilCard({
           </div>
         )}
       </CardContent>
+      )}
     </Card>
   );
 }
