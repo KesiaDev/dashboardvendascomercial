@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchOrigemV3Fn } from "@/lib/origem-v3.functions";
 import { ChevronDown, ChevronRight, Route as RouteIcon } from "lucide-react";
 
+const pct = (n: number, d: number) => (d > 0 ? `${((n / d) * 100).toFixed(1)}%` : "—");
+
 const eur = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
@@ -60,6 +62,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Em aberto</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Perdidos</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Vendas</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Aproveit. %</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Valor (€)</th>
                 </tr>
               </thead>
@@ -85,6 +88,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                         <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{r.abertos}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{r.perdidos}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-emerald-500 font-medium">{r.ganhos}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{pct(r.ganhos, r.leads)}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{eur(r.valor)}</td>
                       </tr>
                       {isOpen &&
@@ -95,6 +99,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                             <td className="px-3 py-1.5 text-right tabular-nums">—</td>
                             <td className="px-3 py-1.5 text-right tabular-nums">—</td>
                             <td className="px-3 py-1.5 text-right tabular-nums text-emerald-500">{c.ganhos}</td>
+                            <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{pct(c.ganhos, c.leads)}</td>
                             <td className="px-3 py-1.5 text-right tabular-nums">—</td>
                           </tr>
                         ))}
@@ -109,6 +114,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                   <td className="px-3 py-2 text-right tabular-nums">{totals.abertos}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.perdidos}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.ganhos}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{pct(totals.ganhos, totals.leads)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{eur(totals.valor)}</td>
                 </tr>
               </tfoot>
