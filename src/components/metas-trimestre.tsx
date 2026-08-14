@@ -528,31 +528,6 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                 </tbody>
               </table>
 
-              {/* Gap traduzido em ação comercial */}
-              <div className="grid gap-3 border-t border-border bg-muted/20 p-4 md:grid-cols-3">
-                {linhas.map((l) => (
-                  <div key={l.id} className="rounded-md border border-border/60 bg-background p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-semibold">{l.label}</p>
-                      <Badge className={`${STATUS_UI[l.status].cls} border-0`}>{STATUS_UI[l.status].dot}</Badge>
-                    </div>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={`h-full ${STATUS_UI[l.status].bar}`}
-                        style={{ width: `${Math.min(100, Math.max(0, l.atgTri))}%` }}
-                      />
-                    </div>
-                    <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                      Meta {pct(l.metaTri)} · Realizado {pct(l.convTri)} · Projeção {pct(l.projecao)}
-                    </p>
-                    <p className="mt-1 text-[11px] leading-relaxed">
-                      {l.vendasFaltam > 0
-                        ? `Precisamos de ${l.vendasFaltam} venda(s) nos próximos ~${l.leadsRestantes} leads (converter ${pct(l.ritmoNecessario)}).`
-                        : "Meta trimestral já assegurada no ritmo atual."}
-                    </p>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </CardContent>
