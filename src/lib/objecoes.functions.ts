@@ -38,33 +38,33 @@ const LABELS: Record<string, string> = {
   valor: "Preço / investimento",
   dinheiro: "Preço / investimento",
   financeiro: "Preço / investimento",
-  // "Medo de não conseguir na profissão" — rede ampliada de palavras-chave
-  medo: "Medo de não conseguir na profissão",
-  "medo de errar": "Medo de não conseguir na profissão",
-  "medo de falhar": "Medo de não conseguir na profissão",
-  "medo de nao conseguir": "Medo de não conseguir na profissão",
-  "nao conseguir": "Medo de não conseguir na profissão",
-  inseguran: "Medo de não conseguir na profissão",
-  insegur: "Medo de não conseguir na profissão",
-  inseguro: "Medo de não conseguir na profissão",
-  incerteza: "Medo de não conseguir na profissão",
-  incerto: "Medo de não conseguir na profissão",
-  receio: "Medo de não conseguir na profissão",
-  ansiedade: "Medo de não conseguir na profissão",
-  capacidade: "Medo de não conseguir na profissão",
-  incapaz: "Medo de não conseguir na profissão",
-  "nao dar conta": "Medo de não conseguir na profissão",
-  fracasso: "Medo de não conseguir na profissão",
-  "duvida de si": "Medo de não conseguir na profissão",
-  autoconfianca: "Medo de não conseguir na profissão",
-  resultado: "Medo de não conseguir na profissão",
-  confianca: "Medo de não conseguir na profissão",
-  ceticismo: "Medo de não conseguir na profissão",
-  credibilidade: "Medo de não conseguir na profissão",
-  financas: "Medo de não conseguir na profissão",
-  sobreviver: "Medo de não conseguir na profissão",
-  "viver da profissao": "Medo de não conseguir na profissão",
-  profissao: "Medo de não conseguir na profissão",
+  // "Medo de não conseguir seguir na profissão" — rede ampliada de palavras-chave
+  medo: "Medo de não conseguir seguir na profissão",
+  "medo de errar": "Medo de não conseguir seguir na profissão",
+  "medo de falhar": "Medo de não conseguir seguir na profissão",
+  "medo de nao conseguir": "Medo de não conseguir seguir na profissão",
+  "nao conseguir": "Medo de não conseguir seguir na profissão",
+  inseguran: "Medo de não conseguir seguir na profissão",
+  insegur: "Medo de não conseguir seguir na profissão",
+  inseguro: "Medo de não conseguir seguir na profissão",
+  incerteza: "Medo de não conseguir seguir na profissão",
+  incerto: "Medo de não conseguir seguir na profissão",
+  receio: "Medo de não conseguir seguir na profissão",
+  ansiedade: "Medo de não conseguir seguir na profissão",
+  capacidade: "Medo de não conseguir seguir na profissão",
+  incapaz: "Medo de não conseguir seguir na profissão",
+  "nao dar conta": "Medo de não conseguir seguir na profissão",
+  fracasso: "Medo de não conseguir seguir na profissão",
+  "duvida de si": "Medo de não conseguir seguir na profissão",
+  autoconfianca: "Medo de não conseguir seguir na profissão",
+  resultado: "Medo de não conseguir seguir na profissão",
+  confianca: "Medo de não conseguir seguir na profissão",
+  ceticismo: "Medo de não conseguir seguir na profissão",
+  credibilidade: "Medo de não conseguir seguir na profissão",
+  financas: "Medo de não conseguir seguir na profissão",
+  sobreviver: "Medo de não conseguir seguir na profissão",
+  "viver da profissao": "Medo de não conseguir seguir na profissão",
+  profissao: "Medo de não conseguir seguir na profissão",
   // "Outro" → rótulo claro
   outro: "Não foi claro em declarar objeção",
   // Demais categorias
@@ -80,11 +80,24 @@ const LABELS: Record<string, string> = {
   produto: "Dúvidas sobre o produto",
 };
 
+const MEDO = "Medo de não conseguir seguir na profissão";
+// Adiamento genérico ("timing", "não é o momento") é, na prática, medo de não
+// conseguir seguir na profissão. Só fica em "Timing / momento" quando há um
+// motivo concreto de agenda declarado.
+const TIMING_CONCRETO = [
+  "agenda", "viagem", "ferias", "mudanca", "obra", "cirurgia", "doenca",
+  "casamento", "gravidez", "luto", "trabalho fixo", "clt", "compromisso",
+];
 function labelFor(raw: string) {
   const n = normalize(raw);
+  const isTiming = ["timing", "tempo", "momento", "adiar", "depois"].some((k) => n.includes(k));
+  if (isTiming) {
+    return TIMING_CONCRETO.some((k) => n.includes(k)) ? "Timing / momento" : MEDO;
+  }
   for (const k of Object.keys(LABELS)) if (n.includes(k)) return LABELS[k];
   return "Não foi claro em declarar objeção";
 }
+
 
 export const fetchObjecoesFn = createServerFn({ method: "GET" })
   .inputValidator((d: { from?: string; to?: string; seller?: string; funil?: string } = {}) => d)
@@ -166,7 +179,7 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
       }
     }
 
-    const PRIORITARIA = "Medo de não conseguir na profissão";
+    const PRIORITARIA = "Medo de não conseguir seguir na profissão";
     const ranking: ObjecaoRow[] = Array.from(agg.entries())
       .map(([objecao, a]) => ({
         objecao,
@@ -183,7 +196,7 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
           .slice(0, 4),
       }))
       .sort((a, b) => {
-        // "Medo de não conseguir na profissão" sempre em primeiro lugar
+        // "Medo de não conseguir seguir na profissão" sempre em primeiro lugar
         if (a.objecao === PRIORITARIA) return -1;
         if (b.objecao === PRIORITARIA) return 1;
         return b.total - a.total;
