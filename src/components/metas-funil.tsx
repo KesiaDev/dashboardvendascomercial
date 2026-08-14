@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
 import { Gauge, RotateCcw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MetasTrimestreCard } from "@/components/metas-trimestre";
+
 
 /**
  * Metas de aproveitamento (conversão lead→venda) por funil.
@@ -95,7 +97,9 @@ function weeksBetween(from: string, to: string) {
 export function MetasFunilCard({ from, to, title, period = "mes" }: { from: string; to: string; title: string; period?: "semana" | "mes" }) {
   const isWeek = period === "semana";
   const [cfg, setCfg] = useState<Config>(DEFAULT_CONFIG);
+  const [view, setView] = useState<"periodo" | "trimestre">("periodo");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+
   const [dirty, setDirty] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   useEffect(() => setCfg(loadConfig()), []);
