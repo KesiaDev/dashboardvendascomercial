@@ -156,7 +156,7 @@ export function ObjecoesTab() {
             </thead>
             <tbody>
               {(data?.ranking ?? []).map((r, i) => (
-                <>
+                <Fragment key={r.objecao}>
                   <tr key={r.objecao} className={`border-b ${i < 2 ? "bg-muted/30 font-semibold" : ""}`}>
                     <td className="p-2 font-medium">{r.objecao}</td>
                     <td className="p-2 text-right">{r.total}</td>
