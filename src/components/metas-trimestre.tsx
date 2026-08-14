@@ -16,6 +16,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
+import { fetchOrigemV3Fn } from "@/lib/origem-v3.functions";
 
 /* ------------------------------------------------------------------ */
 /* Funis acompanhados na visão trimestral                              */
