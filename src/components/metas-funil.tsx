@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
-import { Gauge, RotateCcw } from "lucide-react";
+import { Gauge, RotateCcw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -95,15 +95,24 @@ function weeksBetween(from: string, to: string) {
 export function MetasFunilCard({ from, to, title }: { from: string; to: string; title: string }) {
   const [cfg, setCfg] = useState<Config>(DEFAULT_CONFIG);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [dirty, setDirty] = useState(false);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
   useEffect(() => setCfg(loadConfig()), []);
+  /** Altera os valores em tela (recalcula na hora), mas só persiste ao clicar em Salvar. */
   const save = (next: Config) => {
     setCfg(next);
+    setDirty(true);
+  };
+  const persist = () => {
     try {
-      window.localStorage.setItem(STORE_KEY, JSON.stringify(next));
+      window.localStorage.setItem(STORE_KEY, JSON.stringify(cfg));
+      setDirty(false);
+      setSavedAt(new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
     } catch {
       /* ignore */
     }
   };
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["conversao-funil", from, to],
@@ -211,6 +220,16 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
               <RotateCcw className="h-3.5 w-3.5 mr-1" />
               Metas do trimestre
             </Button>
+            <Button size="sm" className="h-7 text-xs" disabled={!dirty} onClick={persist}>
+              <Save className="h-3.5 w-3.5 mr-1" />
+              {dirty ? "Salvar metas" : "Salvo"}
+            </Button>
+            {dirty ? (
+              <span className="text-[11px] text-amber-500">alterações não salvas</span>
+            ) : savedAt ? (
+              <span className="text-[11px] text-emerald-500">salvo às {savedAt}</span>
+            ) : null}
+
           </div>
         </div>
       </CardHeader>
@@ -541,16 +560,6 @@ export function MetasFunilCard({ from, to, title }: { from: string; to: string; 
                       </div>
                     </div>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Como ler: a <strong>Meta % mês</strong> é a fonte da verdade — a <strong>Meta % semana</strong>
-                    {" "}herda automaticamente esse valor (a taxa de aproveitamento é a mesma; o que muda é o volume de
-                    leads da semana). Você pode sobrescrever a semana pontualmente e voltar ao mês com um clique.{" "}
-                    <strong>Meta de vendas</strong> = leads × meta % (arredondado pra cima).{" "}
-                    <strong>Faltam vender</strong> = quanto ainda falta para bater a meta.{" "}
-                    <strong>Reuniões a realizar</strong> = por semana, com fechamento de {cfg.fechamento}%;{" "}
-                    <strong>Reuniões a agendar</strong> já considera {cfg.comparecimento}% de comparecimento. O bloco
-                    "por vendedor" divide tudo igualmente entre os {cfg.vendedores} vendedores.
-                  </p>
 
                 </div>
               );
