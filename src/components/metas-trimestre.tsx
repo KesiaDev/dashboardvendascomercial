@@ -32,7 +32,12 @@ const FUNIS: { id: FunilTriId; label: string; metaTri: number; match: (n: string
     metaTri: 5,
     match: (n) => n.includes("pipeline_comercial") || n.includes("pipeline comercial"),
   },
-  { id: "SESSAO", label: "Sessão Estratégica", metaTri: 10, match: (n) => n.includes("sessao estrategica") },
+  {
+    id: "SESSAO",
+    label: "Sessão Estratégica (funil + V3)",
+    metaTri: 10,
+    match: (n) => n.includes("sessao estrategica"),
+  },
 ];
 
 /** rampa padrão de meta mensal (mês 1, 2, 3 do trimestre) */
