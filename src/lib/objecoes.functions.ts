@@ -83,7 +83,7 @@ const LABELS: Record<string, string> = {
 function labelFor(raw: string) {
   const n = normalize(raw);
   for (const k of Object.keys(LABELS)) if (n.includes(k)) return LABELS[k];
-  return raw.trim().charAt(0).toUpperCase() + raw.trim().slice(1);
+  return "Não foi claro em declarar objeção";
 }
 
 export const fetchObjecoesFn = createServerFn({ method: "GET" })
