@@ -362,6 +362,9 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         r.ganhosSemContato++;
         r.valorSemContato += Number(s.value_eur ?? 0);
       }
+    }
+
+
 
 
     const result = Array.from(map.values())
