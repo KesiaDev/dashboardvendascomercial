@@ -121,7 +121,7 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
 
     const { data: analyses, error } = await db
       .from("coach_analyses")
-      .select("conversation_id, score_geral, objecoes, analyzed_at")
+      .select("conversation_id, score_geral, objecoes, analyzed_at, resumo, justificativa_nota, proxima_acao")
       .eq("status", "ok")
       .gte("analyzed_at", `${from}T00:00:00Z`)
       .lte("analyzed_at", `${to}T23:59:59Z`)
@@ -171,7 +171,7 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
       const seen = new Set<string>();
       for (const raw of r.objecoes as any[]) {
         if (typeof raw !== "string" || !raw.trim()) continue;
-        const label = labelFor(raw);
+        const label = labelFor(raw, `${r.resumo ?? ""} ${r.justificativa_nota ?? ""} ${r.proxima_acao ?? ""}`);
         if (seen.has(label)) continue;
         seen.add(label);
         totalObj++;
