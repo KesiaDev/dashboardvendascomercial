@@ -178,8 +178,41 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
     return <Badge className="bg-red-500/15 text-red-500 border-0">Abaixo</Badge>;
   };
 
+  const toggle = (
+    <div className="inline-flex rounded-md border border-border p-0.5">
+      {(["periodo", "trimestre"] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => setView(v)}
+          className={`px-2.5 py-1 text-[11px] rounded-sm transition-colors ${
+            view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+          }`}
+        >
+          {v === "periodo" ? (isWeek ? "Semana" : "Mês") : "Trimestre"}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (view === "trimestre") {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold flex items-center gap-1.5">
+            <Gauge className="h-4 w-4 text-muted-foreground" />
+            Meta de Aproveitamento — visão trimestral
+          </h3>
+          {toggle}
+        </div>
+        <MetasTrimestreCard refDate={to} />
+      </div>
+    );
+  }
+
   return (
     <Card>
+
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
