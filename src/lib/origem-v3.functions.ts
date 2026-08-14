@@ -83,7 +83,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<OrigemV3Result> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller, canonOrigem } = await import(
+    const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller, tagBucket } = await import(
       "@/lib/origem-v3.server"
     );
 
@@ -93,9 +93,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       const { data: c, error } = await supabaseAdmin
         .from("clint_deals")
         .select("id,origin_name,status,value,created_at,contact_email,raw,contact_tags,user_name")
-        .in("origin_name", V3_ORIGIN_NAMES)
-        // Só entram leads que foram delegados a um vendedor (dono do negócio na Clint).
-        .not("user_name", "is", null)
+        .eq("origin_name", "PIPELINE_COMERCIAL-V3")
         .gte("created_at", data.from)
         .lte("created_at", `${data.to}T23:59:59`)
         .order("created_at", { ascending: false })
@@ -104,6 +102,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       rows.push(...(c ?? []));
       if ((c ?? []).length < pageSize) break;
     }
+
 
     // --- Vendas do fechamento manual do período (fonte de verdade de "venda") ---
     const { data: salesRows } = await supabaseAdmin
