@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertTriangle, Copy, Sparkles, TrendingDown } from "lucide-react";
@@ -155,25 +155,32 @@ export function ObjecoesTab() {
               </tr>
             </thead>
             <tbody>
-              {(data?.ranking ?? []).map((r) => (
-                <tr key={r.objecao} className="border-b last:border-0">
-                  <td className="p-2 font-medium">{r.objecao}</td>
-                  <td className="p-2 text-right">{r.total}</td>
-                  <td className="p-2 text-right">{r.pct.toFixed(1)}%</td>
-                  <td className={`p-2 text-right ${r.avg_score != null && r.avg_score < 6 ? "text-red-500 font-semibold" : ""}`}>
-                    {r.avg_score != null ? r.avg_score.toFixed(2) : "—"}
-                  </td>
-                  <td className="p-2">
-                    <div className="flex flex-wrap gap-1">
-                      {r.sellers.slice(0, 3).map((s) => (
-                        <Badge key={s.seller} variant="outline" className="text-[10px]">{s.seller} · {s.total}</Badge>
-                      ))}
-                      {r.funis.slice(0, 2).map((f) => (
-                        <Badge key={f.funil} variant="secondary" className="text-[10px]">{f.funil} · {f.total}</Badge>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
+              {(data?.ranking ?? []).map((r, i) => (
+                <Fragment key={r.objecao}>
+                  <tr key={r.objecao} className={`border-b ${i < 2 ? "bg-muted/30 font-semibold" : ""}`}>
+                    <td className="p-2 font-medium">{r.objecao}</td>
+                    <td className="p-2 text-right">{r.total}</td>
+                    <td className="p-2 text-right">{r.pct.toFixed(1)}%</td>
+                    <td className={`p-2 text-right ${r.avg_score != null && r.avg_score < 6 ? "text-red-500 font-semibold" : ""}`}>
+                      {r.avg_score != null ? r.avg_score.toFixed(2) : "—"}
+                    </td>
+                    <td className="p-2">
+                      <div className="flex flex-wrap gap-1">
+                        {r.sellers.slice(0, 3).map((s) => (
+                          <Badge key={s.seller} variant="outline" className="text-[10px]">{s.seller} · {s.total}</Badge>
+                        ))}
+                        {r.funis.slice(0, 2).map((f) => (
+                          <Badge key={f.funil} variant="secondary" className="text-[10px]">{f.funil} · {f.total}</Badge>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                  {i === 1 && (
+                    <tr><td colSpan={5} className="p-0">
+                      <div className="h-[3px] bg-primary/40 w-full" />
+                    </td></tr>
+                  )}
+                </Fragment>
               ))}
               {(data?.ranking?.length ?? 0) === 0 && (
                 <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Sem dados."}</td></tr>
