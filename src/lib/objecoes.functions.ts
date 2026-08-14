@@ -81,12 +81,22 @@ const LABELS: Record<string, string> = {
 };
 
 const MEDO = "Medo de não conseguir seguir na profissão";
-// "Timing / momento" volta a ser categoria própria (adiamento genérico e
-// motivos concretos de agenda). Não é mais dobrado em "Medo".
+// Palavras que indicam motivo CONCRETO de agenda (permanece "Timing / momento").
+// Todo adiamento genérico ("timing", "tempo", "depois", "agora não") cai em "Medo".
+const TIMING_CONCRETO = [
+  "ferias", "feria", "viagem", "viajar", "cirurgia", "operac", "exame",
+  "consulta", "compromisso", "reuniao marcada", "agenda cheia", "viage",
+  "trabalho", "empresa", "matriz", "filial", " congresso", "curso marcado",
+  "data", "dia x", "semana que vem", "proximo mes", "mes que vem",
+  "outubro", "novembro", "dezembro", "setembro", "agosto",
+];
 function labelFor(raw: string) {
   const n = normalize(raw);
-  if (["timing", "tempo", "momento", "adiar", "depois"].some((k) => n.includes(k))) {
-    return "Timing / momento";
+  // Timing CONCRETO (agenda/férias/viagem/cirurgia/datas) → permanece Timing
+  if (TIMING_CONCRETO.some((k) => n.includes(k))) return "Timing / momento";
+  // Adiamento genérico (timing/tempo/momento/adiar/depois/agora não) → Medo
+  if (["timing", "tempo", "momento", "adiar", "depois", "agora nao", "nao agora"].some((k) => n.includes(k))) {
+    return MEDO;
   }
   for (const k of Object.keys(LABELS)) if (n.includes(k)) return LABELS[k];
   return "Não foi claro em declarar objeção";
