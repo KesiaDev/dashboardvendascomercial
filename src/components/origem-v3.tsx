@@ -114,6 +114,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                   <td className="px-3 py-2 text-right tabular-nums">{totals.abertos}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.perdidos}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totals.ganhos}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{pct(totals.ganhos, totals.leads)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{eur(totals.valor)}</td>
                 </tr>
               </tfoot>
