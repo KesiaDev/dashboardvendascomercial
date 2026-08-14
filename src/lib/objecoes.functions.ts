@@ -80,11 +80,24 @@ const LABELS: Record<string, string> = {
   produto: "Dúvidas sobre o produto",
 };
 
+const MEDO = "Medo de não conseguir seguir na profissão";
+// Adiamento genérico ("timing", "não é o momento") é, na prática, medo de não
+// conseguir seguir na profissão. Só fica em "Timing / momento" quando há um
+// motivo concreto de agenda declarado.
+const TIMING_CONCRETO = [
+  "agenda", "viagem", "ferias", "mudanca", "obra", "cirurgia", "doenca",
+  "casamento", "gravidez", "luto", "trabalho fixo", "clt", "compromisso",
+];
 function labelFor(raw: string) {
   const n = normalize(raw);
+  const isTiming = ["timing", "tempo", "momento", "adiar", "depois"].some((k) => n.includes(k));
+  if (isTiming) {
+    return TIMING_CONCRETO.some((k) => n.includes(k)) ? "Timing / momento" : MEDO;
+  }
   for (const k of Object.keys(LABELS)) if (n.includes(k)) return LABELS[k];
   return "Não foi claro em declarar objeção";
 }
+
 
 export const fetchObjecoesFn = createServerFn({ method: "GET" })
   .inputValidator((d: { from?: string; to?: string; seller?: string; funil?: string } = {}) => d)
