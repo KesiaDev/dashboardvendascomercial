@@ -258,10 +258,8 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       if (email && humanEmails.has(email)) r.atendidos++;
       else r.soIa++;
       if (d.status === "LOST") r.perdidos++;
-      else if (d.status === "WON") {
-        r.ganhos++;
-        r.valor += Number(d.value ?? 0);
-      } else r.abertos++;
+      else r.abertos++;
+
 
       let c = r.camp.get(hit.tag);
       if (!c) {
