@@ -267,7 +267,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         r.camp.set(hit.tag, c);
       }
       c.leads++;
-      if (d.status === "WON") c.ganhos++;
+
     }
 
 
