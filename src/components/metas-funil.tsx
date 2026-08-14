@@ -95,15 +95,24 @@ function weeksBetween(from: string, to: string) {
 export function MetasFunilCard({ from, to, title }: { from: string; to: string; title: string }) {
   const [cfg, setCfg] = useState<Config>(DEFAULT_CONFIG);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [dirty, setDirty] = useState(false);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
   useEffect(() => setCfg(loadConfig()), []);
+  /** Altera os valores em tela (recalcula na hora), mas só persiste ao clicar em Salvar. */
   const save = (next: Config) => {
     setCfg(next);
+    setDirty(true);
+  };
+  const persist = () => {
     try {
-      window.localStorage.setItem(STORE_KEY, JSON.stringify(next));
+      window.localStorage.setItem(STORE_KEY, JSON.stringify(cfg));
+      setDirty(false);
+      setSavedAt(new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
     } catch {
       /* ignore */
     }
   };
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["conversao-funil", from, to],
