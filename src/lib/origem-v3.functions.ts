@@ -350,8 +350,11 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         falouComVendedor: Boolean(falou),
       });
 
-      // Venda atribuída pela tag do negócio V3 do cliente (independente do mês
-      // em que o lead entrou); fallback: lead que entrou no período.
+      // Vendas = fechamento manual declarado como PIPELINE_COMERCIAL-V3 (bate com
+      // o fechamento dos vendedores), agrupadas pela tag do negócio V3 do cliente
+      // — mesmo que o lead tenha entrado em meses anteriores.
+      const declaradoV3 = /pipeline[\s_-]*comercial[\s_-]*v3/i.test(String(s.funnel ?? ""));
+      if (!declaradoV3) continue;
       const v3Touch = [...sorted]
         .reverse()
         .find(
@@ -361,8 +364,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
             Boolean(tagBucket(t.contact_tags)),
         );
       const hitTag = v3Touch ? tagBucket(v3Touch.contact_tags) : null;
-      const linha = hitTag?.bucket ?? (email ? bucketByEmail.get(email) : undefined);
-      if (!linha) continue;
+      const linha = hitTag?.bucket ?? (email ? bucketByEmail.get(email) : undefined) ?? SEM_TAG;
       const r = ensure(linha);
       r.ganhos++;
       r.valor += Number(s.value_eur ?? 0);
@@ -374,6 +376,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         }
         c.ganhos++;
       }
+
       if (!falou) {
         r.ganhosSemContato++;
         r.valorSemContato += Number(s.value_eur ?? 0);
