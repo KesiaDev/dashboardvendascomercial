@@ -297,6 +297,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       return {
         ...f,
         metaTri,
+        metaQtd,
         metaMes,
         mes,
         convMes,
