@@ -361,7 +361,35 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                     <td className="px-1.5 py-2 text-right tabular-nums border-l border-border/30">{r.leads}</td>
                     <td className="px-1.5 py-2 text-right tabular-nums text-emerald-500 font-medium">{r.vendas}</td>
                     <td className="px-1 py-2 text-right border-l border-border/30">
-                      {isWeek ? (
+                      {cfg.modo === "qtd" ? (
+                        <>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            value={
+                              drafts[`q:${r.funnel}`] ??
+                              String(isWeek ? r.qtdSemana : r.qtdMes)
+                            }
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setDrafts((d) => ({ ...d, [`q:${r.funnel}`]: v }));
+                              const n = Math.max(0, Math.round(Number(v.replace(",", "."))));
+                              if (v.trim() !== "" && Number.isFinite(n)) {
+                                if (isWeek) {
+                                  save({ ...cfg, metasQtdSemana: { ...cfg.metasQtdSemana, [r.funnel]: n } });
+                                } else {
+                                  const semana = { ...cfg.metasQtdSemana };
+                                  delete semana[r.funnel];
+                                  save({ ...cfg, metasQtd: { ...cfg.metasQtd, [r.funnel]: n }, metasQtdSemana: semana });
+                                }
+                              }
+                            }}
+                            onBlur={() => setDrafts((d) => { const n = { ...d }; delete n[`q:${r.funnel}`]; return n; })}
+                            className={`h-7 w-full text-xs text-right ${isWeek && cfg.metasQtdSemana[r.funnel] != null ? "border-amber-500" : ""}`}
+                          />
+                          <span className="block text-[9px] opacity-60">= {fmtPct(r.meta)}</span>
+                        </>
+                      ) : isWeek ? (
                         <>
                           <Input
                             type="text"
@@ -413,6 +441,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                         />
                       )}
                     </td>
+
                     <td className="px-1.5 py-2 text-right tabular-nums font-semibold">{fmtPct(r.real)}</td>
                     <td className="px-2 py-2">
                       <div className="flex items-center gap-1.5">
