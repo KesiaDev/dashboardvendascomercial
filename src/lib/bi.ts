@@ -409,7 +409,7 @@ export type SaleRecord = {
  * confiável que o cruzamento por e-mail porque vem direto da Hotmart, sem
  * adivinhação de qual negócio da Clint corresponde à venda.
  */
-const KNOWN_SELLERS = ["Gisele Pimentel", "Fabio Nadal", "João Pessoa", "Rita Bandeira", "Luana Guimarães"];
+const KNOWN_SELLERS = ["Gisele Pimentel", "Fabio Nadal", "João Pessoa", "Rita Bandeira", "Luana Guimarães", "Kesia Nandi"];
 
 const ACCENT_MAP: Record<string, string> = {
   á: "a", à: "a", â: "a", ã: "a", ä: "a",

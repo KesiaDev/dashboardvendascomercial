@@ -169,6 +169,8 @@ const SELLER_CANONICAL: Record<string, string> = {
   "fabionadal@lucianolarrossa.com": "Fabio Nadal",
   "ritabandeira@lucianolarrossa.com": "Rita Bandeira",
   "luana.guimaraes@lucianolarrossa.com": "Luana Guimarães",
+  "kesiawnandi@gmail.com": "Kesia Nandi",
+  "kesia@llmidiaco.com": "Kesia Nandi",
 };
 function normalizeSeller(raw: string | null | undefined): string {
   if (!raw) return "—";
