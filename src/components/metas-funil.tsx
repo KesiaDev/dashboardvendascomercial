@@ -243,8 +243,8 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
 
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-            <Gauge className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-base font-semibold tracking-tight flex items-center gap-2">
+            <Gauge className="h-4 w-4 text-primary" />
             {title}
           </CardTitle>
           <div className="flex items-center gap-3 flex-wrap text-xs">
@@ -318,7 +318,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
           <p className="text-sm text-muted-foreground px-4 py-6">Sem dados no período.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-xs table-fixed">
+            <table className="w-full text-sm table-fixed">
               <colgroup>
                 <col className="w-[18%]" />
                 <col className="w-[7%]" />
@@ -330,32 +330,32 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                 <col className="w-[7%]" />
               </colgroup>
               <thead>
-                <tr className="border-t border-border bg-muted/40 align-bottom">
-                  <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">
+                <tr className="border-t border-border bg-muted/30 align-bottom">
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                     Funil
                   </th>
-                  <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">Leads</th>
-                  <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Vendas</th>
-                  <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">
+                  <th className="px-2 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap border-l border-border/40">Leads</th>
+                  <th className="px-2 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Vendas</th>
+                  <th className="px-2 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap border-l border-border/40">
                     {cfg.modo === "qtd"
                       ? isWeek ? "Meta vendas semana" : "Meta vendas mês"
                       : isWeek ? "Meta % semana" : "Meta % mês"}
                   </th>
 
-                  <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Realizado</th>
-                  <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">Atingimento</th>
-                  <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">Vendas meta</th>
-                  <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Faltam</th>
+                  <th className="px-2 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Realizado</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Atingimento</th>
+                  <th className="px-2 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap border-l border-border/40">Vendas meta</th>
+                  <th className="px-2 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Faltam</th>
                 </tr>
               </thead>
 
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.funnel} className="border-t border-border/40 hover:bg-muted/20 transition-colors">
-                    <td className="px-2 py-2 font-medium whitespace-nowrap truncate" title={r.funnel}>{r.funnel}</td>
-                    <td className="px-1.5 py-2 text-right tabular-nums border-l border-border/30">{r.leads}</td>
-                    <td className="px-1.5 py-2 text-right tabular-nums text-emerald-500 font-medium">{r.vendas}</td>
-                    <td className="px-1 py-2 text-right border-l border-border/30">
+                    <td className="px-3 py-3 font-medium text-[13px] whitespace-nowrap truncate" title={r.funnel}>{r.funnel}</td>
+                    <td className="px-2 py-3 text-right tabular-nums text-base font-semibold border-l border-border/30">{r.leads}</td>
+                    <td className="px-2 py-3 text-right tabular-nums text-base font-bold text-emerald-500">{r.vendas}</td>
+                    <td className="px-2 py-3 text-right border-l border-border/30">
                       {cfg.modo === "qtd" ? (
                         <>
                           <Input
@@ -437,20 +437,20 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                       )}
                     </td>
 
-                    <td className="px-1.5 py-2 text-right tabular-nums font-semibold">{fmtPct(r.real)}</td>
+                    <td className="px-2 py-3 text-right tabular-nums text-base font-bold">{fmtPct(r.real)}</td>
                     <td className="px-2 py-2">
                       <div className="flex items-center gap-1.5">
-                        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden min-w-0">
+                        <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden min-w-0">
                           <div
-                            className={`h-full ${r.atingimento >= 100 ? "bg-emerald-500" : r.atingimento >= 70 ? "bg-amber-500" : "bg-red-500"}`}
+                            className={`h-full rounded-full transition-all ${r.atingimento >= 100 ? "bg-emerald-500" : r.atingimento >= 70 ? "bg-amber-500" : "bg-red-500"}`}
                             style={{ width: `${Math.min(100, r.atingimento)}%` }}
                           />
                         </div>
                         {statusBadge(r.atingimento)}
                       </div>
                     </td>
-                    <td className="px-1.5 py-2 text-right tabular-nums border-l border-border/30">{r.vendasMeta.toFixed(0)}</td>
-                    <td className="px-1.5 py-2 text-right tabular-nums">
+                    <td className="px-2 py-3 text-right tabular-nums text-base font-semibold border-l border-border/30">{r.vendasMeta.toFixed(0)}</td>
+                    <td className="px-2 py-3 text-right tabular-nums text-base">
                       {r.gap >= 0 ? (
                         <span className="text-emerald-500 font-medium">✓</span>
                       ) : (
@@ -461,16 +461,16 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-border bg-muted/40 font-semibold">
-                  <td className="px-2 py-2">Total</td>
-                  <td className="px-1.5 py-2 text-right tabular-nums">{totals.leads}</td>
-                  <td className="px-1.5 py-2 text-right tabular-nums">{totals.vendas}</td>
+                <tr className="border-t-2 border-border bg-muted/40 font-bold text-base">
+                  <td className="px-3 py-3 text-[13px] uppercase tracking-wide">Total</td>
+                  <td className="px-2 py-3 text-right tabular-nums">{totals.leads}</td>
+                  <td className="px-2 py-3 text-right tabular-nums text-emerald-500">{totals.vendas}</td>
                   <td className="px-1.5 py-2" />
                   <td className="px-1.5 py-2 text-right tabular-nums">
                     {fmtPct(totals.leads > 0 ? (totals.vendas / totals.leads) * 100 : 0)}
                   </td>
                   <td className="px-2 py-2" />
-                  <td className="px-1.5 py-2 text-right tabular-nums">{totals.vendasMeta.toFixed(0)}</td>
+                  <td className="px-2 py-3 text-right tabular-nums">{totals.vendasMeta.toFixed(0)}</td>
                   <td className="px-1.5 py-2 text-right tabular-nums">
                     {Math.max(0, totals.vendasMeta - totals.vendas)}
                   </td>
@@ -521,19 +521,19 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
                       <p className="text-[11px] text-muted-foreground">Meta de aproveitamento</p>
-                      <p className="text-lg font-semibold tabular-nums">{fmtPct(metaGeral)}</p>
+                      <p className="text-2xl font-bold tabular-nums tracking-tight">{fmtPct(metaGeral)}</p>
                     </div>
                     <div>
                       <p className="text-[11px] text-muted-foreground">Realizado</p>
-                      <p className="text-lg font-semibold tabular-nums">{fmtPct(realGeral)}</p>
+                      <p className="text-2xl font-bold tabular-nums tracking-tight">{fmtPct(realGeral)}</p>
                     </div>
                     <div>
                       <p className="text-[11px] text-muted-foreground">Atingimento da meta</p>
-                      <p className="text-lg font-semibold tabular-nums">{atgGeral.toFixed(0)}%</p>
+                      <p className="text-2xl font-bold tabular-nums tracking-tight">{atgGeral.toFixed(0)}%</p>
                     </div>
                     <div>
                       <p className="text-[11px] text-muted-foreground">Vendas necessárias</p>
-                      <p className="text-lg font-semibold tabular-nums">
+                      <p className="text-2xl font-bold tabular-nums tracking-tight">
                         {vendasNecessarias.toFixed(0)}
                         <span className={`ml-1 text-xs ${faltam > 0 ? "text-red-500" : "text-emerald-500"}`}>
                           ({faltam > 0 ? `faltam ${faltam.toFixed(0)}` : `+${Math.abs(faltam).toFixed(0)}`})
