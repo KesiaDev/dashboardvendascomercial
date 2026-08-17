@@ -16,7 +16,8 @@ export function canonicalFunnel(raw: string | null | undefined): string {
   if (u.includes("MASTER AND SCALE") || u.includes("MAS_")) return "Master and Scale";
   if (u.includes("RENOVA")) return "Renovação";
   if (u.includes("FOLLOW")) return "Follow-up Mentoria";
-  if (u.includes("MINICURSO")) return "Minicurso";
+  if (u.includes("MINICURSO")) return "Minicurso V3";
+  if (u.includes("EBOOK") || u.includes("E-BOOK")) return "Ebook V3";
   if (u.includes("PALESTRA")) return "Funil de Palestras";
   return k;
 }
@@ -30,6 +31,8 @@ export function canonicalFunnel(raw: string | null | undefined): string {
 export const FUNIS_VENDEDOR = new Set<string>(
   [
     "PIPELINE_COMERCIAL-V3",
+    "Minicurso V3",
+    "Ebook V3",
     "IGT23",
     "Master and Scale — LDP_03_MAS_MGT",
     "Funil - Sessão Estratégica",

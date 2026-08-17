@@ -353,8 +353,15 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       // Vendas = fechamento manual declarado como PIPELINE_COMERCIAL-V3 (bate com
       // o fechamento dos vendedores), agrupadas pela tag do negócio V3 do cliente
       // — mesmo que o lead tenha entrado em meses anteriores.
-      const declaradoV3 = /pipeline[\s_-]*comercial[\s_-]*v3/i.test(String(s.funnel ?? ""));
-      if (!declaradoV3) continue;
+      const funilDecl = String(s.funnel ?? "");
+      const declaradoV3 = /pipeline[\s_-]*comercial[\s_-]*v3/i.test(funilDecl);
+      // Vendedor pode declarar direto o sub-funil do V3 (Minicurso V3 / Ebook V3).
+      const bucketDeclarado = /minicurso/i.test(funilDecl)
+        ? "Minicurso V3"
+        : /e-?book/i.test(funilDecl)
+          ? "Ebook V3"
+          : null;
+      if (!declaradoV3 && !bucketDeclarado) continue;
       const v3Touch = [...sorted]
         .reverse()
         .find(
@@ -365,7 +372,8 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         );
       const hitTag = v3Touch ? tagBucket(v3Touch.contact_tags) : null;
       // Sem tag identificada na Clint → conta como Sessão Estratégica (padrão do V3).
-      const linha = hitTag?.bucket ?? (email ? bucketByEmail.get(email) : undefined) ?? "Sessão Estratégica";
+      const linha =
+        bucketDeclarado ?? hitTag?.bucket ?? (email ? bucketByEmail.get(email) : undefined) ?? "Sessão Estratégica";
       const r = ensure(linha);
       r.ganhos++;
       r.valor += Number(s.value_eur ?? 0);
