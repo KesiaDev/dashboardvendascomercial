@@ -372,7 +372,8 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         );
       const hitTag = v3Touch ? tagBucket(v3Touch.contact_tags) : null;
       // Sem tag identificada na Clint → conta como Sessão Estratégica (padrão do V3).
-      const linha = hitTag?.bucket ?? (email ? bucketByEmail.get(email) : undefined) ?? "Sessão Estratégica";
+      const linha =
+        bucketDeclarado ?? hitTag?.bucket ?? (email ? bucketByEmail.get(email) : undefined) ?? "Sessão Estratégica";
       const r = ensure(linha);
       r.ganhos++;
       r.valor += Number(s.value_eur ?? 0);
