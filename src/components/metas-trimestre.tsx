@@ -67,11 +67,17 @@ const STORE_KEY = "metas-trimestre-v1";
 
 type TriConfig = {
   metaTri: Record<FunilTriId, number>;
+  /** meta do trimestre em nº de vendas (usada quando modo = "qtd") */
+  metaTriQtd: Record<FunilTriId, number>;
+  /** modo de edição da meta trimestral */
+  modo: "pct" | "qtd";
   rampa: Record<FunilTriId, [number, number, number]>;
 };
 
 const DEFAULT_TRI: TriConfig = {
   metaTri: { WGT: 1.5, V3: 5, SESSAO: 10 },
+  metaTriQtd: { WGT: 12, V3: 50, SESSAO: 40 },
+  modo: "pct",
   rampa: { ...RAMPA_PADRAO },
 };
 
@@ -83,6 +89,8 @@ function loadTri(): TriConfig {
     const p = JSON.parse(raw) as Partial<TriConfig>;
     return {
       metaTri: { ...DEFAULT_TRI.metaTri, ...(p.metaTri ?? {}) },
+      metaTriQtd: { ...DEFAULT_TRI.metaTriQtd, ...(p.metaTriQtd ?? {}) },
+      modo: p.modo === "qtd" ? "qtd" : "pct",
       rampa: { ...DEFAULT_TRI.rampa, ...(p.rampa ?? {}) },
     };
   } catch {
@@ -259,7 +267,6 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       const vendasTri = meses.reduce((a, m) => a + m.vendas, 0);
 
       const metaMes = cfg.rampa[f.id][mesAtualIdx] ?? 0;
-      const metaTri = cfg.metaTri[f.id] ?? f.metaTri;
 
       const convMes = mes.leads > 0 ? (mes.vendas / mes.leads) * 100 : 0;
       const convTri = leadsTri > 0 ? (vendasTri / leadsTri) * 100 : 0;
@@ -269,11 +276,20 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       const leadsRestantes = Math.round(leadsDia * qi.diasRestantes);
       const leadsProj = leadsTri + leadsRestantes;
 
+      const isQtd = cfg.modo === "qtd";
+      const metaQtd = Math.max(0, Math.round(cfg.metaTriQtd[f.id] ?? 0));
+      // no modo quantidade a meta % é derivada dos leads projetados do trimestre
+      const metaTri = isQtd
+        ? leadsProj > 0
+          ? (metaQtd / leadsProj) * 100
+          : 0
+        : (cfg.metaTri[f.id] ?? f.metaTri);
+
       // conversão de referência para projeção: mês corrente se tiver volume, senão trimestre
       const convRef = mes.leads >= 20 ? convMes : convTri;
       const projecao = leadsProj > 0 ? ((vendasTri + (leadsRestantes * convRef) / 100) / leadsProj) * 100 : 0;
 
-      const vendasMetaTri = Math.ceil((leadsProj * metaTri) / 100);
+      const vendasMetaTri = isQtd ? metaQtd : Math.ceil((leadsProj * metaTri) / 100);
       const vendasFaltam = Math.max(0, vendasMetaTri - vendasTri);
       const ritmoNecessario = leadsRestantes > 0 ? (vendasFaltam / leadsRestantes) * 100 : 0;
       const gapPP = convTri - metaTri;
@@ -281,6 +297,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       return {
         ...f,
         metaTri,
+        metaQtd,
         metaMes,
         mes,
         convMes,
@@ -355,16 +372,43 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       <div className="grid gap-3 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">
-              Meta trimestral
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">
+                Meta trimestral
+              </CardTitle>
+              <div className="flex rounded-md border border-border p-0.5">
+                {(["pct", "qtd"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => change({ ...cfg, modo: m })}
+                    className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                      cfg.modo === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {m === "pct" ? "%" : "Vendas"}
+                  </button>
+                ))}
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-1.5 pt-0">
             {linhas.map((l) => (
               <div key={l.id} className="flex items-center justify-between gap-2 text-sm">
                 <span className="truncate text-muted-foreground">{l.label}</span>
-                {numInput(`t:${l.id}`, l.metaTri, (n) =>
-                  change({ ...cfg, metaTri: { ...cfg.metaTri, [l.id]: n } }),
+                {cfg.modo === "qtd" ? (
+                  <span className="flex items-center gap-1">
+                    {numInput(`tq:${l.id}`, l.metaQtd, (n) =>
+                      change({ ...cfg, metaTriQtd: { ...cfg.metaTriQtd, [l.id]: n } }),
+                    )}
+                    <span className="text-[10px] text-muted-foreground tabular-nums">
+                      = {pct(l.metaTri)}
+                    </span>
+                  </span>
+                ) : (
+                  numInput(`t:${l.id}`, l.metaTri, (n) =>
+                    change({ ...cfg, metaTri: { ...cfg.metaTri, [l.id]: n } }),
+                  )
                 )}
               </div>
             ))}
@@ -382,7 +426,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
               <div key={l.id} className="flex items-center justify-between gap-2 text-sm">
                 <span className="truncate text-muted-foreground">{l.label}</span>
                 <span className="tabular-nums font-semibold" title={`${l.vendasTri}/${l.leadsTri}`}>
-                  {pct(l.convTri)}
+                  {cfg.modo === "qtd" ? `${l.vendasTri} / ${l.metaQtd}` : pct(l.convTri)}
                 </span>
               </div>
             ))}
@@ -430,7 +474,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                 variant="ghost"
                 size="sm"
                 className="h-7 text-xs"
-                onClick={() => change({ metaTri: { ...DEFAULT_TRI.metaTri }, rampa: { ...RAMPA_PADRAO } })}
+                onClick={() => change({ ...DEFAULT_TRI, modo: cfg.modo, rampa: { ...RAMPA_PADRAO } })}
               >
                 <RotateCcw className="h-3.5 w-3.5 mr-1" />
                 Padrão
@@ -502,7 +546,18 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                         {l.vendasTri}
                       </td>
                       <td className="px-1.5 py-2 text-right tabular-nums font-semibold">{pct(l.convTri)}</td>
-                      <td className="px-1.5 py-2 text-right tabular-nums">{pct(l.metaTri)}</td>
+                      <td className="px-1.5 py-2 text-right tabular-nums">
+                        {cfg.modo === "qtd" ? (
+                          <span className="flex items-center justify-end gap-1">
+                            {numInput(`tq2:${l.id}`, l.metaQtd, (n) =>
+                              change({ ...cfg, metaTriQtd: { ...cfg.metaTriQtd, [l.id]: n } }),
+                            )}
+                            <span className="text-[9px] opacity-60">{pct(l.metaTri)}</span>
+                          </span>
+                        ) : (
+                          pct(l.metaTri)
+                        )}
+                      </td>
                       <td
                         className={`px-1.5 py-2 text-right tabular-nums font-medium ${l.gapPP >= 0 ? "text-emerald-500" : "text-red-500"}`}
                       >
