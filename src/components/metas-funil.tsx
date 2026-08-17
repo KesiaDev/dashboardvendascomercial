@@ -278,6 +278,20 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                 className="h-7 w-14 text-xs"
               />
             </label>
+            <div className="inline-flex rounded-md border border-border p-0.5" title="Definir as metas em % de aproveitamento ou em quantidade de vendas">
+              {(["pct", "qtd"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => save({ ...cfg, modo: m })}
+                  className={`px-2.5 py-1 text-[11px] rounded-sm transition-colors ${
+                    cfg.modo === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {m === "pct" ? "Meta em %" : "Meta em vendas"}
+                </button>
+              ))}
+            </div>
             {toggle}
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
 
