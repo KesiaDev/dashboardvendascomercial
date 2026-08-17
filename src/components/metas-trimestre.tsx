@@ -267,7 +267,6 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       const vendasTri = meses.reduce((a, m) => a + m.vendas, 0);
 
       const metaMes = cfg.rampa[f.id][mesAtualIdx] ?? 0;
-      const metaTri = cfg.metaTri[f.id] ?? f.metaTri;
 
       const convMes = mes.leads > 0 ? (mes.vendas / mes.leads) * 100 : 0;
       const convTri = leadsTri > 0 ? (vendasTri / leadsTri) * 100 : 0;
@@ -277,11 +276,20 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       const leadsRestantes = Math.round(leadsDia * qi.diasRestantes);
       const leadsProj = leadsTri + leadsRestantes;
 
+      const isQtd = cfg.modo === "qtd";
+      const metaQtd = Math.max(0, Math.round(cfg.metaTriQtd[f.id] ?? 0));
+      // no modo quantidade a meta % é derivada dos leads projetados do trimestre
+      const metaTri = isQtd
+        ? leadsProj > 0
+          ? (metaQtd / leadsProj) * 100
+          : 0
+        : (cfg.metaTri[f.id] ?? f.metaTri);
+
       // conversão de referência para projeção: mês corrente se tiver volume, senão trimestre
       const convRef = mes.leads >= 20 ? convMes : convTri;
       const projecao = leadsProj > 0 ? ((vendasTri + (leadsRestantes * convRef) / 100) / leadsProj) * 100 : 0;
 
-      const vendasMetaTri = Math.ceil((leadsProj * metaTri) / 100);
+      const vendasMetaTri = isQtd ? metaQtd : Math.ceil((leadsProj * metaTri) / 100);
       const vendasFaltam = Math.max(0, vendasMetaTri - vendasTri);
       const ritmoNecessario = leadsRestantes > 0 ? (vendasFaltam / leadsRestantes) * 100 : 0;
       const gapPP = convTri - metaTri;
