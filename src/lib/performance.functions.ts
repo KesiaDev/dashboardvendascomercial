@@ -451,7 +451,10 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         coberturaAtendimento: leadsNovos > 0 ? (leadsNovos - leadsSemAtendimento) / leadsNovos : 0,
       },
 
+      // Série diária: não mostramos dias futuros (evita "buracos" no gráfico
+      // quando a janela do período/leads vai além de hoje).
       daily: Array.from(dailyMap.entries())
+        .filter(([date]) => date <= todayISO)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([date, v]) => ({ date, ...v })),
     };
