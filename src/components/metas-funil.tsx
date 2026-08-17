@@ -148,12 +148,23 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
     return Array.from(map.values())
       .map((f) => {
         const baseline = cfg.baselines[f.funnel] ?? metaTrimestral(f.funnel);
-        const metaMes = cfg.metas[f.funnel] ?? metaTrimestral(f.funnel);
+        const metaPctMes = cfg.metas[f.funnel] ?? metaTrimestral(f.funnel);
 
         // Na visão semanal usa a meta da semana (herda a do mês salvo override); na mensal usa a do mês
-        const meta = isWeek ? (cfg.metasSemana[f.funnel] ?? metaMes) : metaMes;
+        const metaPct = isWeek ? (cfg.metasSemana[f.funnel] ?? metaPctMes) : metaPctMes;
         const real = f.leads > 0 ? (f.vendas / f.leads) * 100 : 0;
-        const vendasMeta = ceil((f.leads * meta) / 100);
+
+        // Meta em quantidade de vendas: ou digitada direto, ou derivada do %
+        const qtdMes = cfg.metasQtd[f.funnel] ?? ceil((f.leads * metaPctMes) / 100);
+        const qtdSemana = cfg.metasQtdSemana[f.funnel] ?? qtdMes;
+        const isQtd = cfg.modo === "qtd";
+        const vendasMeta = isQtd
+          ? (isWeek ? qtdSemana : qtdMes)
+          : ceil((f.leads * metaPct) / 100);
+        // Quando a meta é em quantidade, o % passa a ser derivado dela
+        const meta = isQtd ? (f.leads > 0 ? (vendasMeta / f.leads) * 100 : 0) : metaPct;
+        const metaMes = isQtd ? (f.leads > 0 ? (qtdMes / f.leads) * 100 : 0) : metaPctMes;
+
         const gap = f.vendas - vendasMeta;
         // Reuniões necessárias: vendas alvo ÷ taxa de fechamento, e agendamentos ÷ comparecimento
         const reunioesRealizadas = ceil(cfg.fechamento > 0 ? vendasMeta / (cfg.fechamento / 100) : 0);
@@ -163,6 +174,8 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
           baseline,
           metaMes,
           meta,
+          qtdMes,
+          qtdSemana,
           real,
           vendasMeta,
           gap,
@@ -171,6 +184,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
           agendamentosSemana: isWeek ? ceil(agendamentos / semanas) : agendamentos,
         };
       })
+
       .filter((f) => f.leads > 0 || f.vendas > 0)
       .sort((a, b) => b.leads - a.leads);
   }, [data, cfg, from, to, isWeek]);
