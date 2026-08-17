@@ -67,11 +67,17 @@ const STORE_KEY = "metas-trimestre-v1";
 
 type TriConfig = {
   metaTri: Record<FunilTriId, number>;
+  /** meta do trimestre em nº de vendas (usada quando modo = "qtd") */
+  metaTriQtd: Record<FunilTriId, number>;
+  /** modo de edição da meta trimestral */
+  modo: "pct" | "qtd";
   rampa: Record<FunilTriId, [number, number, number]>;
 };
 
 const DEFAULT_TRI: TriConfig = {
   metaTri: { WGT: 1.5, V3: 5, SESSAO: 10 },
+  metaTriQtd: { WGT: 12, V3: 50, SESSAO: 40 },
+  modo: "pct",
   rampa: { ...RAMPA_PADRAO },
 };
 
@@ -83,6 +89,8 @@ function loadTri(): TriConfig {
     const p = JSON.parse(raw) as Partial<TriConfig>;
     return {
       metaTri: { ...DEFAULT_TRI.metaTri, ...(p.metaTri ?? {}) },
+      metaTriQtd: { ...DEFAULT_TRI.metaTriQtd, ...(p.metaTriQtd ?? {}) },
+      modo: p.modo === "qtd" ? "qtd" : "pct",
       rampa: { ...DEFAULT_TRI.rampa, ...(p.rampa ?? {}) },
     };
   } catch {
