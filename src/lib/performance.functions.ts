@@ -194,8 +194,8 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         .from("clint_deals")
         .select("id,contact_id,created_at,user_email,user_name")
         .in("origin_name", FUNIS_LEADS)
-        .gte("created_at", startTS)
-        .lte("created_at", endTS)
+        .gte("created_at", leadsStartTS)
+        .lte("created_at", leadsEndTS)
         .limit(20000),
     ]);
 
