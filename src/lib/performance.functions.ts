@@ -168,8 +168,13 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     const startTS = `${startDate}T00:00:00.000Z`;
     const endTS   = `${endDate}T23:59:59.999Z`;
 
-    // Leads novos usam semana sexta→quinta (apenas quando range = week)
-    const leadsWin = data.range === "week" ? leadsWeekBounds(endDate) : { startDate, endDate };
+    // Leads novos usam semana sexta→quinta (apenas quando range = week).
+    // Âncora = hoje quando a semana comercial ainda está em curso; caso
+    // contrário o fim da semana. Assim a janela é sempre a última sexta
+    // que já passou (e não uma sexta futura, que devolveria 0 leads).
+    const todayISO = todayBR();
+    const leadsAnchor = todayISO < startDate ? startDate : (todayISO > endDate ? endDate : todayISO);
+    const leadsWin = data.range === "week" ? leadsWeekBounds(leadsAnchor) : { startDate, endDate };
     const leadsStartTS = `${leadsWin.startDate}T00:00:00.000Z`;
     const leadsEndTS   = `${leadsWin.endDate}T23:59:59.999Z`;
     const leadsLabel = data.range === "week"
