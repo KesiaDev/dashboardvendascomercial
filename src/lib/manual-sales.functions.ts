@@ -44,6 +44,7 @@ export const SELLERS = [
   "Fabio Nadal",
   "Rita Bandeira",
   "Luana Guimarães",
+  "Kesia Nandi",
 ] as const;
 
 export type RoletaType = "mentoria" | "accelerator";

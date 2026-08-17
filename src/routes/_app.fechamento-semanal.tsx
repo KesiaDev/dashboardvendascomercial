@@ -156,6 +156,7 @@ const COLORS: Record<string, string> = {
   "Gisele Pimentel": "#8b5cf6",
   "João Pessoa":     "#3b82f6",
   "Luana Guimarães": "#10b981",
+  "Kesia Nandi": "#f59e0b",
   "Rita Bandeira":   "#f59e0b",
   "Fabio Nadal":     "#ef4444",
 };

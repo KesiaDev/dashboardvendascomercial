@@ -74,6 +74,7 @@ const SELLER_NAME_MAP: { match: string[]; name: string }[] = [
   { name: "João Pessoa",      match: ["joaopessoa", "joao pessoa", "joão pessoa"] },
   { name: "Fabio Nadal",      match: ["fabionadal", "fabio nadal", "nadal"] },
   { name: "Luana Guimarães",  match: ["luanaguimaraes", "luana.guimaraes", "luana guimaraes", "luana guimarães", "luana"] },
+  { name: "Kesia Nandi", match: ["kesiawnandi", "kesia nandi", "kesia"] },
   { name: "Gisele Pimentel",  match: ["giselegagliano", "gisele gagliano", "gisele pimentel", "gisele"] },
   { name: "Rita Bandeira",    match: ["ritabandeira", "rita bandeira", "rita"] },
 ];
