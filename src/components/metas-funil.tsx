@@ -328,7 +328,6 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                 <col className="w-[17%]" />
                 <col className="w-[8%]" />
                 <col className="w-[7%]" />
-                <col className="w-[16%]" />
               </colgroup>
               <thead>
                 <tr className="border-t border-border bg-muted/40 align-bottom">
@@ -347,10 +346,6 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                   <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">Atingimento</th>
                   <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">Vendas meta</th>
                   <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Faltam</th>
-                  <th className="px-2 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">
-                    {isWeek ? "Reuniões/semana" : "Reuniões/mês"}
-                    <span className="block text-[9px] font-normal opacity-70">realizar · agendar</span>
-                  </th>
                 </tr>
               </thead>
 
@@ -462,14 +457,6 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                         <span className="text-red-500 font-medium">{Math.abs(r.gap).toFixed(0)}</span>
                       )}
                     </td>
-                    <td className="px-2 py-2 text-right tabular-nums border-l border-border/30 leading-tight">
-                      <span className="text-emerald-500">{r.reunioesSemana.toFixed(0)}</span>
-                      <span className="text-muted-foreground mx-1">·</span>
-                      <span className="text-sky-500">{r.agendamentosSemana.toFixed(0)}</span>
-                      <span className="block text-[9px] opacity-60">
-                        {ceil(r.reunioesSemana / cfg.vendedores)}/{ceil(r.agendamentosSemana / cfg.vendedores)} por vendedor
-                      </span>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -486,14 +473,6 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                   <td className="px-1.5 py-2 text-right tabular-nums">{totals.vendasMeta.toFixed(0)}</td>
                   <td className="px-1.5 py-2 text-right tabular-nums">
                     {Math.max(0, totals.vendasMeta - totals.vendas)}
-                  </td>
-                  <td className="px-2 py-2 text-right tabular-nums leading-tight">
-                    <span className="text-emerald-500">{totals.reunioesSemana.toFixed(0)}</span>
-                    <span className="text-muted-foreground mx-1">·</span>
-                    <span className="text-sky-500">{totals.agendamentosSemana.toFixed(0)}</span>
-                    <span className="block text-[9px] font-normal opacity-60">
-                      {ceil(totals.reunioesSemana / cfg.vendedores)}/{ceil(totals.agendamentosSemana / cfg.vendedores)} por vendedor
-                    </span>
                   </td>
                 </tr>
               </tfoot>
