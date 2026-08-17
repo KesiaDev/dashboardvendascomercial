@@ -52,6 +52,11 @@ type Config = {
   baselines: Record<string, number>;
   metas: Record<string, number>; // meta do MÊS por funil (fonte da verdade)
   metasSemana: Record<string, number>; // override opcional da meta da semana
+  /** modo de edição das metas: percentual de aproveitamento ou quantidade de vendas */
+  modo: "pct" | "qtd";
+  metasQtd: Record<string, number>; // meta do MÊS em nº de vendas
+  metasQtdSemana: Record<string, number>; // meta da SEMANA em nº de vendas
+  metaGeralQtd: number | null; // meta geral em nº de vendas (quando modo = qtd)
   comparecimento: number; // % de reuniões agendadas que acontecem
   fechamento: number; // % de reuniões realizadas que viram venda
   metaGeral: number; // % de aproveitamento alvo somando todos os funis (mês)
@@ -63,12 +68,17 @@ const DEFAULT_CONFIG: Config = {
   baselines: {},
   metas: {},
   metasSemana: {},
+  modo: "pct",
+  metasQtd: {},
+  metasQtdSemana: {},
+  metaGeralQtd: null,
   comparecimento: 48.6,
   fechamento: 33,
   metaGeral: 5,
   metaCaptacao: CAPTACAO_META,
   vendedores: 5,
 };
+
 
 
 function loadConfig(): Config {
