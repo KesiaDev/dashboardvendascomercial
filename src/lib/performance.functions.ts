@@ -24,6 +24,10 @@ export type PerfResult = {
   periodStart: string;
   periodEnd: string;
   periodLabel: string;
+  leadsPeriodLabel?: string;
+  leadsPeriodStart?: string;
+  leadsPeriodEnd?: string;
+
   sellers: SellerPerf[];
   team: {
     atendimentos: number;
