@@ -447,7 +447,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                 variant="ghost"
                 size="sm"
                 className="h-7 text-xs"
-                onClick={() => change({ metaTri: { ...DEFAULT_TRI.metaTri }, rampa: { ...RAMPA_PADRAO } })}
+                onClick={() => change({ ...DEFAULT_TRI, modo: cfg.modo, rampa: { ...RAMPA_PADRAO } })}
               >
                 <RotateCcw className="h-3.5 w-3.5 mr-1" />
                 Padrão
