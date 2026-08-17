@@ -1478,7 +1478,7 @@ function PerformanceTab() {
               </div>
             )}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 auto-rows-fr">
-              <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads novos (${isSeller ? scopeLabel : rangeLabel})`} value={String(view.leadsNovos)} />
+              <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads novos (${isSeller ? scopeLabel : (range === "week" && perf?.leadsPeriodStart ? `sex→qui ${perf.leadsPeriodStart.slice(8)}/${perf.leadsPeriodStart.slice(5, 7)}–${perf.leadsPeriodEnd!.slice(8)}/${perf.leadsPeriodEnd!.slice(5, 7)}` : rangeLabel)})`} value={String(view.leadsNovos)} />
               <KpiCard icon={<CheckCircle2 className="h-3 w-3" />} label="Vendas" value={String(view.vendas)} />
               <KpiCard icon={<TrendingUp className="h-3 w-3" />} label="Faturamento" value={fmtEUR(view.faturamento)} />
               <KpiCard
