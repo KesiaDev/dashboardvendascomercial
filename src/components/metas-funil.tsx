@@ -499,10 +499,16 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
               </tfoot>
             </table>
             {(() => {
+              const isQtd = cfg.modo === "qtd";
               const realGeral = totals.leads > 0 ? (totals.vendas / totals.leads) * 100 : 0;
-              const metaGeral = cfg.metaGeral;
+              const qtdGeral = isQtd
+                ? (cfg.metaGeralQtd ?? (totals.vendasMeta || ceil((totals.leads * cfg.metaGeral) / 100)))
+                : ceil((totals.leads * cfg.metaGeral) / 100);
+              const metaGeral = isQtd
+                ? (totals.leads > 0 ? (qtdGeral / totals.leads) * 100 : 0)
+                : cfg.metaGeral;
               const atgGeral = metaGeral > 0 ? (realGeral / metaGeral) * 100 : 0;
-              const vendasNecessarias = ceil((totals.leads * metaGeral) / 100);
+              const vendasNecessarias = qtdGeral;
               const faltam = vendasNecessarias - totals.vendas;
               return (
                 <div className="px-4 py-3 border-t border-border space-y-2 bg-muted/20">
@@ -514,20 +520,24 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                       Meta
                       <Input
                         type="text"
-                        inputMode="decimal"
-                        value={drafts.__geral ?? String(cfg.metaGeral)}
+                        inputMode={isQtd ? "numeric" : "decimal"}
+                        value={drafts.__geral ?? String(isQtd ? qtdGeral : cfg.metaGeral)}
                         onChange={(e) => {
                           const v = e.target.value;
                           setDrafts((d) => ({ ...d, __geral: v }));
                           const n = Number(v.replace(",", "."));
-                          if (v.trim() !== "" && Number.isFinite(n)) save({ ...cfg, metaGeral: n });
+                          if (v.trim() !== "" && Number.isFinite(n)) {
+                            if (isQtd) save({ ...cfg, metaGeralQtd: Math.max(0, Math.round(n)) });
+                            else save({ ...cfg, metaGeral: n });
+                          }
                         }}
                         onBlur={() => setDrafts((d) => { const n = { ...d }; delete n.__geral; return n; })}
                         className="h-7 w-20 text-xs text-right"
                       />
-                      %
+                      {isQtd ? "vendas" : "%"}
                     </label>
                     {statusBadge(atgGeral)}
+
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
