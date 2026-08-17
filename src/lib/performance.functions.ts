@@ -141,6 +141,19 @@ function normalizeSeller(raw: string | null | undefined): string {
   return canonicalFrom(raw) ?? (raw?.trim() || "—");
 }
 
+/**
+ * Janela específica de LEADS NOVOS: a semana comercial de leads começa na
+ * SEXTA e termina na QUINTA. Só afeta a métrica de leads (clint_deals);
+ * atendimentos/vendas continuam na semana padrão.
+ */
+export function leadsWeekBounds(refISO: string): { startDate: string; endDate: string } {
+  const d = new Date(refISO + "T12:00:00Z");
+  const dow = d.getUTCDay(); // 0=dom … 5=sex
+  const back = (dow - 5 + 7) % 7; // dias desde a última sexta
+  const startDate = addDays(refISO, -back);
+  return { startDate, endDate: addDays(startDate, 6) };
+}
+
 export const fetchPerformanceFn = createServerFn({ method: "POST" })
   .inputValidator((d: { range: PerfRange; refDate?: string }) => d)
   .handler(async ({ data }) => {
@@ -150,6 +163,15 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     // Timestamps para tabelas com coluna timestamptz
     const startTS = `${startDate}T00:00:00.000Z`;
     const endTS   = `${endDate}T23:59:59.999Z`;
+
+    // Leads novos usam semana sexta→quinta (apenas quando range = week)
+    const leadsWin = data.range === "week" ? leadsWeekBounds(endDate) : { startDate, endDate };
+    const leadsStartTS = `${leadsWin.startDate}T00:00:00.000Z`;
+    const leadsEndTS   = `${leadsWin.endDate}T23:59:59.999Z`;
+    const leadsLabel = data.range === "week"
+      ? `Semana de leads (${leadsWin.startDate.slice(8)}/${leadsWin.startDate.slice(5, 7)}–${leadsWin.endDate.slice(8)}/${leadsWin.endDate.slice(5, 7)}) · sex→qui`
+      : label;
+
 
     // 1-3. Paralelizamos as três queries independentes (vendas, conversas do
     //      período e leads V3) — antes rodavam em série, o que na visão Mensal
