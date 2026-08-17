@@ -406,10 +406,19 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                     </span>
                   </span>
                 ) : (
-                  numInput(`t:${l.id}`, l.metaTri, (n) =>
-                    change({ ...cfg, metaTri: { ...cfg.metaTri, [l.id]: n } }),
-                  )
+                  <span className="flex items-center gap-1">
+                    {numInput(`t:${l.id}`, l.metaTri, (n) =>
+                      change({ ...cfg, metaTri: { ...cfg.metaTri, [l.id]: n } }),
+                    )}
+                    <span
+                      className="text-[10px] text-muted-foreground tabular-nums"
+                      title={`${l.metaTri.toFixed(2)}% sobre ~${l.leadsTri + l.leadsRestantes} leads projetados no trimestre`}
+                    >
+                      = {l.vendasMetaTri} vendas
+                    </span>
+                  </span>
                 )}
+
               </div>
             ))}
           </CardContent>
