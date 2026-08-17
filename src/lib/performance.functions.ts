@@ -428,6 +428,10 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       periodStart: startDate,
       periodEnd: endDate,
       periodLabel: label,
+      leadsPeriodLabel: leadsLabel,
+      leadsPeriodStart: leadsWin.startDate,
+      leadsPeriodEnd: leadsWin.endDate,
+
       sellers,
       team: {
         atendimentos: teamAt, vendas: teamVd, faturamento: teamFat,
