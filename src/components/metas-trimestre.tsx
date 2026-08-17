@@ -372,16 +372,43 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       <div className="grid gap-3 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">
-              Meta trimestral
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">
+                Meta trimestral
+              </CardTitle>
+              <div className="flex rounded-md border border-border p-0.5">
+                {(["pct", "qtd"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => change({ ...cfg, modo: m })}
+                    className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                      cfg.modo === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {m === "pct" ? "%" : "Vendas"}
+                  </button>
+                ))}
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-1.5 pt-0">
             {linhas.map((l) => (
               <div key={l.id} className="flex items-center justify-between gap-2 text-sm">
                 <span className="truncate text-muted-foreground">{l.label}</span>
-                {numInput(`t:${l.id}`, l.metaTri, (n) =>
-                  change({ ...cfg, metaTri: { ...cfg.metaTri, [l.id]: n } }),
+                {cfg.modo === "qtd" ? (
+                  <span className="flex items-center gap-1">
+                    {numInput(`tq:${l.id}`, l.metaQtd, (n) =>
+                      change({ ...cfg, metaTriQtd: { ...cfg.metaTriQtd, [l.id]: n } }),
+                    )}
+                    <span className="text-[10px] text-muted-foreground tabular-nums">
+                      = {pct(l.metaTri)}
+                    </span>
+                  </span>
+                ) : (
+                  numInput(`t:${l.id}`, l.metaTri, (n) =>
+                    change({ ...cfg, metaTri: { ...cfg.metaTri, [l.id]: n } }),
+                  )
                 )}
               </div>
             ))}
