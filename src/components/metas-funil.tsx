@@ -52,6 +52,11 @@ type Config = {
   baselines: Record<string, number>;
   metas: Record<string, number>; // meta do MÊS por funil (fonte da verdade)
   metasSemana: Record<string, number>; // override opcional da meta da semana
+  /** modo de edição das metas: percentual de aproveitamento ou quantidade de vendas */
+  modo: "pct" | "qtd";
+  metasQtd: Record<string, number>; // meta do MÊS em nº de vendas
+  metasQtdSemana: Record<string, number>; // meta da SEMANA em nº de vendas
+  metaGeralQtd: number | null; // meta geral em nº de vendas (quando modo = qtd)
   comparecimento: number; // % de reuniões agendadas que acontecem
   fechamento: number; // % de reuniões realizadas que viram venda
   metaGeral: number; // % de aproveitamento alvo somando todos os funis (mês)
@@ -63,12 +68,17 @@ const DEFAULT_CONFIG: Config = {
   baselines: {},
   metas: {},
   metasSemana: {},
+  modo: "pct",
+  metasQtd: {},
+  metasQtdSemana: {},
+  metaGeralQtd: null,
   comparecimento: 48.6,
   fechamento: 33,
   metaGeral: 5,
   metaCaptacao: CAPTACAO_META,
   vendedores: 5,
 };
+
 
 
 function loadConfig(): Config {
@@ -138,12 +148,23 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
     return Array.from(map.values())
       .map((f) => {
         const baseline = cfg.baselines[f.funnel] ?? metaTrimestral(f.funnel);
-        const metaMes = cfg.metas[f.funnel] ?? metaTrimestral(f.funnel);
+        const metaPctMes = cfg.metas[f.funnel] ?? metaTrimestral(f.funnel);
 
         // Na visão semanal usa a meta da semana (herda a do mês salvo override); na mensal usa a do mês
-        const meta = isWeek ? (cfg.metasSemana[f.funnel] ?? metaMes) : metaMes;
+        const metaPct = isWeek ? (cfg.metasSemana[f.funnel] ?? metaPctMes) : metaPctMes;
         const real = f.leads > 0 ? (f.vendas / f.leads) * 100 : 0;
-        const vendasMeta = ceil((f.leads * meta) / 100);
+
+        // Meta em quantidade de vendas: ou digitada direto, ou derivada do %
+        const qtdMes = cfg.metasQtd[f.funnel] ?? ceil((f.leads * metaPctMes) / 100);
+        const qtdSemana = cfg.metasQtdSemana[f.funnel] ?? qtdMes;
+        const isQtd = cfg.modo === "qtd";
+        const vendasMeta = isQtd
+          ? (isWeek ? qtdSemana : qtdMes)
+          : ceil((f.leads * metaPct) / 100);
+        // Quando a meta é em quantidade, o % passa a ser derivado dela
+        const meta = isQtd ? (f.leads > 0 ? (vendasMeta / f.leads) * 100 : 0) : metaPct;
+        const metaMes = isQtd ? (f.leads > 0 ? (qtdMes / f.leads) * 100 : 0) : metaPctMes;
+
         const gap = f.vendas - vendasMeta;
         // Reuniões necessárias: vendas alvo ÷ taxa de fechamento, e agendamentos ÷ comparecimento
         const reunioesRealizadas = ceil(cfg.fechamento > 0 ? vendasMeta / (cfg.fechamento / 100) : 0);
@@ -153,6 +174,8 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
           baseline,
           metaMes,
           meta,
+          qtdMes,
+          qtdSemana,
           real,
           vendasMeta,
           gap,
@@ -161,6 +184,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
           agendamentosSemana: isWeek ? ceil(agendamentos / semanas) : agendamentos,
         };
       })
+
       .filter((f) => f.leads > 0 || f.vendas > 0)
       .sort((a, b) => b.leads - a.leads);
   }, [data, cfg, from, to, isWeek]);
@@ -254,6 +278,20 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                 className="h-7 w-14 text-xs"
               />
             </label>
+            <div className="inline-flex rounded-md border border-border p-0.5" title="Definir as metas em % de aproveitamento ou em quantidade de vendas">
+              {(["pct", "qtd"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => save({ ...cfg, modo: m })}
+                  className={`px-2.5 py-1 text-[11px] rounded-sm transition-colors ${
+                    cfg.modo === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {m === "pct" ? "Meta em %" : "Meta em vendas"}
+                </button>
+              ))}
+            </div>
             {toggle}
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
 
@@ -300,8 +338,11 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                   <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">Leads</th>
                   <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Vendas</th>
                   <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">
-                    {isWeek ? "Meta % semana" : "Meta % mês"}
+                    {cfg.modo === "qtd"
+                      ? isWeek ? "Meta vendas semana" : "Meta vendas mês"
+                      : isWeek ? "Meta % semana" : "Meta % mês"}
                   </th>
+
                   <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Realizado</th>
                   <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">Atingimento</th>
                   <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">Vendas meta</th>
@@ -320,7 +361,35 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                     <td className="px-1.5 py-2 text-right tabular-nums border-l border-border/30">{r.leads}</td>
                     <td className="px-1.5 py-2 text-right tabular-nums text-emerald-500 font-medium">{r.vendas}</td>
                     <td className="px-1 py-2 text-right border-l border-border/30">
-                      {isWeek ? (
+                      {cfg.modo === "qtd" ? (
+                        <>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            value={
+                              drafts[`q:${r.funnel}`] ??
+                              String(isWeek ? r.qtdSemana : r.qtdMes)
+                            }
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setDrafts((d) => ({ ...d, [`q:${r.funnel}`]: v }));
+                              const n = Math.max(0, Math.round(Number(v.replace(",", "."))));
+                              if (v.trim() !== "" && Number.isFinite(n)) {
+                                if (isWeek) {
+                                  save({ ...cfg, metasQtdSemana: { ...cfg.metasQtdSemana, [r.funnel]: n } });
+                                } else {
+                                  const semana = { ...cfg.metasQtdSemana };
+                                  delete semana[r.funnel];
+                                  save({ ...cfg, metasQtd: { ...cfg.metasQtd, [r.funnel]: n }, metasQtdSemana: semana });
+                                }
+                              }
+                            }}
+                            onBlur={() => setDrafts((d) => { const n = { ...d }; delete n[`q:${r.funnel}`]; return n; })}
+                            className={`h-7 w-full text-xs text-right ${isWeek && cfg.metasQtdSemana[r.funnel] != null ? "border-amber-500" : ""}`}
+                          />
+                          <span className="block text-[9px] opacity-60">= {fmtPct(r.meta)}</span>
+                        </>
+                      ) : isWeek ? (
                         <>
                           <Input
                             type="text"
@@ -372,6 +441,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                         />
                       )}
                     </td>
+
                     <td className="px-1.5 py-2 text-right tabular-nums font-semibold">{fmtPct(r.real)}</td>
                     <td className="px-2 py-2">
                       <div className="flex items-center gap-1.5">
@@ -429,10 +499,16 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
               </tfoot>
             </table>
             {(() => {
+              const isQtd = cfg.modo === "qtd";
               const realGeral = totals.leads > 0 ? (totals.vendas / totals.leads) * 100 : 0;
-              const metaGeral = cfg.metaGeral;
+              const qtdGeral = isQtd
+                ? (cfg.metaGeralQtd ?? (totals.vendasMeta || ceil((totals.leads * cfg.metaGeral) / 100)))
+                : ceil((totals.leads * cfg.metaGeral) / 100);
+              const metaGeral = isQtd
+                ? (totals.leads > 0 ? (qtdGeral / totals.leads) * 100 : 0)
+                : cfg.metaGeral;
               const atgGeral = metaGeral > 0 ? (realGeral / metaGeral) * 100 : 0;
-              const vendasNecessarias = ceil((totals.leads * metaGeral) / 100);
+              const vendasNecessarias = qtdGeral;
               const faltam = vendasNecessarias - totals.vendas;
               return (
                 <div className="px-4 py-3 border-t border-border space-y-2 bg-muted/20">
@@ -444,20 +520,24 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                       Meta
                       <Input
                         type="text"
-                        inputMode="decimal"
-                        value={drafts.__geral ?? String(cfg.metaGeral)}
+                        inputMode={isQtd ? "numeric" : "decimal"}
+                        value={drafts.__geral ?? String(isQtd ? qtdGeral : cfg.metaGeral)}
                         onChange={(e) => {
                           const v = e.target.value;
                           setDrafts((d) => ({ ...d, __geral: v }));
                           const n = Number(v.replace(",", "."));
-                          if (v.trim() !== "" && Number.isFinite(n)) save({ ...cfg, metaGeral: n });
+                          if (v.trim() !== "" && Number.isFinite(n)) {
+                            if (isQtd) save({ ...cfg, metaGeralQtd: Math.max(0, Math.round(n)) });
+                            else save({ ...cfg, metaGeral: n });
+                          }
                         }}
                         onBlur={() => setDrafts((d) => { const n = { ...d }; delete n.__geral; return n; })}
                         className="h-7 w-20 text-xs text-right"
                       />
-                      %
+                      {isQtd ? "vendas" : "%"}
                     </label>
                     {statusBadge(atgGeral)}
+
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
