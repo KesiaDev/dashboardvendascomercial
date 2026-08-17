@@ -426,7 +426,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
               <div key={l.id} className="flex items-center justify-between gap-2 text-sm">
                 <span className="truncate text-muted-foreground">{l.label}</span>
                 <span className="tabular-nums font-semibold" title={`${l.vendasTri}/${l.leadsTri}`}>
-                  {pct(l.convTri)}
+                  {cfg.modo === "qtd" ? `${l.vendasTri} / ${l.metaQtd}` : pct(l.convTri)}
                 </span>
               </div>
             ))}
