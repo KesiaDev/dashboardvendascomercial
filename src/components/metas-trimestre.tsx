@@ -546,7 +546,18 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                         {l.vendasTri}
                       </td>
                       <td className="px-1.5 py-2 text-right tabular-nums font-semibold">{pct(l.convTri)}</td>
-                      <td className="px-1.5 py-2 text-right tabular-nums">{pct(l.metaTri)}</td>
+                      <td className="px-1.5 py-2 text-right tabular-nums">
+                        {cfg.modo === "qtd" ? (
+                          <span className="flex items-center justify-end gap-1">
+                            {numInput(`tq2:${l.id}`, l.metaQtd, (n) =>
+                              change({ ...cfg, metaTriQtd: { ...cfg.metaTriQtd, [l.id]: n } }),
+                            )}
+                            <span className="text-[9px] opacity-60">{pct(l.metaTri)}</span>
+                          </span>
+                        ) : (
+                          pct(l.metaTri)
+                        )}
+                      </td>
                       <td
                         className={`px-1.5 py-2 text-right tabular-nums font-medium ${l.gapPP >= 0 ? "text-emerald-500" : "text-red-500"}`}
                       >
