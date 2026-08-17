@@ -328,6 +328,11 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     for (const day of eachDay(startDate, endDate)) {
       dailyMap.set(day, { atendimentos: 0, vendas: 0, faturamento: 0, leads: 0 });
     }
+    // garante os dias da janela de leads (sex→qui) na série diária
+    for (const day of eachDay(leadsWin.startDate, leadsWin.endDate)) {
+      if (!dailyMap.has(day)) dailyMap.set(day, { atendimentos: 0, vendas: 0, faturamento: 0, leads: 0 });
+    }
+
     for (const b of buckets.values()) {
       const ref = b.firstAt ?? b.lastAt;
       if (!ref) continue;
