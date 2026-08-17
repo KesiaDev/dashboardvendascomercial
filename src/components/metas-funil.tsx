@@ -338,8 +338,11 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                   <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">Leads</th>
                   <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Vendas</th>
                   <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">
-                    {isWeek ? "Meta % semana" : "Meta % mês"}
+                    {cfg.modo === "qtd"
+                      ? isWeek ? "Meta vendas semana" : "Meta vendas mês"
+                      : isWeek ? "Meta % semana" : "Meta % mês"}
                   </th>
+
                   <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Realizado</th>
                   <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">Atingimento</th>
                   <th className="px-1.5 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-l border-border/40">Vendas meta</th>
