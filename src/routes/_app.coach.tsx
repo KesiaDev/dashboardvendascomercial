@@ -38,6 +38,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { isAdminUser, isAllowedSellerEmail, isCaseOwnerEmail } from "@/lib/auth";
 import { CasesTab } from "@/components/coach-cases";
 import { ObjecoesTab } from "@/components/coach-objecoes";
+import { PerfisTab } from "@/components/coach-perfis";
 
 
 export const Route = createFileRoute("/_app/coach")({
