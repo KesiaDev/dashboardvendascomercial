@@ -5,6 +5,17 @@ async function admin() {
   return supabaseAdmin;
 }
 
+export type PerfilConversa = {
+  id: string;
+  contato: string;
+  seller: string;
+  is_ai: boolean;
+  last_message_at: string | null;
+  score: number | null;
+  status: "ganho" | "perdido" | "aberto";
+  trecho: string;
+};
+
 export type PerfilRow = {
   perfil: string;
   descricao: string;
@@ -13,11 +24,16 @@ export type PerfilRow = {
   humano: number;
   ia: number;
   vendas: number;
+  ganhos: number;
+  perdidos: number;
+  abertos: number;
   conv: number;
   avg_score: number | null;
   exemplos: string[];
   sellers: { seller: string; total: number }[];
+  conversas: PerfilConversa[];
 };
+
 
 export type PerfisResult = {
   from: string;
