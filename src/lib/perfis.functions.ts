@@ -16,6 +16,7 @@ export type PerfilConversa = {
   score: number | null;
   status: "ganho" | "perdido" | "aberto";
   trecho: string;
+  profissao: string | null;
 };
 
 export type PerfilRow = {
