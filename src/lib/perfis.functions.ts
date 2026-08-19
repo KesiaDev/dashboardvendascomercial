@@ -155,7 +155,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
     let q = db
       .from("coach_conversations")
-      .select("id, seller_name, seller_email, is_ai_conversation, contact_name")
+      .select("id, seller_name, seller_email, is_ai_conversation, contact_name, contact_email")
       .gte("last_message_at", `${from}T00:00:00Z`)
       .lte("last_message_at", `${to}T23:59:59Z`)
       .order("last_message_at", { ascending: false })
@@ -167,6 +167,23 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     const list = (convs ?? []) as any[];
     const ids = list.map((c) => c.id);
+
+    // Clientes que compraram (fechamento manual) — para conversão por perfil
+    const soldEmails = new Set<string>();
+    const soldNames = new Set<string>();
+    {
+      const { data: vendas } = await db.from("manual_sales").select("client_name, client_email").limit(5000);
+      for (const v of (vendas ?? []) as any[]) {
+        if (v.client_email) soldEmails.add(String(v.client_email).trim().toLowerCase());
+        if (v.client_name) soldNames.add(normalize(String(v.client_name).trim()));
+      }
+    }
+    const isSold = (c: any) => {
+      const em = c.contact_email ? String(c.contact_email).trim().toLowerCase() : "";
+      const nm = c.contact_name ? normalize(String(c.contact_name).trim()) : "";
+      return (em !== "" && soldEmails.has(em)) || (nm !== "" && soldNames.has(nm));
+    };
+
 
     // Texto do lead (mensagens inbound)
     const textById = new Map<string, string>();
