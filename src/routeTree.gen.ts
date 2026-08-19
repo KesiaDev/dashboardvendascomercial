@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as ApiConversaProvaRouteImport } from './routes/api/conversa-prova'
 import { Route as AppVendedorProdutoRouteImport } from './routes/_app.vendedor-produto'
 import { Route as AppVendasReaisRouteImport } from './routes/_app.vendas-reais'
 import { Route as AppUsuariosRouteImport } from './routes/_app.usuarios'
@@ -76,6 +77,11 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/callback',
   path: '/callback',
   getParentRoute: () => AuthRoute,
+} as any)
+const ApiConversaProvaRoute = ApiConversaProvaRouteImport.update({
+  id: '/api/conversa-prova',
+  path: '/api/conversa-prova',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppVendedorProdutoRoute = AppVendedorProdutoRouteImport.update({
   id: '/vendedor-produto',
@@ -330,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/usuarios': typeof AppUsuariosRoute
   '/vendas-reais': typeof AppVendasReaisRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
+  '/api/conversa-prova': typeof ApiConversaProvaRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/coach/$id': typeof AppCoachIdRoute
   '/api/clint/webhook': typeof ApiClintWebhookRoute
@@ -378,6 +385,7 @@ export interface FileRoutesByTo {
   '/usuarios': typeof AppUsuariosRoute
   '/vendas-reais': typeof AppVendasReaisRoute
   '/vendedor-produto': typeof AppVendedorProdutoRoute
+  '/api/conversa-prova': typeof ApiConversaProvaRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/': typeof AppIndexRoute
   '/coach/$id': typeof AppCoachIdRoute
@@ -429,6 +437,7 @@ export interface FileRoutesById {
   '/_app/usuarios': typeof AppUsuariosRoute
   '/_app/vendas-reais': typeof AppVendasReaisRoute
   '/_app/vendedor-produto': typeof AppVendedorProdutoRoute
+  '/api/conversa-prova': typeof ApiConversaProvaRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_app/': typeof AppIndexRoute
   '/_app/coach/$id': typeof AppCoachIdRoute
@@ -481,6 +490,7 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/vendas-reais'
     | '/vendedor-produto'
+    | '/api/conversa-prova'
     | '/auth/callback'
     | '/coach/$id'
     | '/api/clint/webhook'
@@ -529,6 +539,7 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/vendas-reais'
     | '/vendedor-produto'
+    | '/api/conversa-prova'
     | '/auth/callback'
     | '/'
     | '/coach/$id'
@@ -579,6 +590,7 @@ export interface FileRouteTypes {
     | '/_app/usuarios'
     | '/_app/vendas-reais'
     | '/_app/vendedor-produto'
+    | '/api/conversa-prova'
     | '/auth/callback'
     | '/_app/'
     | '/_app/coach/$id'
@@ -607,6 +619,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  ApiConversaProvaRoute: typeof ApiConversaProvaRoute
   ApiClintWebhookRoute: typeof ApiClintWebhookRoute
   ApiHotmartWebhookRoute: typeof ApiHotmartWebhookRoute
   ApiPublicBackfillAiExactRoute: typeof ApiPublicBackfillAiExactRoute
@@ -656,6 +669,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/callback'
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/api/conversa-prova': {
+      id: '/api/conversa-prova'
+      path: '/api/conversa-prova'
+      fullPath: '/api/conversa-prova'
+      preLoaderRoute: typeof ApiConversaProvaRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/vendedor-produto': {
       id: '/_app/vendedor-produto'
@@ -1053,6 +1073,7 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  ApiConversaProvaRoute: ApiConversaProvaRoute,
   ApiClintWebhookRoute: ApiClintWebhookRoute,
   ApiHotmartWebhookRoute: ApiHotmartWebhookRoute,
   ApiPublicBackfillAiExactRoute: ApiPublicBackfillAiExactRoute,
