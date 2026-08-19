@@ -189,6 +189,16 @@ export function PerfisTab() {
                     {r.exemplos.slice(0, 2).map((e, i) => (
                       <p key={i} className="text-[11px] text-muted-foreground italic mb-1">{e}</p>
                     ))}
+                    {r.profissoes.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-1">
+                        {r.profissoes.slice(0, 6).map((p) => (
+                          <Badge key={p.nome} variant="secondary" className="text-[10px] capitalize">
+                            {p.nome} · {p.total}
+                            {p.vendas > 0 ? ` · ${p.vendas} venda${p.vendas > 1 ? "s" : ""}` : ""}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex flex-wrap gap-1">
                       {r.sellers.map((s) => (
                         <Badge key={s.seller} variant="outline" className="text-[10px]">{s.seller} · {s.total}</Badge>
