@@ -1855,6 +1855,33 @@ export type Database = {
           },
         ]
       }
+      lead_perfil_cache: {
+        Row: {
+          conversation_id: string
+          evidencia: string | null
+          perfil: string | null
+          profissao: string | null
+          text_hash: string
+          updated_at: string
+        }
+        Insert: {
+          conversation_id: string
+          evidencia?: string | null
+          perfil?: string | null
+          profissao?: string | null
+          text_hash: string
+          updated_at?: string
+        }
+        Update: {
+          conversation_id?: string
+          evidencia?: string | null
+          perfil?: string | null
+          profissao?: string | null
+          text_hash?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       manual_sales: {
         Row: {
           affiliate_mismatch: boolean
