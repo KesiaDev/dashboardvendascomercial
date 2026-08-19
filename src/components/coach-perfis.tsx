@@ -12,7 +12,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
-import type { ConversaProva } from "@/lib/conversa-prova.server";
+
+type ConversaProva = {
+  id: string;
+  contato: string;
+  seller: string;
+  is_ai: boolean;
+  origin_name: string | null;
+  stage: string | null;
+  status: "ganho" | "perdido" | "aberto";
+  mensagens: { direction: string; sender: string | null; body: string; sent_at: string }[];
+};
 
 async function fetchConversaProva(id: string): Promise<ConversaProva> {
   const { data: sess } = await supabase.auth.getSession();
@@ -315,7 +325,7 @@ function PerfilConversasDialog({
 function ConversaDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
   const { data, isLoading } = useQuery({
     queryKey: ["perfil-conversa", id],
-    queryFn: () => fetchConversaProvaFn({ data: { id: id! } }),
+    queryFn: () => fetchConversaProva(id!),
     enabled: !!id,
   });
   return (
