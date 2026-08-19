@@ -1841,23 +1841,35 @@ function LigacoesTab() {
                   </button>
                 ))}
               </div>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 gap-1 text-xs">
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                    {format(refDate, "dd/MM/yyyy", { locale: ptBR })}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="single"
-                    selected={refDate}
-                    onSelect={(d) => d && setRefDate(d)}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
+              {range === "month" ? (
+                <select
+                  value={`${new Date(refDate.getTime() - 3 * 3600_000).toISOString().slice(0, 7)}-01`}
+                  onChange={(e) => setRefDate(new Date(e.target.value + "T12:00:00Z"))}
+                  className="h-9 text-xs border rounded-md px-2 bg-background"
+                >
+                  {monthOptions.map((mo) => (
+                    <option key={mo.value} value={mo.value}>{mo.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 gap-1 text-xs">
+                      <CalendarIcon className="h-3.5 w-3.5" />
+                      {format(refDate, "dd/MM/yyyy", { locale: ptBR })}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="single"
+                      selected={refDate}
+                      onSelect={(d) => d && setRefDate(d)}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
               <div className="hidden sm:block h-6 w-px bg-border mx-1" />
               <Label className="text-xs hidden sm:inline">Sync:</Label>
               <Input type="number" min={1} max={90} className="h-8 w-20" value={days} onChange={(e) => setDays(Math.max(1, Math.min(90, Number(e.target.value) || 7)))} />
