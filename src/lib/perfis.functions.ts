@@ -454,10 +454,6 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       const ocupacao = extractOcupacao(text);
       if (ocupacao) profissaoById.set(c.id, ocupacao);
       const hits = classify(text);
-      if (hits.length === 0 && ocupacao) {
-        hits.push(PROFISSAO_DECLARADA);
-        evidenciaById.set(c.id, ocupacao);
-      }
       hitsById.set(c.id, hits);
     }
 
