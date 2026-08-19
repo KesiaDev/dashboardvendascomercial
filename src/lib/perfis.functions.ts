@@ -7,6 +7,14 @@ async function admin() {
   return supabaseAdmin;
 }
 
+// hash barato para saber se a conversa mudou desde a última classificação da IA
+function hashText(t: string): string {
+  let h = 5381;
+  for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0;
+  return `${t.length}-${h.toString(36)}`;
+}
+
+
 export type PerfilConversa = {
   id: string;
   contato: string;
