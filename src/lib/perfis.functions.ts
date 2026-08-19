@@ -181,15 +181,36 @@ const AUTOMACAO_PATTERNS = [
   "quero saber mais sobre o minicurso",
   "recebi o link",
   "confirmo minha presenca",
+  // opt-in da imersão / grupo (não diz nada sobre o perfil do lead)
+  "quero receber o presente",
+  "quero o presente",
+  "presente da imersao",
+  "quero participar da imersao",
+  "quero entrar na imersao",
+  "quero entrar no grupo",
+  "ainda nao entrei",
+  "agora consegui",
+  "consegui entrar",
+  "quero as aulas",
+  "quero o link",
+  "quero receber os links",
+  "combinado",
+  "obrigad",
+  "bom dia",
+  "boa tarde",
+  "boa noite",
 ];
 
 function isAutomacao(body: string): boolean {
   const t = normalize(body).replace(/\s+/g, " ").trim();
   if (t.length < 3) return true;
   // respostas de botão: "sim", "sim quero", "ok", "1", "2"
-  if (/^(sim|nao|ok|okay|quero|sim quero|sim!|\d{1,2})$/.test(t)) return true;
+  if (/^(sim|nao|ok|okay|quero|sim quero|sim!|ja|ja entrei|\d{1,2})$/.test(t)) return true;
+  // frases curtas de opt-in sem conteúdo real
+  if (t.length < 25 && /^(sim|ok|quero|ja|entrei|consegui|combinado|obrigad)/.test(t)) return true;
   return AUTOMACAO_PATTERNS.some((p) => t.includes(p));
 }
+
 
 
 export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
