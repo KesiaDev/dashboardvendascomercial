@@ -1339,6 +1339,23 @@ function PerformanceTab() {
   const todayISO = new Date().toISOString().slice(0, 10);
   const [refDate, setRefDate] = useState<string>(todayISO);
 
+  // Lista de meses disponíveis desde o início da temporada (jun/2026) até o mês atual
+  const monthOptions = useMemo(() => {
+    const months: { value: string; label: string }[] = [];
+    const now = new Date();
+    let y = 2026, m = 6; // junho/2026 — início da temporada
+    while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
+      months.push({
+        value: `${y}-${String(m).padStart(2, "0")}-01`,
+        label: `${MONTHS_PT[m - 1]} ${y}`,
+      });
+      m++;
+      if (m > 12) { m = 1; y++; }
+    }
+    return months.reverse(); // mais recente primeiro
+  }, []);
+  const selectedMonth = refDate.slice(0, 7) + "-01";
+
   const effectiveRefDate = refDate;
 
   const { data: perf, isLoading, isFetching, error: perfError } = useQuery({
