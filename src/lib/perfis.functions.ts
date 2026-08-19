@@ -551,6 +551,9 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
           .map(([seller, total]) => ({ seller, total }))
           .sort((x, y) => y.total - x.total)
           .slice(0, 4),
+        profissoes: Array.from(a.profissoes.values()).sort(
+          (x, y) => y.vendas - x.vendas || y.ganhos - x.ganhos || y.total - x.total,
+        ),
         conversas: a.conversas.sort((x, y) => (y.last_message_at ?? "").localeCompare(x.last_message_at ?? "")),
       }))
       .sort((a, b) => {
