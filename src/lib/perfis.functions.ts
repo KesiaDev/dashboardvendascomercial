@@ -145,6 +145,33 @@ function snippet(text: string, perfil: string): string | null {
   return null;
 }
 
+// Mensagens de automação / opt-in (o lead clicou num botão do funil).
+// Não são "conversa real" — poluem os perfis e os trechos.
+const AUTOMACAO_PATTERNS = [
+  "acabei de inscrever",
+  "acabei de me inscrever",
+  "gostaria de receb",
+  "quero receber o ebook",
+  "quero o ebook",
+  "quero receber o minicurso",
+  "quero participar da sessao",
+  "quero minha sessao estrategica",
+  "vim pelo anuncio",
+  "vim pelo instagram",
+  "quero saber mais sobre o minicurso",
+  "recebi o link",
+  "confirmo minha presenca",
+];
+
+function isAutomacao(body: string): boolean {
+  const t = normalize(body).replace(/\s+/g, " ").trim();
+  if (t.length < 3) return true;
+  // respostas de botão: "sim", "sim quero", "ok", "1", "2"
+  if (/^(sim|nao|ok|okay|quero|sim quero|sim!|\d{1,2})$/.test(t)) return true;
+  return AUTOMACAO_PATTERNS.some((p) => t.includes(p));
+}
+
+
 export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
   .inputValidator((d: { from?: string; to?: string; origem?: "todas" | "humano" | "ia" } = {}) => d)
   .handler(async ({ data }): Promise<PerfisResult> => {
@@ -185,8 +212,9 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     };
 
 
-    // Texto do lead (mensagens inbound)
+    // Texto do lead (mensagens inbound reais — sem automação/opt-in, sem repetições)
     const textById = new Map<string, string>();
+    const seenById = new Map<string, Set<string>>();
     for (let i = 0; i < ids.length; i += 100) {
       const chunk = ids.slice(i, i + 100);
       const { data: msgs } = await db
@@ -197,11 +225,19 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         .limit(20000);
       for (const m of (msgs ?? []) as any[]) {
         if (!m.body) continue;
+        const body = String(m.body);
+        if (isAutomacao(body)) continue;
+        const key = normalize(body).replace(/\s+/g, " ").trim().slice(0, 120);
+        let seen = seenById.get(m.conversation_id);
+        if (!seen) { seen = new Set(); seenById.set(m.conversation_id, seen); }
+        if (seen.has(key)) continue;
+        seen.add(key);
         const prev = textById.get(m.conversation_id) ?? "";
         if (prev.length > 6000) continue;
-        textById.set(m.conversation_id, `${prev} ${m.body}`);
+        textById.set(m.conversation_id, `${prev} ${body}`);
       }
     }
+
 
     // Notas das análises
     const scoreById = new Map<string, number>();
