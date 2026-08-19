@@ -530,9 +530,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         descricao:
           perfil === NAO_IDENTIFICADO
             ? "Lead conversou, mas não revelou nada sobre a vida/profissão dele — precisa de pergunta de qualificação"
-            : perfil === PROFISSAO_DECLARADA
-              ? "Lead disse a profissão dele, mas ela não se encaixa nos perfis padrão (ex.: assistente técnica, administrativa)"
-              : PERFIS.find((p) => p.nome === perfil)?.descricao ?? "",
+            : PERFIS.find((p) => p.nome === perfil)?.descricao ?? "",
 
 
         total: a.total,
