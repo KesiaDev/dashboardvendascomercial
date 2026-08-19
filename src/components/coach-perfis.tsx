@@ -195,6 +195,11 @@ export function PerfisTab() {
                     {r.exemplos.slice(0, 2).map((e, i) => (
                       <p key={i} className="text-[11px] text-muted-foreground italic mb-1">{e}</p>
                     ))}
+                    {r.sem_pergunta > 0 && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 mb-1">
+                        {r.sem_pergunta} de {r.total} sem pergunta de profissão pelo vendedor
+                      </p>
+                    )}
                     {r.profissoes.length > 0 && (
                       <div className="flex flex-wrap gap-1 mb-1">
                         {r.profissoes.slice(0, 6).map((p) => (
@@ -326,6 +331,11 @@ function PerfilConversasDialog({
                   <Badge variant="outline" className={`text-[10px] ${STATUS_STYLE[c.status]}`}>{c.status === "aberto" ? "em aberto" : c.status}</Badge>
                   <Badge variant="outline" className="text-[10px]">{c.is_ai ? "Agente IA" : c.seller}</Badge>
                   {c.profissao && <Badge variant="secondary" className="text-[10px] capitalize">{c.profissao}</Badge>}
+                  {!c.perguntou_profissao && (
+                    <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-600 dark:text-amber-400">
+                      vendedor não perguntou a profissão
+                    </Badge>
+                  )}
                   {c.score != null && <Badge variant="outline" className="text-[10px]">nota {c.score.toFixed(1)}</Badge>}
                   <span className="text-[11px] text-muted-foreground ml-auto">
                     {c.last_message_at ? new Date(c.last_message_at).toLocaleDateString("pt-BR") : "—"}
