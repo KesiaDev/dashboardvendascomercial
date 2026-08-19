@@ -147,6 +147,30 @@ const PERFIS: PerfilDef[] = [
   },
 ];
 
+const PROFISSAO_DECLARADA = "Profissão declarada (outros)";
+
+// Frases em que o lead declara ocupação: "sou assistente técnica", "trabalho como auxiliar"...
+const OCUPACAO_RE =
+  /\b(?:sou|trabalho como|atuo como|trabalho de|trabalho na area de|minha profissao e|minha profissao é|sou formad[ao] em|faco faculdade de)\s+([a-zà-ú][a-zà-ú\s()/-]{2,40})/i;
+
+const OCUPACAO_STOP = [
+  "muito", "bem", "so", "só", "de casa", "do lar", "grato", "grata", "aqui", "novo", "nova",
+  "interessad", "curios", "iniciante", "sim", "eu", "a favor",
+];
+
+function extractOcupacao(text: string): string | null {
+  for (const frase of text.split(/[.!?\n]/)) {
+    const m = OCUPACAO_RE.exec(frase.trim());
+    if (!m) continue;
+    const raw = m[1].replace(/\s+/g, " ").trim().replace(/[,;]+$/, "");
+    const n = normalize(raw);
+    if (n.length < 4) continue;
+    if (OCUPACAO_STOP.some((s) => n.startsWith(normalize(s)))) continue;
+    return raw.slice(0, 40);
+  }
+  return null;
+}
+
 function classify(text: string): string[] {
   const t = normalize(text);
   const hits: string[] = [];
@@ -155,6 +179,62 @@ function classify(text: string): string[] {
   }
   return hits;
 }
+
+// Classificação conversa por conversa com IA para o que a heurística não pegou.
+async function classifyWithAI(
+  items: { id: string; text: string }[],
+): Promise<Map<string, { perfil: string; evidencia: string }>> {
+  const out = new Map<string, { perfil: string; evidencia: string }>();
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key || items.length === 0) return out;
+
+  const nomes = [...PERFIS.map((p) => p.nome), PROFISSAO_DECLARADA, NAO_IDENTIFICADO];
+  const sys =
+    "Você classifica o PERFIL DE VIDA/PROFISSÃO de leads a partir do que o próprio lead escreveu no WhatsApp. " +
+    `Escolha UM perfil desta lista exata: ${nomes.join(" | ")}. ` +
+    `Use "${PROFISSAO_DECLARADA}" quando o lead disser a profissão dele mas ela não couber em nenhum outro perfil (ex.: "sou assistente técnica administrativa"). ` +
+    `Use "${NAO_IDENTIFICADO}" só quando não houver nenhuma pista real sobre a vida/trabalho dele. ` +
+    'Responda APENAS JSON: {"itens":[{"id":"...","perfil":"...","evidencia":"trecho literal do lead"}]}';
+
+  const batches: { id: string; text: string }[][] = [];
+  for (let i = 0; i < items.length; i += 12) batches.push(items.slice(i, i + 12));
+
+  for (const batch of batches.slice(0, 20)) {
+    try {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-lite",
+          messages: [
+            { role: "system", content: sys },
+            {
+              role: "user",
+              content: batch
+                .map((b) => `ID: ${b.id}\nLEAD DISSE: ${b.text.replace(/\s+/g, " ").slice(0, 900)}`)
+                .join("\n---\n"),
+            },
+          ],
+        }),
+      });
+      if (!res.ok) continue;
+      const j: any = await res.json();
+      const raw = String(j?.choices?.[0]?.message?.content ?? "");
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (!m) continue;
+      const parsed = JSON.parse(m[0]);
+      for (const it of parsed?.itens ?? []) {
+        const perfil = String(it?.perfil ?? "").trim();
+        if (!nomes.includes(perfil) || perfil === NAO_IDENTIFICADO) continue;
+        out.set(String(it?.id), { perfil, evidencia: String(it?.evidencia ?? "").slice(0, 200) });
+      }
+    } catch {
+      /* segue com heurística */
+    }
+  }
+  return out;
+}
+
 
 function snippet(text: string, perfil: string): string | null {
   const def = PERFIS.find((p) => p.nome === perfil);
