@@ -377,7 +377,11 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     const ranking: PerfilRow[] = Array.from(agg.entries())
       .map(([perfil, a]) => ({
         perfil,
-        descricao: PERFIS.find((p) => p.nome === perfil)?.descricao ?? "",
+        descricao:
+          perfil === NAO_IDENTIFICADO
+            ? "Lead conversou, mas não revelou nada sobre a vida/profissão dele — precisa de pergunta de qualificação"
+            : PERFIS.find((p) => p.nome === perfil)?.descricao ?? "",
+
         total: a.total,
         pct: comTexto ? (a.total / comTexto) * 100 : 0,
         humano: a.humano,
