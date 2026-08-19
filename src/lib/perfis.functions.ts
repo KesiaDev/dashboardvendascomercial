@@ -483,7 +483,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
         let a = agg.get(h);
         if (!a) {
-          a = { total: 0, humano: 0, ia: 0, vendas: 0, ganhos: 0, perdidos: 0, abertos: 0, scores: [], exemplos: [], sellers: new Map(), conversas: [] };
+          a = { total: 0, humano: 0, ia: 0, vendas: 0, ganhos: 0, perdidos: 0, abertos: 0, scores: [], exemplos: [], sellers: new Map(), profissoes: new Map(), conversas: [] };
           agg.set(h, a);
         }
         a.total++;
@@ -496,6 +496,15 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         const s = scoreById.get(c.id);
         if (typeof s === "number") a.scores.push(s);
         a.sellers.set(seller, (a.sellers.get(seller) ?? 0) + 1);
+        const prof = profissaoById.get(c.id) ?? null;
+        if (prof) {
+          const k = normalize(prof).replace(/\s+/g, " ").trim();
+          const p = a.profissoes.get(k) ?? { nome: prof, total: 0, vendas: 0, ganhos: 0 };
+          p.total++;
+          if (vendeu) p.vendas++;
+          if (st === "ganho") p.ganhos++;
+          a.profissoes.set(k, p);
+        }
         const ev = evidenciaById.get(c.id);
         const sn = snippet(text, h) ?? (ev ? `...${ev}...` : null);
         if (a.exemplos.length < 3 && sn) a.exemplos.push(sn);
@@ -510,6 +519,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
             score: typeof s === "number" ? s : null,
             status: st,
             trecho: sn ?? text.slice(0, 160),
+            profissao: prof,
           });
         }
       }
