@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, Sparkles, Users } from "lucide-react";
+import { Copy, MessageSquare, Sparkles, Users } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,15 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { fetchPerfisLeadsFn, generatePerfisInsightFn, type PerfisInsight } from "@/lib/perfis.functions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  fetchConversaProvaFn,
+  fetchPerfisLeadsFn,
+  generatePerfisInsightFn,
+  type PerfilRow,
+  type PerfisInsight,
+} from "@/lib/perfis.functions";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -18,6 +26,8 @@ export function PerfisTab() {
   const [to, setTo] = useState(iso(new Date()));
   const [origem, setOrigem] = useState<"todas" | "humano" | "ia">("todas");
   const [insight, setInsight] = useState<PerfisInsight | null>(null);
+  const [perfilAberto, setPerfilAberto] = useState<PerfilRow | null>(null);
+  const [conversaId, setConversaId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["coach-perfis", from, to, origem],
@@ -113,10 +123,14 @@ export function PerfisTab() {
                 <th className="text-right p-2">%</th>
                 <th className="text-right p-2">Vendas</th>
                 <th className="text-right p-2">Conv.</th>
+                <th className="text-right p-2">Ganho</th>
+                <th className="text-right p-2">Perdido</th>
+                <th className="text-right p-2">Em aberto</th>
                 <th className="text-right p-2">Equipe</th>
                 <th className="text-right p-2">Agente IA</th>
                 <th className="text-right p-2">Nota média</th>
                 <th className="text-left p-2">Trecho real / vendedores</th>
+                <th className="text-right p-2">Prova</th>
               </tr>
             </thead>
             <tbody>
@@ -130,6 +144,9 @@ export function PerfisTab() {
                   <td className="p-2 text-right">{r.pct.toFixed(1)}%</td>
                   <td className="p-2 text-right font-semibold text-emerald-600 dark:text-emerald-400">{r.vendas}</td>
                   <td className="p-2 text-right">{r.conv.toFixed(1)}%</td>
+                  <td className="p-2 text-right text-emerald-600 dark:text-emerald-400">{r.ganhos}</td>
+                  <td className="p-2 text-right text-rose-600 dark:text-rose-400">{r.perdidos}</td>
+                  <td className="p-2 text-right text-amber-600 dark:text-amber-400">{r.abertos}</td>
                   <td className="p-2 text-right">{r.humano}</td>
                   <td className="p-2 text-right">{r.ia}</td>
                   <td className="p-2 text-right">{r.avg_score != null ? r.avg_score.toFixed(2) : "—"}</td>
@@ -143,10 +160,15 @@ export function PerfisTab() {
                       ))}
                     </div>
                   </td>
+                  <td className="p-2 text-right">
+                    <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setPerfilAberto(r)}>
+                      <MessageSquare className="h-3 w-3 mr-1" /> Ver conversas
+                    </Button>
+                  </td>
                 </tr>
               ))}
               {(data?.ranking?.length ?? 0) === 0 && (
-                <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Sem dados."}</td></tr>
+                <tr><td colSpan={13} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Sem dados."}</td></tr>
               )}
 
             </tbody>
@@ -202,7 +224,118 @@ export function PerfisTab() {
           </CardContent>
         </Card>
       )}
+
+      <PerfilConversasDialog
+        perfil={perfilAberto}
+        onClose={() => setPerfilAberto(null)}
+        onOpenConversa={(id) => setConversaId(id)}
+      />
+      <ConversaDialog id={conversaId} onClose={() => setConversaId(null)} />
     </div>
+  );
+}
+
+const STATUS_STYLE: Record<string, string> = {
+  ganho: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+  perdido: "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30",
+  aberto: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30",
+};
+
+function PerfilConversasDialog({
+  perfil, onClose, onOpenConversa,
+}: { perfil: PerfilRow | null; onClose: () => void; onOpenConversa: (id: string) => void }) {
+  const [filtro, setFiltro] = useState<"todos" | "ganho" | "perdido" | "aberto">("todos");
+  const lista = (perfil?.conversas ?? []).filter((c) => filtro === "todos" || c.status === filtro);
+  return (
+    <Dialog open={!!perfil} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle className="text-base">{perfil?.perfil} — conversas reais ({perfil?.conversas.length ?? 0})</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-wrap gap-2">
+          {(["todos", "ganho", "perdido", "aberto"] as const).map((f) => (
+            <Button key={f} size="sm" variant={filtro === f ? "default" : "outline"} className="h-7 text-[11px] capitalize" onClick={() => setFiltro(f)}>
+              {f === "todos" ? "Todos" : f === "aberto" ? "Em aberto" : f}
+              {f !== "todos" && perfil ? ` · ${f === "ganho" ? perfil.ganhos : f === "perdido" ? perfil.perdidos : perfil.abertos}` : ""}
+            </Button>
+          ))}
+        </div>
+        <ScrollArea className="h-[60vh] pr-3">
+          <div className="space-y-2">
+            {lista.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => onOpenConversa(c.id)}
+                className="w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition"
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium text-sm">{c.contato}</span>
+                  <Badge variant="outline" className={`text-[10px] ${STATUS_STYLE[c.status]}`}>{c.status === "aberto" ? "em aberto" : c.status}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{c.is_ai ? "Agente IA" : c.seller}</Badge>
+                  {c.score != null && <Badge variant="outline" className="text-[10px]">nota {c.score.toFixed(1)}</Badge>}
+                  <span className="text-[11px] text-muted-foreground ml-auto">
+                    {c.last_message_at ? new Date(c.last_message_at).toLocaleDateString("pt-BR") : "—"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground italic mt-1 line-clamp-2">{c.trecho}</p>
+              </button>
+            ))}
+            {lista.length === 0 && <p className="text-sm text-muted-foreground p-4 text-center">Nenhuma conversa neste filtro.</p>}
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ConversaDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["perfil-conversa", id],
+    queryFn: () => fetchConversaProvaFn({ data: { id: id! } }),
+    enabled: !!id,
+  });
+  return (
+    <Dialog open={!!id} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="text-base">
+            {data?.contato ?? "Conversa"}{" "}
+            {data && (
+              <Badge variant="outline" className={`text-[10px] ml-2 ${STATUS_STYLE[data.status]}`}>
+                {data.status === "aberto" ? "em aberto" : data.status}
+              </Badge>
+            )}
+          </DialogTitle>
+        </DialogHeader>
+        {data && (
+          <p className="text-[11px] text-muted-foreground -mt-2">
+            {data.is_ai ? "Agente IA" : data.seller}
+            {data.origin_name ? ` · ${data.origin_name}` : ""}{data.stage ? ` · ${data.stage}` : ""}
+          </p>
+        )}
+        <ScrollArea className="h-[65vh] pr-3">
+          {isLoading && <p className="text-sm text-muted-foreground p-4">Carregando conversa...</p>}
+          <div className="space-y-2">
+            {(data?.mensagens ?? []).map((m, i) => {
+              const lead = m.direction === "inbound";
+              return (
+                <div key={i} className={`flex ${lead ? "justify-start" : "justify-end"}`}>
+                  <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${lead ? "bg-muted" : "bg-primary/10"}`}>
+                    <p className="text-[10px] text-muted-foreground mb-0.5">
+                      {lead ? "Lead" : m.sender || "Vendedor/IA"} · {m.sent_at ? new Date(m.sent_at).toLocaleString("pt-BR") : ""}
+                    </p>
+                    <p className="whitespace-pre-wrap">{m.body}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {!isLoading && (data?.mensagens?.length ?? 0) === 0 && (
+              <p className="text-sm text-muted-foreground p-4 text-center">Sem mensagens sincronizadas.</p>
+            )}
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
   );
 }
 
