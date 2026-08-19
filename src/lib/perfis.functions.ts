@@ -229,7 +229,11 @@ async function classifyWithAI(
       for (const it of parsed?.itens ?? []) {
         const perfil = String(it?.perfil ?? "").trim();
         if (!nomes.includes(perfil) || perfil === NAO_IDENTIFICADO) continue;
-        out.set(String(it?.id), { perfil, evidencia: String(it?.evidencia ?? "").slice(0, 200) });
+        out.set(String(it?.id), {
+          perfil,
+          evidencia: String(it?.evidencia ?? "").slice(0, 200),
+          profissao: String(it?.profissao ?? "").slice(0, 40).trim(),
+        });
       }
     } catch {
       /* segue com heurística */
