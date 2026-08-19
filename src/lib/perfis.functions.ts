@@ -436,6 +436,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     const validos: { c: any; text: string }[] = [];
     const hitsById = new Map<string, string[]>();
     const evidenciaById = new Map<string, string>();
+    const profissaoById = new Map<string, string>();
     for (const c of list) {
       const text = textById.get(c.id);
       // conversa real: houve troca (lead respondeu de verdade + o comercial/IA respondeu)
@@ -447,13 +448,12 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       if (!houveConversa) continue;
       comTexto++;
       validos.push({ c, text });
+      const ocupacao = extractOcupacao(text);
+      if (ocupacao) profissaoById.set(c.id, ocupacao);
       const hits = classify(text);
-      if (hits.length === 0) {
-        const ocup = extractOcupacao(text);
-        if (ocup) {
-          hits.push(PROFISSAO_DECLARADA);
-          evidenciaById.set(c.id, ocup);
-        }
+      if (hits.length === 0 && ocupacao) {
+        hits.push(PROFISSAO_DECLARADA);
+        evidenciaById.set(c.id, ocupacao);
       }
       hitsById.set(c.id, hits);
     }
@@ -467,6 +467,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     for (const [id, r] of iaHits) {
       hitsById.set(id, [r.perfil]);
       if (r.evidencia) evidenciaById.set(id, r.evidencia);
+      if (r.profissao && !profissaoById.has(id)) profissaoById.set(id, r.profissao);
     }
 
     for (const { c, text } of validos) {
