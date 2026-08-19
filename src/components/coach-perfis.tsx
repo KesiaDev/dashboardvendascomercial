@@ -79,24 +79,6 @@ export function PerfisTab() {
     [data],
   );
 
-  const profissoesGeral = useMemo(() => {
-    const m = new Map<string, { nome: string; total: number; vendas: number; ganhos: number; perfis: Set<string> }>();
-    for (const r of data?.ranking ?? []) {
-      for (const p of r.profissoes ?? []) {
-        const k = p.nome.toLowerCase().trim();
-        const cur = m.get(k) ?? { nome: p.nome, total: 0, vendas: 0, ganhos: 0, perfis: new Set<string>() };
-        cur.total += p.total;
-        cur.vendas += p.vendas;
-        cur.ganhos += p.ganhos;
-        cur.perfis.add(r.perfil);
-        m.set(k, cur);
-      }
-    }
-    return Array.from(m.values())
-      .map((p) => ({ ...p, perfis: Array.from(p.perfis) }))
-      .sort((a, b) => b.vendas - a.vendas || b.ganhos - a.ganhos || b.total - a.total)
-      .slice(0, 30);
-  }, [data]);
 
 
   return (
@@ -244,44 +226,6 @@ export function PerfisTab() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Profissões declaradas — quais mais viraram venda</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
-            <thead className="text-[11px] uppercase text-muted-foreground bg-muted/40">
-              <tr className="[&>th]:border-r [&>th]:border-border/60 [&>th:last-child]:border-r-0">
-                <th className="text-left p-3">Profissão declarada</th>
-                <th className="text-center p-3 w-[90px]">Leads</th>
-                <th className="text-center p-3 w-[90px]">Ganhos</th>
-                <th className="text-center p-3 w-[90px]">Vendas</th>
-                <th className="text-center p-3 w-[90px]">Conv.</th>
-                <th className="text-left p-3 w-[260px]">Perfis onde aparece</th>
-              </tr>
-            </thead>
-            <tbody>
-              {profissoesGeral.map((p, i) => (
-                <tr key={p.nome} className={`border-b border-border/60 hover:bg-muted/30 ${i % 2 ? "bg-muted/10" : ""}`}>
-                  <td className="p-3 capitalize font-medium border-r border-border/60">{p.nome}</td>
-                  <td className="p-3 text-center border-r border-border/60">{p.total}</td>
-                  <td className="p-3 text-center text-emerald-600 dark:text-emerald-400 border-r border-border/60">{p.ganhos}</td>
-                  <td className="p-3 text-center font-semibold text-emerald-600 dark:text-emerald-400 border-r border-border/60">{p.vendas}</td>
-                  <td className="p-3 text-center border-r border-border/60">{p.total ? ((p.vendas / p.total) * 100).toFixed(0) : 0}%</td>
-                  <td className="p-3">
-                    <div className="flex flex-wrap gap-1">
-                      {p.perfis.map((n) => <Badge key={n} variant="outline" className="text-[10px]">{n}</Badge>)}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {profissoesGeral.length === 0 && (
-                <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Nenhuma profissão declarada no período."}</td></tr>
-              )}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
 
 
 
