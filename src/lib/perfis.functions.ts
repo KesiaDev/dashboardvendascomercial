@@ -332,12 +332,13 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       if (!text || text.trim().length < 15) continue;
       comTexto++;
       const hits = classify(text);
-      if (hits.length === 0) continue;
-      classificadas++;
+      if (hits.length > 0) classificadas++;
+      const buckets = hits.length > 0 ? hits : [NAO_IDENTIFICADO];
       const seller = (c.seller_name || c.seller_email || "—").trim();
       const vendeu = isSold(c);
       const st = statusOf(c, vendeu);
-      for (const h of hits) {
+      for (const h of buckets) {
+
         let a = agg.get(h);
         if (!a) {
           a = { total: 0, humano: 0, ia: 0, vendas: 0, ganhos: 0, perdidos: 0, abertos: 0, scores: [], exemplos: [], sellers: new Map(), conversas: [] };
