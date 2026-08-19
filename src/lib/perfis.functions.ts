@@ -346,8 +346,15 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
     for (const c of list) {
       const text = textById.get(c.id);
-      if (!text || text.trim().length < 15) continue;
+      // conversa real: houve troca (lead respondeu de verdade + o comercial/IA respondeu)
+      const houveConversa =
+        (inboundCount.get(c.id) ?? 0) >= 1 &&
+        (outboundCount.get(c.id) ?? 0) >= 1 &&
+        !!text &&
+        text.trim().length >= 25;
+      if (!houveConversa) continue;
       comTexto++;
+
       const hits = classify(text);
       if (hits.length > 0) classificadas++;
       const buckets = hits.length > 0 ? hits : [NAO_IDENTIFICADO];
