@@ -1339,6 +1339,24 @@ function PerformanceTab() {
   const todayISO = new Date().toISOString().slice(0, 10);
   const [refDate, setRefDate] = useState<string>(todayISO);
 
+  // Lista de meses disponíveis desde o início da temporada (jun/2026) até o mês atual
+  const monthOptions = useMemo(() => {
+    const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    const months: { value: string; label: string }[] = [];
+    const now = new Date();
+    let y = 2026, m = 6; // junho/2026 — início da temporada
+    while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
+      months.push({
+        value: `${y}-${String(m).padStart(2, "0")}-01`,
+        label: `${MESES[m - 1]} ${y}`,
+      });
+      m++;
+      if (m > 12) { m = 1; y++; }
+    }
+    return months.reverse(); // mais recente primeiro
+  }, []);
+  const selectedMonth = refDate.slice(0, 7) + "-01";
+
   const effectiveRefDate = refDate;
 
   const { data: perf, isLoading, isFetching, error: perfError } = useQuery({
@@ -1387,16 +1405,33 @@ function PerformanceTab() {
           ))}
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[11px] text-muted-foreground">
-            {range === "day" ? "Dia" : range === "week" ? "Semana de" : "Mês de"}
-          </span>
-          <input
-            type="date"
-            value={refDate}
-            max={todayISO}
-            onChange={(e) => setRefDate(e.target.value || todayISO)}
-            className="text-xs border rounded-md px-2 py-1 bg-background"
-          />
+          {range === "month" ? (
+            <>
+              <span className="text-[11px] text-muted-foreground">Mês</span>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setRefDate(e.target.value)}
+                className="text-xs border rounded-md px-2 py-1 bg-background"
+              >
+                {monthOptions.map((mo) => (
+                  <option key={mo.value} value={mo.value}>{mo.label}</option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <>
+              <span className="text-[11px] text-muted-foreground">
+                {range === "day" ? "Dia" : "Semana de"}
+              </span>
+              <input
+                type="date"
+                value={refDate}
+                max={todayISO}
+                onChange={(e) => setRefDate(e.target.value || todayISO)}
+                className="text-xs border rounded-md px-2 py-1 bg-background"
+              />
+            </>
+          )}
           {refDate !== todayISO && (
             <button
               onClick={() => setRefDate(todayISO)}
@@ -1699,6 +1734,20 @@ function LigacoesTab() {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<CallRow | null>(null);
 
+  // Lista de meses disponíveis desde o início da temporada (jun/2026) até o mês atual
+  const monthOptions = useMemo(() => {
+    const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    const months: { value: string; label: string }[] = [];
+    const now = new Date();
+    let y = 2026, m = 6;
+    while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
+      months.push({ value: `${y}-${String(m).padStart(2, "0")}-01`, label: `${MESES[m - 1]} ${y}` });
+      m++;
+      if (m > 12) { m = 1; y++; }
+    }
+    return months.reverse();
+  }, []);
+
   const bounds = useMemo(() => {
     // Alinha ao fuso BR (UTC-3) como o restante do dashboard
     const iso = new Date(refDate.getTime() - 3 * 3600_000).toISOString().slice(0, 10);
@@ -1792,23 +1841,35 @@ function LigacoesTab() {
                   </button>
                 ))}
               </div>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 gap-1 text-xs">
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                    {format(refDate, "dd/MM/yyyy", { locale: ptBR })}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="single"
-                    selected={refDate}
-                    onSelect={(d) => d && setRefDate(d)}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
+              {range === "month" ? (
+                <select
+                  value={`${new Date(refDate.getTime() - 3 * 3600_000).toISOString().slice(0, 7)}-01`}
+                  onChange={(e) => setRefDate(new Date(e.target.value + "T12:00:00Z"))}
+                  className="h-9 text-xs border rounded-md px-2 bg-background"
+                >
+                  {monthOptions.map((mo) => (
+                    <option key={mo.value} value={mo.value}>{mo.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 gap-1 text-xs">
+                      <CalendarIcon className="h-3.5 w-3.5" />
+                      {format(refDate, "dd/MM/yyyy", { locale: ptBR })}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="single"
+                      selected={refDate}
+                      onSelect={(d) => d && setRefDate(d)}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
               <div className="hidden sm:block h-6 w-px bg-border mx-1" />
               <Label className="text-xs hidden sm:inline">Sync:</Label>
               <Input type="number" min={1} max={90} className="h-8 w-20" value={days} onChange={(e) => setDays(Math.max(1, Math.min(90, Number(e.target.value) || 7)))} />
