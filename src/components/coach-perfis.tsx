@@ -11,7 +11,27 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { fetchConversaProvaFn } from "@/lib/conversa-prova.functions";
+import { supabase } from "@/integrations/supabase/client";
+
+type ConversaProva = {
+  id: string;
+  contato: string;
+  seller: string;
+  is_ai: boolean;
+  origin_name: string | null;
+  stage: string | null;
+  status: "ganho" | "perdido" | "aberto";
+  mensagens: { direction: string; sender: string | null; body: string; sent_at: string }[];
+};
+
+async function fetchConversaProva(id: string): Promise<ConversaProva> {
+  const { data: sess } = await supabase.auth.getSession();
+  const res = await fetch(`/api/conversa-prova?id=${encodeURIComponent(id)}`, {
+    headers: { Authorization: `Bearer ${sess.session?.access_token ?? ""}` },
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Erro ao carregar conversa");
+  return res.json();
+}
 import {
   fetchPerfisLeadsFn,
   generatePerfisInsightFn,
@@ -305,7 +325,7 @@ function PerfilConversasDialog({
 function ConversaDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
   const { data, isLoading } = useQuery({
     queryKey: ["perfil-conversa", id],
-    queryFn: () => fetchConversaProvaFn({ data: { id: id! } }),
+    queryFn: () => fetchConversaProva(id!),
     enabled: !!id,
   });
   return (
