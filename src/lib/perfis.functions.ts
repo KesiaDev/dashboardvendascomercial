@@ -192,12 +192,13 @@ async function classifyWithAI(
   const key = process.env.LOVABLE_API_KEY;
   if (!key || items.length === 0) return out;
 
-  const nomes = [...PERFIS.map((p) => p.nome), PROFISSAO_DECLARADA, NAO_IDENTIFICADO];
+  const nomes = [...PERFIS.map((p) => p.nome), NAO_IDENTIFICADO];
   const sys =
-    "Você classifica o PERFIL DE VIDA/PROFISSÃO de leads a partir do que o próprio lead escreveu no WhatsApp. " +
+    "Você classifica o PERFIL DE VIDA de leads a partir do que o próprio lead escreveu no WhatsApp. " +
     `Escolha UM perfil desta lista exata: ${nomes.join(" | ")}. ` +
-    `Use "${PROFISSAO_DECLARADA}" quando o lead disser a profissão dele mas ela não couber em nenhum outro perfil (ex.: "sou assistente técnica administrativa"). ` +
-    `Use "${NAO_IDENTIFICADO}" só quando não houver nenhuma pista real sobre a vida/trabalho dele. ` +
+    "Não existe categoria 'profissão declarada' — a profissão é só um atributo, não define o perfil. " +
+    "Escolha o perfil de VIDA que melhor descreve o lead (ex.: mãe com filhos, desempregado, autônomo, estudante...). " +
+    `Use "${NAO_IDENTIFICADO}" quando não houver nenhuma pista real sobre a vida/trabalho dele. ` +
     'Em "profissao" devolva o cargo/ocupação em 1 a 3 palavras no singular (ex.: "assistente administrativa", "enfermeira", "motorista de app"); use "" se o lead não disse a profissão. ' +
     'Responda APENAS JSON: {"itens":[{"id":"...","perfil":"...","profissao":"...","evidencia":"trecho literal do lead"}]}';
 
