@@ -115,42 +115,42 @@ export function PerfisTab() {
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">Detalhe por perfil</CardTitle></CardHeader>
         <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-[11px] uppercase text-muted-foreground border-b">
-              <tr>
-                <th className="text-left p-2">Perfil</th>
-                <th className="text-right p-2">Leads</th>
-                <th className="text-right p-2">%</th>
-                <th className="text-right p-2">Vendas</th>
-                <th className="text-right p-2">Conv.</th>
-                <th className="text-right p-2">Ganho</th>
-                <th className="text-right p-2">Perdido</th>
-                <th className="text-right p-2">Em aberto</th>
-                <th className="text-right p-2">Equipe</th>
-                <th className="text-right p-2">Agente IA</th>
-                <th className="text-right p-2">Nota média</th>
-                <th className="text-left p-2">Trecho real / vendedores</th>
-                <th className="text-right p-2">Prova</th>
+          <table className="w-full text-sm border-collapse">
+            <thead className="text-[11px] uppercase text-muted-foreground bg-muted/40">
+              <tr className="[&>th]:border-r [&>th]:border-border/60 [&>th:last-child]:border-r-0">
+                <th className="text-left p-3 sticky left-0 bg-muted/40">Perfil</th>
+                <th className="text-right p-3">Leads</th>
+                <th className="text-right p-3">%</th>
+                <th className="text-right p-3">Vendas</th>
+                <th className="text-right p-3">Conv.</th>
+                <th className="text-right p-3">Ganho</th>
+                <th className="text-right p-3">Perdido</th>
+                <th className="text-right p-3">Em aberto</th>
+                <th className="text-right p-3">Equipe</th>
+                <th className="text-right p-3">Agente IA</th>
+                <th className="text-right p-3">Nota média</th>
+                <th className="text-left p-3 min-w-[280px]">Trecho real / vendedores</th>
+                <th className="text-right p-3">Prova</th>
               </tr>
             </thead>
             <tbody>
-              {(data?.ranking ?? []).map((r) => (
-                <tr key={r.perfil} className="border-b align-top">
-                  <td className="p-2">
+              {(data?.ranking ?? []).map((r, idx) => (
+                <tr key={r.perfil} className={`border-b border-border/60 align-top hover:bg-muted/30 ${idx % 2 ? "bg-muted/10" : ""}`}>
+                  <td className="p-3 border-r border-border/60 sticky left-0 bg-background">
                     <p className="font-medium">{r.perfil}</p>
                     <p className="text-[11px] text-muted-foreground">{r.descricao}</p>
                   </td>
-                  <td className="p-2 text-right font-semibold">{r.total}</td>
-                  <td className="p-2 text-right">{r.pct.toFixed(1)}%</td>
-                  <td className="p-2 text-right font-semibold text-emerald-600 dark:text-emerald-400">{r.vendas}</td>
-                  <td className="p-2 text-right">{r.conv.toFixed(1)}%</td>
-                  <td className="p-2 text-right text-emerald-600 dark:text-emerald-400">{r.ganhos}</td>
-                  <td className="p-2 text-right text-rose-600 dark:text-rose-400">{r.perdidos}</td>
-                  <td className="p-2 text-right text-amber-600 dark:text-amber-400">{r.abertos}</td>
-                  <td className="p-2 text-right">{r.humano}</td>
-                  <td className="p-2 text-right">{r.ia}</td>
-                  <td className="p-2 text-right">{r.avg_score != null ? r.avg_score.toFixed(2) : "—"}</td>
-                  <td className="p-2 max-w-[420px]">
+                  <td className="p-3 text-right font-semibold border-r border-border/60">{r.total}</td>
+                  <td className="p-3 text-right border-r border-border/60">{r.pct.toFixed(1)}%</td>
+                  <td className="p-3 text-right font-semibold text-emerald-600 dark:text-emerald-400 border-r border-border/60">{r.vendas}</td>
+                  <td className="p-3 text-right border-r border-border/60">{r.conv.toFixed(1)}%</td>
+                  <td className="p-3 text-right text-emerald-600 dark:text-emerald-400 border-r border-border/60">{r.ganhos}</td>
+                  <td className="p-3 text-right text-rose-600 dark:text-rose-400 border-r border-border/60">{r.perdidos}</td>
+                  <td className="p-3 text-right text-amber-600 dark:text-amber-400 border-r border-border/60">{r.abertos}</td>
+                  <td className="p-3 text-right border-r border-border/60">{r.humano}</td>
+                  <td className="p-3 text-right border-r border-border/60">{r.ia}</td>
+                  <td className="p-3 text-right border-r border-border/60">{r.avg_score != null ? r.avg_score.toFixed(2) : "—"}</td>
+                  <td className="p-3 max-w-[420px] border-r border-border/60">
                     {r.exemplos.slice(0, 2).map((e, i) => (
                       <p key={i} className="text-[11px] text-muted-foreground italic mb-1">{e}</p>
                     ))}
@@ -160,7 +160,7 @@ export function PerfisTab() {
                       ))}
                     </div>
                   </td>
-                  <td className="p-2 text-right">
+                  <td className="p-3 text-right">
                     <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setPerfilAberto(r)}>
                       <MessageSquare className="h-3 w-3 mr-1" /> Ver conversas
                     </Button>
@@ -170,7 +170,6 @@ export function PerfisTab() {
               {(data?.ranking?.length ?? 0) === 0 && (
                 <tr><td colSpan={13} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Sem dados."}</td></tr>
               )}
-
             </tbody>
           </table>
         </CardContent>
