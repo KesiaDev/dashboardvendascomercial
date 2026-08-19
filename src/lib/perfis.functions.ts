@@ -219,7 +219,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
     const agg = new Map<
       string,
-      { total: number; humano: number; ia: number; scores: number[]; exemplos: string[]; sellers: Map<string, number> }
+      { total: number; humano: number; ia: number; vendas: number; scores: number[]; exemplos: string[]; sellers: Map<string, number> }
     >();
     let classificadas = 0;
     let comTexto = 0;
@@ -232,13 +232,15 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       if (hits.length === 0) continue;
       classificadas++;
       const seller = (c.seller_name || c.seller_email || "—").trim();
+      const vendeu = isSold(c);
       for (const h of hits) {
         let a = agg.get(h);
         if (!a) {
-          a = { total: 0, humano: 0, ia: 0, scores: [], exemplos: [], sellers: new Map() };
+          a = { total: 0, humano: 0, ia: 0, vendas: 0, scores: [], exemplos: [], sellers: new Map() };
           agg.set(h, a);
         }
         a.total++;
+        if (vendeu) a.vendas++;
         if (c.is_ai_conversation) a.ia++;
         else a.humano++;
         const s = scoreById.get(c.id);
@@ -259,6 +261,8 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         pct: comTexto ? (a.total / comTexto) * 100 : 0,
         humano: a.humano,
         ia: a.ia,
+        vendas: a.vendas,
+        conv: a.total ? (a.vendas / a.total) * 100 : 0,
         avg_score: a.scores.length ? a.scores.reduce((x, y) => x + y, 0) / a.scores.length : null,
         exemplos: a.exemplos,
         sellers: Array.from(a.sellers.entries())
@@ -266,7 +270,8 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
           .sort((x, y) => y.total - x.total)
           .slice(0, 4),
       }))
-      .sort((a, b) => b.total - a.total);
+      .sort((a, b) => b.vendas - a.vendas || b.total - a.total);
+
 
     return {
       from,
