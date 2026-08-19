@@ -424,6 +424,10 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     let classificadas = 0;
     let comTexto = 0;
 
+    // 1ª passada: heurística + profissão declarada; junta o que ficou sem perfil
+    const validos: { c: any; text: string }[] = [];
+    const hitsById = new Map<string, string[]>();
+    const evidenciaById = new Map<string, string>();
     for (const c of list) {
       const text = textById.get(c.id);
       // conversa real: houve troca (lead respondeu de verdade + o comercial/IA respondeu)
@@ -434,14 +438,39 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         text.trim().length >= 25;
       if (!houveConversa) continue;
       comTexto++;
-
+      validos.push({ c, text });
       const hits = classify(text);
+      if (hits.length === 0) {
+        const ocup = extractOcupacao(text);
+        if (ocup) {
+          hits.push(PROFISSAO_DECLARADA);
+          evidenciaById.set(c.id, ocup);
+        }
+      }
+      hitsById.set(c.id, hits);
+    }
+
+    // 2ª passada: IA lê conversa por conversa o que sobrou sem perfil
+    const semPerfil = validos
+      .filter((v) => (hitsById.get(v.c.id) ?? []).length === 0)
+      .slice(0, 240)
+      .map((v) => ({ id: String(v.c.id), text: v.text }));
+    const iaHits = await classifyWithAI(semPerfil);
+    for (const [id, r] of iaHits) {
+      hitsById.set(id, [r.perfil]);
+      if (r.evidencia) evidenciaById.set(id, r.evidencia);
+    }
+
+    for (const { c, text } of validos) {
+      const hits = hitsById.get(c.id) ?? [];
       if (hits.length > 0) classificadas++;
       const buckets = hits.length > 0 ? hits : [NAO_IDENTIFICADO];
       const seller = (c.seller_name || c.seller_email || "—").trim();
       const vendeu = isSold(c);
       const st = statusOf(c, vendeu);
       for (const h of buckets) {
+
+
 
         let a = agg.get(h);
         if (!a) {
