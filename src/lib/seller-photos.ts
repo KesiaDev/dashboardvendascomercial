@@ -6,6 +6,7 @@ const SELLER_PHOTOS: Record<string, string> = {
   luana: "/avatars/luana.jpg",
   joao: "/avatars/joao.jpg",
   kesia: "/avatars/kesia.jpg",
+  pamela: "/avatars/pamela.jpg",
 };
 
 function norm(s: string) {
