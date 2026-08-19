@@ -196,6 +196,8 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         .from("coach_conversations")
         .select("id,seller_email,seller_name,first_message_at,last_message_at,clint_contact_id,origin_name")
         .in("origin_name", FUNIS_LEADS)
+        // Atendimentos = só vendedor humano. Conversas do Agente IA ficam na aba Agente IA.
+        .eq("is_ai_conversation", false)
         .gte("last_message_at", startTS)
         .lte("last_message_at", endTS)
         .limit(5000),
