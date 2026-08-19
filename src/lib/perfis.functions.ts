@@ -224,11 +224,11 @@ async function classifyWithAI(
           ],
         }),
       });
-      if (!res.ok) continue;
+      if (!res.ok) return;
       const j: any = await res.json();
       const raw = String(j?.choices?.[0]?.message?.content ?? "");
       const m = raw.match(/\{[\s\S]*\}/);
-      if (!m) continue;
+      if (!m) return;
       const parsed = JSON.parse(m[0]);
       for (const it of parsed?.itens ?? []) {
         const perfil = String(it?.perfil ?? "").trim();
@@ -242,9 +242,16 @@ async function classifyWithAI(
     } catch {
       /* segue com heurística */
     }
+  };
+
+  // roda em paralelo (6 por vez) — antes era sequencial e levava minutos
+  const pend = batches.slice(0, 20);
+  for (let i = 0; i < pend.length; i += 6) {
+    await Promise.all(pend.slice(i, i + 6).map(runBatch));
   }
   return out;
 }
+
 
 
 function snippet(text: string, perfil: string): string | null {
