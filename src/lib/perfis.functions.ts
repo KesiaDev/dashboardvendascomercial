@@ -34,6 +34,8 @@ export type PerfilRow = {
   avg_score: number | null;
   exemplos: string[];
   sellers: { seller: string; total: number }[];
+  sellers: { seller: string; total: number }[];
+  profissoes: { nome: string; total: number; vendas: number; ganhos: number }[];
   conversas: PerfilConversa[];
 };
 
