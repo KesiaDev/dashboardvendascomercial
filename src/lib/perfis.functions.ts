@@ -185,8 +185,8 @@ function classify(text: string): string[] {
 // Classificação conversa por conversa com IA para o que a heurística não pegou.
 async function classifyWithAI(
   items: { id: string; text: string }[],
-): Promise<Map<string, { perfil: string; evidencia: string }>> {
-  const out = new Map<string, { perfil: string; evidencia: string }>();
+): Promise<Map<string, { perfil: string; evidencia: string; profissao: string }>> {
+  const out = new Map<string, { perfil: string; evidencia: string; profissao: string }>();
   const key = process.env.LOVABLE_API_KEY;
   if (!key || items.length === 0) return out;
 
@@ -196,7 +196,8 @@ async function classifyWithAI(
     `Escolha UM perfil desta lista exata: ${nomes.join(" | ")}. ` +
     `Use "${PROFISSAO_DECLARADA}" quando o lead disser a profissão dele mas ela não couber em nenhum outro perfil (ex.: "sou assistente técnica administrativa"). ` +
     `Use "${NAO_IDENTIFICADO}" só quando não houver nenhuma pista real sobre a vida/trabalho dele. ` +
-    'Responda APENAS JSON: {"itens":[{"id":"...","perfil":"...","evidencia":"trecho literal do lead"}]}';
+    'Em "profissao" devolva o cargo/ocupação em 1 a 3 palavras no singular (ex.: "assistente administrativa", "enfermeira", "motorista de app"); use "" se o lead não disse a profissão. ' +
+    'Responda APENAS JSON: {"itens":[{"id":"...","perfil":"...","profissao":"...","evidencia":"trecho literal do lead"}]}';
 
   const batches: { id: string; text: string }[][] = [];
   for (let i = 0; i < items.length; i += 12) batches.push(items.slice(i, i + 12));
