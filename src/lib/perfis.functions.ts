@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { V3_ORIGIN_NAMES } from "@/lib/origem-v3.server";
+
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -226,7 +228,8 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
     let q = db
       .from("coach_conversations")
-      .select("id, seller_name, seller_email, is_ai_conversation, contact_name, contact_email, deal_id, last_message_at")
+      .select("id, seller_name, seller_email, is_ai_conversation, contact_name, contact_email, deal_id, origin_name, last_message_at")
+      .in("origin_name", V3_ORIGIN_NAMES)
       .gte("last_message_at", `${from}T00:00:00Z`)
       .lte("last_message_at", `${to}T23:59:59Z`)
       .order("last_message_at", { ascending: false })
@@ -236,8 +239,12 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
     const { data: convs, error } = await q;
     if (error) throw new Error(error.message);
-    const list = (convs ?? []) as any[];
+    // só leads que foram efetivamente transferidos para o comercial (têm dono/atendente)
+    const list = ((convs ?? []) as any[]).filter(
+      (c) => String(c.seller_name ?? c.seller_email ?? "").trim() !== "",
+    );
     const ids = list.map((c) => c.id);
+
 
     // Clientes que compraram (fechamento manual) — para conversão por perfil
     const soldEmails = new Set<string>();
@@ -280,28 +287,35 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     // Texto do lead (mensagens inbound reais — sem automação/opt-in, sem repetições)
     const textById = new Map<string, string>();
     const seenById = new Map<string, Set<string>>();
+    const inboundCount = new Map<string, number>();
+    const outboundCount = new Map<string, number>();
     for (let i = 0; i < ids.length; i += 100) {
       const chunk = ids.slice(i, i + 100);
       const { data: msgs } = await db
         .from("coach_messages")
         .select("conversation_id, body, direction")
         .in("conversation_id", chunk)
-        .eq("direction", "inbound")
-        .limit(20000);
+        .limit(40000);
       for (const m of (msgs ?? []) as any[]) {
         if (!m.body) continue;
         const body = String(m.body);
+        if (String(m.direction) !== "inbound") {
+          outboundCount.set(m.conversation_id, (outboundCount.get(m.conversation_id) ?? 0) + 1);
+          continue;
+        }
         if (isAutomacao(body)) continue;
         const key = normalize(body).replace(/\s+/g, " ").trim().slice(0, 120);
         let seen = seenById.get(m.conversation_id);
         if (!seen) { seen = new Set(); seenById.set(m.conversation_id, seen); }
         if (seen.has(key)) continue;
         seen.add(key);
+        inboundCount.set(m.conversation_id, (inboundCount.get(m.conversation_id) ?? 0) + 1);
         const prev = textById.get(m.conversation_id) ?? "";
         if (prev.length > 6000) continue;
         textById.set(m.conversation_id, `${prev} ${body}`);
       }
     }
+
 
 
     // Notas das análises
@@ -332,8 +346,15 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
     for (const c of list) {
       const text = textById.get(c.id);
-      if (!text || text.trim().length < 15) continue;
+      // conversa real: houve troca (lead respondeu de verdade + o comercial/IA respondeu)
+      const houveConversa =
+        (inboundCount.get(c.id) ?? 0) >= 1 &&
+        (outboundCount.get(c.id) ?? 0) >= 1 &&
+        !!text &&
+        text.trim().length >= 25;
+      if (!houveConversa) continue;
       comTexto++;
+
       const hits = classify(text);
       if (hits.length > 0) classificadas++;
       const buckets = hits.length > 0 ? hits : [NAO_IDENTIFICADO];
