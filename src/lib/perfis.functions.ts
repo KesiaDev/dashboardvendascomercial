@@ -226,7 +226,8 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
     let q = db
       .from("coach_conversations")
-      .select("id, seller_name, seller_email, is_ai_conversation, contact_name, contact_email, deal_id, last_message_at")
+      .select("id, seller_name, seller_email, is_ai_conversation, contact_name, contact_email, deal_id, origin_name, last_message_at")
+      .in("origin_name", V3_ORIGIN_NAMES)
       .gte("last_message_at", `${from}T00:00:00Z`)
       .lte("last_message_at", `${to}T23:59:59Z`)
       .order("last_message_at", { ascending: false })
@@ -236,8 +237,12 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
     const { data: convs, error } = await q;
     if (error) throw new Error(error.message);
-    const list = (convs ?? []) as any[];
+    // só leads que foram efetivamente transferidos para o comercial (têm dono/atendente)
+    const list = ((convs ?? []) as any[]).filter(
+      (c) => String(c.seller_name ?? c.seller_email ?? "").trim() !== "",
+    );
     const ids = list.map((c) => c.id);
+
 
     // Clientes que compraram (fechamento manual) — para conversão por perfil
     const soldEmails = new Set<string>();
