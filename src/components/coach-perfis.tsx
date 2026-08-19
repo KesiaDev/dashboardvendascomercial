@@ -79,24 +79,6 @@ export function PerfisTab() {
     [data],
   );
 
-  const profissoesGeral = useMemo(() => {
-    const m = new Map<string, { nome: string; total: number; vendas: number; ganhos: number; perfis: Set<string> }>();
-    for (const r of data?.ranking ?? []) {
-      for (const p of r.profissoes ?? []) {
-        const k = p.nome.toLowerCase().trim();
-        const cur = m.get(k) ?? { nome: p.nome, total: 0, vendas: 0, ganhos: 0, perfis: new Set<string>() };
-        cur.total += p.total;
-        cur.vendas += p.vendas;
-        cur.ganhos += p.ganhos;
-        cur.perfis.add(r.perfil);
-        m.set(k, cur);
-      }
-    }
-    return Array.from(m.values())
-      .map((p) => ({ ...p, perfis: Array.from(p.perfis) }))
-      .sort((a, b) => b.vendas - a.vendas || b.ganhos - a.ganhos || b.total - a.total)
-      .slice(0, 30);
-  }, [data]);
 
 
   return (
