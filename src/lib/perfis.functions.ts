@@ -473,17 +473,68 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       hitsById.set(c.id, hits);
     }
 
-    // 2ª passada: IA lê conversa por conversa o que sobrou sem perfil
+    // 2ª passada: IA lê conversa por conversa o que sobrou sem perfil — com cache no banco
     const semPerfil = validos
       .filter((v) => (hitsById.get(v.c.id) ?? []).length === 0)
       .slice(0, 240)
-      .map((v) => ({ id: String(v.c.id), text: v.text }));
-    const iaHits = await classifyWithAI(semPerfil);
-    for (const [id, r] of iaHits) {
-      hitsById.set(id, [r.perfil]);
+      .map((v) => ({ id: String(v.c.id), text: v.text, hash: hashText(v.text) }));
+
+    const applyIA = (id: string, r: { perfil: string; evidencia: string; profissao: string }) => {
+      if (r.perfil) hitsById.set(id, [r.perfil]);
       if (r.evidencia) evidenciaById.set(id, r.evidencia);
       if (r.profissao && !profissaoById.has(id)) profissaoById.set(id, r.profissao);
+    };
+
+    // lê o cache
+    const cached = new Map<string, string>(); // id -> hash já classificado
+    if (semPerfil.length > 0) {
+      const idsSem = semPerfil.map((s) => s.id);
+      const chunks: string[][] = [];
+      for (let i = 0; i < idsSem.length; i += 200) chunks.push(idsSem.slice(i, i + 200));
+      const results = await Promise.all(
+        chunks.map((ch) =>
+          db
+            .from("lead_perfil_cache")
+            .select("conversation_id, text_hash, perfil, evidencia, profissao")
+            .in("conversation_id", ch),
+        ),
+      );
+      const byId = new Map<string, any>();
+      for (const r of results) for (const row of ((r.data ?? []) as any[])) byId.set(String(row.conversation_id), row);
+      for (const s of semPerfil) {
+        const row = byId.get(s.id);
+        if (row && String(row.text_hash) === s.hash) {
+          cached.set(s.id, s.hash);
+          applyIA(s.id, {
+            perfil: String(row.perfil ?? ""),
+            evidencia: String(row.evidencia ?? ""),
+            profissao: String(row.profissao ?? ""),
+          });
+        }
+      }
     }
+
+    const pendentes = semPerfil.filter((s) => !cached.has(s.id));
+    if (pendentes.length > 0) {
+      const iaHits = await classifyWithAI(pendentes.map((p) => ({ id: p.id, text: p.text })));
+      for (const [id, r] of iaHits) applyIA(id, r);
+      // grava o cache (inclusive os que a IA não classificou, para não reprocessar sempre)
+      const rows = pendentes.map((p) => {
+        const r = iaHits.get(p.id);
+        return {
+          conversation_id: p.id,
+          text_hash: p.hash,
+          perfil: r?.perfil ?? null,
+          evidencia: r?.evidencia ?? null,
+          profissao: r?.profissao ?? null,
+          updated_at: new Date().toISOString(),
+        };
+      });
+      for (let i = 0; i < rows.length; i += 200) {
+        await db.from("lead_perfil_cache").upsert(rows.slice(i, i + 200), { onConflict: "conversation_id" });
+      }
+    }
+
 
     for (const { c, text } of validos) {
       const hits = hitsById.get(c.id) ?? [];
