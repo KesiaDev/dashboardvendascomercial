@@ -377,6 +377,7 @@ function PerfilConversasDialog({
                   <span className="font-medium text-sm">{c.contato}</span>
                   <Badge variant="outline" className={`text-[10px] ${STATUS_STYLE[c.status]}`}>{c.status === "aberto" ? "em aberto" : c.status}</Badge>
                   <Badge variant="outline" className="text-[10px]">{c.is_ai ? "Agente IA" : c.seller}</Badge>
+                  {c.profissao && <Badge variant="secondary" className="text-[10px] capitalize">{c.profissao}</Badge>}
                   {c.score != null && <Badge variant="outline" className="text-[10px]">nota {c.score.toFixed(1)}</Badge>}
                   <span className="text-[11px] text-muted-foreground ml-auto">
                     {c.last_message_at ? new Date(c.last_message_at).toLocaleDateString("pt-BR") : "—"}
