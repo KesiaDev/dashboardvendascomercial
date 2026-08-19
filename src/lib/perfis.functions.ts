@@ -12,6 +12,8 @@ export type PerfilRow = {
   pct: number;
   humano: number;
   ia: number;
+  vendas: number;
+  conv: number;
   avg_score: number | null;
   exemplos: string[];
   sellers: { seller: string; total: number }[];
