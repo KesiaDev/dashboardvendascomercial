@@ -487,8 +487,10 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         const s = scoreById.get(c.id);
         if (typeof s === "number") a.scores.push(s);
         a.sellers.set(seller, (a.sellers.get(seller) ?? 0) + 1);
-        const sn = snippet(text, h);
+        const ev = evidenciaById.get(c.id);
+        const sn = snippet(text, h) ?? (ev ? `...${ev}...` : null);
         if (a.exemplos.length < 3 && sn) a.exemplos.push(sn);
+
         if (a.conversas.length < 200) {
           a.conversas.push({
             id: c.id,
