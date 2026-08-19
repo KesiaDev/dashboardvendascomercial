@@ -399,7 +399,12 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
           .slice(0, 4),
         conversas: a.conversas.sort((x, y) => (y.last_message_at ?? "").localeCompare(x.last_message_at ?? "")),
       }))
-      .sort((a, b) => b.vendas - a.vendas || b.total - a.total);
+      .sort((a, b) => {
+        if (a.perfil === NAO_IDENTIFICADO) return 1;
+        if (b.perfil === NAO_IDENTIFICADO) return -1;
+        return b.vendas - a.vendas || b.total - a.total;
+      });
+
 
 
 
