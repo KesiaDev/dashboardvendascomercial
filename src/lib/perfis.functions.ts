@@ -50,6 +50,9 @@ const normalize = (s: string) =>
 
 type PerfilDef = { nome: string; descricao: string; kw: string[] };
 
+const NAO_IDENTIFICADO = "Perfil não identificado";
+
+
 // Heurística de perfil de lead a partir do que o PRÓPRIO lead escreve.
 const PERFIS: PerfilDef[] = [
   {
@@ -99,13 +102,17 @@ const PERFIS: PerfilDef[] = [
   },
   {
     nome: "Já atua com tráfego/marketing",
-    descricao: "Gestores de tráfego, social media, agências e freelancers da área",
+    descricao: "Só entra quando o lead DIZ que já trabalha na área (não basta citar o produto)",
     kw: [
-      "gestor de trafego", "gestora de trafego", "ja gerencio", "tenho clientes", "meus clientes",
-      "social media", "agencia", "freelancer", "faco anuncio", "rodo campanha", "gerencio campanha",
-      "meta ads", "google ads", "trabalho com marketing", "designer",
+      "sou gestor de trafego", "sou gestora de trafego", "trabalho com trafego", "trabalho com trafego pago",
+      "ja gerencio", "gerencio campanha", "gerencio anuncio", "rodo campanha", "faco anuncio",
+      "tenho clientes", "meus clientes", "atendo clientes", "sou social media", "tenho agencia",
+      "trabalho numa agencia", "trabalho com marketing", "sou designer", "sou freelancer",
+      "ja trabalho com anuncio", "ja fiz campanha", "tenho experiencia com trafego", "sei mexer no meta ads",
+      "ja uso o gerenciador de anuncio",
     ],
   },
+
   {
     nome: "Estudantes / iniciantes",
     descricao: "Estudando, primeiro emprego, começando do zero",
@@ -177,15 +184,36 @@ const AUTOMACAO_PATTERNS = [
   "quero saber mais sobre o minicurso",
   "recebi o link",
   "confirmo minha presenca",
+  // opt-in da imersão / grupo (não diz nada sobre o perfil do lead)
+  "quero receber o presente",
+  "quero o presente",
+  "presente da imersao",
+  "quero participar da imersao",
+  "quero entrar na imersao",
+  "quero entrar no grupo",
+  "ainda nao entrei",
+  "agora consegui",
+  "consegui entrar",
+  "quero as aulas",
+  "quero o link",
+  "quero receber os links",
+  "combinado",
+  "obrigad",
+  "bom dia",
+  "boa tarde",
+  "boa noite",
 ];
 
 function isAutomacao(body: string): boolean {
   const t = normalize(body).replace(/\s+/g, " ").trim();
   if (t.length < 3) return true;
   // respostas de botão: "sim", "sim quero", "ok", "1", "2"
-  if (/^(sim|nao|ok|okay|quero|sim quero|sim!|\d{1,2})$/.test(t)) return true;
+  if (/^(sim|nao|ok|okay|quero|sim quero|sim!|ja|ja entrei|\d{1,2})$/.test(t)) return true;
+  // frases curtas de opt-in sem conteúdo real
+  if (t.length < 25 && /^(sim|ok|quero|ja|entrei|consegui|combinado|obrigad)/.test(t)) return true;
   return AUTOMACAO_PATTERNS.some((p) => t.includes(p));
 }
+
 
 
 export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
@@ -307,12 +335,13 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       if (!text || text.trim().length < 15) continue;
       comTexto++;
       const hits = classify(text);
-      if (hits.length === 0) continue;
-      classificadas++;
+      if (hits.length > 0) classificadas++;
+      const buckets = hits.length > 0 ? hits : [NAO_IDENTIFICADO];
       const seller = (c.seller_name || c.seller_email || "—").trim();
       const vendeu = isSold(c);
       const st = statusOf(c, vendeu);
-      for (const h of hits) {
+      for (const h of buckets) {
+
         let a = agg.get(h);
         if (!a) {
           a = { total: 0, humano: 0, ia: 0, vendas: 0, ganhos: 0, perdidos: 0, abertos: 0, scores: [], exemplos: [], sellers: new Map(), conversas: [] };
@@ -348,7 +377,11 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     const ranking: PerfilRow[] = Array.from(agg.entries())
       .map(([perfil, a]) => ({
         perfil,
-        descricao: PERFIS.find((p) => p.nome === perfil)?.descricao ?? "",
+        descricao:
+          perfil === NAO_IDENTIFICADO
+            ? "Lead conversou, mas não revelou nada sobre a vida/profissão dele — precisa de pergunta de qualificação"
+            : PERFIS.find((p) => p.nome === perfil)?.descricao ?? "",
+
         total: a.total,
         pct: comTexto ? (a.total / comTexto) * 100 : 0,
         humano: a.humano,
@@ -366,7 +399,12 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
           .slice(0, 4),
         conversas: a.conversas.sort((x, y) => (y.last_message_at ?? "").localeCompare(x.last_message_at ?? "")),
       }))
-      .sort((a, b) => b.vendas - a.vendas || b.total - a.total);
+      .sort((a, b) => {
+        if (a.perfil === NAO_IDENTIFICADO) return 1;
+        if (b.perfil === NAO_IDENTIFICADO) return -1;
+        return b.vendas - a.vendas || b.total - a.total;
+      });
+
 
 
 
