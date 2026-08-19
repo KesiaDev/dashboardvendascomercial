@@ -42,21 +42,50 @@ import {
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 export function PerfisTab() {
+  const [periodMode, setPeriodMode] = useState<"range" | "month">("range");
   const [from, setFrom] = useState(iso(new Date(Date.now() - 90 * 864e5)));
   const [to, setTo] = useState(iso(new Date()));
+  const [mesSel, setMesSel] = useState<string>(iso(new Date()).slice(0, 7) + "-01");
   const [origem, setOrigem] = useState<"todas" | "humano" | "ia">("todas");
   const [insight, setInsight] = useState<PerfisInsight | null>(null);
   const [perfilAberto, setPerfilAberto] = useState<PerfilRow | null>(null);
   const [conversaId, setConversaId] = useState<string | null>(null);
 
+  // Lista de meses disponíveis desde o início da temporada (jun/2026) até o mês atual
+  const monthOptions = useMemo(() => {
+    const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    const months: { value: string; label: string }[] = [];
+    const now = new Date();
+    let y = 2026, m = 6; // junho/2026 — início da temporada
+    while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
+      months.push({
+        value: `${y}-${String(m).padStart(2, "0")}-01`,
+        label: `${MESES[m - 1]} ${y}`,
+      });
+      m++;
+      if (m > 12) { m = 1; y++; }
+    }
+    return months.reverse(); // mais recente primeiro
+  }, []);
+
+  // Quando modo mês, from/to derivam do mês selecionado
+  const effFrom = periodMode === "month" ? mesSel : from;
+  const effTo = useMemo(() => {
+    if (periodMode !== "month") return to;
+    const [y, mo] = mesSel.split("-").map(Number);
+    const lastDay = new Date(y, mo, 0).getDate();
+    const last = `${y}-${String(mo).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    const today = iso(new Date());
+    return last > today ? today : last;
+  }, [periodMode, mesSel, to]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["coach-perfis", from, to, origem],
-    queryFn: () => fetchPerfisLeadsFn({ data: { from, to, origem } }),
+    queryKey: ["coach-perfis", effFrom, effTo, origem],
+    queryFn: () => fetchPerfisLeadsFn({ data: { from: effFrom, to: effTo, origem } }),
     staleTime: 10 * 60_000,
     gcTime: 30 * 60_000,
     refetchOnWindowFocus: false,
   });
-
 
   const gerar = useMutation({
     mutationFn: () =>
@@ -65,7 +94,7 @@ export function PerfisTab() {
           ranking: (data?.ranking ?? []).map((r) => ({
             perfil: r.perfil, total: r.total, pct: r.pct, avg_score: r.avg_score,
           })),
-          contexto: `Período ${from} a ${to}. Conversas com texto do lead: ${data?.total_conversas ?? 0}. Origem: ${
+          contexto: `Período ${effFrom} a ${effTo}. Conversas com texto do lead: ${data?.total_conversas ?? 0}. Origem: ${
             origem === "todas" ? "equipe + agente IA" : origem === "ia" ? "agente IA" : "equipe comercial"
           }.`,
         },
@@ -79,20 +108,48 @@ export function PerfisTab() {
     [data],
   );
 
-
-
   return (
     <div className="space-y-4 pt-4">
       <Card>
         <CardContent className="pt-4 flex flex-wrap items-end gap-3">
-          <div className="space-y-1">
-            <Label className="text-[11px] text-muted-foreground">De</Label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9 w-[150px]" />
+          <div className="flex items-center gap-1 rounded-md border p-0.5">
+            {(["range", "month"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setPeriodMode(m)}
+                className={
+                  "px-3 py-1 text-xs rounded-md transition " +
+                  (periodMode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")
+                }
+              >
+                {m === "range" ? "Intervalo" : "Mês"}
+              </button>
+            ))}
           </div>
-          <div className="space-y-1">
-            <Label className="text-[11px] text-muted-foreground">Até</Label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9 w-[150px]" />
-          </div>
+          {periodMode === "range" ? (
+            <>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">De</Label>
+                <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9 w-[150px]" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Até</Label>
+                <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9 w-[150px]" />
+              </div>
+            </>
+          ) : (
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">Mês</Label>
+              <Select value={mesSel} onValueChange={setMesSel}>
+                <SelectTrigger className="h-9 w-[180px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {monthOptions.map((mo) => (
+                    <SelectItem key={mo.value} value={mo.value}>{mo.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-1">
             <Label className="text-[11px] text-muted-foreground">Origem do atendimento</Label>
             <Select value={origem} onValueChange={(v) => setOrigem(v as any)}>
