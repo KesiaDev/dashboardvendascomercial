@@ -387,32 +387,40 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     const seenById = new Map<string, Set<string>>();
     const inboundCount = new Map<string, number>();
     const outboundCount = new Map<string, number>();
-    for (let i = 0; i < ids.length; i += 100) {
-      const chunk = ids.slice(i, i + 100);
-      const { data: msgs } = await db
-        .from("coach_messages")
-        .select("conversation_id, body, direction")
-        .in("conversation_id", chunk)
-        .limit(40000);
-      for (const m of (msgs ?? []) as any[]) {
-        if (!m.body) continue;
-        const body = String(m.body);
-        if (String(m.direction) !== "inbound") {
-          outboundCount.set(m.conversation_id, (outboundCount.get(m.conversation_id) ?? 0) + 1);
-          continue;
+    const msgChunks: string[][] = [];
+    for (let i = 0; i < ids.length; i += 100) msgChunks.push(ids.slice(i, i + 100));
+    for (let i = 0; i < msgChunks.length; i += 5) {
+      const res = await Promise.all(
+        msgChunks.slice(i, i + 5).map((chunk) =>
+          db
+            .from("coach_messages")
+            .select("conversation_id, body, direction")
+            .in("conversation_id", chunk)
+            .limit(40000),
+        ),
+      );
+      for (const r of res) {
+        for (const m of ((r.data ?? []) as any[])) {
+          if (!m.body) continue;
+          const body = String(m.body);
+          if (String(m.direction) !== "inbound") {
+            outboundCount.set(m.conversation_id, (outboundCount.get(m.conversation_id) ?? 0) + 1);
+            continue;
+          }
+          if (isAutomacao(body)) continue;
+          const key = normalize(body).replace(/\s+/g, " ").trim().slice(0, 120);
+          let seen = seenById.get(m.conversation_id);
+          if (!seen) { seen = new Set(); seenById.set(m.conversation_id, seen); }
+          if (seen.has(key)) continue;
+          seen.add(key);
+          inboundCount.set(m.conversation_id, (inboundCount.get(m.conversation_id) ?? 0) + 1);
+          const prev = textById.get(m.conversation_id) ?? "";
+          if (prev.length > 6000) continue;
+          textById.set(m.conversation_id, `${prev} ${body}`);
         }
-        if (isAutomacao(body)) continue;
-        const key = normalize(body).replace(/\s+/g, " ").trim().slice(0, 120);
-        let seen = seenById.get(m.conversation_id);
-        if (!seen) { seen = new Set(); seenById.set(m.conversation_id, seen); }
-        if (seen.has(key)) continue;
-        seen.add(key);
-        inboundCount.set(m.conversation_id, (inboundCount.get(m.conversation_id) ?? 0) + 1);
-        const prev = textById.get(m.conversation_id) ?? "";
-        if (prev.length > 6000) continue;
-        textById.set(m.conversation_id, `${prev} ${body}`);
       }
     }
+
 
 
 
