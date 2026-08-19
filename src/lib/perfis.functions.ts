@@ -50,6 +50,9 @@ const normalize = (s: string) =>
 
 type PerfilDef = { nome: string; descricao: string; kw: string[] };
 
+const NAO_IDENTIFICADO = "Perfil não identificado";
+
+
 // Heurística de perfil de lead a partir do que o PRÓPRIO lead escreve.
 const PERFIS: PerfilDef[] = [
   {
