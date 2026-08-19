@@ -276,7 +276,12 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
     const agg = new Map<
       string,
-      { total: number; humano: number; ia: number; vendas: number; scores: number[]; exemplos: string[]; sellers: Map<string, number> }
+      {
+        total: number; humano: number; ia: number; vendas: number;
+        ganhos: number; perdidos: number; abertos: number;
+        scores: number[]; exemplos: string[]; sellers: Map<string, number>;
+        conversas: PerfilConversa[];
+      }
     >();
     let classificadas = 0;
     let comTexto = 0;
@@ -290,22 +295,36 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       classificadas++;
       const seller = (c.seller_name || c.seller_email || "—").trim();
       const vendeu = isSold(c);
+      const st = statusOf(c, vendeu);
       for (const h of hits) {
         let a = agg.get(h);
         if (!a) {
-          a = { total: 0, humano: 0, ia: 0, vendas: 0, scores: [], exemplos: [], sellers: new Map() };
+          a = { total: 0, humano: 0, ia: 0, vendas: 0, ganhos: 0, perdidos: 0, abertos: 0, scores: [], exemplos: [], sellers: new Map(), conversas: [] };
           agg.set(h, a);
         }
         a.total++;
         if (vendeu) a.vendas++;
+        if (st === "ganho") a.ganhos++;
+        else if (st === "perdido") a.perdidos++;
+        else a.abertos++;
         if (c.is_ai_conversation) a.ia++;
         else a.humano++;
         const s = scoreById.get(c.id);
         if (typeof s === "number") a.scores.push(s);
         a.sellers.set(seller, (a.sellers.get(seller) ?? 0) + 1);
-        if (a.exemplos.length < 3) {
-          const sn = snippet(text, h);
-          if (sn) a.exemplos.push(sn);
+        const sn = snippet(text, h);
+        if (a.exemplos.length < 3 && sn) a.exemplos.push(sn);
+        if (a.conversas.length < 200) {
+          a.conversas.push({
+            id: c.id,
+            contato: c.contact_name || c.contact_email || "—",
+            seller,
+            is_ai: !!c.is_ai_conversation,
+            last_message_at: c.last_message_at ?? null,
+            score: typeof s === "number" ? s : null,
+            status: st,
+            trecho: sn ?? text.slice(0, 160),
+          });
         }
       }
     }
@@ -319,6 +338,9 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         humano: a.humano,
         ia: a.ia,
         vendas: a.vendas,
+        ganhos: a.ganhos,
+        perdidos: a.perdidos,
+        abertos: a.abertos,
         conv: a.total ? (a.vendas / a.total) * 100 : 0,
         avg_score: a.scores.length ? a.scores.reduce((x, y) => x + y, 0) / a.scores.length : null,
         exemplos: a.exemplos,
@@ -326,8 +348,10 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
           .map(([seller, total]) => ({ seller, total }))
           .sort((x, y) => y.total - x.total)
           .slice(0, 4),
+        conversas: a.conversas.sort((x, y) => (y.last_message_at ?? "").localeCompare(x.last_message_at ?? "")),
       }))
       .sort((a, b) => b.vendas - a.vendas || b.total - a.total);
+
 
 
     return {
