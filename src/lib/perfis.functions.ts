@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { V3_ORIGIN_NAMES } from "@/lib/origem-v3.server";
+
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
