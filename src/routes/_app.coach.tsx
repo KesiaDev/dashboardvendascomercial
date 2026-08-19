@@ -1734,6 +1734,20 @@ function LigacoesTab() {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<CallRow | null>(null);
 
+  // Lista de meses disponíveis desde o início da temporada (jun/2026) até o mês atual
+  const monthOptions = useMemo(() => {
+    const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    const months: { value: string; label: string }[] = [];
+    const now = new Date();
+    let y = 2026, m = 6;
+    while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
+      months.push({ value: `${y}-${String(m).padStart(2, "0")}-01`, label: `${MESES[m - 1]} ${y}` });
+      m++;
+      if (m > 12) { m = 1; y++; }
+    }
+    return months.reverse();
+  }, []);
+
   const bounds = useMemo(() => {
     // Alinha ao fuso BR (UTC-3) como o restante do dashboard
     const iso = new Date(refDate.getTime() - 3 * 3600_000).toISOString().slice(0, 10);
