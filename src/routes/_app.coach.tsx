@@ -1405,16 +1405,33 @@ function PerformanceTab() {
           ))}
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[11px] text-muted-foreground">
-            {range === "day" ? "Dia" : range === "week" ? "Semana de" : "Mês de"}
-          </span>
-          <input
-            type="date"
-            value={refDate}
-            max={todayISO}
-            onChange={(e) => setRefDate(e.target.value || todayISO)}
-            className="text-xs border rounded-md px-2 py-1 bg-background"
-          />
+          {range === "month" ? (
+            <>
+              <span className="text-[11px] text-muted-foreground">Mês</span>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setRefDate(e.target.value)}
+                className="text-xs border rounded-md px-2 py-1 bg-background"
+              >
+                {monthOptions.map((mo) => (
+                  <option key={mo.value} value={mo.value}>{mo.label}</option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <>
+              <span className="text-[11px] text-muted-foreground">
+                {range === "day" ? "Dia" : "Semana de"}
+              </span>
+              <input
+                type="date"
+                value={refDate}
+                max={todayISO}
+                onChange={(e) => setRefDate(e.target.value || todayISO)}
+                className="text-xs border rounded-md px-2 py-1 bg-background"
+              />
+            </>
+          )}
           {refDate !== todayISO && (
             <button
               onClick={() => setRefDate(todayISO)}
