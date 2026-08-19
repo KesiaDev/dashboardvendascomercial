@@ -148,11 +148,17 @@ const PERFIS: PerfilDef[] = [
     kw: ["aposentad", "inss", "pensionista", "ja tenho 5", "ja tenho 6", "60 anos", "55 anos", "idade avancada"],
   },
   {
-    nome: "Fora do Brasil / imigrantes",
-    descricao: "Leads morando em Portugal, EUA e outros países",
+    // Os leads são, na sua normalidade, de Portugal — morar em PT/Lisboa/Porto
+    // não é um perfil distintivo. Este bucket captura apenas quem É imigrante em
+    // Portugal ou mora noutro país (fora de PT): brasileiros, venezuelanos etc.
+    nome: "Imigrantes / residentes no exterior",
+    descricao: "Leads que imigraram para Portugal ou moram noutro país",
     kw: [
-      "moro em portugal", "aqui em portugal", "lisboa", "porto", "moro nos estados unidos",
-      "moro na irlanda", "moro no japao", "imigrante", "morando fora", "moro fora do brasil", "euro",
+      "imigrante", "vim morar em portugal", "vim para portugal", "mudaram-me para portugal",
+      "sou brasileir", "sou brasileira", "venezuelan", "caboverdian", "angolan", "guineense",
+      "moro nos estados unidos", "moro na irlanda", "moro no japao", "moro em londres",
+      "moro na espanha", "moro na franca", "moro na alemanha", "morando fora de portugal",
+      "moro fora de portugal", "vim do brasil", "vim da venezuela", "vim de angola",
     ],
   },
 ];
