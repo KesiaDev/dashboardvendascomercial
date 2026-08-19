@@ -59,6 +59,19 @@ export type PerfisResult = {
   ranking: PerfilRow[];
 };
 
+// o comercial perguntou sobre trabalho/profissão do lead?
+const PERGUNTA_PROF = [
+  "com o que voce trabalha", "com o que trabalha", "no que voce trabalha", "onde voce trabalha",
+  "qual a sua profissao", "qual sua profissao", "qual e a sua profissao", "sua profissao",
+  "o que voce faz", "o que faz da vida", "o que faz hoje", "com o que atua", "em que area",
+  "qual sua area", "qual a sua area", "voce trabalha com", "trabalha atualmente",
+  "esta trabalhando", "voce ja trabalha com", "atua com o que", "qual sua ocupacao",
+];
+function isPerguntaProfissao(body: string): boolean {
+  const t = normalize(body);
+  return PERGUNTA_PROF.some((k) => t.includes(k));
+}
+
 const normalize = (s: string) =>
   s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
@@ -403,6 +416,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     const seenById = new Map<string, Set<string>>();
     const inboundCount = new Map<string, number>();
     const outboundCount = new Map<string, number>();
+    const perguntouProf = new Set<string>();
     const msgChunks: string[][] = [];
     for (let i = 0; i < ids.length; i += 100) msgChunks.push(ids.slice(i, i + 100));
     for (let i = 0; i < msgChunks.length; i += 5) {
@@ -421,6 +435,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
           const body = String(m.body);
           if (String(m.direction) !== "inbound") {
             outboundCount.set(m.conversation_id, (outboundCount.get(m.conversation_id) ?? 0) + 1);
+            if (isPerguntaProfissao(body)) perguntouProf.add(m.conversation_id);
             continue;
           }
           if (isAutomacao(body)) continue;
@@ -462,6 +477,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         scores: number[]; exemplos: string[]; sellers: Map<string, number>;
         profissoes: Map<string, { nome: string; total: number; vendas: number; ganhos: number }>;
         conversas: PerfilConversa[];
+        semPergunta: number;
       }
     >();
     let classificadas = 0;
@@ -565,7 +581,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
         let a = agg.get(h);
         if (!a) {
-          a = { total: 0, humano: 0, ia: 0, vendas: 0, ganhos: 0, perdidos: 0, abertos: 0, scores: [], exemplos: [], sellers: new Map(), profissoes: new Map(), conversas: [] };
+          a = { total: 0, humano: 0, ia: 0, vendas: 0, ganhos: 0, perdidos: 0, abertos: 0, scores: [], exemplos: [], sellers: new Map(), profissoes: new Map(), conversas: [], semPergunta: 0 };
           agg.set(h, a);
         }
         a.total++;
@@ -578,6 +594,8 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         const s = scoreById.get(c.id);
         if (typeof s === "number") a.scores.push(s);
         a.sellers.set(seller, (a.sellers.get(seller) ?? 0) + 1);
+        const perguntou = perguntouProf.has(c.id);
+        if (!perguntou) a.semPergunta++;
         const prof = profissaoById.get(c.id) ?? null;
         if (prof) {
           const k = normalize(prof).replace(/\s+/g, " ").trim();
@@ -602,6 +620,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
             status: st,
             trecho: sn ?? text.slice(0, 160),
             profissao: prof,
+            perguntou_profissao: perguntou,
           });
         }
       }
@@ -631,6 +650,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
           .map(([seller, total]) => ({ seller, total }))
           .sort((x, y) => y.total - x.total)
           .slice(0, 4),
+        sem_pergunta: a.semPergunta,
         profissoes: Array.from(a.profissoes.values()).sort(
           (x, y) => y.vendas - x.vendas || y.ganhos - x.ganhos || y.total - x.total,
         ),
