@@ -25,6 +25,7 @@ export type PerfilConversa = {
   status: "ganho" | "perdido" | "aberto";
   trecho: string;
   profissao: string | null;
+  perguntou_profissao: boolean;
 };
 
 export type PerfilRow = {
