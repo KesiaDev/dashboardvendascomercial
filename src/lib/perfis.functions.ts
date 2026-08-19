@@ -5,6 +5,17 @@ async function admin() {
   return supabaseAdmin;
 }
 
+export type PerfilConversa = {
+  id: string;
+  contato: string;
+  seller: string;
+  is_ai: boolean;
+  last_message_at: string | null;
+  score: number | null;
+  status: "ganho" | "perdido" | "aberto";
+  trecho: string;
+};
+
 export type PerfilRow = {
   perfil: string;
   descricao: string;
@@ -13,11 +24,16 @@ export type PerfilRow = {
   humano: number;
   ia: number;
   vendas: number;
+  ganhos: number;
+  perdidos: number;
+  abertos: number;
   conv: number;
   avg_score: number | null;
   exemplos: string[];
   sellers: { seller: string; total: number }[];
+  conversas: PerfilConversa[];
 };
+
 
 export type PerfisResult = {
   from: string;
@@ -182,7 +198,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
     let q = db
       .from("coach_conversations")
-      .select("id, seller_name, seller_email, is_ai_conversation, contact_name, contact_email")
+      .select("id, seller_name, seller_email, is_ai_conversation, contact_name, contact_email, deal_id, last_message_at")
       .gte("last_message_at", `${from}T00:00:00Z`)
       .lte("last_message_at", `${to}T23:59:59Z`)
       .order("last_message_at", { ascending: false })
@@ -210,6 +226,27 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       const nm = c.contact_name ? normalize(String(c.contact_name).trim()) : "";
       return (em !== "" && soldEmails.has(em)) || (nm !== "" && soldNames.has(nm));
     };
+
+    // Status do negócio na Clint (ganho / perdido / aberto)
+    const dealStatus = new Map<string, string>();
+    {
+      const dealIds = Array.from(new Set(list.map((c) => c.deal_id).filter(Boolean))) as string[];
+      for (let i = 0; i < dealIds.length; i += 200) {
+        const { data: ds } = await db
+          .from("clint_deals")
+          .select("id, status")
+          .in("id", dealIds.slice(i, i + 200));
+        for (const d of (ds ?? []) as any[]) dealStatus.set(String(d.id), String(d.status ?? "").toUpperCase());
+      }
+    }
+    const statusOf = (c: any, vendeu: boolean): "ganho" | "perdido" | "aberto" => {
+      if (vendeu) return "ganho";
+      const s = c.deal_id ? dealStatus.get(String(c.deal_id)) : undefined;
+      if (s === "WON") return "ganho";
+      if (s === "LOST") return "perdido";
+      return "aberto";
+    };
+
 
 
     // Texto do lead (mensagens inbound reais — sem automação/opt-in, sem repetições)
@@ -255,7 +292,12 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
     const agg = new Map<
       string,
-      { total: number; humano: number; ia: number; vendas: number; scores: number[]; exemplos: string[]; sellers: Map<string, number> }
+      {
+        total: number; humano: number; ia: number; vendas: number;
+        ganhos: number; perdidos: number; abertos: number;
+        scores: number[]; exemplos: string[]; sellers: Map<string, number>;
+        conversas: PerfilConversa[];
+      }
     >();
     let classificadas = 0;
     let comTexto = 0;
@@ -269,22 +311,36 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       classificadas++;
       const seller = (c.seller_name || c.seller_email || "—").trim();
       const vendeu = isSold(c);
+      const st = statusOf(c, vendeu);
       for (const h of hits) {
         let a = agg.get(h);
         if (!a) {
-          a = { total: 0, humano: 0, ia: 0, vendas: 0, scores: [], exemplos: [], sellers: new Map() };
+          a = { total: 0, humano: 0, ia: 0, vendas: 0, ganhos: 0, perdidos: 0, abertos: 0, scores: [], exemplos: [], sellers: new Map(), conversas: [] };
           agg.set(h, a);
         }
         a.total++;
         if (vendeu) a.vendas++;
+        if (st === "ganho") a.ganhos++;
+        else if (st === "perdido") a.perdidos++;
+        else a.abertos++;
         if (c.is_ai_conversation) a.ia++;
         else a.humano++;
         const s = scoreById.get(c.id);
         if (typeof s === "number") a.scores.push(s);
         a.sellers.set(seller, (a.sellers.get(seller) ?? 0) + 1);
-        if (a.exemplos.length < 3) {
-          const sn = snippet(text, h);
-          if (sn) a.exemplos.push(sn);
+        const sn = snippet(text, h);
+        if (a.exemplos.length < 3 && sn) a.exemplos.push(sn);
+        if (a.conversas.length < 200) {
+          a.conversas.push({
+            id: c.id,
+            contato: c.contact_name || c.contact_email || "—",
+            seller,
+            is_ai: !!c.is_ai_conversation,
+            last_message_at: c.last_message_at ?? null,
+            score: typeof s === "number" ? s : null,
+            status: st,
+            trecho: sn ?? text.slice(0, 160),
+          });
         }
       }
     }
@@ -298,6 +354,9 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         humano: a.humano,
         ia: a.ia,
         vendas: a.vendas,
+        ganhos: a.ganhos,
+        perdidos: a.perdidos,
+        abertos: a.abertos,
         conv: a.total ? (a.vendas / a.total) * 100 : 0,
         avg_score: a.scores.length ? a.scores.reduce((x, y) => x + y, 0) / a.scores.length : null,
         exemplos: a.exemplos,
@@ -305,8 +364,10 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
           .map(([seller, total]) => ({ seller, total }))
           .sort((x, y) => y.total - x.total)
           .slice(0, 4),
+        conversas: a.conversas.sort((x, y) => (y.last_message_at ?? "").localeCompare(x.last_message_at ?? "")),
       }))
       .sort((a, b) => b.vendas - a.vendas || b.total - a.total);
+
 
 
     return {
@@ -362,5 +423,59 @@ export const generatePerfisInsightFn = createServerFn({ method: "POST" })
       icp: parsed.icp ?? "",
       perfis: Array.isArray(parsed.perfis) ? parsed.perfis.slice(0, 6) : [],
       acoes: Array.isArray(parsed.acoes) ? parsed.acoes.slice(0, 5) : [],
+    };
+  });
+
+export type ConversaProva = {
+  id: string;
+  contato: string;
+  seller: string;
+  is_ai: boolean;
+  origin_name: string | null;
+  stage: string | null;
+  status: "ganho" | "perdido" | "aberto";
+  mensagens: { direction: string; sender: string | null; body: string; sent_at: string }[];
+};
+
+export const fetchConversaProvaFn = createServerFn({ method: "GET" })
+  .inputValidator((d: { id: string }) => d)
+  .handler(async ({ data }): Promise<ConversaProva> => {
+    const db = await admin();
+    const { data: c, error } = await db
+      .from("coach_conversations")
+      .select("id, contact_name, contact_email, seller_name, seller_email, is_ai_conversation, origin_name, stage, deal_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!c) throw new Error("Conversa não encontrada");
+
+    let status: "ganho" | "perdido" | "aberto" = "aberto";
+    if ((c as any).deal_id) {
+      const { data: d } = await db.from("clint_deals").select("status").eq("id", (c as any).deal_id).maybeSingle();
+      const s = String((d as any)?.status ?? "").toUpperCase();
+      status = s === "WON" ? "ganho" : s === "LOST" ? "perdido" : "aberto";
+    }
+
+    const { data: msgs } = await db
+      .from("coach_messages")
+      .select("direction, sender_name, body, sent_at")
+      .eq("conversation_id", data.id)
+      .order("sent_at", { ascending: true })
+      .limit(500);
+
+    return {
+      id: String((c as any).id),
+      contato: (c as any).contact_name || (c as any).contact_email || "—",
+      seller: (c as any).seller_name || (c as any).seller_email || "—",
+      is_ai: !!(c as any).is_ai_conversation,
+      origin_name: (c as any).origin_name ?? null,
+      stage: (c as any).stage ?? null,
+      status,
+      mensagens: ((msgs ?? []) as any[]).map((m) => ({
+        direction: String(m.direction ?? ""),
+        sender: m.sender_name ?? null,
+        body: String(m.body ?? ""),
+        sent_at: String(m.sent_at ?? ""),
+      })),
     };
   });
