@@ -38,6 +38,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { isAdminUser, isAllowedSellerEmail, isCaseOwnerEmail } from "@/lib/auth";
 import { CasesTab } from "@/components/coach-cases";
 import { ObjecoesTab } from "@/components/coach-objecoes";
+import { PerfisTab } from "@/components/coach-perfis";
 
 
 export const Route = createFileRoute("/_app/coach")({
@@ -177,6 +178,7 @@ function CoachPage() {
           <TabsTrigger value="conversas"><MessageSquare className="h-4 w-4 mr-1" />Conversas</TabsTrigger>
           <TabsTrigger value="ligacoes"><Phone className="h-4 w-4 mr-1" />Ligações</TabsTrigger>
           {isAdmin && <TabsTrigger value="objecoes"><TrendingDown className="h-4 w-4 mr-1" />Objeções</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="perfis"><Users className="h-4 w-4 mr-1" />Perfis de leads</TabsTrigger>}
           {isCaseOwner && <TabsTrigger value="cases"><GraduationCap className="h-4 w-4 mr-1" />Cases</TabsTrigger>}
           {isAdmin && <TabsTrigger value="alertas"><AlertTriangle className="h-4 w-4 mr-1" />Alertas</TabsTrigger>}
           {isAdmin && <TabsTrigger value="upload"><Upload className="h-4 w-4 mr-1" />Nova análise</TabsTrigger>}
@@ -188,6 +190,8 @@ function CoachPage() {
         <TabsContent value="conversas">{isAdmin || isAllowedSeller ? <Conversas /> : <SemAcessoIndividual />}</TabsContent>
         <TabsContent value="ligacoes">{isAdmin || isAllowedSeller ? <LigacoesTab /> : <SemAcessoIndividual />}</TabsContent>
         {isAdmin && <TabsContent value="objecoes"><ObjecoesTab /></TabsContent>}
+        {isAdmin && <TabsContent value="perfis"><PerfisTab /></TabsContent>}
+
         {isCaseOwner && <TabsContent value="cases"><CasesTab /></TabsContent>}
         {isAdmin && <TabsContent value="alertas"><Alertas /></TabsContent>}
         {isAdmin && <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>}
