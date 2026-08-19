@@ -99,13 +99,17 @@ const PERFIS: PerfilDef[] = [
   },
   {
     nome: "Já atua com tráfego/marketing",
-    descricao: "Gestores de tráfego, social media, agências e freelancers da área",
+    descricao: "Só entra quando o lead DIZ que já trabalha na área (não basta citar o produto)",
     kw: [
-      "gestor de trafego", "gestora de trafego", "ja gerencio", "tenho clientes", "meus clientes",
-      "social media", "agencia", "freelancer", "faco anuncio", "rodo campanha", "gerencio campanha",
-      "meta ads", "google ads", "trabalho com marketing", "designer",
+      "sou gestor de trafego", "sou gestora de trafego", "trabalho com trafego", "trabalho com trafego pago",
+      "ja gerencio", "gerencio campanha", "gerencio anuncio", "rodo campanha", "faco anuncio",
+      "tenho clientes", "meus clientes", "atendo clientes", "sou social media", "tenho agencia",
+      "trabalho numa agencia", "trabalho com marketing", "sou designer", "sou freelancer",
+      "ja trabalho com anuncio", "ja fiz campanha", "tenho experiencia com trafego", "sei mexer no meta ads",
+      "ja uso o gerenciador de anuncio",
     ],
   },
+
   {
     nome: "Estudantes / iniciantes",
     descricao: "Estudando, primeiro emprego, começando do zero",
