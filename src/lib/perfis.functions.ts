@@ -149,7 +149,9 @@ const PERFIS: PerfilDef[] = [
   },
 ];
 
-const PROFISSAO_DECLARADA = "Profissão declarada (outros)";
+// "Profissão declarada (outros)" deixou de existir como perfil:
+// qualquer profissão pode comprar a mentoria, então a profissão declarada
+// é só um atributo (badge) dentro do perfil real — não vira um bucket próprio.
 
 // Frases em que o lead declara ocupação: "sou assistente técnica", "trabalho como auxiliar"...
 const OCUPACAO_RE =
