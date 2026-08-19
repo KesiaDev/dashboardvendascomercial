@@ -205,7 +205,8 @@ async function classifyWithAI(
   const batches: { id: string; text: string }[][] = [];
   for (let i = 0; i < items.length; i += 12) batches.push(items.slice(i, i + 12));
 
-  for (const batch of batches.slice(0, 20)) {
+  const runBatch = async (batch: { id: string; text: string }[]) => {
+
     try {
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
