@@ -115,22 +115,37 @@ export function PerfisTab() {
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">Detalhe por perfil</CardTitle></CardHeader>
         <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
+          <table className="w-full text-sm border-collapse table-fixed">
+            <colgroup>
+              <col className="w-[220px]" />
+              <col className="w-[60px]" />
+              <col className="w-[60px]" />
+              <col className="w-[70px]" />
+              <col className="w-[70px]" />
+              <col className="w-[70px]" />
+              <col className="w-[70px]" />
+              <col className="w-[80px]" />
+              <col className="w-[70px]" />
+              <col className="w-[80px]" />
+              <col className="w-[80px]" />
+              <col className="w-[300px]" />
+              <col className="w-[130px]" />
+            </colgroup>
             <thead className="text-[11px] uppercase text-muted-foreground bg-muted/40">
               <tr className="[&>th]:border-r [&>th]:border-border/60 [&>th:last-child]:border-r-0">
                 <th className="text-left p-3 sticky left-0 bg-muted/40">Perfil</th>
-                <th className="text-right p-3">Leads</th>
-                <th className="text-right p-3">%</th>
-                <th className="text-right p-3">Vendas</th>
-                <th className="text-right p-3">Conv.</th>
-                <th className="text-right p-3">Ganho</th>
-                <th className="text-right p-3">Perdido</th>
-                <th className="text-right p-3">Em aberto</th>
-                <th className="text-right p-3">Equipe</th>
-                <th className="text-right p-3">Agente IA</th>
-                <th className="text-right p-3">Nota média</th>
-                <th className="text-left p-3 min-w-[280px]">Trecho real / vendedores</th>
-                <th className="text-right p-3">Prova</th>
+                <th className="text-center p-3">Leads</th>
+                <th className="text-center p-3">%</th>
+                <th className="text-center p-3">Vendas</th>
+                <th className="text-center p-3">Conv.</th>
+                <th className="text-center p-3">Ganho</th>
+                <th className="text-center p-3">Perdido</th>
+                <th className="text-center p-3">Aberto</th>
+                <th className="text-center p-3">Equipe</th>
+                <th className="text-center p-3">Ag. IA</th>
+                <th className="text-center p-3">Nota</th>
+                <th className="text-left p-3">Trecho real / vendedores</th>
+                <th className="text-center p-3">Prova</th>
               </tr>
             </thead>
             <tbody>
@@ -140,17 +155,17 @@ export function PerfisTab() {
                     <p className="font-medium">{r.perfil}</p>
                     <p className="text-[11px] text-muted-foreground">{r.descricao}</p>
                   </td>
-                  <td className="p-3 text-right font-semibold border-r border-border/60">{r.total}</td>
-                  <td className="p-3 text-right border-r border-border/60">{r.pct.toFixed(1)}%</td>
-                  <td className="p-3 text-right font-semibold text-emerald-600 dark:text-emerald-400 border-r border-border/60">{r.vendas}</td>
-                  <td className="p-3 text-right border-r border-border/60">{r.conv.toFixed(1)}%</td>
-                  <td className="p-3 text-right text-emerald-600 dark:text-emerald-400 border-r border-border/60">{r.ganhos}</td>
-                  <td className="p-3 text-right text-rose-600 dark:text-rose-400 border-r border-border/60">{r.perdidos}</td>
-                  <td className="p-3 text-right text-amber-600 dark:text-amber-400 border-r border-border/60">{r.abertos}</td>
-                  <td className="p-3 text-right border-r border-border/60">{r.humano}</td>
-                  <td className="p-3 text-right border-r border-border/60">{r.ia}</td>
-                  <td className="p-3 text-right border-r border-border/60">{r.avg_score != null ? r.avg_score.toFixed(2) : "—"}</td>
-                  <td className="p-3 max-w-[420px] border-r border-border/60">
+                  <td className="p-3 text-center font-semibold border-r border-border/60">{r.total}</td>
+                  <td className="p-3 text-center border-r border-border/60">{r.pct.toFixed(1)}%</td>
+                  <td className="p-3 text-center font-semibold text-emerald-600 dark:text-emerald-400 border-r border-border/60">{r.vendas}</td>
+                  <td className="p-3 text-center border-r border-border/60">{r.conv.toFixed(1)}%</td>
+                  <td className="p-3 text-center text-emerald-600 dark:text-emerald-400 border-r border-border/60">{r.ganhos}</td>
+                  <td className="p-3 text-center text-rose-600 dark:text-rose-400 border-r border-border/60">{r.perdidos}</td>
+                  <td className="p-3 text-center text-amber-600 dark:text-amber-400 border-r border-border/60">{r.abertos}</td>
+                  <td className="p-3 text-center border-r border-border/60">{r.humano}</td>
+                  <td className="p-3 text-center border-r border-border/60">{r.ia}</td>
+                  <td className="p-3 text-center border-r border-border/60">{r.avg_score != null ? r.avg_score.toFixed(2) : "—"}</td>
+                  <td className="p-3 border-r border-border/60">
                     {r.exemplos.slice(0, 2).map((e, i) => (
                       <p key={i} className="text-[11px] text-muted-foreground italic mb-1">{e}</p>
                     ))}
@@ -160,9 +175,9 @@ export function PerfisTab() {
                       ))}
                     </div>
                   </td>
-                  <td className="p-3 text-right">
+                  <td className="p-3 text-center">
                     <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setPerfilAberto(r)}>
-                      <MessageSquare className="h-3 w-3 mr-1" /> Ver conversas
+                      <MessageSquare className="h-3 w-3 mr-1" /> Ver
                     </Button>
                   </td>
                 </tr>
