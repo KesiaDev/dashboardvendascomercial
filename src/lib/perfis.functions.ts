@@ -44,6 +44,7 @@ export type PerfilRow = {
   exemplos: string[];
   sellers: { seller: string; total: number }[];
   profissoes: { nome: string; total: number; vendas: number; ganhos: number }[];
+  sem_pergunta: number;
   conversas: PerfilConversa[];
 };
 
