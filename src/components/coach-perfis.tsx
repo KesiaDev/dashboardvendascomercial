@@ -11,7 +11,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { fetchConversaProvaFn } from "@/lib/conversa-prova.functions";
+import { supabase } from "@/integrations/supabase/client";
+import type { ConversaProva } from "@/lib/conversa-prova.server";
+
+async function fetchConversaProva(id: string): Promise<ConversaProva> {
+  const { data: sess } = await supabase.auth.getSession();
+  const res = await fetch(`/api/conversa-prova?id=${encodeURIComponent(id)}`, {
+    headers: { Authorization: `Bearer ${sess.session?.access_token ?? ""}` },
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Erro ao carregar conversa");
+  return res.json();
+}
 import {
   fetchPerfisLeadsFn,
   generatePerfisInsightFn,
