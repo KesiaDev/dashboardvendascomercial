@@ -111,6 +111,8 @@ export function PerfisTab() {
                 <th className="text-left p-2">Perfil</th>
                 <th className="text-right p-2">Leads</th>
                 <th className="text-right p-2">%</th>
+                <th className="text-right p-2">Vendas</th>
+                <th className="text-right p-2">Conv.</th>
                 <th className="text-right p-2">Equipe</th>
                 <th className="text-right p-2">Agente IA</th>
                 <th className="text-right p-2">Nota média</th>
@@ -126,6 +128,8 @@ export function PerfisTab() {
                   </td>
                   <td className="p-2 text-right font-semibold">{r.total}</td>
                   <td className="p-2 text-right">{r.pct.toFixed(1)}%</td>
+                  <td className="p-2 text-right font-semibold text-emerald-600 dark:text-emerald-400">{r.vendas}</td>
+                  <td className="p-2 text-right">{r.conv.toFixed(1)}%</td>
                   <td className="p-2 text-right">{r.humano}</td>
                   <td className="p-2 text-right">{r.ia}</td>
                   <td className="p-2 text-right">{r.avg_score != null ? r.avg_score.toFixed(2) : "—"}</td>
@@ -142,8 +146,9 @@ export function PerfisTab() {
                 </tr>
               ))}
               {(data?.ranking?.length ?? 0) === 0 && (
-                <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Sem dados."}</td></tr>
+                <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Sem dados."}</td></tr>
               )}
+
             </tbody>
           </table>
         </CardContent>
