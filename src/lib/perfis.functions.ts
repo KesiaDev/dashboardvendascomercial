@@ -182,7 +182,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
     let q = db
       .from("coach_conversations")
-      .select("id, seller_name, seller_email, is_ai_conversation, contact_name, contact_email")
+      .select("id, seller_name, seller_email, is_ai_conversation, contact_name, contact_email, deal_id, last_message_at")
       .gte("last_message_at", `${from}T00:00:00Z`)
       .lte("last_message_at", `${to}T23:59:59Z`)
       .order("last_message_at", { ascending: false })
@@ -210,6 +210,27 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       const nm = c.contact_name ? normalize(String(c.contact_name).trim()) : "";
       return (em !== "" && soldEmails.has(em)) || (nm !== "" && soldNames.has(nm));
     };
+
+    // Status do negócio na Clint (ganho / perdido / aberto)
+    const dealStatus = new Map<string, string>();
+    {
+      const dealIds = Array.from(new Set(list.map((c) => c.deal_id).filter(Boolean))) as string[];
+      for (let i = 0; i < dealIds.length; i += 200) {
+        const { data: ds } = await db
+          .from("clint_deals")
+          .select("id, status")
+          .in("id", dealIds.slice(i, i + 200));
+        for (const d of (ds ?? []) as any[]) dealStatus.set(String(d.id), String(d.status ?? "").toUpperCase());
+      }
+    }
+    const statusOf = (c: any, vendeu: boolean): "ganho" | "perdido" | "aberto" => {
+      if (vendeu) return "ganho";
+      const s = c.deal_id ? dealStatus.get(String(c.deal_id)) : undefined;
+      if (s === "WON") return "ganho";
+      if (s === "LOST") return "perdido";
+      return "aberto";
+    };
+
 
 
     // Texto do lead (mensagens inbound reais — sem automação/opt-in, sem repetições)
