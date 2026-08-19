@@ -52,7 +52,11 @@ export function PerfisTab() {
   const { data, isLoading } = useQuery({
     queryKey: ["coach-perfis", from, to, origem],
     queryFn: () => fetchPerfisLeadsFn({ data: { from, to, origem } }),
+    staleTime: 10 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
   });
+
 
   const gerar = useMutation({
     mutationFn: () =>

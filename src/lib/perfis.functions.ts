@@ -7,6 +7,14 @@ async function admin() {
   return supabaseAdmin;
 }
 
+// hash barato para saber se a conversa mudou desde a última classificação da IA
+function hashText(t: string): string {
+  let h = 5381;
+  for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0;
+  return `${t.length}-${h.toString(36)}`;
+}
+
+
 export type PerfilConversa = {
   id: string;
   contato: string;
@@ -205,7 +213,8 @@ async function classifyWithAI(
   const batches: { id: string; text: string }[][] = [];
   for (let i = 0; i < items.length; i += 12) batches.push(items.slice(i, i + 12));
 
-  for (const batch of batches.slice(0, 20)) {
+  const runBatch = async (batch: { id: string; text: string }[]) => {
+
     try {
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -223,11 +232,11 @@ async function classifyWithAI(
           ],
         }),
       });
-      if (!res.ok) continue;
+      if (!res.ok) return;
       const j: any = await res.json();
       const raw = String(j?.choices?.[0]?.message?.content ?? "");
       const m = raw.match(/\{[\s\S]*\}/);
-      if (!m) continue;
+      if (!m) return;
       const parsed = JSON.parse(m[0]);
       for (const it of parsed?.itens ?? []) {
         const perfil = String(it?.perfil ?? "").trim();
@@ -241,9 +250,16 @@ async function classifyWithAI(
     } catch {
       /* segue com heurística */
     }
+  };
+
+  // roda em paralelo (6 por vez) — antes era sequencial e levava minutos
+  const pend = batches.slice(0, 20);
+  for (let i = 0; i < pend.length; i += 6) {
+    await Promise.all(pend.slice(i, i + 6).map(runBatch));
   }
   return out;
 }
+
 
 
 function snippet(text: string, perfil: string): string | null {
@@ -379,32 +395,40 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     const seenById = new Map<string, Set<string>>();
     const inboundCount = new Map<string, number>();
     const outboundCount = new Map<string, number>();
-    for (let i = 0; i < ids.length; i += 100) {
-      const chunk = ids.slice(i, i + 100);
-      const { data: msgs } = await db
-        .from("coach_messages")
-        .select("conversation_id, body, direction")
-        .in("conversation_id", chunk)
-        .limit(40000);
-      for (const m of (msgs ?? []) as any[]) {
-        if (!m.body) continue;
-        const body = String(m.body);
-        if (String(m.direction) !== "inbound") {
-          outboundCount.set(m.conversation_id, (outboundCount.get(m.conversation_id) ?? 0) + 1);
-          continue;
+    const msgChunks: string[][] = [];
+    for (let i = 0; i < ids.length; i += 100) msgChunks.push(ids.slice(i, i + 100));
+    for (let i = 0; i < msgChunks.length; i += 5) {
+      const res = await Promise.all(
+        msgChunks.slice(i, i + 5).map((chunk) =>
+          db
+            .from("coach_messages")
+            .select("conversation_id, body, direction")
+            .in("conversation_id", chunk)
+            .limit(40000),
+        ),
+      );
+      for (const r of res) {
+        for (const m of ((r.data ?? []) as any[])) {
+          if (!m.body) continue;
+          const body = String(m.body);
+          if (String(m.direction) !== "inbound") {
+            outboundCount.set(m.conversation_id, (outboundCount.get(m.conversation_id) ?? 0) + 1);
+            continue;
+          }
+          if (isAutomacao(body)) continue;
+          const key = normalize(body).replace(/\s+/g, " ").trim().slice(0, 120);
+          let seen = seenById.get(m.conversation_id);
+          if (!seen) { seen = new Set(); seenById.set(m.conversation_id, seen); }
+          if (seen.has(key)) continue;
+          seen.add(key);
+          inboundCount.set(m.conversation_id, (inboundCount.get(m.conversation_id) ?? 0) + 1);
+          const prev = textById.get(m.conversation_id) ?? "";
+          if (prev.length > 6000) continue;
+          textById.set(m.conversation_id, `${prev} ${body}`);
         }
-        if (isAutomacao(body)) continue;
-        const key = normalize(body).replace(/\s+/g, " ").trim().slice(0, 120);
-        let seen = seenById.get(m.conversation_id);
-        if (!seen) { seen = new Set(); seenById.set(m.conversation_id, seen); }
-        if (seen.has(key)) continue;
-        seen.add(key);
-        inboundCount.set(m.conversation_id, (inboundCount.get(m.conversation_id) ?? 0) + 1);
-        const prev = textById.get(m.conversation_id) ?? "";
-        if (prev.length > 6000) continue;
-        textById.set(m.conversation_id, `${prev} ${body}`);
       }
     }
+
 
 
 
@@ -457,17 +481,68 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       hitsById.set(c.id, hits);
     }
 
-    // 2ª passada: IA lê conversa por conversa o que sobrou sem perfil
+    // 2ª passada: IA lê conversa por conversa o que sobrou sem perfil — com cache no banco
     const semPerfil = validos
       .filter((v) => (hitsById.get(v.c.id) ?? []).length === 0)
       .slice(0, 240)
-      .map((v) => ({ id: String(v.c.id), text: v.text }));
-    const iaHits = await classifyWithAI(semPerfil);
-    for (const [id, r] of iaHits) {
-      hitsById.set(id, [r.perfil]);
+      .map((v) => ({ id: String(v.c.id), text: v.text, hash: hashText(v.text) }));
+
+    const applyIA = (id: string, r: { perfil: string; evidencia: string; profissao: string }) => {
+      if (r.perfil) hitsById.set(id, [r.perfil]);
       if (r.evidencia) evidenciaById.set(id, r.evidencia);
       if (r.profissao && !profissaoById.has(id)) profissaoById.set(id, r.profissao);
+    };
+
+    // lê o cache
+    const cached = new Map<string, string>(); // id -> hash já classificado
+    if (semPerfil.length > 0) {
+      const idsSem = semPerfil.map((s) => s.id);
+      const chunks: string[][] = [];
+      for (let i = 0; i < idsSem.length; i += 200) chunks.push(idsSem.slice(i, i + 200));
+      const results = await Promise.all(
+        chunks.map((ch) =>
+          db
+            .from("lead_perfil_cache")
+            .select("conversation_id, text_hash, perfil, evidencia, profissao")
+            .in("conversation_id", ch),
+        ),
+      );
+      const byId = new Map<string, any>();
+      for (const r of results) for (const row of ((r.data ?? []) as any[])) byId.set(String(row.conversation_id), row);
+      for (const s of semPerfil) {
+        const row = byId.get(s.id);
+        if (row && String(row.text_hash) === s.hash) {
+          cached.set(s.id, s.hash);
+          applyIA(s.id, {
+            perfil: String(row.perfil ?? ""),
+            evidencia: String(row.evidencia ?? ""),
+            profissao: String(row.profissao ?? ""),
+          });
+        }
+      }
     }
+
+    const pendentes = semPerfil.filter((s) => !cached.has(s.id));
+    if (pendentes.length > 0) {
+      const iaHits = await classifyWithAI(pendentes.map((p) => ({ id: p.id, text: p.text })));
+      for (const [id, r] of iaHits) applyIA(id, r);
+      // grava o cache (inclusive os que a IA não classificou, para não reprocessar sempre)
+      const rows = pendentes.map((p) => {
+        const r = iaHits.get(p.id);
+        return {
+          conversation_id: p.id,
+          text_hash: p.hash,
+          perfil: r?.perfil ?? null,
+          evidencia: r?.evidencia ?? null,
+          profissao: r?.profissao ?? null,
+          updated_at: new Date().toISOString(),
+        };
+      });
+      for (let i = 0; i < rows.length; i += 200) {
+        await db.from("lead_perfil_cache").upsert(rows.slice(i, i + 200), { onConflict: "conversation_id" });
+      }
+    }
+
 
     for (const { c, text } of validos) {
       const hits = hitsById.get(c.id) ?? [];
