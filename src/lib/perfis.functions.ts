@@ -425,6 +425,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         total: number; humano: number; ia: number; vendas: number;
         ganhos: number; perdidos: number; abertos: number;
         scores: number[]; exemplos: string[]; sellers: Map<string, number>;
+        profissoes: Map<string, { nome: string; total: number; vendas: number; ganhos: number }>;
         conversas: PerfilConversa[];
       }
     >();
