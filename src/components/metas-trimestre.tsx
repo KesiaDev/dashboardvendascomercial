@@ -206,26 +206,24 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
     })),
   });
 
-  /** leads/vendas com a tag "Sessão Estratégica" dentro do PIPELINE_COMERCIAL-V3 */
-  const v3Sessao = useQueries({
+  /** leads/vendas por TAG (Minicurso, Ebook, Sessão) dentro do PIPELINE_COMERCIAL-V3 */
+  const v3Tags = useQueries({
     queries: qi.months.map((m) => ({
-      queryKey: ["origem-v3-sessao", m.from, m.to > refDate ? refDate : m.to],
+      queryKey: ["origem-v3-tags", m.from, m.to > refDate ? refDate : m.to],
       queryFn: () => fetchOrigemV3Fn({ data: { from: m.from, to: m.to > refDate ? refDate : m.to } }),
       staleTime: 5 * 60_000,
       enabled: m.from <= refDate,
     })),
   });
 
-  const isLoading = results.some((r) => r.isFetching) || v3Sessao.some((r) => r.isFetching);
+  const isLoading = results.some((r) => r.isFetching) || v3Tags.some((r) => r.isFetching);
 
   /** leads/vendas por funil × mês */
   const porFunil = useMemo(() => {
-    const base: Record<FunilTriId, { meses: { leads: number; vendas: number }[] }> = {
-      WGT: { meses: [] },
-      V3: { meses: [] },
-      SESSAO: { meses: [] },
-    };
-    for (const f of FUNIS) base[f.id].meses = qi.months.map(() => ({ leads: 0, vendas: 0 }));
+    const base = {} as Record<FunilTriId, { meses: { leads: number; vendas: number }[] }>;
+    for (const f of FUNIS) base[f.id] = { meses: qi.months.map(() => ({ leads: 0, vendas: 0 })) };
+
+    // WGT vem do funil da Clint
     results.forEach((res, i) => {
       for (const r of (res.data ?? []) as ConversaoRow[]) {
         const id = funilId(r.funnel);
@@ -234,24 +232,22 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
         base[id].meses[i].vendas += r.vendas;
       }
     });
-    // Sessão Estratégica soma também a parte "Sessão" que vive dentro do V3
-    v3Sessao.forEach((res, i) => {
-      const row = (res.data?.rows ?? []).find((r) => norm(r.origem).includes("sessao estrategica"));
-      if (!row) return;
-      base.SESSAO.meses[i].leads += row.leads;
-      base.SESSAO.meses[i].vendas += row.ganhos;
+
+    // Minicurso / Ebook / Sessão vêm das tags reais dos leads do V3
+    v3Tags.forEach((res, i) => {
+      const rows = res.data?.rows ?? [];
+      for (const f of FUNIS) {
+        if (!f.origem) continue;
+        for (const r of rows) {
+          if (!norm(r.origem).includes(f.origem)) continue;
+          base[f.id].meses[i].leads += r.leads;
+          base[f.id].meses[i].vendas += r.ganhos;
+        }
+      }
     });
-    // (removido o ajuste manual de leads do V3 — agora usa só o número real da Clint)
-
-
-    // Ajuste manual temporário: leva a Sessão Estratégica ao patamar de 5%
-    // (20 vendas / 400 leads = 5%) até sincronização completa da Clint.
-    const AJUSTE_LEADS_SESSAO = 163;
-    const ultimoSessao = base.SESSAO.meses.reduce((acc, m, i) => (m.leads > 0 ? i : acc), 0);
-    if (base.SESSAO.meses[ultimoSessao]) base.SESSAO.meses[ultimoSessao].leads += AJUSTE_LEADS_SESSAO;
 
     return base;
-  }, [results.map((r) => r.dataUpdatedAt).join("|"), v3Sessao.map((r) => r.dataUpdatedAt).join("|"), qi]);
+  }, [results.map((r) => r.dataUpdatedAt).join("|"), v3Tags.map((r) => r.dataUpdatedAt).join("|"), qi]);
 
 
   const mesAtualIdx = Math.max(
