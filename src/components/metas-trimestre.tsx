@@ -442,12 +442,9 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                         ? "text-amber-500"
                         : "text-red-500"
                   }`}
-                  title={`${l.vendasTri} vendas / ${l.leadsTri} leads · meta ${pct(l.metaTri)}`}
+                  title={`${l.vendasTri} vendas / ${l.leadsTri} leads`}
                 >
                   {pct(l.convTri)}
-                  <span className="ml-1 text-[10px] font-normal text-muted-foreground">
-                    meta {pct(l.metaTri)}
-                  </span>
                 </span>
               </div>
             ))}
