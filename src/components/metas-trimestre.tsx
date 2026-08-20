@@ -60,14 +60,14 @@ function norm(s: string) {
 
 function funilId(funnel: string): FunilTriId | null {
   const n = norm(funnel);
-  return FUNIS.find((f) => f.match(n))?.id ?? null;
+  return FUNIS.find((f) => f.match?.(n))?.id ?? null;
 }
 
 /* ------------------------------------------------------------------ */
 /* Config editável                                                     */
 /* ------------------------------------------------------------------ */
 
-const STORE_KEY = "metas-trimestre-v1";
+const STORE_KEY = "metas-trimestre-v2";
 
 type TriConfig = {
   metaTri: Record<FunilTriId, number>;
@@ -79,8 +79,8 @@ type TriConfig = {
 };
 
 const DEFAULT_TRI: TriConfig = {
-  metaTri: { WGT: 1.5, V3: 5, SESSAO: 10 },
-  metaTriQtd: { WGT: 12, V3: 50, SESSAO: 40 },
+  metaTri: { WGT: 1.5, MINICURSO: 5, EBOOK: 5, SESSAO: 10 },
+  metaTriQtd: { WGT: 12, MINICURSO: 25, EBOOK: 25, SESSAO: 40 },
   modo: "pct",
   rampa: { ...RAMPA_PADRAO },
 };
