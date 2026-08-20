@@ -107,7 +107,7 @@ function weeksBetween(from: string, to: string) {
 export function MetasFunilCard({ from, to, title, period = "mes" }: { from: string; to: string; title: string; period?: "semana" | "mes" }) {
   const isWeek = period === "semana";
   const [cfg, setCfg] = useState<Config>(DEFAULT_CONFIG);
-  const [view, setView] = useState<"periodo" | "trimestre">("periodo");
+  const [view, setView] = useState<"periodo" | "trimestre">("trimestre");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
   const [dirty, setDirty] = useState(false);
