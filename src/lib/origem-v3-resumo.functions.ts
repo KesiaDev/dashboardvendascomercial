@@ -17,14 +17,6 @@ export type OrigemV3ResumoRow = {
 };
 
 const normEmail = (e: unknown) => String(e ?? "").trim().toLowerCase();
-const normName = (n: unknown) =>
-  String(n ?? "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ");
-
 const chunk = <T,>(arr: T[], size: number) => {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
@@ -121,6 +113,5 @@ export const fetchOrigemV3ResumoFn = createServerFn({ method: "GET" })
       ensure(String(s.sale_date).slice(0, 7), linha).ganhos++;
     }
 
-    void normName;
     return Array.from(acc.values());
   });
