@@ -431,26 +431,31 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1.5 pt-0">
-            {linhas.map((l) => (
-              <div key={l.id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="truncate text-muted-foreground">{l.label}</span>
-                <span className="tabular-nums font-semibold" title={`${l.vendasTri}/${l.leadsTri}`}>
-                  {cfg.modo === "qtd" ? (
-                    `${l.vendasTri} / ${l.metaQtd}`
-                  ) : (
-                    <>
-                      {pct(l.convTri)}
-                      <span className="ml-1 text-[10px] font-normal text-muted-foreground">
-                        ({l.vendasTri} / {l.vendasMetaTri} vendas)
-                      </span>
-                    </>
-                  )}
-                </span>
-              </div>
-
-            ))}
+            {linhas.map((l) => {
+              const atg = l.vendasMetaTri > 0 ? (l.vendasTri / l.vendasMetaTri) * 100 : 0;
+              return (
+                <div key={l.id} className="space-y-0.5">
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="truncate text-muted-foreground">{l.label}</span>
+                    <span className="tabular-nums font-semibold" title={`${l.vendasTri} vendas / ${l.leadsTri} leads`}>
+                      {l.vendasTri} / {l.vendasMetaTri}
+                      <span className="ml-1 text-[10px] font-normal text-muted-foreground">vendas</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground tabular-nums">
+                    <span>
+                      taxa real {pct(l.convTri)} · meta {pct(l.metaTri)}
+                    </span>
+                    <span className={atg >= 100 ? "text-emerald-500" : atg >= 85 ? "text-amber-500" : "text-red-500"}>
+                      {atg.toFixed(0)}% da meta{l.vendasFaltam > 0 ? ` · faltam ${l.vendasFaltam}` : ""}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
+
 
         <Card>
           <CardHeader className="pb-1">
