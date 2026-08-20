@@ -521,47 +521,46 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="border-t border-border bg-muted/60 text-[11px] uppercase tracking-wide">
-                    <th className="px-3 py-1.5 text-left font-semibold text-muted-foreground border-r border-border/60" />
+                  {/* Cabeçalhos de grupo — coloridos */}
+                  <tr className="border-t border-b border-border text-[11px] uppercase tracking-wide">
+                    <th className="px-3 py-2 border-r border-border/60 bg-muted/40" />
                     <th
-                      colSpan={5}
-                      className="px-3 py-1.5 text-center font-semibold text-muted-foreground border-r border-border/60"
+                      colSpan={3}
+                      className="px-3 py-2 text-center font-bold border-r border-border/60 bg-blue-500/20 text-blue-400"
                     >
                       Mês atual — {qi.months[mesAtualIdx]?.label}
                     </th>
                     <th
-                      colSpan={5}
-                      className="px-3 py-1.5 text-center font-semibold text-muted-foreground border-r border-border/60"
+                      colSpan={4}
+                      className="px-3 py-2 text-center font-bold border-r border-border/60 bg-purple-500/20 text-purple-400"
                     >
                       Acumulado do trimestre
                     </th>
-                    <th colSpan={4} className="px-3 py-1.5 text-center font-semibold text-muted-foreground">
+                    <th
+                      colSpan={3}
+                      className="px-3 py-2 text-center font-bold bg-amber-500/20 text-amber-400"
+                    >
                       O que falta
                     </th>
                   </tr>
-                  <tr className="border-t border-border bg-muted/30 align-bottom">
+                  {/* Sub-cabeçalhos */}
+                  <tr className="border-b border-border bg-muted/30 align-bottom">
                     <th className="px-3 py-2.5 text-left font-medium text-muted-foreground border-r border-border/60">
                       Funil
                     </th>
                     <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Leads</th>
                     <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Vendas</th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Conv.</th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Meta %</th>
                     <th className="px-2 py-2.5 text-right font-medium text-muted-foreground border-r border-border/60">
                       Ating.
                     </th>
                     <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Leads</th>
                     <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Vendas</th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Conv.</th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">
-                      Meta tri {cfg.modo === "qtd" ? "(vendas)" : "(%)"}
-                    </th>
+                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Ating.</th>
                     <th className="px-2 py-2.5 text-right font-medium text-muted-foreground border-r border-border/60">
                       Gap p.p.
                     </th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Meta em vendas</th>
+                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Meta vendas</th>
                     <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Faltam</th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Ritmo necess.</th>
                     <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">Status</th>
                   </tr>
                 </thead>
@@ -571,41 +570,41 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                       <td className="px-3 py-3.5 font-semibold whitespace-nowrap border-r border-border/40">
                         {l.label}
                       </td>
+                      {/* Mês atual */}
                       <td className="px-2 py-3.5 text-right tabular-nums">{l.mes.leads}</td>
                       <td className="px-2 py-3.5 text-right tabular-nums text-emerald-500 font-semibold">
                         {l.mes.vendas}
                       </td>
-                      <td className="px-2 py-3.5 text-right tabular-nums font-semibold">{pct(l.convMes)}</td>
-                      <td className="px-1 py-3.5 text-right">
-                        <div className="flex justify-end">
-                          {numInput(`m:${l.id}`, l.metaMes, (n) => {
-                            const r = [...cfg.rampa[l.id]] as [number, number, number];
-                            r[mesAtualIdx] = n;
-                            change({ ...cfg, rampa: { ...cfg.rampa, [l.id]: r } });
-                          }, "w-16")}
-                        </div>
-                      </td>
                       <td className="px-2 py-3.5 text-right tabular-nums border-r border-border/40">
-                        {l.atgMes.toFixed(0)}%
+                        <span
+                          className={`font-semibold ${
+                            l.atgMes >= 100
+                              ? "text-emerald-500"
+                              : l.atgMes >= 85
+                                ? "text-amber-500"
+                                : "text-red-500"
+                          }`}
+                        >
+                          {l.atgMes.toFixed(0)}%
+                        </span>
                       </td>
+                      {/* Acumulado do trimestre */}
                       <td className="px-2 py-3.5 text-right tabular-nums">{l.leadsTri}</td>
                       <td className="px-2 py-3.5 text-right tabular-nums text-emerald-500 font-semibold">
                         {l.vendasTri}
                       </td>
-                      <td className="px-2 py-3.5 text-right tabular-nums font-semibold">{pct(l.convTri)}</td>
-                      <td className="px-1 py-3.5 text-right tabular-nums">
-                        <div className="flex flex-col items-end gap-0.5">
-                          {cfg.modo === "qtd"
-                            ? numInput(`tq2:${l.id}`, l.metaQtd, (n) =>
-                                change({ ...cfg, metaTriQtd: { ...cfg.metaTriQtd, [l.id]: n } }),
-                              )
-                            : numInput(`tp2:${l.id}`, l.metaTri, (n) =>
-                                change({ ...cfg, metaTri: { ...cfg.metaTri, [l.id]: n } }),
-                              )}
-                          <span className="text-[10px] text-muted-foreground">
-                            {cfg.modo === "qtd" ? `= ${pct(l.metaTri)}` : `= ${l.vendasMetaTri} vendas`}
-                          </span>
-                        </div>
+                      <td className="px-2 py-3.5 text-right tabular-nums">
+                        <span
+                          className={`font-semibold ${
+                            l.atgTri >= 100
+                              ? "text-emerald-500"
+                              : l.atgTri >= 85
+                                ? "text-amber-500"
+                                : "text-red-500"
+                          }`}
+                        >
+                          {l.atgTri.toFixed(0)}%
+                        </span>
                       </td>
                       <td
                         className={`px-2 py-3.5 text-right tabular-nums font-semibold border-r border-border/40 ${l.gapPP >= 0 ? "text-emerald-500" : "text-red-500"}`}
@@ -613,6 +612,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                         {l.gapPP >= 0 ? "+" : ""}
                         {l.gapPP.toFixed(2)}
                       </td>
+                      {/* O que falta */}
                       <td className="px-2 py-3.5 text-right tabular-nums">
                         <span className="font-semibold">{l.vendasMetaTri}</span>
                         <span className="block text-[10px] text-muted-foreground">
@@ -631,10 +631,6 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                           </Badge>
                         )}
                       </td>
-                      <td className="px-2 py-3.5 text-right tabular-nums">
-                        {pct(l.ritmoNecessario)}
-                        <span className="block text-[10px] text-muted-foreground">~{l.leadsRestantes} leads</span>
-                      </td>
                       <td className="px-3 py-3.5">
                         <Badge className={`${STATUS_UI[l.status].cls} border-0 whitespace-nowrap`}>
                           {STATUS_UI[l.status].dot} {STATUS_UI[l.status].label}
@@ -646,15 +642,9 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
               </table>
               <div className="border-t border-border/50 px-4 py-3 text-[11px] leading-relaxed text-muted-foreground">
                 <p>
-                  <strong className="text-foreground">Modo %</strong>: você define a meta em percentual e a
-                  “Meta em vendas” é calculada sobre os leads projetados do trimestre (
-                  {linhas.map((l) => `${l.label}: ~${l.leadsTri + l.leadsRestantes}`).join(" · ")}). Por isso o
-                  número de vendas fica maior.
-                </p>
-                <p>
-                  <strong className="text-foreground">Modo Vendas</strong>: você define diretamente quantas vendas
-                  quer no trimestre — a % é apenas a consequência. “Meta batida” aparece quando as vendas já
-                  realizadas superaram a meta.
+                  <strong className="text-foreground">Modo {cfg.modo === "qtd" ? "Vendas" : "%"}</strong>: a meta
+                  é editada no card <em>Meta trimestral</em> acima. Aqui, “Meta vendas” é o alvo em unidades e
+                  “Faltam” é quantas vendas ainda faltam para bater. “Ating.” = conversão real ÷ meta.
                 </p>
               </div>
             </div>
