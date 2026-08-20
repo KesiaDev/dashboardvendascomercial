@@ -237,11 +237,8 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       base.SESSAO.meses[i].leads += row.leads;
       base.SESSAO.meses[i].vendas += row.ganhos;
     });
-    // Ajuste manual temporário: leads extras do Pipeline Comercial V3 ainda não
-    // sincronizados da Clint (mantém o realizado do trimestre em ~2,97%).
-    const AJUSTE_LEADS_V3 = 256;
-    const ultimoV3 = base.V3.meses.reduce((acc, m, i) => (m.leads > 0 ? i : acc), 0);
-    if (base.V3.meses[ultimoV3]) base.V3.meses[ultimoV3].leads += AJUSTE_LEADS_V3;
+    // (removido o ajuste manual de leads do V3 — agora usa só o número real da Clint)
+
 
     // Ajuste manual temporário: leva a Sessão Estratégica ao patamar de 5%
     // (20 vendas / 400 leads = 5%) até sincronização completa da Clint.
