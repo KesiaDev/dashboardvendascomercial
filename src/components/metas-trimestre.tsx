@@ -16,7 +16,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
-import { fetchOrigemV3Fn } from "@/lib/origem-v3.functions";
+import { fetchOrigemV3ResumoFn } from "@/lib/origem-v3-resumo.functions";
 
 /* ------------------------------------------------------------------ */
 /* Funis acompanhados na visão trimestral                              */
@@ -206,17 +206,19 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
     })),
   });
 
-  /** leads/vendas por TAG (Minicurso, Ebook, Sessão) dentro do PIPELINE_COMERCIAL-V3 */
-  const v3Tags = useQueries({
-    queries: qi.months.map((m) => ({
-      queryKey: ["origem-v3-tags", m.from, m.to > refDate ? refDate : m.to],
-      queryFn: () => fetchOrigemV3Fn({ data: { from: m.from, to: m.to > refDate ? refDate : m.to } }),
-      staleTime: 5 * 60_000,
-      enabled: m.from <= refDate,
-    })),
+  /**
+   * leads/vendas por TAG (Minicurso, Ebook, Sessão) dentro do PIPELINE_COMERCIAL-V3.
+   * Uma única chamada leve cobre o trimestre inteiro, já agregada por mês.
+   */
+  const triFrom = qi.inicio;
+  const triTo = qi.fim > refDate ? refDate : qi.fim;
+  const v3Resumo = useQuery({
+    queryKey: ["origem-v3-resumo", triFrom, triTo],
+    queryFn: () => fetchOrigemV3ResumoFn({ data: { from: triFrom, to: triTo } }),
+    staleTime: 5 * 60_000,
   });
 
-  const isLoading = results.some((r) => r.isFetching) || v3Tags.some((r) => r.isFetching);
+  const isLoading = results.some((r) => r.isFetching) || v3Resumo.isFetching;
 
   /** leads/vendas por funil × mês */
   const porFunil = useMemo(() => {
