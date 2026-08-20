@@ -22,28 +22,32 @@ import { fetchOrigemV3Fn } from "@/lib/origem-v3.functions";
 /* Funis acompanhados na visão trimestral                              */
 /* ------------------------------------------------------------------ */
 
-export type FunilTriId = "WGT" | "V3" | "SESSAO";
+export type FunilTriId = "WGT" | "MINICURSO" | "EBOOK" | "SESSAO";
 
-const FUNIS: { id: FunilTriId; label: string; metaTri: number; match: (n: string) => boolean }[] = [
+/**
+ * WGT vem do funil da Clint. Minicurso, Ebook e Sessão Estratégica vêm das TAGS
+ * reais dos contatos dentro do PIPELINE_COMERCIAL-V3 (levantadas de mão).
+ */
+const FUNIS: {
+  id: FunilTriId;
+  label: string;
+  metaTri: number;
+  /** funil da Clint (só WGT) */
+  match?: (n: string) => boolean;
+  /** origem/tag no card "Origem dos leads V3" */
+  origem?: string;
+}[] = [
   { id: "WGT", label: "WGT – Perpétuo", metaTri: 1.5, match: (n) => n.includes("wgt") || n.includes("webinar") },
-  {
-    id: "V3",
-    label: "Pipeline Comercial V3",
-    metaTri: 5,
-    match: (n) => n.includes("pipeline_comercial") || n.includes("pipeline comercial"),
-  },
-  {
-    id: "SESSAO",
-    label: "Sessão Estratégica (funil + V3)",
-    metaTri: 10,
-    match: (n) => n.includes("sessao estrategica"),
-  },
+  { id: "MINICURSO", label: "Minicurso V3", metaTri: 5, origem: "minicurso" },
+  { id: "EBOOK", label: "Ebook V3", metaTri: 5, origem: "ebook" },
+  { id: "SESSAO", label: "Sessão Estratégica (funil + V3)", metaTri: 10, origem: "sessao estrategica" },
 ];
 
 /** rampa padrão de meta mensal (mês 1, 2, 3 do trimestre) */
 const RAMPA_PADRAO: Record<FunilTriId, [number, number, number]> = {
   WGT: [1.0, 1.5, 2.0],
-  V3: [3.5, 5.0, 6.5],
+  MINICURSO: [3.5, 5.0, 6.5],
+  EBOOK: [3.5, 5.0, 6.5],
   SESSAO: [6, 10, 14],
 };
 
