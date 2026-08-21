@@ -45,18 +45,18 @@ const DEMO_REUNIOES = 16;
 /* --------------------------------------------------------------- */
 /* Custo do agente IA (editável — a Clint não expõe API de custo)    */
 /* --------------------------------------------------------------- */
-const CUSTO_KEY = "agente-ia-custo-eur";
+const CUSTO_KEY = "agente-ia-custo-por-venda";
 const CUSTO_PADRAO = 499;
 
 function CustoIaCard({ vendas, receitaEur }: { vendas: number; receitaEur: number }) {
-  const [custo, setCusto] = useState(CUSTO_PADRAO);
+  const [custoPorVenda, setCustoPorVenda] = useState(CUSTO_PADRAO);
   const [draft, setDraft] = useState(String(CUSTO_PADRAO));
 
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(CUSTO_KEY);
       if (raw && Number.isFinite(Number(raw))) {
-        setCusto(Number(raw));
+        setCustoPorVenda(Number(raw));
         setDraft(raw);
       }
     } catch {
@@ -67,7 +67,7 @@ function CustoIaCard({ vendas, receitaEur }: { vendas: number; receitaEur: numbe
   const salvar = () => {
     const n = Number(draft.replace(",", "."));
     if (!Number.isFinite(n) || n < 0) return;
-    setCusto(n);
+    setCustoPorVenda(n);
     try {
       window.localStorage.setItem(CUSTO_KEY, String(n));
     } catch {
@@ -77,8 +77,10 @@ function CustoIaCard({ vendas, receitaEur }: { vendas: number; receitaEur: numbe
 
   const eur = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
-  const roi = custo > 0 ? ((receitaEur - custo) / custo) * 100 : 0;
-  const custoPorVenda = vendas > 0 ? custo / vendas : 0;
+  // Custo total = custo por venda × vendas com passagem pela IA.
+  // Esse é o valor que a IA teve participação (gasto gerado pelo agente).
+  const custoTotal = vendas * custoPorVenda;
+  const roi = custoTotal > 0 ? ((receitaEur - custoTotal) / custoTotal) * 100 : 0;
 
   return (
     <Card className="border-amber-500/30">
@@ -90,7 +92,7 @@ function CustoIaCard({ vendas, receitaEur }: { vendas: number; receitaEur: numbe
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-end gap-2">
           <label className="text-xs text-muted-foreground">
-            Custo do período (EUR)
+            Custo por venda (EUR)
             <input
               type="number"
               value={draft}
@@ -105,27 +107,23 @@ function CustoIaCard({ vendas, receitaEur }: { vendas: number; receitaEur: numbe
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Kpi icon={TrendingUp} label="Custo da IA" value={eur(custo)} tone="warn" />
-          <Kpi icon={Trophy} label="Receita atribuída" value={eur(receitaEur)} tone="good" />
+          <Kpi icon={TrendingUp} label="Custo por venda" value={eur(custoPorVenda)} tone="warn" />
+          <Kpi icon={Bot} label="Vendas com a IA" value={String(vendas)} hint="Vendas com passagem pela IA" />
           <Kpi
             icon={Sparkles}
+            label="Valor de participação da IA"
+            value={eur(custoTotal)}
+            tone="warn"
+            hint={`${vendas} × ${eur(custoPorVenda)}`}
+          />
+          <Kpi
+            icon={TrendingUp}
             label="ROI"
             value={`${roi.toFixed(0)}%`}
             tone={roi >= 0 ? "good" : "warn"}
-            hint={`Resultado líquido ${eur(receitaEur - custo)}`}
-          />
-          <Kpi
-            icon={Bot}
-            label="Custo por venda"
-            value={vendas > 0 ? eur(custoPorVenda) : "—"}
-            hint={`${vendas} vendas no período`}
+            hint={`Receita ${eur(receitaEur)} · líquido ${eur(receitaEur - custoTotal)}`}
           />
         </div>
-
-        <p className="text-xs text-muted-foreground">
-          A Clint não disponibiliza o custo do agente por API — o valor da aba “Análise › Custo”
-          é lançado aqui manualmente e fica salvo neste navegador.
-        </p>
       </CardContent>
     </Card>
   );
