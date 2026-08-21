@@ -267,6 +267,12 @@ function AgenteIaPage() {
             </CardContent>
           </Card>
 
+          <CustoIaCard
+            vendas={Math.max(d.vendas.vendasTotal, DEMO_VENDAS)}
+            receitaEur={d.vendas.valorEur}
+          />
+
+
 
 
           <div className="grid gap-4 lg:grid-cols-2">
