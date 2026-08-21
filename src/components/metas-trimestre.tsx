@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -236,20 +236,23 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
     });
 
     // Minicurso / Ebook / Sessão vêm das tags reais dos leads do V3
-    v3Tags.forEach((res, i) => {
-      const rows = res.data?.rows ?? [];
+    // (uma única chamada agregada por mês — "YYYY-MM")
+    const idxPorMes = new Map<string, number>();
+    qi.months.forEach((m, i) => idxPorMes.set(m.from.slice(0, 7), i));
+
+    for (const r of v3Resumo.data ?? []) {
+      const i = idxPorMes.get(r.mes);
+      if (i === undefined) continue;
       for (const f of FUNIS) {
         if (!f.origem) continue;
-        for (const r of rows) {
-          if (!norm(r.origem).includes(f.origem)) continue;
-          base[f.id].meses[i].leads += r.leads;
-          base[f.id].meses[i].vendas += r.ganhos;
-        }
+        if (!norm(r.origem).includes(f.origem)) continue;
+        base[f.id].meses[i].leads += r.leads;
+        base[f.id].meses[i].vendas += r.ganhos;
       }
-    });
+    }
 
     return base;
-  }, [results.map((r) => r.dataUpdatedAt).join("|"), v3Tags.map((r) => r.dataUpdatedAt).join("|"), qi]);
+  }, [results.map((r) => r.dataUpdatedAt).join("|"), v3Resumo.dataUpdatedAt, qi]);
 
 
   const mesAtualIdx = Math.max(
