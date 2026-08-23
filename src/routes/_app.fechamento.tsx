@@ -20,6 +20,7 @@ import {
   type ManualSale,
 } from "@/lib/manual-sales.functions";
 import { isRenewalProduct } from "@/lib/product-groups";
+import { getSessionFast } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,7 +119,7 @@ function FechamentoPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setLoading(false); });
+    getSessionFast().then((s) => { setSession(s); setLoading(false); });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);

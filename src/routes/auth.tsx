@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { isAdminUser } from "@/lib/auth";
+import { isAdminUser, getSessionFast } from "@/lib/auth";
 import logoIcon from "@/assets/logo-icon.png";
 
 export const Route = createFileRoute("/auth")({
@@ -39,8 +39,8 @@ function AuthPage() {
     const go = (u: any) => {
       navigate({ to: getPendingDestination(u), replace: true });
     };
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) go(data.session.user);
+    getSessionFast().then((session) => {
+      if (session) go(session.user);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
