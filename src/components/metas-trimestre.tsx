@@ -305,11 +305,6 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
         ritmoNecessario,
         projecao,
         status: statusOf(projecao, metaTri),
-        serie: qi.months.map((m, i) => ({
-          mes: m.short,
-          realizado: meses[i].leads > 0 ? Number(((meses[i].vendas / meses[i].leads) * 100).toFixed(2)) : null,
-          metaMes: cfg.rampa[f.id][i] ?? null,
-        })),
       };
     });
   }, [porFunil, cfg, mesAtualIdx, qi]);

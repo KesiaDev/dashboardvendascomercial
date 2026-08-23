@@ -757,10 +757,6 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
       {/* Meta de aproveitamento por funil */}
       <MetasFunilCard from={`${yearMonth}-01`} to={monthEndISO} period="mes" title={`Meta de Aproveitamento por Funil — ${monthLabel}`}/>
 
-      {/* Conversão por vendedor × funil */}
-      <ConversaoFunilCard from={`${yearMonth}-01`} to={monthEndISO} title={`Conversão por Vendedor × Funil — ${monthLabel}`}/>
-
-
       {/* Meta IGT23: Marketing x Comercial */}
       <MetasIgt23Card />
 
