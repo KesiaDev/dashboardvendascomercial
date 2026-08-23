@@ -18,11 +18,10 @@ const BR_HOURS: WorkingHours = { startH: 10, endH: 22, tz: "America/Sao_Paulo", 
 /** Vendedores baseados no Brasil (chave = e-mail ou pedaço do nome). */
 const BR_SELLERS = [
   "fabio.nadal19@gmail.com",
+  "fabionadal@llmidiaco.com",
   "gp5230158@gmail.com",
-  "luanaguimaraes.moc@gmail.com",
   "nadal",
   "gisele",
-  "luana",
 ];
 
 function norm(v: string | null | undefined) {

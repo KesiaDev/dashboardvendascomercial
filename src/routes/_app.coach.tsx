@@ -72,7 +72,7 @@ function sentimentColor(s: string | null | undefined) {
   return "bg-slate-500/15 text-slate-700 dark:text-slate-300";
 }
 const SELLER_NAME_MAP: { match: string[]; name: string }[] = [
-  { name: "João Pessoa",      match: ["joaopessoa", "joao pessoa", "joão pessoa"] },
+  { name: "João Pessoa",      match: ["joaopessoa", "jpessoa20", "joao pessoa", "joão pessoa"] },
   { name: "Fabio Nadal",      match: ["fabionadal", "fabio nadal", "nadal"] },
   { name: "Luana Guimarães",  match: ["luanaguimaraes", "luana.guimaraes", "luana guimaraes", "luana guimarães", "luana"] },
   { name: "Kesia Nandi", match: ["kesiawnandi", "kesia nandi", "kesia"] },
@@ -90,8 +90,9 @@ function displaySellerName(nameOrEmail: string | null | undefined): string {
   if (raw.includes("@")) return raw.split("@")[0];
   return raw;
 }
-// Nomes que não fazem parte da equipa comercial (não entram nas métricas)
-const EXCLUDED_SELLER_KEYS = ["camila", "aline", "kesia", "késia", "—"];
+// Nomes que não fazem parte da equipa comercial (não entram nas métricas).
+// Luana saiu da empresa — fora das métricas. Kesia agora entra como vendedora.
+const EXCLUDED_SELLER_KEYS = ["camila", "aline", "luana", "—"];
 function isMetricSeller(nameOrEmail: string | null | undefined): boolean {
   const n = displaySellerName(nameOrEmail).toLowerCase().trim();
   if (!n || n === "—") return false;

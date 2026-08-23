@@ -14,7 +14,17 @@ export const SELLER_ALIASES: SellerAlias[] = [
   {
     canonical: "joaopessoa@llmidiaco.com",
     name: "João Pessoa",
-    aliases: ["joaopessoa@lucianolarrossa.com"],
+    aliases: ["joaopessoa@lucianolarrossa.com", "jpessoa20@hotmail.com"],
+  },
+  {
+    canonical: "fabionadal@llmidiaco.com",
+    name: "Fabio Nadal",
+    aliases: ["fabio.nadal19@gmail.com", "fabionadal@lucianolarrossa.com"],
+  },
+  {
+    canonical: "kesia@llmidiaco.com",
+    name: "Kesia Nandi",
+    aliases: ["kesiawnandi@gmail.com"],
   },
 ];
 
