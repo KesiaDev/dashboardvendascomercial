@@ -4,17 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Save, RotateCcw, TrendingUp } from "lucide-react";
-import {
-  Line,
-  LineChart,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from "recharts";
+import { Save, RotateCcw, TrendingUp } from "lucide-react";
 import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
 import { fetchOrigemV3ResumoFn } from "@/lib/origem-v3-resumo.functions";
 
@@ -324,19 +314,6 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
     });
   }, [porFunil, cfg, mesAtualIdx, qi]);
 
-  const alertas = useMemo(
-    () =>
-      [...linhas].sort((a, b) => a.atgTri - b.atgTri).map((l) => ({
-        id: l.id,
-        label: l.label,
-        status: l.status,
-        texto:
-          l.status === "ok"
-            ? `${l.label} está no ritmo (projeção ${pct(l.projecao)} vs meta ${pct(l.metaTri)}).`
-            : `${l.label} está ${pct(Math.abs(l.gapPP))} ${l.gapPP < 0 ? "abaixo" : "acima"} da meta acumulada — precisa de ${l.vendasFaltam} venda(s) nos próximos ~${l.leadsRestantes} leads (${pct(l.ritmoNecessario)}).`,
-      })),
-    [linhas],
-  );
 
   const resumoStatus = linhas.reduce(
     (a, l) => ({ ...a, [l.status]: a[l.status] + 1 }),
@@ -364,9 +341,6 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       className={`h-7 ${width} text-xs text-right`}
     />
   );
-
-  const [openRampa, setOpenRampa] = useState(false);
-  const [openAlertas, setOpenAlertas] = useState(false);
 
   return (
     <div className="space-y-4">
