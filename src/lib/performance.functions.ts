@@ -424,6 +424,7 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         leadsNovos: s.leadsNovos,
         conversaoLead: s.leadsNovos > 0 ? s.vendas / s.leadsNovos : 0,
       }))
+      .filter((s) => !EXCLUDED_PERF_KEYS.some((k) => s.name.toLowerCase().includes(k)))
       .sort((a, b) => b.faturamento - a.faturamento || b.vendas - a.vendas);
 
 

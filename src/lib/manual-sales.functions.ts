@@ -45,7 +45,6 @@ export const SELLERS = [
   "João Pessoa",
   "Fabio Nadal",
   "Rita Bandeira",
-  "Luana Guimarães",
   "Kesia Nandi",
 ] as const;
 
