@@ -39,8 +39,8 @@ function AuthPage() {
     const go = (u: any) => {
       navigate({ to: getPendingDestination(u), replace: true });
     };
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) go(data.session.user);
+    getSessionFast().then((session) => {
+      if (session) go(session.user);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {

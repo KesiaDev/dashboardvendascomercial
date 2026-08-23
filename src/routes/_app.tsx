@@ -39,10 +39,10 @@ function AppLayout() {
 
   useEffect(() => {
     let cancelled = false;
-    supabase.auth.getSession().then(({ data }) => {
+    getSessionFast().then((session) => {
       if (cancelled) return;
-      setUser(data.session?.user ? { email: data.session.user.email ?? null, user_metadata: data.session.user.user_metadata } : null);
-      setStatus(data.session ? "ready" : "auth");
+      setUser(session?.user ? { email: session.user.email ?? null, user_metadata: session.user.user_metadata } : null);
+      setStatus(session ? "ready" : "auth");
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
