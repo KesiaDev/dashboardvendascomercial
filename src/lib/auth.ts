@@ -1,7 +1,44 @@
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+
 export const ADMIN_EMAILS = ["kesiawnandi@gmail.com", "kesia@llmidiaco.com"];
 
 // Cases de treinamento (Análise Comercial): visíveis apenas para este e-mail.
 export const CASE_OWNER_EMAILS = ["kesiawnandi@gmail.com"];
+
+/**
+ * getSession com timeout: se o serviço de auth estiver lento/indisponível
+ * (ex.: refresh de token estourando), não deixa a tela travada em
+ * "Carregando…" — cai para a sessão em cache (se ainda válida) ou retorna null.
+ */
+export async function getSessionFast(timeoutMs = 6000): Promise<Session | null> {
+  try {
+    const result = await Promise.race([
+      supabase.auth.getSession(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+    ]);
+    if (result) return result.data.session ?? null;
+  } catch {
+    /* cai no fallback abaixo */
+  }
+  // Fallback: sessão em cache no storage (apenas browser, apenas se não expirada).
+  try {
+    if (typeof window === "undefined") return null;
+    const key = Object.keys(window.localStorage).find((k) => /^sb-.+-auth-token$/.test(k));
+    if (!key) return null;
+    const parsed = JSON.parse(window.localStorage.getItem(key) ?? "null");
+    if (
+      parsed?.access_token &&
+      typeof parsed?.expires_at === "number" &&
+      parsed.expires_at * 1000 > Date.now() + 30_000
+    ) {
+      return parsed as Session;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
 
 export function isCaseOwnerEmail(email: string | null | undefined): boolean {
   if (!email) return false;
