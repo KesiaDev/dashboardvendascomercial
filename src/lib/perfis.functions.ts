@@ -204,16 +204,32 @@ function extractOcupacao(text: string): string | null {
   return null;
 }
 
+// Tokens curtos perigosos: substring gerava falsos positivos graves
+// ("mei" casava com "meio", "uber" com "tuberculose", "99" com qualquer número).
+// Esses só casam como PALAVRA INTEIRA; os demais seguem como radicais (substring).
+const EXACT_WORD = new Set(["mei", "99", "clt", "uber"]);
+const escRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const EXACT_RES = new Map(
+  [...EXACT_WORD].map((k) => [k, new RegExp(`(?<![a-z0-9])${escRe(k)}(?![a-z0-9])`)]),
+);
+function kwMatch(t: string, kw: string): boolean {
+  const k = normalize(kw);
+  const re = EXACT_RES.get(k);
+  return re ? re.test(t) : t.includes(k);
+}
+
 function classify(text: string): string[] {
   const t = normalize(text);
   const hits: string[] = [];
   for (const p of PERFIS) {
-    if (p.kw.some((k) => t.includes(normalize(k)))) hits.push(p.nome);
+    if (p.kw.some((k) => kwMatch(t, k))) hits.push(p.nome);
   }
   return hits;
 }
 
-// Classificação conversa por conversa com IA para o que a heurística não pegou.
+// Classificação principal: a IA lê conversa por conversa com regras rígidas de
+// evidência. Um erro aqui vira anúncio errado — na dúvida, a IA deve devolver
+// "não identificado" em vez de chutar um perfil.
 async function classifyWithAI(
   items: { id: string; text: string }[],
 ): Promise<Map<string, { perfil: string; evidencia: string; profissao: string }>> {
@@ -223,31 +239,45 @@ async function classifyWithAI(
 
   const nomes = [...PERFIS.map((p) => p.nome), NAO_IDENTIFICADO];
   const sys =
-    "Você classifica o PERFIL DE VIDA de leads a partir do que o próprio lead escreveu no WhatsApp. " +
-    `Escolha UM perfil desta lista exata: ${nomes.join(" | ")}. ` +
-    "Não existe categoria 'profissão declarada' — a profissão é só um atributo, não define o perfil. " +
-    "Escolha o perfil de VIDA que melhor descreve o lead (ex.: mãe com filhos, desempregado, autônomo, estudante...). " +
-    `Use "${NAO_IDENTIFICADO}" quando não houver nenhuma pista real sobre a vida/trabalho dele. ` +
-    'Em "profissao" devolva o cargo/ocupação em 1 a 3 palavras no singular (ex.: "assistente administrativa", "enfermeira", "motorista de app"); use "" se o lead não disse a profissão. ' +
-    'Responda APENAS JSON: {"itens":[{"id":"...","perfil":"...","profissao":"...","evidencia":"trecho literal do lead"}]}';
+    "Você é um analista sênior de pesquisa de audiência (ICP) de uma empresa de mentorias de tráfego pago. " +
+    "Sua classificação alimenta a criação de ANÚNCIOS, então precisão é obrigatória. " +
+    "Classifique o PERFIL DE VIDA de cada lead usando APENAS o que o próprio lead escreveu; " +
+    "ignore mensagens do vendedor/IA e nunca deduza o perfil pelo interesse no produto.\n\n" +
+    "PERFIS (escolha exatamente UM):\n" +
+    "- Mães com filhos pequenos — o lead diz que é mãe/pai e menciona filhos, creche ou cuidar de casa.\n" +
+    "- Desempregados — diz explicitamente que está sem emprego/sem renda ou que foi demitido.\n" +
+    "- Caminhoneiros / motoristas — caminhão, carreta, motorista de app, entregador.\n" +
+    "- CLT / assalariados — tem emprego registrado/fixo, patrão, salário, escala; quer renda extra ou sair do emprego. Ter emprego fixo NÃO é ser autônomo.\n" +
+    "- Autônomos / pequenos empresários — SÓ quando o lead diz que TEM negócio próprio (loja, salão, empresa, MEI, CNPJ) ou trabalha por conta própria. Nunca use para quem tem emprego CLT.\n" +
+    "- Já atua com tráfego/marketing — só quando o lead diz que JÁ trabalha na área (gestor de tráfego, social media, agência, tem clientes na área).\n" +
+    "- Estudantes / iniciantes — estuda, busca o primeiro emprego ou está começando do zero.\n" +
+    "- Servidores / militares / saúde — concursado, militar, policial, enfermagem, professor, hospital.\n" +
+    "- Aposentados / 50+ — aposentado, INSS, idade avançada declarada.\n" +
+    "- Imigrantes / residentes no exterior — imigrou para Portugal ou mora fora do país de origem.\n" +
+    `- ${NAO_IDENTIFICADO} — nenhuma pista real sobre a vida/trabalho do lead.\n\n` +
+    "REGRAS:\n" +
+    `1. Evidência obrigatória: cite o trecho LITERAL do lead que justifica o perfil. Sem evidência literal, use "${NAO_IDENTIFICADO}".\n` +
+    `2. Na dúvida entre dois perfis, escolha o que tem evidência mais explícita; se nenhum for claro, use "${NAO_IDENTIFICADO}".\n` +
+    '3. profissao: ocupação declarada em 1 a 3 palavras no singular (ex.: "auxiliar de cozinha"); "" se não declarada.\n' +
+    '4. Responda APENAS JSON no formato {"itens":[{"id":"...","perfil":"...","profissao":"...","evidencia":"..."}]} e inclua TODOS os ids recebidos.';
 
   const batches: { id: string; text: string }[][] = [];
-  for (let i = 0; i < items.length; i += 12) batches.push(items.slice(i, i + 12));
+  for (let i = 0; i < items.length; i += 8) batches.push(items.slice(i, i + 8));
 
   const runBatch = async (batch: { id: string; text: string }[]) => {
-
     try {
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash-lite",
+          model: "google/gemini-2.5-flash",
+          temperature: 0,
           messages: [
             { role: "system", content: sys },
             {
               role: "user",
               content: batch
-                .map((b) => `ID: ${b.id}\nLEAD DISSE: ${b.text.replace(/\s+/g, " ").slice(0, 900)}`)
+                .map((b) => `ID: ${b.id}\nLEAD DISSE: ${b.text.replace(/\s+/g, " ").slice(0, 1800)}`)
                 .join("\n---\n"),
             },
           ],
@@ -261,20 +291,21 @@ async function classifyWithAI(
       const parsed = JSON.parse(m[0]);
       for (const it of parsed?.itens ?? []) {
         const perfil = String(it?.perfil ?? "").trim();
-        if (!nomes.includes(perfil) || perfil === NAO_IDENTIFICADO) continue;
+        if (!nomes.includes(perfil)) continue;
+        // perfil "" = a IA respondeu "não identificado" (veredito válido, vai pro cache)
         out.set(String(it?.id), {
-          perfil,
-          evidencia: String(it?.evidencia ?? "").slice(0, 200),
+          perfil: perfil === NAO_IDENTIFICADO ? "" : perfil,
+          evidencia: perfil === NAO_IDENTIFICADO ? "" : String(it?.evidencia ?? "").slice(0, 200),
           profissao: String(it?.profissao ?? "").slice(0, 40).trim(),
         });
       }
     } catch {
-      /* segue com heurística */
+      /* quem ficar sem resposta da IA cai na heurística */
     }
   };
 
-  // roda em paralelo (6 por vez) — antes era sequencial e levava minutos
-  const pend = batches.slice(0, 20);
+  // roda em paralelo (6 por vez)
+  const pend = batches.slice(0, 54);
   for (let i = 0; i < pend.length; i += 6) {
     await Promise.all(pend.slice(i, i + 6).map(runBatch));
   }
@@ -483,7 +514,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     let classificadas = 0;
     let comTexto = 0;
 
-    // 1ª passada: heurística + profissão declarada; junta o que ficou sem perfil
+    // 1ª passada: filtra conversas reais e extrai profissão declarada (regex simples)
     const validos: { c: any; text: string }[] = [];
     const hitsById = new Map<string, string[]>();
     const evidenciaById = new Map<string, string>();
@@ -501,15 +532,17 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       validos.push({ c, text });
       const ocupacao = extractOcupacao(text);
       if (ocupacao) profissaoById.set(c.id, ocupacao);
-      const hits = classify(text);
-      hitsById.set(c.id, hits);
     }
 
-    // 2ª passada: IA lê conversa por conversa o que sobrou sem perfil — com cache no banco
-    const semPerfil = validos
-      .filter((v) => (hitsById.get(v.c.id) ?? []).length === 0)
-      .slice(0, 240)
-      .map((v) => ({ id: String(v.c.id), text: v.text, hash: hashText(v.text) }));
+    // 2ª passada: a IA classifica TODAS as conversas válidas (com cache versionado
+    // no banco). A heurística por palavra-chave virou apenas fallback para quando a
+    // IA não responde — era ela a origem das classificações erradas.
+    const CACHE_VERSION = "v3";
+    const aiTargets = validos.map((v) => ({
+      id: String(v.c.id),
+      text: v.text,
+      hash: `${CACHE_VERSION}|${hashText(v.text)}`,
+    }));
 
     const applyIA = (id: string, r: { perfil: string; evidencia: string; profissao: string }) => {
       if (r.perfil) hitsById.set(id, [r.perfil]);
@@ -518,11 +551,11 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     };
 
     // lê o cache
-    const cached = new Map<string, string>(); // id -> hash já classificado
-    if (semPerfil.length > 0) {
-      const idsSem = semPerfil.map((s) => s.id);
+    const hasVerdict = new Set<string>();
+    if (aiTargets.length > 0) {
+      const idsAll = aiTargets.map((s) => s.id);
       const chunks: string[][] = [];
-      for (let i = 0; i < idsSem.length; i += 200) chunks.push(idsSem.slice(i, i + 200));
+      for (let i = 0; i < idsAll.length; i += 200) chunks.push(idsAll.slice(i, i + 200));
       const results = await Promise.all(
         chunks.map((ch) =>
           db
@@ -533,10 +566,10 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       );
       const byId = new Map<string, any>();
       for (const r of results) for (const row of ((r.data ?? []) as any[])) byId.set(String(row.conversation_id), row);
-      for (const s of semPerfil) {
+      for (const s of aiTargets) {
         const row = byId.get(s.id);
         if (row && String(row.text_hash) === s.hash) {
-          cached.set(s.id, s.hash);
+          hasVerdict.add(s.id);
           applyIA(s.id, {
             perfil: String(row.perfil ?? ""),
             evidencia: String(row.evidencia ?? ""),
@@ -546,25 +579,40 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       }
     }
 
-    const pendentes = semPerfil.filter((s) => !cached.has(s.id));
+    const pendentes = aiTargets.filter((s) => !hasVerdict.has(s.id)).slice(0, 420);
     if (pendentes.length > 0) {
       const iaHits = await classifyWithAI(pendentes.map((p) => ({ id: p.id, text: p.text })));
-      for (const [id, r] of iaHits) applyIA(id, r);
-      // grava o cache (inclusive os que a IA não classificou, para não reprocessar sempre)
-      const rows = pendentes.map((p) => {
-        const r = iaHits.get(p.id);
-        return {
-          conversation_id: p.id,
-          text_hash: p.hash,
-          perfil: r?.perfil ?? null,
-          evidencia: r?.evidencia ?? null,
-          profissao: r?.profissao ?? null,
-          updated_at: new Date().toISOString(),
-        };
-      });
+      for (const [id, r] of iaHits) {
+        hasVerdict.add(id);
+        applyIA(id, r);
+      }
+      // grava o cache só de quem a IA respondeu de fato (inclusive "não identificado")
+      const rows = pendentes
+        .filter((p) => iaHits.has(p.id))
+        .map((p) => {
+          const r = iaHits.get(p.id)!;
+          return {
+            conversation_id: p.id,
+            text_hash: p.hash,
+            perfil: r.perfil || null,
+            evidencia: r.evidencia || null,
+            profissao: r.profissao || null,
+            updated_at: new Date().toISOString(),
+          };
+        });
       for (let i = 0; i < rows.length; i += 200) {
         await db.from("lead_perfil_cache").upsert(rows.slice(i, i + 200), { onConflict: "conversation_id" });
       }
+    }
+
+    // Fallback: heurística por palavra-chave só para quem ficou sem veredito da IA
+    // (falha no gateway ou acima do limite por execução). Vários matches → fica o
+    // de maior prioridade (ordem da lista PERFIS).
+    for (const v of validos) {
+      const id = String(v.c.id);
+      if (hasVerdict.has(id)) continue;
+      const hits = classify(v.text);
+      if (hits.length > 0) hitsById.set(id, [hits[0]]);
     }
 
 
