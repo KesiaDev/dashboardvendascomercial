@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { isAdminUser } from "@/lib/auth";
+import { isAdminUser, getSessionFast } from "@/lib/auth";
 import logoIcon from "@/assets/logo-icon.png";
 
 export const Route = createFileRoute("/auth")({
