@@ -52,7 +52,7 @@ const DEFAULT_CONFIG: Config = {
   metas: { WEBINAR: 1.5, V3: 5, SESSAO: 10 },
   dataFinal: "2026-09-30",
   desde: "2026-01-01",
-  vendedores: ["Fábio Nadal", "Gisele", "Luana", "Rita", "João"],
+  vendedores: ["Fábio Nadal", "Gisele", "Rita", "João"],
   comparecimento: 48.6,
   fechamento: 33,
   proposta: 60,
