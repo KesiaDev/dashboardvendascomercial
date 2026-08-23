@@ -66,12 +66,15 @@ export const ALLOWED_NON_ADMIN_ROUTES = ["/fechamento", "/fechamento-semanal", "
 
 // Vendedores autorizados a ver a visão individual de Performance/Conversas/Ligações no Coach.
 // Qualquer outro utilizador não-admin vê essas abas vazias.
+// E-mails novos (Clint) + antigos (login continua válido). Luana saiu da empresa.
 export const ALLOWED_SELLER_EMAILS = [
   "ritasbandeira@gmail.com",
   "gp5230158@gmail.com",
+  "fabionadal@llmidiaco.com",
   "fabio.nadal19@gmail.com",
-  "luanaguimaraes.moc@gmail.com",
+  "joaopessoa@llmidiaco.com",
   "jpessoa20@hotmail.com",
+  "kesia@llmidiaco.com",
 ];
 
 export function isAllowedSellerEmail(email: string | null | undefined): boolean {

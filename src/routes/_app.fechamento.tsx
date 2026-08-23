@@ -166,10 +166,13 @@ function isAdminEmail(e: string) { return ADMIN_EMAILS.includes((e ?? "").trim()
 const SELLER_CANONICAL: Record<string, string> = {
   "joaopessoa@llmidiaco.com": "João Pessoa",
   "joaopessoa@lucianolarrossa.com": "João Pessoa",
+  "jpessoa20@hotmail.com": "João Pessoa",
   "giselegagliano@lucianolarrossa.com": "Gisele Pimentel",
+  "gp5230158@gmail.com": "Gisele Pimentel",
+  "fabionadal@llmidiaco.com": "Fabio Nadal",
   "fabionadal@lucianolarrossa.com": "Fabio Nadal",
+  "fabio.nadal19@gmail.com": "Fabio Nadal",
   "ritabandeira@lucianolarrossa.com": "Rita Bandeira",
-  "luana.guimaraes@lucianolarrossa.com": "Luana Guimarães",
   "kesiawnandi@gmail.com": "Kesia Nandi",
   "kesia@llmidiaco.com": "Kesia Nandi",
 };

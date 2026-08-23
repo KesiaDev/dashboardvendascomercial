@@ -29,12 +29,12 @@ export type CallRow = {
 };
 
 // Mapa fixo extensão -> e-mail canônico do vendedor (fonte: painel CCPBX + Clint).
+// Luana (204) saiu da empresa — ramal removido do mapa.
 const EXTENSION_TO_EMAIL: Record<string, string> = {
   "200": "ritabandeira@lucianolarrossa.com",
   "201": "joaopessoa@llmidiaco.com",
   "202": "giselegagliano@lucianolarrossa.com",
-  "203": "fabionadal@lucianolarrossa.com",
-  "204": "luanaguimaraes@lucianolarrossa.com",
+  "203": "fabionadal@llmidiaco.com",
 };
 
 function baseUrl(): string {

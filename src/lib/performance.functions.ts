@@ -121,13 +121,16 @@ function rangeBounds(range: PerfRange, refDateISO?: string): { startDate: string
 // Aliases → nome canônico. Cobre variantes de e-mail (com/sem ponto), locais
 // (joaopessoa, gisele, gagliano, pimentel...) e o próprio nome escrito.
 const SELLER_ALIASES: { match: string[]; name: string }[] = [
-  { name: "João Pessoa",     match: ["joaopessoa", "joao pessoa", "joão pessoa"] },
+  { name: "João Pessoa",     match: ["joaopessoa", "jpessoa20", "joao pessoa", "joão pessoa"] },
   { name: "Gisele Pimentel", match: ["giselegagliano", "gisele gagliano", "gisele pimentel", "gisele"] },
   { name: "Fabio Nadal",     match: ["fabionadal", "fabio nadal", "nadal"] },
   { name: "Rita Bandeira",   match: ["ritabandeira", "rita bandeira", "rita"] },
   { name: "Luana Guimarães", match: ["luanaguimaraes", "luana.guimaraes", "luana guimaraes", "luana guimarães", "luana"] },
   { name: "Kesia Nandi", match: ["kesiawnandi", "kesia nandi", "kesia"] },
 ];
+
+// Fora das métricas de performance: Luana saiu da empresa.
+const EXCLUDED_PERF_KEYS = ["luana"];
 
 function canonicalFrom(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -421,6 +424,7 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         leadsNovos: s.leadsNovos,
         conversaoLead: s.leadsNovos > 0 ? s.vendas / s.leadsNovos : 0,
       }))
+      .filter((s) => !EXCLUDED_PERF_KEYS.some((k) => s.name.toLowerCase().includes(k)))
       .sort((a, b) => b.faturamento - a.faturamento || b.vendas - a.vendas);
 
 
