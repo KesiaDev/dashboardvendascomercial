@@ -98,11 +98,13 @@ export function ObjecoesTab() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-4">
+        <Kpi label="Conversas lidas (mensagens)" value={String(data?.conversas_analisadas ?? 0)} />
         <Kpi label="Conversas com objeção" value={String(data?.sample_size ?? 0)} />
         <Kpi label="Objeções detectadas" value={String(data?.total_objecoes ?? 0)} />
         <Kpi label="Nota média dessas conversas" value={data?.avg_score != null ? data.avg_score.toFixed(2) : "—"} />
       </div>
+
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
