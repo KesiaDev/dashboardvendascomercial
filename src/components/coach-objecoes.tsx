@@ -26,6 +26,8 @@ export function ObjecoesTab() {
   const [seller, setSeller] = useState("all");
   const [funil, setFunil] = useState("all");
   const [playbook, setPlaybook] = useState<ObjecoesPlaybook | null>(null);
+  const [aberto, setAberto] = useState<string | null>(null);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["coach-objecoes", from, to, seller, funil],
@@ -37,9 +39,14 @@ export function ObjecoesTab() {
       generateObjecoesPlaybookFn({
         data: {
           ranking: (data?.ranking ?? []).map((r) => ({
-            objecao: r.objecao, total: r.total, avg_score: r.avg_score,
+            objecao: r.objecao,
+            total: r.total,
+            avg_score: r.avg_score,
+            exemplos: (r.evidencias ?? []).slice(0, 4).map((e) => e.trecho),
           })),
-          contexto: `Período ${from} a ${to}. Conversas analisadas: ${data?.sample_size ?? 0}. Nota média: ${
+          contexto: `Período ${from} a ${to}. Conversas lidas: ${data?.conversas_analisadas ?? 0}. Conversas com objeção: ${
+            data?.sample_size ?? 0
+          }. Nota média: ${
             data?.avg_score?.toFixed(2) ?? "—"
           }. Vendedor: ${seller === "all" ? "todos" : seller}. Funil: ${funil === "all" ? "todos" : funil}.`,
         },
@@ -47,6 +54,7 @@ export function ObjecoesTab() {
     onSuccess: (r) => { setPlaybook(r); toast.success("Playbook de objeções gerado"); },
     onError: (e: any) => toast.error(e?.message ?? "Falha ao gerar playbook"),
   });
+
 
   const chartData = useMemo(
     () => (data?.ranking ?? []).slice(0, 8).map((r) => ({ nome: r.objecao, total: r.total })),
@@ -92,11 +100,13 @@ export function ObjecoesTab() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-4">
+        <Kpi label="Conversas lidas (mensagens)" value={String(data?.conversas_analisadas ?? 0)} />
         <Kpi label="Conversas com objeção" value={String(data?.sample_size ?? 0)} />
         <Kpi label="Objeções detectadas" value={String(data?.total_objecoes ?? 0)} />
         <Kpi label="Nota média dessas conversas" value={data?.avg_score != null ? data.avg_score.toFixed(2) : "—"} />
       </div>
+
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -157,8 +167,18 @@ export function ObjecoesTab() {
             <tbody>
               {(data?.ranking ?? []).map((r, i) => (
                 <Fragment key={r.objecao}>
-                  <tr key={r.objecao} className={`border-b ${i < 2 ? "bg-muted/30 font-semibold" : ""}`}>
-                    <td className="p-2 font-medium">{r.objecao}</td>
+                  <tr
+                    className={`border-b cursor-pointer hover:bg-muted/40 ${i < 2 ? "bg-muted/30 font-semibold" : ""}`}
+                    onClick={() => setAberto(aberto === r.objecao ? null : r.objecao)}
+                  >
+                    <td className="p-2 font-medium">
+                      {r.objecao}
+                      {(r.evidencias?.length ?? 0) > 0 && (
+                        <span className="ml-2 text-[10px] font-normal text-muted-foreground">
+                          {aberto === r.objecao ? "▲ ocultar falas" : `▼ ver ${r.evidencias.length} falas reais`}
+                        </span>
+                      )}
+                    </td>
                     <td className="p-2 text-right">{r.total}</td>
                     <td className="p-2 text-right">{r.pct.toFixed(1)}%</td>
                     <td className={`p-2 text-right ${r.avg_score != null && r.avg_score < 6 ? "text-red-500 font-semibold" : ""}`}>
@@ -175,13 +195,31 @@ export function ObjecoesTab() {
                       </div>
                     </td>
                   </tr>
-                  {i === 1 && (
-                    <tr><td colSpan={5} className="p-0">
-                      <div className="h-[3px] bg-primary/40 w-full" />
-                    </td></tr>
+                  {aberto === r.objecao && (
+                    <tr className="border-b bg-muted/20">
+                      <td colSpan={5} className="p-3">
+                        <p className="text-[10px] uppercase text-muted-foreground mb-2">
+                          Prova real — o que o lead escreveu
+                        </p>
+                        <div className="space-y-2">
+                          {r.evidencias.map((e, k) => (
+                            <div key={k} className="rounded-md border bg-background p-2">
+                              <p className="text-xs italic">“{e.trecho}”</p>
+                              <p className="text-[10px] text-muted-foreground mt-1">
+                                {e.contato} · atendido por {e.seller}
+                              </p>
+                            </div>
+                          ))}
+                          {r.evidencias.length === 0 && (
+                            <p className="text-xs text-muted-foreground">Sem citação registada.</p>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
                   )}
                 </Fragment>
               ))}
+
               {(data?.ranking?.length ?? 0) === 0 && (
                 <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Sem dados."}</td></tr>
               )}
