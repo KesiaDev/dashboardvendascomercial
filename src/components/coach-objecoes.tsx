@@ -37,9 +37,14 @@ export function ObjecoesTab() {
       generateObjecoesPlaybookFn({
         data: {
           ranking: (data?.ranking ?? []).map((r) => ({
-            objecao: r.objecao, total: r.total, avg_score: r.avg_score,
+            objecao: r.objecao,
+            total: r.total,
+            avg_score: r.avg_score,
+            exemplos: (r.evidencias ?? []).slice(0, 4).map((e) => e.trecho),
           })),
-          contexto: `Período ${from} a ${to}. Conversas analisadas: ${data?.sample_size ?? 0}. Nota média: ${
+          contexto: `Período ${from} a ${to}. Conversas lidas: ${data?.conversas_analisadas ?? 0}. Conversas com objeção: ${
+            data?.sample_size ?? 0
+          }. Nota média: ${
             data?.avg_score?.toFixed(2) ?? "—"
           }. Vendedor: ${seller === "all" ? "todos" : seller}. Funil: ${funil === "all" ? "todos" : funil}.`,
         },
@@ -47,6 +52,7 @@ export function ObjecoesTab() {
     onSuccess: (r) => { setPlaybook(r); toast.success("Playbook de objeções gerado"); },
     onError: (e: any) => toast.error(e?.message ?? "Falha ao gerar playbook"),
   });
+
 
   const chartData = useMemo(
     () => (data?.ranking ?? []).slice(0, 8).map((r) => ({ nome: r.objecao, total: r.total })),
