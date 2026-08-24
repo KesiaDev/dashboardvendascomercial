@@ -165,8 +165,18 @@ export function ObjecoesTab() {
             <tbody>
               {(data?.ranking ?? []).map((r, i) => (
                 <Fragment key={r.objecao}>
-                  <tr key={r.objecao} className={`border-b ${i < 2 ? "bg-muted/30 font-semibold" : ""}`}>
-                    <td className="p-2 font-medium">{r.objecao}</td>
+                  <tr
+                    className={`border-b cursor-pointer hover:bg-muted/40 ${i < 2 ? "bg-muted/30 font-semibold" : ""}`}
+                    onClick={() => setAberto(aberto === r.objecao ? null : r.objecao)}
+                  >
+                    <td className="p-2 font-medium">
+                      {r.objecao}
+                      {(r.evidencias?.length ?? 0) > 0 && (
+                        <span className="ml-2 text-[10px] font-normal text-muted-foreground">
+                          {aberto === r.objecao ? "▲ ocultar falas" : `▼ ver ${r.evidencias.length} falas reais`}
+                        </span>
+                      )}
+                    </td>
                     <td className="p-2 text-right">{r.total}</td>
                     <td className="p-2 text-right">{r.pct.toFixed(1)}%</td>
                     <td className={`p-2 text-right ${r.avg_score != null && r.avg_score < 6 ? "text-red-500 font-semibold" : ""}`}>
@@ -183,13 +193,31 @@ export function ObjecoesTab() {
                       </div>
                     </td>
                   </tr>
-                  {i === 1 && (
-                    <tr><td colSpan={5} className="p-0">
-                      <div className="h-[3px] bg-primary/40 w-full" />
-                    </td></tr>
+                  {aberto === r.objecao && (
+                    <tr className="border-b bg-muted/20">
+                      <td colSpan={5} className="p-3">
+                        <p className="text-[10px] uppercase text-muted-foreground mb-2">
+                          Prova real — o que o lead escreveu
+                        </p>
+                        <div className="space-y-2">
+                          {r.evidencias.map((e, k) => (
+                            <div key={k} className="rounded-md border bg-background p-2">
+                              <p className="text-xs italic">“{e.trecho}”</p>
+                              <p className="text-[10px] text-muted-foreground mt-1">
+                                {e.contato} · atendido por {e.seller}
+                              </p>
+                            </div>
+                          ))}
+                          {r.evidencias.length === 0 && (
+                            <p className="text-xs text-muted-foreground">Sem citação registada.</p>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
                   )}
                 </Fragment>
               ))}
+
               {(data?.ranking?.length ?? 0) === 0 && (
                 <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Sem dados."}</td></tr>
               )}
