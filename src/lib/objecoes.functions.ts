@@ -1,9 +1,27 @@
 import { createServerFn } from "@tanstack/react-start";
+import { V3_ORIGIN_NAMES } from "@/lib/origem-v3.server";
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin;
 }
+
+// hash barato para saber se a conversa mudou desde a última leitura da IA
+function hashText(t: string): string {
+  let h = 5381;
+  for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0;
+  return `${t.length}-${h.toString(36)}`;
+}
+
+const normalize = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+export type ObjecaoEvidencia = {
+  conversation_id: string;
+  contato: string;
+  seller: string;
+  trecho: string;
+};
 
 export type ObjecaoRow = {
   objecao: string;
@@ -12,12 +30,14 @@ export type ObjecaoRow = {
   avg_score: number | null;
   sellers: { seller: string; total: number }[];
   funis: { funil: string; total: number }[];
+  evidencias: ObjecaoEvidencia[];
 };
 
 export type ObjecoesResult = {
   from: string;
   to: string;
   sample_size: number;
+  conversas_analisadas: number;
   total_objecoes: number;
   avg_score: number | null;
   ranking: ObjecaoRow[];
@@ -27,90 +47,124 @@ export type ObjecoesResult = {
   funis: string[];
 };
 
-const normalize = (s: string) =>
-  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+// Catálogo fechado de objeções — a IA precisa escolher uma destas, sempre com
+// trecho literal do lead. Nada é "forçado" para o topo: o ranking é o real.
+export const OBJECOES = [
+  "Preço / não tem o dinheiro agora",
+  "Medo de não conseguir resultado",
+  "Falta de tempo para estudar/aplicar",
+  "Vai decidir depois (data/motivo concreto)",
+  "Desconfiança / medo de golpe",
+  "Precisa falar com cônjuge/família",
+  "Já tentou antes e não deu certo",
+  "Dúvidas sobre o produto ou a entrega",
+  "Quer comparar com outro curso/mentoria",
+  "Achou que era grátis / não esperava pagar",
+  "Sem interesse real / não é o público",
+] as const;
 
-const LABELS: Record<string, string> = {
-  timing: "Timing / momento",
-  tempo: "Timing / momento",
-  momento: "Timing / momento",
-  preco: "Preço / investimento",
-  valor: "Preço / investimento",
-  dinheiro: "Preço / investimento",
-  financeiro: "Preço / investimento",
-  // "Medo de não conseguir seguir na profissão" — rede ampliada de palavras-chave
-  medo: "Medo de não conseguir seguir na profissão",
-  "medo de errar": "Medo de não conseguir seguir na profissão",
-  "medo de falhar": "Medo de não conseguir seguir na profissão",
-  "medo de nao conseguir": "Medo de não conseguir seguir na profissão",
-  "nao conseguir": "Medo de não conseguir seguir na profissão",
-  inseguran: "Medo de não conseguir seguir na profissão",
-  insegur: "Medo de não conseguir seguir na profissão",
-  inseguro: "Medo de não conseguir seguir na profissão",
-  incerteza: "Medo de não conseguir seguir na profissão",
-  incerto: "Medo de não conseguir seguir na profissão",
-  receio: "Medo de não conseguir seguir na profissão",
-  ansiedade: "Medo de não conseguir seguir na profissão",
-  capacidade: "Medo de não conseguir seguir na profissão",
-  incapaz: "Medo de não conseguir seguir na profissão",
-  "nao dar conta": "Medo de não conseguir seguir na profissão",
-  fracasso: "Medo de não conseguir seguir na profissão",
-  "duvida de si": "Medo de não conseguir seguir na profissão",
-  autoconfianca: "Medo de não conseguir seguir na profissão",
-  resultado: "Medo de não conseguir seguir na profissão",
-  confianca: "Medo de não conseguir seguir na profissão",
-  ceticismo: "Medo de não conseguir seguir na profissão",
-  credibilidade: "Medo de não conseguir seguir na profissão",
-  financas: "Medo de não conseguir seguir na profissão",
-  sobreviver: "Medo de não conseguir seguir na profissão",
-  "viver da profissao": "Medo de não conseguir seguir na profissão",
-  profissao: "Medo de não conseguir seguir na profissão",
-  // "Outro" → rótulo claro
-  outro: "Não foi claro em declarar objeção",
-  // Demais categorias
-  autoridade: "Decisor / autoridade",
-  decisor: "Decisor / autoridade",
-  conjuge: "Decisor / autoridade",
-  necessidade: "Necessidade / fit",
-  fit: "Necessidade / fit",
-  interesse: "Falta de interesse",
-  concorrencia: "Concorrência",
-  suporte: "Dúvidas sobre entrega/suporte",
-  duvida: "Dúvidas sobre o produto",
-  produto: "Dúvidas sobre o produto",
-};
+const SEM_OBJECAO = "Nenhuma objeção declarada";
 
-const MEDO = "Medo de não conseguir seguir na profissão";
-// Palavras que indicam motivo CONCRETO de agenda (permanece "Timing / momento").
-// Todo adiamento genérico ("timing", "tempo", "depois", "agora não") cai em "Medo".
-const TIMING_CONCRETO = [
-  "ferias", "feria", "viagem", "viajar", "cirurgia", "operac", "exame",
-  "consulta", "compromisso", "reuniao marcada", "agenda cheia", "viage",
-  "trabalho", "empresa", "matriz", "filial", " congresso", "curso marcado",
-  "data", "dia x", "semana que vem", "proximo mes", "mes que vem",
-  "outubro", "novembro", "dezembro", "setembro", "agosto",
+// Mensagens de automação / opt-in — não são conversa real do lead.
+const AUTOMACAO_PATTERNS = [
+  "acabei de inscrever", "acabei de me inscrever", "gostaria de receb", "quero receber o ebook",
+  "quero o ebook", "quero receber o minicurso", "quero participar da sessao", "quero minha sessao estrategica",
+  "vim pelo anuncio", "vim pelo instagram", "recebi o link", "confirmo minha presenca",
+  "quero receber o presente", "quero o presente", "quero participar da imersao", "quero entrar no grupo",
+  "quero as aulas", "quero o link", "quero receber os links",
 ];
-// Regex de motivo concreto de agenda/data no texto da análise (resumo, justificativa, próxima ação)
-const TIMING_CTX =
-  /(ferias|viagem|viaj|cirurgia|exame|consulta|congresso|casamento|mudanc|semana que vem|proxima semana|mes que vem|depois do|apos o|aguardar|retorno|agendad|remarc|reagend|feriado|final do mes|no dia|data marcada)/;
 
-function labelFor(raw: string, ctx = "") {
-  const n = normalize(raw);
-  const c = normalize(ctx);
-  const genericoTiming = ["timing", "tempo", "momento", "adiar", "depois", "agora nao", "nao agora"].some((k) =>
-    n.includes(k),
-  );
-  if (genericoTiming) {
-    // Timing só quando há motivo/data CONCRETA na própria objeção ou no contexto da análise
-    if (TIMING_CONCRETO.some((k) => n.includes(k)) || TIMING_CTX.test(c)) return "Timing / momento";
-    return MEDO;
-  }
-  if (TIMING_CONCRETO.some((k) => n.includes(k))) return "Timing / momento";
-  for (const k of Object.keys(LABELS)) if (n.includes(k)) return LABELS[k];
-  return "Não foi claro em declarar objeção";
+function isAutomacao(body: string): boolean {
+  const t = normalize(body).replace(/\s+/g, " ");
+  if (t.length < 3) return true;
+  if (/^(sim|nao|ok|okay|quero|sim quero|sim!|ja|ja entrei|\d{1,2})$/.test(t)) return true;
+  if (t.length < 20 && /^(sim|ok|quero|ja|entrei|consegui|combinado|obrigad|bom dia|boa tarde|boa noite)/.test(t))
+    return true;
+  return AUTOMACAO_PATTERNS.some((p) => t.includes(p));
 }
 
+type IAObj = { objecao: string; trecho: string };
 
+// A IA lê o que o LEAD escreveu e devolve as objeções REAIS, cada uma com o
+// trecho literal que a comprova. Sem trecho → a objeção é descartada.
+async function detectWithAI(
+  items: { id: string; text: string }[],
+): Promise<Map<string, IAObj[]>> {
+  const out = new Map<string, IAObj[]>();
+  const key = process.env["LOVABLE_API_KEY"];
+  if (!key || items.length === 0) return out;
+
+  const lista = [...OBJECOES, SEM_OBJECAO];
+  const sys =
+    "Você é analista sênior de vendas de uma empresa de mentorias de tráfego pago (venda por WhatsApp, ticket alto). " +
+    "Sua tarefa: identificar as OBJEÇÕES REAIS que cada lead levantou, usando SOMENTE o que o próprio lead escreveu. " +
+    "Nunca invente objeção e nunca deduza pelo silêncio do lead.\n\n" +
+    "OBJEÇÕES POSSÍVEIS (use exatamente estes rótulos):\n" +
+    lista.map((o) => `- ${o}`).join("\n") +
+    "\n\nREGRAS:\n" +
+    '1. Para cada objeção, inclua "trecho": citação LITERAL do lead (máx. 160 caracteres) que comprova a objeção. Sem citação literal, não inclua a objeção.\n' +
+    `2. Se o lead não levantou nenhuma objeção, devolva uma única objeção "${SEM_OBJECAO}" com trecho "".\n` +
+    '3. "Vai decidir depois (data/motivo concreto)" só quando o lead cita motivo/data real (férias, viagem, salário no dia X, cirurgia). Adiamento vago sem motivo NÃO é isso — classifique pela razão de fundo (preço, medo, desconfiança) só se houver evidência; senão use "' +
+    SEM_OBJECAO +
+    '".\n' +
+    "4. Máximo 3 objeções por lead, das mais explícitas para as menos.\n" +
+    '5. Responda APENAS JSON: {"itens":[{"id":"...","objecoes":[{"objecao":"...","trecho":"..."}]}]} incluindo TODOS os ids recebidos.';
+
+  const batches: { id: string; text: string }[][] = [];
+  for (let i = 0; i < items.length; i += 8) batches.push(items.slice(i, i + 8));
+
+  const runBatch = async (batch: { id: string; text: string }[]) => {
+    try {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          temperature: 0,
+          messages: [
+            { role: "system", content: sys },
+            {
+              role: "user",
+              content: batch
+                .map((b) => `ID: ${b.id}\nLEAD DISSE: ${b.text.replace(/\s+/g, " ").slice(0, 2200)}`)
+                .join("\n---\n"),
+            },
+          ],
+        }),
+      });
+      if (!res.ok) return;
+      const j = (await res.json()) as any;
+      const raw = String(j?.choices?.[0]?.message?.content ?? "");
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (!m) return;
+      const parsed = JSON.parse(m[0]);
+      for (const it of parsed?.itens ?? []) {
+        const id = String(it?.id ?? "");
+        if (!id) continue;
+        const objs: IAObj[] = [];
+        for (const o of it?.objecoes ?? []) {
+          const label = String(o?.objecao ?? "").trim();
+          if (!lista.includes(label as any)) continue;
+          const trecho = String(o?.trecho ?? "").replace(/\s+/g, " ").trim().slice(0, 160);
+          if (label !== SEM_OBJECAO && !trecho) continue;
+          if (objs.some((x) => x.objecao === label)) continue;
+          objs.push({ objecao: label, trecho });
+        }
+        out.set(id, objs.slice(0, 3));
+      }
+    } catch {
+      /* sem veredito: a conversa fica de fora deste ciclo */
+    }
+  };
+
+  const pend = batches.slice(0, 60);
+  for (let i = 0; i < pend.length; i += 6) {
+    await Promise.all(pend.slice(i, i + 6).map(runBatch));
+  }
+  return out;
+}
+
+const CACHE_VERSION = "obj-v1";
 
 export const fetchObjecoesFn = createServerFn({ method: "GET" })
   .inputValidator((d: { from?: string; to?: string; seller?: string; funil?: string } = {}) => d)
@@ -119,81 +173,186 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
     const to = data.to ?? new Date().toISOString().slice(0, 10);
     const from = data.from ?? new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10);
 
-    const { data: analyses, error } = await db
-      .from("coach_analyses")
-      .select("conversation_id, score_geral, objecoes, analyzed_at, resumo, justificativa_nota, proxima_acao")
-      .eq("status", "ok")
-      .gte("analyzed_at", `${from}T00:00:00Z`)
-      .lte("analyzed_at", `${to}T23:59:59Z`)
-      .limit(3000);
+    // 1) Conversas humanas do funil comercial no período
+    const { data: convs, error } = await db
+      .from("coach_conversations")
+      .select("id, seller_name, seller_email, origin_name, contact_name, last_message_at, is_ai_conversation")
+      .in("origin_name", V3_ORIGIN_NAMES)
+      .eq("is_ai_conversation", false)
+      .gte("last_message_at", `${from}T00:00:00Z`)
+      .lte("last_message_at", `${to}T23:59:59Z`)
+      .order("last_message_at", { ascending: false })
+      .limit(2000);
     if (error) throw new Error(error.message);
 
-    const rows = (analyses ?? []).filter(
-      (r: any) => Array.isArray(r.objecoes) && r.objecoes.length > 0,
+    const list = ((convs ?? []) as any[]).filter(
+      (c) => String(c.seller_name ?? c.seller_email ?? "").trim() !== "",
     );
-    const ids = Array.from(new Set(rows.map((r: any) => r.conversation_id)));
+    const ids = list.map((c) => String(c.id));
 
-    const convById = new Map<string, any>();
-    for (let i = 0; i < ids.length; i += 200) {
-      const chunk = ids.slice(i, i + 200);
-      const { data: convs } = await db
-        .from("coach_conversations")
-        .select("id, seller_name, seller_email, origin_name, is_ai_conversation")
-        .in("id", chunk);
-      for (const c of (convs ?? []) as any[]) convById.set(c.id, c);
+    // 2) Texto real do lead (inbound, sem automação/duplicados)
+    const textById = new Map<string, string>();
+    const inbound = new Map<string, number>();
+    const outbound = new Map<string, number>();
+    const chunks: string[][] = [];
+    for (let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100));
+    for (let i = 0; i < chunks.length; i += 5) {
+      const res = await Promise.all(
+        chunks.slice(i, i + 5).map((ch) =>
+          db.from("coach_messages").select("conversation_id, body, direction").in("conversation_id", ch).limit(40000),
+        ),
+      );
+      const seen = new Map<string, Set<string>>();
+      for (const r of res) {
+        for (const m of ((r.data ?? []) as any[])) {
+          if (!m.body) continue;
+          const cid = String(m.conversation_id);
+          const body = String(m.body);
+          if (String(m.direction) !== "inbound") {
+            outbound.set(cid, (outbound.get(cid) ?? 0) + 1);
+            continue;
+          }
+          if (isAutomacao(body)) continue;
+          const k = normalize(body).replace(/\s+/g, " ").slice(0, 120);
+          let s = seen.get(cid);
+          if (!s) { s = new Set(); seen.set(cid, s); }
+          if (s.has(k)) continue;
+          s.add(k);
+          inbound.set(cid, (inbound.get(cid) ?? 0) + 1);
+          const prev = textById.get(cid) ?? "";
+          if (prev.length > 7000) continue;
+          textById.set(cid, `${prev} ${body}`);
+        }
+      }
     }
 
+    // conversa real: o lead falou e o vendedor respondeu
+    const validos = list.filter((c) => {
+      const t = textById.get(String(c.id)) ?? "";
+      return (inbound.get(String(c.id)) ?? 0) >= 1 && (outbound.get(String(c.id)) ?? 0) >= 1 && t.trim().length >= 25;
+    });
+
+    // 3) Notas das análises (para nota média por objeção)
+    const scoreById = new Map<string, number>();
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data: an } = await db
+        .from("coach_analyses")
+        .select("conversation_id, score_geral")
+        .in("conversation_id", ids.slice(i, i + 200))
+        .eq("status", "ok");
+      for (const a of (an ?? []) as any[]) {
+        if (typeof a.score_geral === "number") scoreById.set(String(a.conversation_id), Number(a.score_geral));
+      }
+    }
+
+    // 4) Cache + IA
+    const targets = validos.map((c) => ({
+      id: String(c.id),
+      text: textById.get(String(c.id)) ?? "",
+      hash: `${CACHE_VERSION}|${hashText(textById.get(String(c.id)) ?? "")}`,
+    }));
+    const objById = new Map<string, IAObj[]>();
+    if (targets.length > 0) {
+      const tIds = targets.map((t) => t.id);
+      const cchunks: string[][] = [];
+      for (let i = 0; i < tIds.length; i += 200) cchunks.push(tIds.slice(i, i + 200));
+      const cached = await Promise.all(
+        cchunks.map((ch) =>
+          db.from("lead_objecao_cache").select("conversation_id, text_hash, objecoes").in("conversation_id", ch),
+        ),
+      );
+      const byId = new Map<string, any>();
+      for (const r of cached) for (const row of ((r.data ?? []) as any[])) byId.set(String(row.conversation_id), row);
+      for (const t of targets) {
+        const row = byId.get(t.id);
+        if (row && String(row.text_hash) === t.hash) {
+          objById.set(t.id, Array.isArray(row.objecoes) ? (row.objecoes as IAObj[]) : []);
+        }
+      }
+
+      const pendentes = targets.filter((t) => !objById.has(t.id)).slice(0, 480);
+      if (pendentes.length > 0) {
+        const hits = await detectWithAI(pendentes.map((p) => ({ id: p.id, text: p.text })));
+        const rows: any[] = [];
+        for (const p of pendentes) {
+          const r = hits.get(p.id);
+          if (!r) continue;
+          objById.set(p.id, r);
+          rows.push({
+            conversation_id: p.id,
+            text_hash: p.hash,
+            objecoes: r,
+            updated_at: new Date().toISOString(),
+          });
+        }
+        for (let i = 0; i < rows.length; i += 200) {
+          await db.from("lead_objecao_cache").upsert(rows.slice(i, i + 200), { onConflict: "conversation_id" });
+        }
+      }
+    }
+
+    // 5) Agregação
     const sellersSet = new Set<string>();
     const funisSet = new Set<string>();
     const agg = new Map<
       string,
-      { total: number; scores: number[]; sellers: Map<string, number>; funis: Map<string, number> }
+      {
+        total: number; scores: number[]; sellers: Map<string, number>; funis: Map<string, number>;
+        evidencias: ObjecaoEvidencia[];
+      }
     >();
     const evoMap = new Map<string, Map<string, number>>();
     let sample = 0;
+    let analisadas = 0;
     let totalObj = 0;
     const allScores: number[] = [];
 
-    for (const r of rows as any[]) {
-      const conv = convById.get(r.conversation_id);
-      if (!conv || conv.is_ai_conversation) continue;
-      const seller = (conv.seller_name || conv.seller_email || "—").trim();
-      const funil = (conv.origin_name || "—").trim();
+    for (const c of validos) {
+      const id = String(c.id);
+      const seller = (c.seller_name || c.seller_email || "—").trim();
+      const funil = (c.origin_name || "—").trim();
       sellersSet.add(seller);
       funisSet.add(funil);
       if (data.seller && data.seller !== "all" && seller !== data.seller) continue;
       if (data.funil && data.funil !== "all" && funil !== data.funil) continue;
 
+      const objs = objById.get(id);
+      if (!objs) continue; // sem veredito da IA neste ciclo
+      analisadas++;
+      const comObjecao = objs.filter((o) => o.objecao !== SEM_OBJECAO);
+      const score = scoreById.get(id);
+      const mes = String(c.last_message_at ?? "").slice(0, 7);
+      if (comObjecao.length === 0) continue;
       sample++;
-      if (typeof r.score_geral === "number") allScores.push(Number(r.score_geral));
-      const mes = String(r.analyzed_at ?? "").slice(0, 7);
+      if (typeof score === "number") allScores.push(score);
 
-      const seen = new Set<string>();
-      for (const raw of r.objecoes as any[]) {
-        if (typeof raw !== "string" || !raw.trim()) continue;
-        const label = labelFor(raw, `${r.resumo ?? ""} ${r.justificativa_nota ?? ""} ${r.proxima_acao ?? ""}`);
-        if (seen.has(label)) continue;
-        seen.add(label);
+      for (const o of comObjecao) {
         totalObj++;
-        let a = agg.get(label);
+        let a = agg.get(o.objecao);
         if (!a) {
-          a = { total: 0, scores: [], sellers: new Map(), funis: new Map() };
-          agg.set(label, a);
+          a = { total: 0, scores: [], sellers: new Map(), funis: new Map(), evidencias: [] };
+          agg.set(o.objecao, a);
         }
         a.total++;
-        if (typeof r.score_geral === "number") a.scores.push(Number(r.score_geral));
+        if (typeof score === "number") a.scores.push(score);
         a.sellers.set(seller, (a.sellers.get(seller) ?? 0) + 1);
         a.funis.set(funil, (a.funis.get(funil) ?? 0) + 1);
+        if (o.trecho && a.evidencias.length < 8) {
+          a.evidencias.push({
+            conversation_id: id,
+            contato: String(c.contact_name ?? "—"),
+            seller,
+            trecho: o.trecho,
+          });
+        }
         if (mes) {
           let m = evoMap.get(mes);
           if (!m) { m = new Map(); evoMap.set(mes, m); }
-          m.set(label, (m.get(label) ?? 0) + 1);
+          m.set(o.objecao, (m.get(o.objecao) ?? 0) + 1);
         }
       }
     }
 
-    const PRIORITARIA = "Medo de não conseguir seguir na profissão";
-    const SEGUNDA = "Timing / momento";
     const ranking: ObjecaoRow[] = Array.from(agg.entries())
       .map(([objecao, a]) => ({
         objecao,
@@ -208,17 +367,9 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
           .map(([funil, total]) => ({ funil, total }))
           .sort((x, y) => y.total - x.total)
           .slice(0, 4),
+        evidencias: a.evidencias,
       }))
-      .sort((a, b) => {
-        // 1º: "Medo de não conseguir seguir na profissão" (sempre)
-        if (a.objecao === PRIORITARIA) return -1;
-        if (b.objecao === PRIORITARIA) return 1;
-        // 2º: "Timing / momento" (neste mês, não como prioridade)
-        if (a.objecao === SEGUNDA) return -1;
-        if (b.objecao === SEGUNDA) return 1;
-        // Demais por frequência
-        return b.total - a.total;
-      });
+      .sort((a, b) => b.total - a.total);
 
     const top = ranking.slice(0, 5).map((r) => r.objecao);
     const evolucao = Array.from(evoMap.entries())
@@ -233,6 +384,7 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
       from,
       to,
       sample_size: sample,
+      conversas_analisadas: analisadas,
       total_objecoes: totalObj,
       avg_score: allScores.length ? allScores.reduce((a, b) => a + b, 0) / allScores.length : null,
       ranking,
@@ -258,14 +410,21 @@ export type ObjecoesPlaybook = {
 };
 
 export const generateObjecoesPlaybookFn = createServerFn({ method: "POST" })
-  .inputValidator((d: { ranking: { objecao: string; total: number; avg_score: number | null }[]; contexto?: string }) => d)
+  .inputValidator(
+    (d: {
+      ranking: { objecao: string; total: number; avg_score: number | null; exemplos?: string[] }[];
+      contexto?: string;
+    }) => d,
+  )
   .handler(async ({ data }): Promise<ObjecoesPlaybook> => {
-    const key = process.env.LOVABLE_API_KEY;
+    const key = process.env["LOVABLE_API_KEY"];
     if (!key) throw new Error("LOVABLE_API_KEY não configurada");
     const sys =
       "Você é uma líder comercial sênior da LLMídia (infoprodutos/mentorias de tráfego, ticket alto, venda por WhatsApp e call). " +
-      "Recebe o ranking de objeções detectadas por IA nas conversas do time. A objeção nº1 do público é o MEDO DE NÃO CONSEGUIR SEGUIR NA PROFISSÃO DE GESTOR DE TRÁFEGO (insegurança sobre conseguir clientes e resultados) — trate-a sempre como prioridade alta e primeiro item da lista. A objeção nº2 é TIMING / MOMENTO (adiamento) — trate como prioridade média, não como foco principal deste mês. Para cada objeção, diga a causa raiz provável no atendimento, " +
-      "como contornar, um script pronto em português do Brasil (linguagem de WhatsApp, humana, sem parecer robô) e como PREVENIR a objeção antes dela aparecer. " +
+      "Recebe o ranking REAL de objeções detectadas nas conversas, com frases literais dos leads. " +
+      "Trate a ordem recebida como a realidade do mês — a prioridade alta é a objeção com mais casos e/ou pior nota; não invente hierarquia. " +
+      "Para cada objeção, diga a causa raiz provável no atendimento, como contornar, um script pronto em português do Brasil " +
+      "(linguagem de WhatsApp, humana, sem parecer robô) e como PREVENIR a objeção antes dela aparecer. " +
       "Responda SOMENTE JSON válido: " +
       `{"resumo":"3-4 frases para a gestão","itens":[{"objecao":"string","causa_raiz":"string","contorno":"string","script":"string","prevencao":"string","prioridade":"alta|media|baixa"}],"acoes_gestao":["string"]}. ` +
       "Máx 8 itens e 5 ações.";
@@ -279,8 +438,7 @@ export const generateObjecoesPlaybookFn = createServerFn({ method: "POST" })
           { role: "system", content: sys },
           {
             role: "user",
-            content:
-              `${data.contexto ?? ""}\nRANKING:\n${JSON.stringify(data.ranking.slice(0, 10), null, 2)}`,
+            content: `${data.contexto ?? ""}\nRANKING REAL:\n${JSON.stringify(data.ranking.slice(0, 10), null, 2)}`,
           },
         ],
       }),
