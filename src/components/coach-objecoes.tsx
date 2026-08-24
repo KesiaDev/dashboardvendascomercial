@@ -26,6 +26,8 @@ export function ObjecoesTab() {
   const [seller, setSeller] = useState("all");
   const [funil, setFunil] = useState("all");
   const [playbook, setPlaybook] = useState<ObjecoesPlaybook | null>(null);
+  const [aberto, setAberto] = useState<string | null>(null);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["coach-objecoes", from, to, seller, funil],
