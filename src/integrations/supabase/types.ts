@@ -1855,6 +1855,27 @@ export type Database = {
           },
         ]
       }
+      lead_objecao_cache: {
+        Row: {
+          conversation_id: string
+          objecoes: Json
+          text_hash: string
+          updated_at: string
+        }
+        Insert: {
+          conversation_id: string
+          objecoes?: Json
+          text_hash: string
+          updated_at?: string
+        }
+        Update: {
+          conversation_id?: string
+          objecoes?: Json
+          text_hash?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lead_perfil_cache: {
         Row: {
           conversation_id: string
