@@ -92,10 +92,42 @@ export function dealMatchesTagFilter(tags: string[], tagFilter: string): boolean
   return tags.some((t) => pats.some((p) => t.toLowerCase().includes(p)));
 }
 
+/**
+ * No WGT (webinar perpétuo) a maior parte dos inscritos é responsabilidade do
+ * marketing. Só entra na análise comercial o lead que chegou em "Abandono de
+ * carrinho" (ou etapa posterior) — a partir daí quem trabalha é o comercial.
+ */
+const WGT_STAGES_COMERCIAL = new Set(
+  [
+    "abandono de carrinho",
+    "abandono de checkout",
+    "iniciou checkout",
+    "fup",
+    "fup 1",
+    "retomada - leads perdidos",
+    "ganho",
+    "fechado",
+  ].map((s) => s),
+);
+
+const normStage = (s: string | null | undefined) =>
+  (s ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+/** O negócio deve entrar nas métricas do comercial? */
+export function isComercialDeal(originName: string | null | undefined, stage: string | null | undefined): boolean {
+  const o = normStage(originName);
+  if (!o.startsWith("wgt")) return true;
+  return WGT_STAGES_COMERCIAL.has(normStage(stage));
+}
+
 export async function pagedDeals(db: any, column: string, from: string, to: string, tagFilter = "") {
   const selectCols = tagFilter
-    ? "origin_name,user_name,status,contact_tags"
-    : "origin_name,user_name,status";
+    ? "origin_name,user_name,status,stage,contact_tags"
+    : "origin_name,user_name,status,stage";
   const rows: any[] = [];
   for (let page = 0; page < 30; page++) {
     let q = db
