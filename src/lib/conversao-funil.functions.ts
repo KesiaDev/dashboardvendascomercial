@@ -27,6 +27,7 @@ export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
       canonicalSellerName,
       FUNIS_VENDEDOR,
       isVendedorExcluido,
+      isComercialDeal,
     } = await import("@/lib/conversao-funil.server");
 
     const [created, lostRows, sales] = await Promise.all([
@@ -48,9 +49,13 @@ export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
       return row;
     };
 
-    for (const d of created as any[]) get(d.origin_name, d.user_name).leads++;
+    for (const d of created as any[]) {
+      if (!isComercialDeal(d.origin_name, d.stage)) continue;
+      get(d.origin_name, d.user_name).leads++;
+    }
     for (const d of lostRows as any[]) {
       if (d.status !== "LOST") continue;
+      if (!isComercialDeal(d.origin_name, d.stage)) continue;
       get(d.origin_name, d.user_name).lost++;
     }
     for (const s of sales as any[]) {
