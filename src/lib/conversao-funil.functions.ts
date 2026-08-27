@@ -27,6 +27,7 @@ export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
       canonicalSellerName,
       FUNIS_VENDEDOR,
       isVendedorExcluido,
+      isComercialDeal,
     } = await import("@/lib/conversao-funil.server");
 
     const [created, lostRows, sales] = await Promise.all([
