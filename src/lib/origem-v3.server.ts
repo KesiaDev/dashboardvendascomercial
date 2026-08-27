@@ -5,6 +5,8 @@ export const V3_ORIGIN_NAMES = [
   "EBOOK-V3",
   "FUNIL DE PALESTRAS",
   "Funil - Sessão Estratégica",
+  // funil antigo da Sessão Estratégica (jun–ago/2025); mesmo funil, nome legado.
+  "SESSAO ESTRATEGICA",
   "WGT - Perpétuo",
 ];
 
