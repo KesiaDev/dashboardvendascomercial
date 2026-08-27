@@ -17,6 +17,7 @@ const FUNIL_LABEL: Record<string, string> = {
   "EBOOK-V3": "Ebook V3",
   "FUNIL DE PALESTRAS": "Funil de Palestras",
   "Funil - Sessão Estratégica": "Sessão Estratégica (funil)",
+  "SESSAO ESTRATEGICA": "Sessão Estratégica (funil)",
   "WGT - Perpétuo": "WGT Perpétuo",
 };
 
