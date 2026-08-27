@@ -391,7 +391,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       .gte("last_message_at", `${from}T00:00:00Z`)
       .lte("last_message_at", `${to}T23:59:59Z`)
       .order("last_message_at", { ascending: false })
-      .limit(2000);
+      .limit(6000);
     if (origem === "humano") q = q.eq("is_ai_conversation", false);
     if (origem === "ia") q = q.eq("is_ai_conversation", true);
 
@@ -579,7 +579,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       }
     }
 
-    const pendentes = aiTargets.filter((s) => !hasVerdict.has(s.id)).slice(0, 420);
+    const pendentes = aiTargets.filter((s) => !hasVerdict.has(s.id)).slice(0, 900);
     if (pendentes.length > 0) {
       const iaHits = await classifyWithAI(pendentes.map((p) => ({ id: p.id, text: p.text })));
       for (const [id, r] of iaHits) {

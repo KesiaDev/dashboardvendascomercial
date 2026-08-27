@@ -5,6 +5,8 @@ export const V3_ORIGIN_NAMES = [
   "EBOOK-V3",
   "FUNIL DE PALESTRAS",
   "Funil - Sessão Estratégica",
+  // funil antigo da Sessão Estratégica (jun–ago/2025); mesmo funil, nome legado.
+  "SESSAO ESTRATEGICA",
   "WGT - Perpétuo",
 ];
 
@@ -15,6 +17,7 @@ const FUNIL_LABEL: Record<string, string> = {
   "EBOOK-V3": "Ebook V3",
   "FUNIL DE PALESTRAS": "Funil de Palestras",
   "Funil - Sessão Estratégica": "Sessão Estratégica (funil)",
+  "SESSAO ESTRATEGICA": "Sessão Estratégica (funil)",
   "WGT - Perpétuo": "WGT Perpétuo",
 };
 

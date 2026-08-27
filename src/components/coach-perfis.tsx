@@ -56,7 +56,7 @@ export function PerfisTab() {
     const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
     const months: { value: string; label: string }[] = [];
     const now = new Date();
-    let y = 2026, m = 6; // junho/2026 — início da temporada
+    let y = 2026, m = 1; // janeiro/2026 — histórico completo do ano
     while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
       months.push({
         value: `${y}-${String(m).padStart(2, "0")}-01`,
@@ -161,6 +161,15 @@ export function PerfisTab() {
               </SelectContent>
             </Select>
           </div>
+          {periodMode === "range" && (
+            <Button
+              variant="outline"
+              className="h-9"
+              onClick={() => { setFrom("2026-01-01"); setTo(iso(new Date())); }}
+            >
+              Desde jan/2026
+            </Button>
+          )}
           <Button className="h-9 ml-auto" disabled={gerar.isPending || !data?.ranking.length} onClick={() => gerar.mutate()}>
             <Sparkles className="h-4 w-4 mr-1" />
             {gerar.isPending ? "Gerando..." : "Ler perfis com IA"}
