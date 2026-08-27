@@ -161,6 +161,15 @@ export function PerfisTab() {
               </SelectContent>
             </Select>
           </div>
+          {periodMode === "range" && (
+            <Button
+              variant="outline"
+              className="h-9"
+              onClick={() => { setFrom("2026-01-01"); setTo(iso(new Date())); }}
+            >
+              Desde jan/2026
+            </Button>
+          )}
           <Button className="h-9 ml-auto" disabled={gerar.isPending || !data?.ranking.length} onClick={() => gerar.mutate()}>
             <Sparkles className="h-4 w-4 mr-1" />
             {gerar.isPending ? "Gerando..." : "Ler perfis com IA"}
