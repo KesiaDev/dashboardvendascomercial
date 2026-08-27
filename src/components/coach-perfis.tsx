@@ -56,7 +56,7 @@ export function PerfisTab() {
     const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
     const months: { value: string; label: string }[] = [];
     const now = new Date();
-    let y = 2026, m = 6; // junho/2026 — início da temporada
+    let y = 2026, m = 1; // janeiro/2026 — histórico completo do ano
     while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
       months.push({
         value: `${y}-${String(m).padStart(2, "0")}-01`,
