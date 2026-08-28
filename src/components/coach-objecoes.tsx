@@ -129,18 +129,34 @@ export function ObjecoesTab() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Ranking de objeções</CardTitle></CardHeader>
-          <CardContent className="h-[280px]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Ranking de objeções</CardTitle>
+            <p className="text-[11px] text-muted-foreground">Passe o mouse na barra para ver o nome completo</p>
+          </CardHeader>
+          <CardContent className="h-[360px]">
             {chartData.length === 0 ? (
               <p className="text-sm text-muted-foreground">{isLoading ? "Carregando..." : "Sem objeções no período."}</p>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 16 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  <XAxis type="number" fontSize={11} />
-                  <YAxis type="category" dataKey="nome" width={150} fontSize={11} />
-                  <Tooltip />
-                  <Bar dataKey="total" fill={COLORS[0]} radius={[0, 4, 4, 0]} />
+                <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 44, top: 4, bottom: 4 }} barCategoryGap="22%">
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} horizontal={false} />
+                  <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <YAxis
+                    type="category"
+                    dataKey="nome"
+                    width={190}
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v: string) => (v.length > 32 ? `${v.slice(0, 30)}…` : v)}
+                  />
+                  <Tooltip
+                    formatter={(value: any) => [`${value} casos`, "Objeções"]}
+                    labelStyle={{ fontWeight: 600, maxWidth: 280, whiteSpace: "normal" }}
+                  />
+                  <Bar dataKey="total" fill={COLORS[0]} radius={[0, 4, 4, 0]}>
+                    <LabelList dataKey="total" position="right" fontSize={12} fontWeight={700} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             )}
