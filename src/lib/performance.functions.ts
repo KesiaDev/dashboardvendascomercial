@@ -459,6 +459,9 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         conversaoLead: leadsNovos > 0 ? teamVd / leadsNovos : 0,
         leadsSemAtendimento,
         coberturaAtendimento: leadsNovos > 0 ? (leadsNovos - leadsSemAtendimento) / leadsNovos : 0,
+        leadsPorOrigem: Array.from(leadsPorOrigemMap.entries())
+          .map(([origem, l]) => ({ origem, leads: l }))
+          .sort((a, b) => b.leads - a.leads),
       },
 
       // Série diária: não mostramos dias futuros (evita "buracos" no gráfico
