@@ -1529,6 +1529,19 @@ function PerformanceTab() {
               />
               <KpiCard icon={<Sparkles className="h-3 w-3" />} label="Nota média" value={view.notaMedia != null ? view.notaMedia.toFixed(1) : "—"} valueClass={scoreColor(view.notaMedia)} />
             </div>
+            {!isSeller && (perf?.team.leadsPorOrigem?.length ?? 0) > 0 && (
+              <div className="flex flex-wrap items-center gap-2 -mt-1 text-[11px]">
+                <span className="text-muted-foreground">Leads por funil ({rangeLabel}):</span>
+                {perf!.team.leadsPorOrigem.map((o) => (
+                  <span key={o.origem} className="rounded-full border px-2 py-0.5">
+                    {o.origem}: <span className="font-semibold text-foreground">{o.leads}</span>
+                  </span>
+                ))}
+                <span className="text-muted-foreground">
+                  · mesma base dos Funis Perpétuos em Resultados
+                </span>
+              </div>
+            )}
             {showAttendance ? (
               <div className="text-[11px] text-muted-foreground -mt-2 px-1 space-y-1">
                 <div>
