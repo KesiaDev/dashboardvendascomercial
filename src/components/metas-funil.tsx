@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
-import { Gauge, RotateCcw, Save } from "lucide-react";
+import { Gauge, RotateCcw, Save, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MetasTrimestreCard } from "@/components/metas-trimestre";
 
@@ -112,6 +112,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
 
   const [dirty, setDirty] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
   useEffect(() => setCfg(loadConfig()), []);
   /** Altera os valores em tela (recalcula na hora), mas só persiste ao clicar em Salvar. */
   const save = (next: Config) => {
@@ -227,26 +228,47 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setCollapsed((v) => !v)}
+            className="text-sm font-semibold flex items-center gap-1.5 transition-opacity hover:opacity-80"
+          >
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`} />
             <Gauge className="h-4 w-4 text-muted-foreground" />
             Meta de Aproveitamento — visão trimestral
-          </h3>
-          {toggle}
+          </button>
+          <div className="flex items-center gap-2">
+            {collapsed && (
+              <button
+                type="button"
+                onClick={() => setCollapsed(false)}
+                className="rounded-md border border-border px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted"
+              >
+                Mostrar
+              </button>
+            )}
+            {toggle}
+          </div>
         </div>
-        <MetasTrimestreCard refDate={to} />
+        {!collapsed && <MetasTrimestreCard refDate={to} />}
       </div>
     );
   }
 
   return (
-    <Card>
+    <Card className={collapsed ? "overflow-hidden" : "overflow-hidden"}>
 
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="text-base font-semibold tracking-tight flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setCollapsed((v) => !v)}
+            className="text-base font-semibold tracking-tight flex items-center gap-2 transition-opacity hover:opacity-80"
+          >
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`} />
             <Gauge className="h-4 w-4 text-primary" />
             {title}
-          </CardTitle>
+          </button>
           <div className="flex items-center gap-3 flex-wrap text-xs">
             <label className="flex items-center gap-1 text-muted-foreground">
               Comparecimento
@@ -292,26 +314,37 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                 </button>
               ))}
             </div>
-            {toggle}
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
-
-              <RotateCcw className="h-3.5 w-3.5 mr-1" />
-              Metas do trimestre
-            </Button>
-            <Button size="sm" className="h-7 text-xs" disabled={!dirty} onClick={persist}>
-              <Save className="h-3.5 w-3.5 mr-1" />
-              {dirty ? "Salvar metas" : "Salvo"}
-            </Button>
-            {dirty ? (
-              <span className="text-[11px] text-amber-500">alterações não salvas</span>
-            ) : savedAt ? (
-              <span className="text-[11px] text-emerald-500">salvo às {savedAt}</span>
-            ) : null}
+            {collapsed ? (
+              <button
+                type="button"
+                onClick={() => setCollapsed(false)}
+                className="rounded-md border border-border px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted"
+              >
+                Mostrar
+              </button>
+            ) : (
+              <>
+                {toggle}
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                  Metas do trimestre
+                </Button>
+                <Button size="sm" className="h-7 text-xs" disabled={!dirty} onClick={persist}>
+                  <Save className="h-3.5 w-3.5 mr-1" />
+                  {dirty ? "Salvar metas" : "Salvo"}
+                </Button>
+                {dirty ? (
+                  <span className="text-[11px] text-amber-500">alterações não salvas</span>
+                ) : savedAt ? (
+                  <span className="text-[11px] text-emerald-500">salvo às {savedAt}</span>
+                ) : null}
+              </>
+            )}
 
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-0">
+      {!collapsed && <CardContent className="p-0">
         {isLoading ? (
           <p className="text-sm text-muted-foreground px-4 py-6">Carregando metas…</p>
         ) : rows.length === 0 ? (
@@ -555,7 +588,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
             })()}
           </div>
         )}
-      </CardContent>
+      </CardContent>}
     </Card>
   );
 }
