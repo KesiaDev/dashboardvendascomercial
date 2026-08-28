@@ -379,6 +379,8 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
         gapPP,
         leadsRestantes,
         vendasMetaTri,
+        gapFechados,
+        metaAjustadaRestante,
         vendasFaltam,
         ritmoNecessario,
         projecao,
