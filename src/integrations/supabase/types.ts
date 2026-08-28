@@ -2392,6 +2392,15 @@ export type Database = {
     }
     Functions: {
       categoria_produto: { Args: { nome: string }; Returns: string }
+      conversao_deals_agg: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          leads: number
+          lost: number
+          origin_name: string
+          user_name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
