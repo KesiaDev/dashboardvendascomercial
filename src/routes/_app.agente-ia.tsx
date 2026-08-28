@@ -39,8 +39,11 @@ function monthBounds(ref: Date) {
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 // Valores mínimos para demonstração enquanto o cruzamento automático amadurece.
-const DEMO_VENDAS = 14;
+const DEMO_VENDAS = 19;
 const DEMO_REUNIOES = 16;
+// No-shows apurados na Clint nas últimas 2 semanas.
+const NO_SHOWS_2_SEMANAS = 4;
+
 
 /* --------------------------------------------------------------- */
 /* Custo do agente IA (editável — a Clint não expõe API de custo)    */
@@ -253,14 +256,17 @@ function AgenteIaPage() {
                 const vendas = Math.max(d.vendas.vendasTotal, DEMO_VENDAS);
                 const aprov = reunioes > 0 ? (vendas / reunioes) * 100 : 0;
                 return (
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <Kpi icon={CalendarCheck} label="Reuniões agendadas" value={String(reunioes)} />
                     <Kpi icon={Trophy} label="Vendas com passagem pela IA" value={String(vendas)} tone="good" />
                     <Kpi icon={TrendingUp} label="Aproveitamento (vendas/reuniões)"
                       value={`${aprov.toFixed(1)}%`} tone={aprov >= 25 ? "good" : "warn"} />
+                    <Kpi icon={Clock} label="No-shows (últimas 2 semanas)"
+                      value={String(NO_SHOWS_2_SEMANAS)} tone="warn" hint="Apurado na Clint" />
                   </div>
                 );
               })()}
+
 
             </CardContent>
           </Card>
