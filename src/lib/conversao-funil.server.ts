@@ -72,7 +72,7 @@ export const FUNIS_VENDEDOR = new Set<string>(
 );
 
 /** Vendedores fora do relatório de conversão por enquanto. */
-export const VENDEDORES_EXCLUIDOS = new Set(["aline", "kesia", "camila"]);
+export const VENDEDORES_EXCLUIDOS = new Set(["aline", "camila"]);
 
 export function isVendedorExcluido(name: string): boolean {
   const n = name
