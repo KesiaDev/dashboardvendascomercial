@@ -1518,7 +1518,7 @@ function PerformanceTab() {
               </div>
             )}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 auto-rows-fr">
-              <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads novos (${isSeller ? scopeLabel : (range === "week" && perf?.leadsPeriodStart ? `sex→qui ${perf.leadsPeriodStart.slice(8)}/${perf.leadsPeriodStart.slice(5, 7)}–${perf.leadsPeriodEnd!.slice(8)}/${perf.leadsPeriodEnd!.slice(5, 7)}` : rangeLabel)})`} value={String(view.leadsNovos)} />
+              <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads novos (${scopeLabel})`} value={String(view.leadsNovos)} />
               <KpiCard icon={<CheckCircle2 className="h-3 w-3" />} label="Vendas" value={String(view.vendas)} />
               <KpiCard icon={<TrendingUp className="h-3 w-3" />} label="Faturamento" value={fmtEUR(view.faturamento)} />
               <KpiCard
@@ -1529,6 +1529,19 @@ function PerformanceTab() {
               />
               <KpiCard icon={<Sparkles className="h-3 w-3" />} label="Nota média" value={view.notaMedia != null ? view.notaMedia.toFixed(1) : "—"} valueClass={scoreColor(view.notaMedia)} />
             </div>
+            {!isSeller && (perf?.team.leadsPorOrigem?.length ?? 0) > 0 && (
+              <div className="flex flex-wrap items-center gap-2 -mt-1 text-[11px]">
+                <span className="text-muted-foreground">Leads por funil ({rangeLabel}):</span>
+                {perf!.team.leadsPorOrigem.map((o) => (
+                  <span key={o.origem} className="rounded-full border px-2 py-0.5">
+                    {o.origem}: <span className="font-semibold text-foreground">{o.leads}</span>
+                  </span>
+                ))}
+                <span className="text-muted-foreground">
+                  · mesma base dos Funis Perpétuos em Resultados
+                </span>
+              </div>
+            )}
             {showAttendance ? (
               <div className="text-[11px] text-muted-foreground -mt-2 px-1 space-y-1">
                 <div>

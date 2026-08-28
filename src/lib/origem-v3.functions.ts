@@ -86,6 +86,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller, tagBucket } = await import(
       "@/lib/origem-v3.server"
     );
+    const { LEADS_ORIGINS, leadBucket } = await import("@/lib/leads-comercial.server");
 
     const pageSize = 1000;
     const rows: any[] = [];
@@ -93,7 +94,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       const { data: c, error } = await supabaseAdmin
         .from("clint_deals")
         .select("id,origin_name,status,value,created_at,contact_email,raw,contact_tags,user_name")
-        .eq("origin_name", "PIPELINE_COMERCIAL-V3")
+        .in("origin_name", LEADS_ORIGINS)
         .gte("created_at", data.from)
         .lte("created_at", `${data.to}T23:59:59`)
         .order("created_at", { ascending: false })
@@ -188,25 +189,31 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     }
 
     // --- Interação real com vendedor (mensagem enviada por humano) ---
+    // Páginas buscadas em PARALELO (antes eram até 30 round-trips em série,
+    // o que deixava a tela lenta para carregar).
+    const [convPages, msgPages] = await Promise.all([
+      Promise.all(
+        Array.from({ length: 8 }, (_, page) =>
+          supabaseAdmin
+            .from("coach_conversations")
+            .select("id,contact_email,contact_name,is_ai_conversation")
+            .range(page * pageSize, page * pageSize + pageSize - 1),
+        ),
+      ),
+      Promise.all(
+        Array.from({ length: 20 }, (_, page) =>
+          supabaseAdmin
+            .from("coach_messages")
+            .select("conversation_id")
+            .eq("author", "vendedor")
+            .range(page * pageSize, page * pageSize + pageSize - 1),
+        ),
+      ),
+    ]);
     const convRows: any[] = [];
-    for (let page = 0; page < 10; page++) {
-      const { data: c } = await supabaseAdmin
-        .from("coach_conversations")
-        .select("id,contact_email,contact_name,is_ai_conversation")
-        .range(page * pageSize, page * pageSize + pageSize - 1);
-      convRows.push(...(c ?? []));
-      if ((c ?? []).length < pageSize) break;
-    }
+    for (const p of convPages) convRows.push(...(p.data ?? []));
     const humanConvIds = new Set<string>();
-    for (let page = 0; page < 20; page++) {
-      const { data: c } = await supabaseAdmin
-        .from("coach_messages")
-        .select("conversation_id")
-        .eq("author", "vendedor")
-        .range(page * pageSize, page * pageSize + pageSize - 1);
-      for (const m of c ?? []) humanConvIds.add((m as any).conversation_id);
-      if ((c ?? []).length < pageSize) break;
-    }
+    for (const p of msgPages) for (const m of p.data ?? []) humanConvIds.add((m as any).conversation_id);
     const humanEmails = new Set<string>();
     const humanNames = new Set<string>();
     const anyConvEmails = new Set<string>();
@@ -248,7 +255,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     // Leads recebidos no PIPELINE_COMERCIAL-V3, agrupados pelas tags reais da Clint.
     const bucketByEmail = new Map<string, string>();
     for (const d of rows) {
-      const hit = tagBucket(d.contact_tags);
+      const hit = leadBucket(d.origin_name, d.contact_tags);
       if (!hit) continue;
       const r = ensure(hit.bucket);
       const email = normEmail(d.contact_email);

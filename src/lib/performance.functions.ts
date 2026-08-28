@@ -42,6 +42,8 @@ export type PerfResult = {
     conversaoLead: number;
     leadsSemAtendimento: number;
     coberturaAtendimento: number; // (leadsNovos - leadsSemAtendimento) / leadsNovos
+    /** Leads por funil (mesma classificação dos "Funis Perpétuos"). */
+    leadsPorOrigem: { origem: string; leads: number }[];
   };
   daily: { date: string; atendimentos: number; vendas: number; faturamento: number; leads: number }[];
 };
@@ -171,18 +173,14 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     const startTS = `${startDate}T00:00:00.000Z`;
     const endTS   = `${endDate}T23:59:59.999Z`;
 
-    // Leads novos usam semana sexta→quinta (apenas quando range = week).
-    // Âncora = hoje quando a semana comercial ainda está em curso; caso
-    // contrário o fim da semana. Assim a janela é sempre a última sexta
-    // que já passou (e não uma sexta futura, que devolveria 0 leads).
+    // Leads novos usam EXATAMENTE a mesma janela do período (dia / semana
+    // comercial / mês) para bater com os "Funis Perpétuos" dos Resultados.
     const todayISO = todayBR();
-    const leadsAnchor = todayISO < startDate ? startDate : (todayISO > endDate ? endDate : todayISO);
-    const leadsWin = data.range === "week" ? leadsWeekBounds(leadsAnchor) : { startDate, endDate };
-    const leadsStartTS = `${leadsWin.startDate}T00:00:00.000Z`;
-    const leadsEndTS   = `${leadsWin.endDate}T23:59:59.999Z`;
-    const leadsLabel = data.range === "week"
-      ? `Semana de leads (${leadsWin.startDate.slice(8)}/${leadsWin.startDate.slice(5, 7)}–${leadsWin.endDate.slice(8)}/${leadsWin.endDate.slice(5, 7)}) · sex→qui`
-      : label;
+    const leadsWin = { startDate, endDate };
+    const leadsStartTS = startTS;
+    const leadsEndTS   = endTS;
+    const leadsLabel = label;
+    const { LEADS_ORIGINS, leadBucket } = await import("@/lib/leads-comercial.server");
 
 
     // 1-3. Paralelizamos as três queries independentes (vendas, conversas do
@@ -206,8 +204,8 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         .limit(5000),
       supabaseAdmin
         .from("clint_deals")
-        .select("id,contact_id,created_at,user_email,user_name")
-        .in("origin_name", FUNIS_LEADS)
+        .select("id,contact_id,created_at,user_email,user_name,origin_name,contact_tags")
+        .in("origin_name", LEADS_ORIGINS)
         .gte("created_at", leadsStartTS)
         .lte("created_at", leadsEndTS)
         .limit(20000),
@@ -355,11 +353,17 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       if (cur) { cur.vendas += 1; cur.faturamento += Number(s.value_eur ?? 0); }
     }
 
-    // Leads novos — Pipeline Comercial V3 (já buscado em paralelo acima)
+    // Leads novos — mesma classificação dos "Funis Perpétuos" (Sessão
+    // Estratégica / Minicurso V3 / Ebook V3). Negócio sem tag comercial na
+    // Clint fica de fora nas duas telas, para os números baterem.
     let leadsNovos = 0;
+    const leadsPorOrigemMap = new Map<string, number>();
     const leadContactIds: string[] = [];
     for (const l of leads) {
       if (!l.created_at) continue;
+      const hit = leadBucket((l as any).origin_name, (l as any).contact_tags);
+      if (!hit) continue;
+      leadsPorOrigemMap.set(hit.bucket, (leadsPorOrigemMap.get(hit.bucket) ?? 0) + 1);
       leadsNovos += 1;
       if (l.contact_id) leadContactIds.push(String(l.contact_id));
       const k = new Date(l.created_at).toISOString().slice(0, 10);
@@ -455,6 +459,9 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         conversaoLead: leadsNovos > 0 ? teamVd / leadsNovos : 0,
         leadsSemAtendimento,
         coberturaAtendimento: leadsNovos > 0 ? (leadsNovos - leadsSemAtendimento) / leadsNovos : 0,
+        leadsPorOrigem: Array.from(leadsPorOrigemMap.entries())
+          .map(([origem, l]) => ({ origem, leads: l }))
+          .sort((a, b) => b.leads - a.leads),
       },
 
       // Série diária: não mostramos dias futuros (evita "buracos" no gráfico
