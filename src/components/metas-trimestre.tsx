@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw } from "lucide-react";
+import { Save, RotateCcw, ChevronDown, ChevronRight } from "lucide-react";
 import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
 import { fetchOrigemV3ResumoFn } from "@/lib/origem-v3-resumo.functions";
 
@@ -175,6 +175,8 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [showConfig, setShowConfig] = useState(false);
+  /** Card "Meta trimestral" fica oculto por padrão; só abre ao clicar. */
+  const [metaCardOpen, setMetaCardOpen] = useState(false);
   useEffect(() => setCfg(loadTri()), []);
 
   const change = (next: TriConfig) => {
@@ -441,72 +443,91 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
     <div className="space-y-4">
       {/* ---------- Visão executiva ---------- */}
       <div className="grid gap-3 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-1">
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">
-                Meta trimestral
-              </CardTitle>
-              <div className="flex items-center gap-2">
+        {/* Card "Meta trimestral" — oculto por padrão, abre ao clicar */}
+        {metaCardOpen ? (
+          <Card>
+            <CardHeader className="pb-1">
+              <div className="flex items-center justify-between gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowConfig((v) => !v)}
-                  className={`rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                    showConfig
-                      ? "bg-primary text-primary-foreground"
-                      : "border-border text-muted-foreground hover:bg-muted"
-                  }`}
+                  onClick={() => setMetaCardOpen(false)}
+                  className="flex items-center gap-1 text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground"
                 >
-                  {showConfig ? "Fechar edição" : "Editar metas"}
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  Meta trimestral
                 </button>
-                <div className="flex rounded-md border border-border p-0.5">
-                  {(["pct", "qtd"] as const).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => change({ ...cfg, modo: m })}
-                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
-                        cfg.modo === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                      }`}
-                    >
-                      {m === "pct" ? "%" : "Vendas"}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowConfig((v) => !v)}
+                    className={`rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                      showConfig
+                        ? "bg-primary text-primary-foreground"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {showConfig ? "Fechar edição" : "Editar metas"}
+                  </button>
+                  <div className="flex rounded-md border border-border p-0.5">
+                    {(["pct", "qtd"] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => change({ ...cfg, modo: m })}
+                        className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                          cfg.modo === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {m === "pct" ? "%" : "Vendas"}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-1.5 pt-0">
-            {linhas.map((l) => (
-              <div key={l.id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="truncate text-muted-foreground">{l.label}</span>
-                {cfg.modo === "qtd" ? (
-                  <span className="flex items-center gap-1">
-                    {numCell(`tq:${l.id}`, l.metaQtd, (n) =>
-                      change({ ...cfg, metaTriQtd: { ...cfg.metaTriQtd, [l.id]: n } }),
-                    )}
-                    <span className="text-[10px] text-muted-foreground tabular-nums">
-                      = {pct(l.metaTri)}
+            </CardHeader>
+            <CardContent className="space-y-1.5 pt-0">
+              {linhas.map((l) => (
+                <div key={l.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate text-muted-foreground">{l.label}</span>
+                  {cfg.modo === "qtd" ? (
+                    <span className="flex items-center gap-1">
+                      {numCell(`tq:${l.id}`, l.metaQtd, (n) =>
+                        change({ ...cfg, metaTriQtd: { ...cfg.metaTriQtd, [l.id]: n } }),
+                      )}
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        = {pct(l.metaTri)}
+                      </span>
                     </span>
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1">
-                    {numCell(`t:${l.id}`, l.metaTri, (n) =>
-                      change({ ...cfg, metaTri: { ...cfg.metaTri, [l.id]: n } }),
-                    )}
-                    <span
-                      className="text-[10px] text-muted-foreground tabular-nums"
-                      title={`${l.metaTri.toFixed(2)}% sobre ~${l.leadsTri + l.leadsRestantes} leads projetados no trimestre`}
-                    >
-                      = {l.vendasMetaTri} vendas
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      {numCell(`t:${l.id}`, l.metaTri, (n) =>
+                        change({ ...cfg, metaTri: { ...cfg.metaTri, [l.id]: n } }),
+                      )}
+                      <span
+                        className="text-[10px] text-muted-foreground tabular-nums"
+                        title={`${l.metaTri.toFixed(2)}% sobre ~${l.leadsTri + l.leadsRestantes} leads projetados no trimestre`}
+                      >
+                        = {l.vendasMetaTri} vendas
+                      </span>
                     </span>
-                  </span>
-                )}
+                  )}
 
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setMetaCardOpen(true)}
+            className="flex h-full min-h-[64px] items-center justify-center gap-2 rounded-lg border border-dashed border-border/70 bg-muted/20 px-4 text-xs uppercase tracking-wide text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+            title="Abrir edição da meta trimestral"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+            Meta trimestral (oculto) — clique para editar
+          </button>
+        )}
+
 
         <Card>
           <CardHeader className="pb-1">
@@ -589,7 +610,9 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                 </>
               ) : (
                 <span className="italic">
-                  Clique em “Editar metas” no card acima para alterar %, metas e pesos.
+                  {metaCardOpen
+                    ? "Clique em “Editar metas” no card acima para alterar %, metas e pesos."
+                    : "Abra o card “Meta trimestral” acima para alterar %, metas e pesos."}
                 </span>
               )}
             </div>
