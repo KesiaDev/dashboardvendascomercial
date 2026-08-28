@@ -204,14 +204,17 @@ async function detectWithAI(
   return out;
 }
 
-const CACHE_VERSION = "obj-v1";
+// v2 = só o trecho de fecho da conversa é enviado à IA (invalida cache antigo)
+const CACHE_VERSION = "obj-v2-fecho";
 
 export const fetchObjecoesFn = createServerFn({ method: "GET" })
   .inputValidator((d: { from?: string; to?: string; seller?: string; funil?: string } = {}) => d)
   .handler(async ({ data }): Promise<ObjecoesResult> => {
     const db = await admin();
-    const to = data.to ?? new Date().toISOString().slice(0, 10);
-    const from = data.from ?? new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10);
+    const hoje = new Date().toISOString().slice(0, 10);
+    const to = data.to ?? hoje;
+    // Padrão = mês corrente. Para ver mais histórico, basta mudar o "De".
+    const from = data.from ?? `${hoje.slice(0, 7)}-01`;
 
     // 1) Conversas humanas do funil comercial no período
     const { data: convs, error } = await db
