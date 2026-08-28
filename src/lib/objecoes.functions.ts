@@ -416,12 +416,10 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
 
       for (const o of comObjecao) {
         totalObj++;
-        let a = agg.get(o.objecao);
-        if (!a) {
-          a = { total: 0, scores: [], sellers: new Map(), funis: new Map(), evidencias: [] };
-          agg.set(o.objecao, a);
-        }
+        objMsg++;
+        const a = bucket(o.objecao);
         a.total++;
+        a.mensagens++;
         if (typeof score === "number") a.scores.push(score);
         a.sellers.set(seller, (a.sellers.get(seller) ?? 0) + 1);
         a.funis.set(funil, (a.funis.get(funil) ?? 0) + 1);
@@ -431,6 +429,7 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
             contato: String(c.contact_name ?? "—"),
             seller,
             trecho: o.trecho,
+            fonte: "mensagem",
           });
         }
         if (mes) {
