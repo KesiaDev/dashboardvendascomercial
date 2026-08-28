@@ -521,6 +521,135 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
         </Card>
       </div>
 
+      {/* ---------- Distribuição da meta pelos 3 meses ---------- */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-sm font-semibold">
+              Como a meta do trimestre se divide entre {qi.months.map((m) => m.short).join(", ")}
+            </CardTitle>
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span>Peso do mês:</span>
+              {qi.months.map((m, i) => (
+                <span key={m.from} className="flex items-center gap-1">
+                  <span>{m.short}</span>
+                  {numInput(`p:${i}`, cfg.pesos[i], (n) => {
+                    const p = [...cfg.pesos] as [number, number, number];
+                    p[i] = n;
+                    change({ ...cfg, pesos: p });
+                  }, "w-14")}
+                </span>
+              ))}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-t border-b border-border text-[11px] uppercase tracking-wide bg-muted/30">
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground border-r border-border/60">
+                    Funil
+                  </th>
+                  {qi.months.map((m, i) => (
+                    <th
+                      key={m.from}
+                      colSpan={3}
+                      className={`px-2 py-2 text-center font-bold border-r border-border/60 ${
+                        i === mesAtualIdx ? "bg-blue-500/20 text-blue-400" : "text-muted-foreground"
+                      }`}
+                    >
+                      {m.label}
+                    </th>
+                  ))}
+                  <th colSpan={3} className="px-2 py-2 text-center font-bold bg-purple-500/20 text-purple-400">
+                    Trimestre
+                  </th>
+                </tr>
+                <tr className="border-b border-border bg-muted/20 text-[10px] uppercase text-muted-foreground">
+                  <th className="px-3 py-1.5 border-r border-border/60" />
+                  {qi.months.map((m) => (
+                    <>
+                      <th key={`${m.from}-a`} className="px-2 py-1.5 text-right font-medium">
+                        Meta %
+                      </th>
+                      <th key={`${m.from}-b`} className="px-2 py-1.5 text-right font-medium">
+                        Meta vd
+                      </th>
+                      <th key={`${m.from}-c`} className="px-2 py-1.5 text-right font-medium border-r border-border/60">
+                        Real
+                      </th>
+                    </>
+                  ))}
+                  <th className="px-2 py-1.5 text-right font-medium">Meta %</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Meta vd</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Real</th>
+                </tr>
+              </thead>
+              <tbody>
+                {linhas.map((l) => (
+                  <tr key={l.id} className="border-t border-border/50 hover:bg-muted/20">
+                    <td className="px-3 py-3 font-semibold whitespace-nowrap border-r border-border/40">{l.label}</td>
+                    {l.detalheMeses.map((d) => (
+                      <>
+                        <td
+                          key={`${l.id}-${d.label}-p`}
+                          className={`px-2 py-3 text-right tabular-nums ${d.atual ? "bg-blue-500/5" : ""}`}
+                        >
+                          {d.metaPct.toFixed(2)}%
+                        </td>
+                        <td
+                          key={`${l.id}-${d.label}-m`}
+                          className={`px-2 py-3 text-right tabular-nums font-semibold ${d.atual ? "bg-blue-500/5" : ""}`}
+                          title={`${d.leadsEst} leads ${d.leads === d.leadsEst ? "reais" : "estimados"} × ${d.metaPct.toFixed(2)}%`}
+                        >
+                          {d.metaVendas}
+                        </td>
+                        <td
+                          key={`${l.id}-${d.label}-r`}
+                          className={`px-2 py-3 text-right tabular-nums border-r border-border/40 ${d.atual ? "bg-blue-500/5" : ""}`}
+                        >
+                          {d.futuro ? (
+                            <span className="text-muted-foreground">—</span>
+                          ) : (
+                            <span
+                              className={
+                                d.vendas >= d.metaVendas ? "text-emerald-500 font-semibold" : "text-red-500 font-semibold"
+                              }
+                              title={`${d.vendas} vendas / ${d.leads} leads = ${d.conv.toFixed(2)}%`}
+                            >
+                              {d.vendas}
+                            </span>
+                          )}
+                        </td>
+                      </>
+                    ))}
+                    <td className="px-2 py-3 text-right tabular-nums">{l.metaTri.toFixed(2)}%</td>
+                    <td className="px-2 py-3 text-right tabular-nums font-semibold">{l.vendasMetaTri}</td>
+                    <td
+                      className={`px-2 py-3 text-right tabular-nums font-semibold ${
+                        l.vendasTri >= l.vendasMetaTri ? "text-emerald-500" : "text-red-500"
+                      }`}
+                    >
+                      {l.vendasTri}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="border-t border-border/50 px-4 py-3 text-[11px] leading-relaxed text-muted-foreground">
+              A meta do trimestre (WGT {cfg.metaTri.WGT}%, Minicurso {cfg.metaTri.MINICURSO}%, Ebook{" "}
+              {cfg.metaTri.EBOOK}%, Sessão {cfg.metaTri.SESSAO}%) é distribuída pelos 3 meses com os pesos acima —
+              hoje {qi.months.map((m, i) => `${m.short} ${pesosNorm[i].toFixed(2)}`).join(" · ")} — mantendo a média
+              do trimestre igual à meta. Meses de férias ficam com peso menor. “Meta vd” = leads do mês (reais ou
+              projetados) × meta % do mês.
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+
+
       {/* ---------- Tabela trimestral ---------- */}
       <Card>
         <CardHeader className="pb-2">
