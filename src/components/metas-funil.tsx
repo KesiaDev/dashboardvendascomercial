@@ -112,6 +112,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
 
   const [dirty, setDirty] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
   useEffect(() => setCfg(loadConfig()), []);
   /** Altera os valores em tela (recalcula na hora), mas só persiste ao clicar em Salvar. */
   const save = (next: Config) => {
