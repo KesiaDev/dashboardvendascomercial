@@ -141,7 +141,9 @@ async function detectWithAI(
     "Nunca invente objeção e nunca deduza pelo silêncio do lead.\n\n" +
     "OBJEÇÕES POSSÍVEIS (use exatamente estes rótulos):\n" +
     lista.map((o) => `- ${o}`).join("\n") +
-    "\n\nREGRAS:\n" +
+    "\n\nCONTEXTO: o texto recebido é a FASE FINAL da negociação — o que o lead disse DEPOIS de o vendedor conduzir para o fecho (valor, proposta, matrícula, pós-reunião). " +
+    "Perguntas iniciais de curiosidade ('como funciona?', 'nunca ouvi falar', 'me explica') NÃO são objeção: são nutrição. Só conte como objeção o que trava a decisão de compra.\n\n" +
+    "REGRAS:\n" +
     '1. Para cada objeção, inclua "trecho": citação LITERAL do lead (máx. 160 caracteres) que comprova a objeção. Sem citação literal, não inclua a objeção.\n' +
     `2. Se o lead não levantou nenhuma objeção, devolva uma única objeção "${SEM_OBJECAO}" com trecho "".\n` +
     '3. "Vai decidir depois (data/motivo concreto)" só quando o lead cita motivo/data real (férias, viagem, salário no dia X, cirurgia). Adiamento vago sem motivo NÃO é isso — classifique pela razão de fundo (preço, medo, desconfiança) só se houver evidência; senão use "' +
