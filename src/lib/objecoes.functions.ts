@@ -63,7 +63,7 @@ const FECHAMENTO_RE =
   /(investimento|valor d|valores|quanto (custa|fica|é)|pre[cç]o|matr[ií]cula|contrato|pagamento|pix|boleto|cart[aã]o|parcel|entrada de|condi[cç][oõ]es|proposta|desconto|link de pagamento|fechar (hoje|agora|com)|garantir (sua |a )?vaga|reserva(r)? (sua )?vaga|ap[oó]s (a |nossa )?reuni[aã]o|depois d[ao] (call|reuni[aã]o)|como combinamos na (call|reuni[aã]o))/i;
 
 /** Mapa das objeções escritas em texto livre nas ligações → catálogo fechado. */
-const LIGACAO_MAP: { re: RegExp; label: (typeof OBJECOES)[number] }[] = [];
+
 
 // Catálogo fechado de objeções — a IA precisa escolher uma destas, sempre com
 // trecho literal do lead. Nada é "forçado" para o topo: o ranking é o real.
