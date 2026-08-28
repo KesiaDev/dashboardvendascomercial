@@ -129,6 +129,13 @@ export function isComercialDeal(_originName: string | null | undefined, _stage: 
 }
 
 
+/** Agregação de leads/perdidos direto no banco (evita paginar 100k linhas). */
+export async function fetchDealsAgg(db: any, from: string, to: string) {
+  const { data, error } = await db.rpc("conversao_deals_agg", { _from: from, _to: to });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as { origin_name: string | null; user_name: string | null; leads: number; lost: number }[];
+}
+
 export async function pagedDeals(db: any, column: string, from: string, to: string, tagFilter = "") {
   const selectCols = tagFilter
     ? "origin_name,user_name,status,stage,contact_tags"
