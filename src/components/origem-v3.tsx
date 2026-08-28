@@ -57,7 +57,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-t border-border bg-muted/40">
-                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Tag da Clint (PIPELINE_COMERCIAL-V3)</th>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Funil</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Leads recebidos</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Vendas</th>
                   <th className="px-3 py-2 text-right font-medium text-muted-foreground">Aproveit. %</th>
