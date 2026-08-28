@@ -175,8 +175,10 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [showConfig, setShowConfig] = useState(false);
-  /** Card "Meta trimestral" fica oculto por padrão; só abre ao clicar. */
+  /** Os três cards da visão executiva são recolhíveis. Meta trimestral começa oculto. */
   const [metaCardOpen, setMetaCardOpen] = useState(false);
+  const [realizadoOpen, setRealizadoOpen] = useState(true);
+  const [statusOpen, setStatusOpen] = useState(true);
   useEffect(() => setCfg(loadTri()), []);
 
   const change = (next: TriConfig) => {
@@ -531,58 +533,75 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
 
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">
-              Realizado no trimestre
-            </CardTitle>
+            <button
+              type="button"
+              onClick={() => setRealizadoOpen((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground"
+            >
+              <span className="flex items-center gap-1">
+                {realizadoOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                Realizado no trimestre
+              </span>
+            </button>
           </CardHeader>
-          <CardContent className="space-y-1.5 pt-0">
-            {linhas.map((l) => (
-              <div key={l.id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="truncate text-muted-foreground">{l.label}</span>
-                <span
-                  className={`tabular-nums font-semibold ${
-                    l.convTri >= l.metaTri
-                      ? "text-emerald-500"
-                      : l.convTri >= l.metaTri * 0.85
-                        ? "text-amber-500"
-                        : "text-red-500"
-                  }`}
-                  title={`${l.vendasTri} vendas / ${l.leadsTri} leads`}
-                >
-                  {pct(l.convTri)}
-                </span>
-              </div>
-            ))}
-          </CardContent>
-
+          {realizadoOpen && (
+            <CardContent className="space-y-1.5 pt-0">
+              {linhas.map((l) => (
+                <div key={l.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate text-muted-foreground">{l.label}</span>
+                  <span
+                    className={`tabular-nums font-semibold ${
+                      l.convTri >= l.metaTri
+                        ? "text-emerald-500"
+                        : l.convTri >= l.metaTri * 0.85
+                          ? "text-amber-500"
+                          : "text-red-500"
+                    }`}
+                    title={`${l.vendasTri} vendas / ${l.leadsTri} leads`}
+                  >
+                    {pct(l.convTri)}
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          )}
         </Card>
 
 
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">
-              Status do trimestre
-            </CardTitle>
+            <button
+              type="button"
+              onClick={() => setStatusOpen((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground"
+            >
+              <span className="flex items-center gap-1">
+                {statusOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                Status do trimestre
+              </span>
+            </button>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-emerald-500 tabular-nums">{resumoStatus.ok}</p>
-                <p className="text-[11px] text-muted-foreground">No ritmo</p>
+          {statusOpen && (
+            <CardContent className="pt-0">
+              <div className="flex items-center gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-emerald-500 tabular-nums">{resumoStatus.ok}</p>
+                  <p className="text-[11px] text-muted-foreground">No ritmo</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-amber-500 tabular-nums">{resumoStatus.atencao}</p>
+                  <p className="text-[11px] text-muted-foreground">Atenção</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-red-500 tabular-nums">{resumoStatus.risco}</p>
+                  <p className="text-[11px] text-muted-foreground">Abaixo</p>
+                </div>
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-amber-500 tabular-nums">{resumoStatus.atencao}</p>
-                <p className="text-[11px] text-muted-foreground">Atenção</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-red-500 tabular-nums">{resumoStatus.risco}</p>
-                <p className="text-[11px] text-muted-foreground">Abaixo</p>
-              </div>
-            </div>
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              Q{qi.q}/{qi.year} · {qi.diasCorridos}/{qi.diasTotais} dias · {mesesRestantes} mês(es) restante(s)
-            </p>
-          </CardContent>
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Q{qi.q}/{qi.year} · {qi.diasCorridos}/{qi.diasTotais} dias · {mesesRestantes} mês(es) restante(s)
+              </p>
+            </CardContent>
+          )}
         </Card>
       </div>
 
