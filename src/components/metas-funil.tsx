@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
-import { Gauge, RotateCcw, Save } from "lucide-react";
+import { Gauge, RotateCcw, Save, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MetasTrimestreCard } from "@/components/metas-trimestre";
 
