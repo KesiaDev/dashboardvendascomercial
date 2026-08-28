@@ -33,13 +33,13 @@ const FUNIS: {
   { id: "SESSAO", label: "Sessão Estratégica (funil + V3)", metaTri: 10, origem: "sessao estrategica" },
 ];
 
-/** rampa padrão de meta mensal (mês 1, 2, 3 do trimestre) */
-const RAMPA_PADRAO: Record<FunilTriId, [number, number, number]> = {
-  WGT: [1.0, 1.5, 2.0],
-  MINICURSO: [3.5, 5.0, 6.5],
-  EBOOK: [3.5, 5.0, 6.5],
-  SESSAO: [6, 10, 14],
-};
+/**
+ * Peso de cada mês do trimestre. A média dos 3 pesos é 1, então a meta média
+ * do trimestre continua sendo exatamente a meta trimestral definida.
+ * Padrão: mês 1 e mês 3 mais fortes, mês 2 (férias) mais leve.
+ */
+const PESOS_PADRAO: [number, number, number] = [1.15, 0.75, 1.1];
+
 
 function norm(s: string) {
   return s
