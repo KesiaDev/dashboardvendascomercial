@@ -220,16 +220,16 @@ export function ObjecoesTab() {
                   </tr>
                   {aberto === r.objecao && (
                     <tr className="border-b bg-muted/20">
-                      <td colSpan={5} className="p-3">
+                      <td colSpan={7} className="p-3">
                         <p className="text-[10px] uppercase text-muted-foreground mb-2">
-                          Prova real — o que o lead escreveu
+                          Prova real — falas do lead na fase de fecho / ligação
                         </p>
                         <div className="space-y-2">
                           {r.evidencias.map((e, k) => (
                             <div key={k} className="rounded-md border bg-background p-2">
                               <p className="text-xs italic">“{e.trecho}”</p>
                               <p className="text-[10px] text-muted-foreground mt-1">
-                                {e.contato} · atendido por {e.seller}
+                                {e.contato} · atendido por {e.seller} · {e.fonte === "ligacao" ? "ligação" : "mensagem"}
                               </p>
                             </div>
                           ))}
@@ -244,7 +244,7 @@ export function ObjecoesTab() {
               ))}
 
               {(data?.ranking?.length ?? 0) === 0 && (
-                <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Sem dados."}</td></tr>
+                <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Sem dados."}</td></tr>
               )}
             </tbody>
           </table>
