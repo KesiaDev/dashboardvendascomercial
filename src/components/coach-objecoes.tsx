@@ -19,9 +19,11 @@ import {
 
 const COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#06b6d4"];
 const iso = (d: Date) => d.toISOString().slice(0, 10);
+/** Padrão = mês corrente. Para ver histórico, o usuário muda o "De". */
+const inicioDoMes = () => `${iso(new Date()).slice(0, 7)}-01`;
 
 export function ObjecoesTab() {
-  const [from, setFrom] = useState(iso(new Date(Date.now() - 90 * 864e5)));
+  const [from, setFrom] = useState(inicioDoMes());
   const [to, setTo] = useState(iso(new Date()));
   const [seller, setSeller] = useState("all");
   const [funil, setFunil] = useState("all");
@@ -68,6 +70,13 @@ export function ObjecoesTab() {
           <div className="space-y-1">
             <Label className="text-[11px] text-muted-foreground">De</Label>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9 w-[150px]" />
+            <button
+              type="button"
+              className="text-[10px] text-muted-foreground underline"
+              onClick={() => { setFrom(inicioDoMes()); setTo(iso(new Date())); }}
+            >
+              mês atual
+            </button>
           </div>
           <div className="space-y-1">
             <Label className="text-[11px] text-muted-foreground">Até</Label>
@@ -100,12 +109,22 @@ export function ObjecoesTab() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-4">
-        <Kpi label="Conversas lidas (mensagens)" value={String(data?.conversas_analisadas ?? 0)} />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <Kpi label="Conversas lidas (fase de fecho)" value={String(data?.conversas_analisadas ?? 0)} />
         <Kpi label="Conversas com objeção" value={String(data?.sample_size ?? 0)} />
-        <Kpi label="Objeções detectadas" value={String(data?.total_objecoes ?? 0)} />
+        <Kpi label="Objeções por mensagem" value={String(data?.objecoes_mensagens ?? 0)} />
+        <Kpi
+          label="Objeções em ligações"
+          value={String(data?.objecoes_ligacoes ?? 0)}
+          hint={`${data?.ligacoes_analisadas ?? 0} ligações analisadas`}
+        />
         <Kpi label="Nota média dessas conversas" value={data?.avg_score != null ? data.avg_score.toFixed(2) : "—"} />
       </div>
+      <p className="text-[11px] text-muted-foreground -mt-1">
+        Só entram as objeções levantadas <strong>depois</strong> de o vendedor conduzir para o fecho (valor, proposta,
+        matrícula, pós-reunião) — dúvidas iniciais de nutrição ficam de fora. Inclui também o que a IA detectou nas
+        análises das ligações.
+      </p>
 
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -159,6 +178,8 @@ export function ObjecoesTab() {
               <tr>
                 <th className="text-left p-2">Objeção</th>
                 <th className="text-right p-2">Casos</th>
+                <th className="text-right p-2">Msg</th>
+                <th className="text-right p-2">Ligação</th>
                 <th className="text-right p-2">% do total</th>
                 <th className="text-right p-2">Nota média</th>
                 <th className="text-left p-2">Mais frequente em</th>
@@ -180,6 +201,8 @@ export function ObjecoesTab() {
                       )}
                     </td>
                     <td className="p-2 text-right">{r.total}</td>
+                    <td className="p-2 text-right text-muted-foreground">{r.mensagens}</td>
+                    <td className="p-2 text-right text-muted-foreground">{r.ligacoes}</td>
                     <td className="p-2 text-right">{r.pct.toFixed(1)}%</td>
                     <td className={`p-2 text-right ${r.avg_score != null && r.avg_score < 6 ? "text-red-500 font-semibold" : ""}`}>
                       {r.avg_score != null ? r.avg_score.toFixed(2) : "—"}
@@ -197,16 +220,16 @@ export function ObjecoesTab() {
                   </tr>
                   {aberto === r.objecao && (
                     <tr className="border-b bg-muted/20">
-                      <td colSpan={5} className="p-3">
+                      <td colSpan={7} className="p-3">
                         <p className="text-[10px] uppercase text-muted-foreground mb-2">
-                          Prova real — o que o lead escreveu
+                          Prova real — falas do lead na fase de fecho / ligação
                         </p>
                         <div className="space-y-2">
                           {r.evidencias.map((e, k) => (
                             <div key={k} className="rounded-md border bg-background p-2">
                               <p className="text-xs italic">“{e.trecho}”</p>
                               <p className="text-[10px] text-muted-foreground mt-1">
-                                {e.contato} · atendido por {e.seller}
+                                {e.contato} · atendido por {e.seller} · {e.fonte === "ligacao" ? "ligação" : "mensagem"}
                               </p>
                             </div>
                           ))}
@@ -221,7 +244,7 @@ export function ObjecoesTab() {
               ))}
 
               {(data?.ranking?.length ?? 0) === 0 && (
-                <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Sem dados."}</td></tr>
+                <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Sem dados."}</td></tr>
               )}
             </tbody>
           </table>
@@ -295,12 +318,13 @@ function Field({ titulo, texto }: { titulo: string; texto: string }) {
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <Card>
       <CardContent className="pt-4">
         <p className="text-[11px] text-muted-foreground">{label}</p>
         <p className="text-2xl font-bold">{value}</p>
+        {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
       </CardContent>
     </Card>
   );

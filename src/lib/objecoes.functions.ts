@@ -21,6 +21,7 @@ export type ObjecaoEvidencia = {
   contato: string;
   seller: string;
   trecho: string;
+  fonte: "mensagem" | "ligacao";
 };
 
 export type ObjecaoRow = {
@@ -28,6 +29,8 @@ export type ObjecaoRow = {
   total: number;
   pct: number;
   avg_score: number | null;
+  mensagens: number;
+  ligacoes: number;
   sellers: { seller: string; total: number }[];
   funis: { funil: string; total: number }[];
   evidencias: ObjecaoEvidencia[];
@@ -39,6 +42,9 @@ export type ObjecoesResult = {
   sample_size: number;
   conversas_analisadas: number;
   total_objecoes: number;
+  objecoes_mensagens: number;
+  objecoes_ligacoes: number;
+  ligacoes_analisadas: number;
   avg_score: number | null;
   ranking: ObjecaoRow[];
   evolucao: { mes: string; [k: string]: number | string }[];
@@ -46,6 +52,18 @@ export type ObjecoesResult = {
   sellers: string[];
   funis: string[];
 };
+
+/**
+ * Sinal de que o vendedor CONDUZIU para o fecho (proposta / valor / matrícula /
+ * pós-reunião). As objeções que interessam são as que o lead levanta DEPOIS
+ * disso — as dúvidas iniciais ("nunca ouvi falar", "como funciona") são
+ * nutrição, não objeção de fecho.
+ */
+const FECHAMENTO_RE =
+  /(investimento|valor d|valores|quanto (custa|fica|é)|pre[cç]o|matr[ií]cula|contrato|pagamento|pix|boleto|cart[aã]o|parcel|entrada de|condi[cç][oõ]es|proposta|desconto|link de pagamento|fechar (hoje|agora|com)|garantir (sua |a )?vaga|reserva(r)? (sua )?vaga|ap[oó]s (a |nossa )?reuni[aã]o|depois d[ao] (call|reuni[aã]o)|como combinamos na (call|reuni[aã]o))/i;
+
+/** Mapa das objeções escritas em texto livre nas ligações → catálogo fechado. */
+
 
 // Catálogo fechado de objeções — a IA precisa escolher uma destas, sempre com
 // trecho literal do lead. Nada é "forçado" para o topo: o ranking é o real.
@@ -64,6 +82,28 @@ export const OBJECOES = [
 ] as const;
 
 const SEM_OBJECAO = "Nenhuma objeção declarada";
+
+/** Objeções das ligações vêm em texto livre → mapeadas para o catálogo. */
+const LIGACAO_MAP: { re: RegExp; label: string }[] = [
+  { re: /(dinheiro|valor|pre[cç]o|caro|matr[ií]cula|invest|pagar|salario|sal[aá]rio|or[cç]amento|financ)/i, label: "Preço / não tem o dinheiro agora" },
+  { re: /(medo de n[aã]o|n[aã]o vou conseguir|inseguran|d[uú]vida se funciona|ser[aá] que d[aá] certo|resultado)/i, label: "Medo de não conseguir resultado" },
+  { re: /(tempo|agenda|trabalha|hor[aá]rio|corrido)/i, label: "Falta de tempo para estudar/aplicar" },
+  { re: /(pensar|decidir depois|depois|amanh[aã]|semana que vem|viagem|f[eé]rias|analisar)/i, label: "Vai decidir depois (data/motivo concreto)" },
+  { re: /(golpe|confian|desconfi|seguran[cç]a|garantia)/i, label: "Desconfiança / medo de golpe" },
+  { re: /(esposa|marido|mulher|c[oô]njuge|fam[ií]lia|s[oó]cio|pais)/i, label: "Precisa falar com cônjuge/família" },
+  { re: /(j[aá] tentou|j[aá] fiz|outro curso antes|n[aã]o deu certo)/i, label: "Já tentou antes e não deu certo" },
+  { re: /(comparar|outra mentoria|outro curso|concorr)/i, label: "Quer comparar com outro curso/mentoria" },
+  { re: /(gr[aá]tis|gratuito|n[aã]o sabia que era pago|achou que era)/i, label: "Achou que era grátis / não esperava pagar" },
+  { re: /(sem interesse|n[aã]o quer|n[aã]o tem interesse|n[aã]o é para mim|desistiu)/i, label: "Sem interesse real / não é o público" },
+  { re: /(d[uú]vida|como funciona|entrega|conte[uú]do|aula|suporte)/i, label: "Dúvidas sobre o produto ou a entrega" },
+];
+
+function mapLigacaoObjecao(txt: string): string | null {
+  const t = String(txt ?? "").trim();
+  if (!t || t.length < 3) return null;
+  for (const m of LIGACAO_MAP) if (m.re.test(t)) return m.label;
+  return null;
+}
 
 // Mensagens de automação / opt-in — não são conversa real do lead.
 const AUTOMACAO_PATTERNS = [
@@ -101,7 +141,9 @@ async function detectWithAI(
     "Nunca invente objeção e nunca deduza pelo silêncio do lead.\n\n" +
     "OBJEÇÕES POSSÍVEIS (use exatamente estes rótulos):\n" +
     lista.map((o) => `- ${o}`).join("\n") +
-    "\n\nREGRAS:\n" +
+    "\n\nCONTEXTO: o texto recebido é a FASE FINAL da negociação — o que o lead disse DEPOIS de o vendedor conduzir para o fecho (valor, proposta, matrícula, pós-reunião). " +
+    "Perguntas iniciais de curiosidade ('como funciona?', 'nunca ouvi falar', 'me explica') NÃO são objeção: são nutrição. Só conte como objeção o que trava a decisão de compra.\n\n" +
+    "REGRAS:\n" +
     '1. Para cada objeção, inclua "trecho": citação LITERAL do lead (máx. 160 caracteres) que comprova a objeção. Sem citação literal, não inclua a objeção.\n' +
     `2. Se o lead não levantou nenhuma objeção, devolva uma única objeção "${SEM_OBJECAO}" com trecho "".\n` +
     '3. "Vai decidir depois (data/motivo concreto)" só quando o lead cita motivo/data real (férias, viagem, salário no dia X, cirurgia). Adiamento vago sem motivo NÃO é isso — classifique pela razão de fundo (preço, medo, desconfiança) só se houver evidência; senão use "' +
@@ -164,14 +206,17 @@ async function detectWithAI(
   return out;
 }
 
-const CACHE_VERSION = "obj-v1";
+// v2 = só o trecho de fecho da conversa é enviado à IA (invalida cache antigo)
+const CACHE_VERSION = "obj-v2-fecho";
 
 export const fetchObjecoesFn = createServerFn({ method: "GET" })
   .inputValidator((d: { from?: string; to?: string; seller?: string; funil?: string } = {}) => d)
   .handler(async ({ data }): Promise<ObjecoesResult> => {
     const db = await admin();
-    const to = data.to ?? new Date().toISOString().slice(0, 10);
-    const from = data.from ?? new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10);
+    const hoje = new Date().toISOString().slice(0, 10);
+    const to = data.to ?? hoje;
+    // Padrão = mês corrente. Para ver mais histórico, basta mudar o "De".
+    const from = data.from ?? `${hoje.slice(0, 7)}-01`;
 
     // 1) Conversas humanas do funil comercial no período
     const { data: convs, error } = await db
@@ -190,40 +235,72 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
     );
     const ids = list.map((c) => String(c.id));
 
-    // 2) Texto real do lead (inbound, sem automação/duplicados)
-    const textById = new Map<string, string>();
-    const inbound = new Map<string, number>();
-    const outbound = new Map<string, number>();
+    // 2) Mensagens ordenadas por conversa (precisamos da ordem para saber
+    //    onde começou a conducão para o fecho).
+    const msgsById = new Map<string, { at: string; dir: string; body: string }[]>();
     const chunks: string[][] = [];
     for (let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100));
     for (let i = 0; i < chunks.length; i += 5) {
       const res = await Promise.all(
         chunks.slice(i, i + 5).map((ch) =>
-          db.from("coach_messages").select("conversation_id, body, direction").in("conversation_id", ch).limit(40000),
+          db
+            .from("coach_messages")
+            .select("conversation_id, body, direction, sent_at")
+            .in("conversation_id", ch)
+            .limit(40000),
         ),
       );
-      const seen = new Map<string, Set<string>>();
       for (const r of res) {
         for (const m of ((r.data ?? []) as any[])) {
           if (!m.body) continue;
           const cid = String(m.conversation_id);
-          const body = String(m.body);
-          if (String(m.direction) !== "inbound") {
-            outbound.set(cid, (outbound.get(cid) ?? 0) + 1);
-            continue;
-          }
-          if (isAutomacao(body)) continue;
-          const k = normalize(body).replace(/\s+/g, " ").slice(0, 120);
-          let s = seen.get(cid);
-          if (!s) { s = new Set(); seen.set(cid, s); }
-          if (s.has(k)) continue;
-          s.add(k);
-          inbound.set(cid, (inbound.get(cid) ?? 0) + 1);
-          const prev = textById.get(cid) ?? "";
-          if (prev.length > 7000) continue;
-          textById.set(cid, `${prev} ${body}`);
+          let arr = msgsById.get(cid);
+          if (!arr) { arr = []; msgsById.set(cid, arr); }
+          arr.push({ at: String(m.sent_at ?? ""), dir: String(m.direction), body: String(m.body) });
         }
       }
+    }
+
+    // 2b) Recorte da FASE DE FECHO: só o que o lead disse depois de o vendedor
+    //     puxar valor/proposta/pós-reunião. Sem esse gatilho, usamos a parte
+    //     final da conversa (últimas falas), nunca as perguntas iniciais.
+    const textById = new Map<string, string>();
+    const inbound = new Map<string, number>();
+    const outbound = new Map<string, number>();
+    const comFechamento = new Set<string>();
+
+    for (const [cid, arrRaw] of msgsById) {
+      const arr = arrRaw.slice().sort((a, b) => a.at.localeCompare(b.at));
+      let cut = -1;
+      for (let i = 0; i < arr.length; i++) {
+        const m = arr[i]!;
+        if (m.dir !== "inbound" && FECHAMENTO_RE.test(m.body)) { cut = i; break; }
+      }
+      if (cut >= 0) comFechamento.add(cid);
+      const leadAll = arr.filter((m) => m.dir === "inbound" && !isAutomacao(m.body));
+      const out = arr.filter((m) => m.dir !== "inbound");
+      outbound.set(cid, out.length);
+
+      let lead = cut >= 0 ? arr.slice(cut).filter((m) => m.dir === "inbound" && !isAutomacao(m.body)) : [];
+      if (lead.length === 0) {
+        // fallback: metade final das falas do lead (mínimo 3 últimas)
+        const keep = Math.max(3, Math.ceil(leadAll.length / 2));
+        lead = leadAll.slice(-keep);
+      }
+
+      const seen = new Set<string>();
+      let text = "";
+      let n = 0;
+      for (const m of lead) {
+        const k = normalize(m.body).replace(/\s+/g, " ").slice(0, 120);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        n++;
+        if (text.length > 7000) continue;
+        text += ` ${m.body}`;
+      }
+      inbound.set(cid, n);
+      textById.set(cid, text);
     }
 
     // conversa real: o lead falou e o vendedor respondeu
@@ -297,14 +374,25 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
     const agg = new Map<
       string,
       {
-        total: number; scores: number[]; sellers: Map<string, number>; funis: Map<string, number>;
+        total: number; mensagens: number; ligacoes: number;
+        scores: number[]; sellers: Map<string, number>; funis: Map<string, number>;
         evidencias: ObjecaoEvidencia[];
       }
     >();
+    const bucket = (label: string) => {
+      let a = agg.get(label);
+      if (!a) {
+        a = { total: 0, mensagens: 0, ligacoes: 0, scores: [], sellers: new Map(), funis: new Map(), evidencias: [] };
+        agg.set(label, a);
+      }
+      return a;
+    };
     const evoMap = new Map<string, Map<string, number>>();
     let sample = 0;
     let analisadas = 0;
     let totalObj = 0;
+    let objMsg = 0;
+    let objCall = 0;
     const allScores: number[] = [];
 
     for (const c of validos) {
@@ -328,12 +416,10 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
 
       for (const o of comObjecao) {
         totalObj++;
-        let a = agg.get(o.objecao);
-        if (!a) {
-          a = { total: 0, scores: [], sellers: new Map(), funis: new Map(), evidencias: [] };
-          agg.set(o.objecao, a);
-        }
+        objMsg++;
+        const a = bucket(o.objecao);
         a.total++;
+        a.mensagens++;
         if (typeof score === "number") a.scores.push(score);
         a.sellers.set(seller, (a.sellers.get(seller) ?? 0) + 1);
         a.funis.set(funil, (a.funis.get(funil) ?? 0) + 1);
@@ -343,6 +429,7 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
             contato: String(c.contact_name ?? "—"),
             seller,
             trecho: o.trecho,
+            fonte: "mensagem",
           });
         }
         if (mes) {
@@ -353,12 +440,67 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
       }
     }
 
+    // 5b) Objeções das LIGAÇÕES analisadas (coach_calls.analysis.objecoes).
+    // A ligação já é, por natureza, o momento de condução para o fecho.
+    let ligacoesAnalisadas = 0;
+    if (!data.funil || data.funil === "all") {
+      const { data: calls } = await db
+        .from("coach_calls")
+        .select("id, agent_name, agent_email, contact_name, started_at, score, analysis")
+        .not("analysis", "is", null)
+        .gte("started_at", `${from}T00:00:00Z`)
+        .lte("started_at", `${to}T23:59:59Z`)
+        .limit(2000);
+
+      for (const call of ((calls ?? []) as any[])) {
+        const seller = String(call.agent_name || call.agent_email || "—").trim();
+        sellersSet.add(seller);
+        if (data.seller && data.seller !== "all" && seller !== data.seller) continue;
+        const raw = Array.isArray(call.analysis?.objecoes) ? call.analysis.objecoes : [];
+        if (raw.length === 0) continue;
+        ligacoesAnalisadas++;
+        const mes = String(call.started_at ?? "").slice(0, 7);
+        const score = typeof call.score === "number" ? Number(call.score) : null;
+        const jaContadas = new Set<string>();
+        for (const item of raw) {
+          const frase = String(item ?? "").replace(/\s+/g, " ").trim();
+          const label = mapLigacaoObjecao(frase);
+          if (!label || jaContadas.has(label)) continue;
+          jaContadas.add(label);
+          totalObj++;
+          objCall++;
+          const a = bucket(label);
+          a.total++;
+          a.ligacoes++;
+          if (score != null) a.scores.push(score);
+          a.sellers.set(seller, (a.sellers.get(seller) ?? 0) + 1);
+          a.funis.set("Ligação", (a.funis.get("Ligação") ?? 0) + 1);
+          if (a.evidencias.length < 8) {
+            a.evidencias.push({
+              conversation_id: String(call.id),
+              contato: String(call.contact_name ?? "—"),
+              seller,
+              trecho: frase.slice(0, 160),
+              fonte: "ligacao",
+            });
+          }
+          if (mes) {
+            let m = evoMap.get(mes);
+            if (!m) { m = new Map(); evoMap.set(mes, m); }
+            m.set(label, (m.get(label) ?? 0) + 1);
+          }
+        }
+      }
+    }
+
     const ranking: ObjecaoRow[] = Array.from(agg.entries())
       .map(([objecao, a]) => ({
         objecao,
         total: a.total,
         pct: totalObj ? (a.total / totalObj) * 100 : 0,
         avg_score: a.scores.length ? a.scores.reduce((x, y) => x + y, 0) / a.scores.length : null,
+        mensagens: a.mensagens,
+        ligacoes: a.ligacoes,
         sellers: Array.from(a.sellers.entries())
           .map(([seller, total]) => ({ seller, total }))
           .sort((x, y) => y.total - x.total)
@@ -386,6 +528,9 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
       sample_size: sample,
       conversas_analisadas: analisadas,
       total_objecoes: totalObj,
+      objecoes_mensagens: objMsg,
+      objecoes_ligacoes: objCall,
+      ligacoes_analisadas: ligacoesAnalisadas,
       avg_score: allScores.length ? allScores.reduce((a, b) => a + b, 0) / allScores.length : null,
       ranking,
       evolucao,
