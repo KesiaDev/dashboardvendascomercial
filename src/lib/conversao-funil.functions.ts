@@ -70,6 +70,7 @@ export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
     return Array.from(map.values()).filter(
       (r) =>
         FUNIS_VENDEDOR.has(r.funnel) &&
+        funnelVisibleInPeriod(r.funnel, data.to) &&
         !isVendedorExcluido(r.seller) &&
         r.leads + r.lost + r.vendas > 0,
     );
