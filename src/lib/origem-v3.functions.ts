@@ -249,7 +249,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     // Leads recebidos no PIPELINE_COMERCIAL-V3, agrupados pelas tags reais da Clint.
     const bucketByEmail = new Map<string, string>();
     for (const d of rows) {
-      const hit = tagBucket(d.contact_tags);
+      const hit = leadBucket(d.origin_name, d.contact_tags);
       if (!hit) continue;
       const r = ensure(hit.bucket);
       const email = normEmail(d.contact_email);

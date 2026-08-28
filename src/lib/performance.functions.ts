@@ -42,6 +42,8 @@ export type PerfResult = {
     conversaoLead: number;
     leadsSemAtendimento: number;
     coberturaAtendimento: number; // (leadsNovos - leadsSemAtendimento) / leadsNovos
+    /** Leads por funil (mesma classificação dos "Funis Perpétuos"). */
+    leadsPorOrigem: { origem: string; leads: number }[];
   };
   daily: { date: string; atendimentos: number; vendas: number; faturamento: number; leads: number }[];
 };
