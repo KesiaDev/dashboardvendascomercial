@@ -574,7 +574,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                       {m.label}
                     </th>
                   ))}
-                  <th colSpan={3} className="px-2 py-2 text-center font-bold bg-purple-500/20 text-purple-400">
+                  <th colSpan={5} className="px-2 py-2 text-center font-bold bg-purple-500/20 text-purple-400">
                     Trimestre
                   </th>
                 </tr>
