@@ -21,20 +21,17 @@ export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<ConversaoRow[]> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const {
-      pagedDeals,
+      fetchDealsAgg,
       fetchManualSales,
       canonicalFunnel,
       canonicalSellerName,
       FUNIS_VENDEDOR,
       isVendedorExcluido,
-      isComercialDeal,
       funnelVisibleInPeriod,
     } = await import("@/lib/conversao-funil.server");
 
-
-    const [created, lostRows, sales] = await Promise.all([
-      pagedDeals(supabaseAdmin, "created_at", data.from, data.to),
-      pagedDeals(supabaseAdmin, "lost_at", data.from, data.to),
+    const [deals, sales] = await Promise.all([
+      fetchDealsAgg(supabaseAdmin, data.from, data.to),
       fetchManualSales(supabaseAdmin, data.from, data.to),
     ]);
 
@@ -51,14 +48,10 @@ export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
       return row;
     };
 
-    for (const d of created as any[]) {
-      if (!isComercialDeal(d.origin_name, d.stage)) continue;
-      get(d.origin_name, d.user_name).leads++;
-    }
-    for (const d of lostRows as any[]) {
-      if (d.status !== "LOST") continue;
-      if (!isComercialDeal(d.origin_name, d.stage)) continue;
-      get(d.origin_name, d.user_name).lost++;
+    for (const d of deals) {
+      const row = get(d.origin_name, d.user_name);
+      row.leads += Number(d.leads ?? 0);
+      row.lost += Number(d.lost ?? 0);
     }
     for (const s of sales as any[]) {
       const row = get(s.funnel, s.seller_name);
