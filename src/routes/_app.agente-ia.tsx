@@ -261,7 +261,7 @@ function AgenteIaPage() {
                     <Kpi icon={Trophy} label="Vendas com passagem pela IA" value={String(vendas)} tone="good" />
                     <Kpi icon={TrendingUp} label="Aproveitamento (vendas/reuniões)"
                       value={`${aprov.toFixed(1)}%`} tone={aprov >= 25 ? "good" : "warn"} />
-                    <Kpi icon={Clock} label="No-shows (últimas 2 semanas)"
+                    <Kpi icon={Clock} label="No-Shows"
                       value={String(NO_SHOWS_2_SEMANAS)} tone="warn" hint="Apurado na Clint" />
                   </div>
                 );
