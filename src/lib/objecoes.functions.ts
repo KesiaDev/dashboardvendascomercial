@@ -440,6 +440,59 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
       }
     }
 
+    // 5b) Objeções das LIGAÇÕES analisadas (coach_calls.analysis.objecoes).
+    // A ligação já é, por natureza, o momento de condução para o fecho.
+    let ligacoesAnalisadas = 0;
+    if (!data.funil || data.funil === "all") {
+      const { data: calls } = await db
+        .from("coach_calls")
+        .select("id, agent_name, agent_email, contact_name, started_at, score, analysis")
+        .not("analysis", "is", null)
+        .gte("started_at", `${from}T00:00:00Z`)
+        .lte("started_at", `${to}T23:59:59Z`)
+        .limit(2000);
+
+      for (const call of ((calls ?? []) as any[])) {
+        const seller = String(call.agent_name || call.agent_email || "—").trim();
+        sellersSet.add(seller);
+        if (data.seller && data.seller !== "all" && seller !== data.seller) continue;
+        const raw = Array.isArray(call.analysis?.objecoes) ? call.analysis.objecoes : [];
+        if (raw.length === 0) continue;
+        ligacoesAnalisadas++;
+        const mes = String(call.started_at ?? "").slice(0, 7);
+        const score = typeof call.score === "number" ? Number(call.score) : null;
+        const jaContadas = new Set<string>();
+        for (const item of raw) {
+          const frase = String(item ?? "").replace(/\s+/g, " ").trim();
+          const label = mapLigacaoObjecao(frase);
+          if (!label || jaContadas.has(label)) continue;
+          jaContadas.add(label);
+          totalObj++;
+          objCall++;
+          const a = bucket(label);
+          a.total++;
+          a.ligacoes++;
+          if (score != null) a.scores.push(score);
+          a.sellers.set(seller, (a.sellers.get(seller) ?? 0) + 1);
+          a.funis.set("Ligação", (a.funis.get("Ligação") ?? 0) + 1);
+          if (a.evidencias.length < 8) {
+            a.evidencias.push({
+              conversation_id: String(call.id),
+              contato: String(call.contact_name ?? "—"),
+              seller,
+              trecho: frase.slice(0, 160),
+              fonte: "ligacao",
+            });
+          }
+          if (mes) {
+            let m = evoMap.get(mes);
+            if (!m) { m = new Map(); evoMap.set(mes, m); }
+            m.set(label, (m.get(label) ?? 0) + 1);
+          }
+        }
+      }
+    }
+
     const ranking: ObjecaoRow[] = Array.from(agg.entries())
       .map(([objecao, a]) => ({
         objecao,
