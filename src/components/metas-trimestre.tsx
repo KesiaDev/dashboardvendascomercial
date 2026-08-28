@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, TrendingUp } from "lucide-react";
+import { Save, RotateCcw } from "lucide-react";
 import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
 import { fetchOrigemV3ResumoFn } from "@/lib/origem-v3-resumo.functions";
 
@@ -773,185 +773,16 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
 
 
 
-      {/* ---------- Tabela trimestral ---------- */}
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              {title ?? `Meta acumulada do trimestre — Q${qi.q}/${qi.year}`}
-            </CardTitle>
-            <div className="flex items-center gap-2 text-xs">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => change({ ...DEFAULT_TRI, modo: cfg.modo })}
-              >
-                <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                Padrão
-              </Button>
-              <Button size="sm" className="h-7 text-xs" disabled={!dirty} onClick={persist}>
-                <Save className="h-3.5 w-3.5 mr-1" />
-                {dirty ? "Salvar metas" : "Salvo"}
-              </Button>
-              {dirty ? (
-                <span className="text-[11px] text-amber-500">alterações não salvas</span>
-              ) : savedAt ? (
-                <span className="text-[11px] text-emerald-500">salvo às {savedAt}</span>
-              ) : null}
-            </div>
-            {/* Botão flutuante fixo — sempre visível enquanto houver alterações */}
-            {dirty && (
-              <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-border bg-background/95 px-3 py-2 shadow-lg backdrop-blur">
-                <span className="text-xs text-amber-500">alterações não salvas</span>
-                <Button size="sm" className="h-8 rounded-full text-xs" onClick={persist}>
-                  <Save className="h-4 w-4 mr-1" />
-                  Salvar metas
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Carregando trimestre…</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  {/* Cabeçalhos de grupo — coloridos */}
-                  <tr className="border-t border-b border-border text-[11px] uppercase tracking-wide">
-                    <th className="px-3 py-2 border-r border-border/60 bg-muted/40" />
-                    <th
-                      colSpan={3}
-                      className="px-3 py-2 text-center font-bold border-r border-border/60 bg-blue-500/20 text-blue-400"
-                    >
-                      Mês atual — {qi.months[mesAtualIdx]?.label}
-                    </th>
-                    <th
-                      colSpan={4}
-                      className="px-3 py-2 text-center font-bold border-r border-border/60 bg-purple-500/20 text-purple-400"
-                    >
-                      Acumulado do trimestre
-                    </th>
-                    <th
-                      colSpan={3}
-                      className="px-3 py-2 text-center font-bold bg-amber-500/20 text-amber-400"
-                    >
-                      O que falta
-                    </th>
-                  </tr>
-                  {/* Sub-cabeçalhos */}
-                  <tr className="border-b border-border bg-muted/30 align-bottom">
-                    <th className="px-3 py-2.5 text-left font-medium text-muted-foreground border-r border-border/60">
-                      Funil
-                    </th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Leads</th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Vendas</th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground border-r border-border/60">
-                      Ating.
-                    </th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Leads</th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Vendas</th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Ating.</th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground border-r border-border/60">
-                      Gap p.p.
-                    </th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Meta vendas</th>
-                    <th className="px-2 py-2.5 text-right font-medium text-muted-foreground">Faltam</th>
-                    <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {linhas.map((l) => (
-                    <tr key={l.id} className="border-t border-border/50 hover:bg-muted/20 transition-colors">
-                      <td className="px-3 py-3.5 font-semibold whitespace-nowrap border-r border-border/40">
-                        {l.label}
-                      </td>
-                      {/* Mês atual */}
-                      <td className="px-2 py-3.5 text-right tabular-nums">{l.mes.leads}</td>
-                      <td className="px-2 py-3.5 text-right tabular-nums text-emerald-500 font-semibold">
-                        {l.mes.vendas}
-                      </td>
-                      <td className="px-2 py-3.5 text-right tabular-nums border-r border-border/40">
-                        <span
-                          className={`font-semibold ${
-                            l.atgMes >= 100
-                              ? "text-emerald-500"
-                              : l.atgMes >= 85
-                                ? "text-amber-500"
-                                : "text-red-500"
-                          }`}
-                        >
-                          {l.atgMes.toFixed(0)}%
-                        </span>
-                      </td>
-                      {/* Acumulado do trimestre */}
-                      <td className="px-2 py-3.5 text-right tabular-nums">{l.leadsTri}</td>
-                      <td className="px-2 py-3.5 text-right tabular-nums text-emerald-500 font-semibold">
-                        {l.vendasTri}
-                      </td>
-                      <td className="px-2 py-3.5 text-right tabular-nums">
-                        <span
-                          className={`font-semibold ${
-                            l.atgTri >= 100
-                              ? "text-emerald-500"
-                              : l.atgTri >= 85
-                                ? "text-amber-500"
-                                : "text-red-500"
-                          }`}
-                        >
-                          {l.atgTri.toFixed(0)}%
-                        </span>
-                      </td>
-                      <td
-                        className={`px-2 py-3.5 text-right tabular-nums font-semibold border-r border-border/40 ${l.gapPP >= 0 ? "text-emerald-500" : "text-red-500"}`}
-                      >
-                        {l.gapPP >= 0 ? "+" : ""}
-                        {l.gapPP.toFixed(2)}
-                      </td>
-                      {/* O que falta */}
-                      <td className="px-2 py-3.5 text-right tabular-nums">
-                        <span className="font-semibold">{l.vendasMetaTri}</span>
-                        <span className="block text-[10px] text-muted-foreground">
-                          {l.vendasTri} feitas
-                        </span>
-                      </td>
-                      <td className="px-2 py-3.5 text-right tabular-nums">
-                        {l.vendasFaltam > 0 ? (
-                          <span className="inline-flex flex-col items-end">
-                            <span className="text-red-500 font-semibold">{l.vendasFaltam}</span>
-                            <span className="text-[10px] text-muted-foreground">vendas</span>
-                          </span>
-                        ) : (
-                          <Badge className="bg-emerald-500/15 text-emerald-500 border-0 whitespace-nowrap">
-                            Meta batida
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="px-3 py-3.5">
-                        <Badge className={`${STATUS_UI[l.status].cls} border-0 whitespace-nowrap`}>
-                          {STATUS_UI[l.status].dot} {STATUS_UI[l.status].label}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="border-t border-border/50 px-4 py-3 text-[11px] leading-relaxed text-muted-foreground">
-                <p>
-                  <strong className="text-foreground">Modo {cfg.modo === "qtd" ? "Vendas" : "%"}</strong>: a meta
-                  é editada no card <em>Meta trimestral</em> acima. Aqui, “Meta vendas” é o alvo em unidades e
-                  “Faltam” é quantas vendas ainda faltam para bater. “Ating.” = conversão real ÷ meta.
-                </p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-
-      </Card>
-
+      {/* Botão flutuante fixo — sempre visível enquanto houver alterações */}
+      {dirty && (
+        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-border bg-background/95 px-3 py-2 shadow-lg backdrop-blur">
+          <span className="text-xs text-amber-500">alterações não salvas</span>
+          <Button size="sm" className="h-8 rounded-full text-xs" onClick={persist}>
+            <Save className="h-4 w-4 mr-1" />
+            Salvar metas
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
