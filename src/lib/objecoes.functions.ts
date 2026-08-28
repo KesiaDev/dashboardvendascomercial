@@ -499,6 +499,8 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
         total: a.total,
         pct: totalObj ? (a.total / totalObj) * 100 : 0,
         avg_score: a.scores.length ? a.scores.reduce((x, y) => x + y, 0) / a.scores.length : null,
+        mensagens: a.mensagens,
+        ligacoes: a.ligacoes,
         sellers: Array.from(a.sellers.entries())
           .map(([seller, total]) => ({ seller, total }))
           .sort((x, y) => y.total - x.total)
