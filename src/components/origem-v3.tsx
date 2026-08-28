@@ -95,7 +95,6 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                             <td className="px-4 py-1.5 pl-10 text-muted-foreground truncate max-w-[320px]">{c.campanha}</td>
                             <td className="px-3 py-1.5 text-right tabular-nums">{c.leads}</td>
                             <td className="px-3 py-1.5 text-right tabular-nums">—</td>
-                            <td className="px-3 py-1.5 text-right tabular-nums">—</td>
                             <td className="px-3 py-1.5 text-right tabular-nums text-emerald-500">{c.ganhos}</td>
                             <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{pct(c.ganhos, c.leads)}</td>
                             <td className="px-3 py-1.5 text-right tabular-nums">—</td>
