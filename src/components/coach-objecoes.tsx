@@ -19,9 +19,11 @@ import {
 
 const COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#06b6d4"];
 const iso = (d: Date) => d.toISOString().slice(0, 10);
+/** Padrão = mês corrente. Para ver histórico, o usuário muda o "De". */
+const inicioDoMes = () => `${iso(new Date()).slice(0, 7)}-01`;
 
 export function ObjecoesTab() {
-  const [from, setFrom] = useState(iso(new Date(Date.now() - 90 * 864e5)));
+  const [from, setFrom] = useState(inicioDoMes());
   const [to, setTo] = useState(iso(new Date()));
   const [seller, setSeller] = useState("all");
   const [funil, setFunil] = useState("all");
