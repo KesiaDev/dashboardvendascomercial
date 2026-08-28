@@ -86,6 +86,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller, tagBucket } = await import(
       "@/lib/origem-v3.server"
     );
+    const { LEADS_ORIGINS, leadBucket } = await import("@/lib/leads-comercial.server");
 
     const pageSize = 1000;
     const rows: any[] = [];
@@ -93,7 +94,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       const { data: c, error } = await supabaseAdmin
         .from("clint_deals")
         .select("id,origin_name,status,value,created_at,contact_email,raw,contact_tags,user_name")
-        .eq("origin_name", "PIPELINE_COMERCIAL-V3")
+        .in("origin_name", LEADS_ORIGINS)
         .gte("created_at", data.from)
         .lte("created_at", `${data.to}T23:59:59`)
         .order("created_at", { ascending: false })
