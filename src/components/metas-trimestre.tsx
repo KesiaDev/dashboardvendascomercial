@@ -632,14 +632,64 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                     </td>
                   </tr>
                 ))}
+                {/* ---------- Linha TOTAL ---------- */}
+                {(() => {
+                  const totMetaMes = qi.months.map((_, i) =>
+                    linhas.reduce((a, l) => a + (l.detalheMeses[i]?.metaVendas ?? 0), 0),
+                  );
+                  const totRealMes = qi.months.map((_, i) =>
+                    linhas.reduce((a, l) => {
+                      const d = l.detalheMeses[i];
+                      return a + (d?.futuro ? 0 : d?.vendas ?? 0);
+                    }, 0),
+                  );
+                  const totMetaTri = linhas.reduce((a, l) => a + l.vendasMetaTri, 0);
+                  const totRealTri = linhas.reduce((a, l) => a + l.vendasTri, 0);
+                  const totFaltaTri = Math.max(0, totMetaTri - totRealTri);
+                  return (
+                    <tr className="border-t-2 border-border bg-muted/30 font-bold">
+                      <td className="px-3 py-3 whitespace-nowrap border-r border-border/40 uppercase text-xs tracking-wide">
+                        Total
+                      </td>
+                      {qi.months.map((m, i) => (
+                        <Fragment key={m.from}>
+                          <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">—</td>
+                          <td className="px-2 py-3 text-right tabular-nums">{totMetaMes[i]}</td>
+                          <td
+                            className={`px-2 py-3 text-right tabular-nums border-r border-border/40 ${
+                              totRealMes[i] >= totMetaMes[i] ? "text-emerald-500" : "text-red-500"
+                            }`}
+                          >
+                            {totRealMes[i]}
+                          </td>
+                        </Fragment>
+                      ))}
+                      <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">—</td>
+                      <td className="px-2 py-3 text-right tabular-nums">{totMetaTri}</td>
+                      <td
+                        className={`px-2 py-3 text-right tabular-nums ${
+                          totRealTri >= totMetaTri ? "text-emerald-500" : "text-red-500"
+                        }`}
+                      >
+                        {totRealTri}
+                      </td>
+                    </tr>
+                  );
+                })()}
               </tbody>
             </table>
             <div className="border-t border-border/50 px-4 py-3 text-[11px] leading-relaxed text-muted-foreground">
-              A meta do trimestre (WGT {cfg.metaTri.WGT}%, Minicurso {cfg.metaTri.MINICURSO}%, Ebook{" "}
-              {cfg.metaTri.EBOOK}%, Sessão {cfg.metaTri.SESSAO}%) é distribuída pelos 3 meses com os pesos acima —
-              hoje {qi.months.map((m, i) => `${m.short} ${pesosNorm[i].toFixed(2)}`).join(" · ")} — mantendo a média
-              do trimestre igual à meta. Meses de férias ficam com peso menor. “Meta vd” = leads do mês (reais ou
-              projetados) × meta % do mês.
+              <strong className="text-foreground">Realizado:</strong> {linhas.reduce((a, l) => a + l.vendasTri, 0)} vendas
+              {" · "}
+              <strong className="text-foreground">Meta:</strong> {linhas.reduce((a, l) => a + l.vendasMetaTri, 0)} vendas
+              {" · "}
+              <strong className="text-foreground">Faltam:</strong>{" "}
+              {Math.max(
+                0,
+                linhas.reduce((a, l) => a + l.vendasMetaTri, 0) -
+                  linhas.reduce((a, l) => a + l.vendasTri, 0),
+              )}{" "}
+              vendas
             </div>
           </div>
         </CardContent>
