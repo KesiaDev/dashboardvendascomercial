@@ -358,17 +358,12 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       const projecao = leadsProj > 0 ? ((vendasTri + (leadsRestantes * convRef) / 100) / leadsProj) * 100 : 0;
 
       const vendasMetaTri = metaVendasMes.reduce((a, b) => a + b, 0);
-      // Gap acumulado dos meses já fechados (o que deixou de vender e "sobra" para os meses restantes)
-      // Gap assinado: positivo = faltou vender (sobra p/ os meses restantes); negativo = vendeu a mais
-      const gapFechados = meses.reduce(
-        (a, m, i) => a + (mesDias[i].completo ? (metaVendasMes[i] ?? 0) - m.vendas : 0),
-        0,
-      );
-      const metaRestante = metaVendasMes.reduce(
-        (a, v, i) => a + (mesDias[i].completo ? 0 : v),
-        0,
-      );
-      const metaAjustadaRestante = metaRestante + gapFechados;
+      // Gap = soma do que faltou (ou sobrou) do real vs meta em TODOS os meses do trimestre.
+      // Positivo = faltou vender; negativo = vendeu a mais.
+      const gapFechados = vendasMetaTri - vendasTri;
+      // Meta ajustada = total que ainda falta vender no trimestre (meta total − realizado),
+      // já incluindo a soma do gap. Nunca negativa.
+      const metaAjustadaRestante = Math.max(0, gapFechados);
       const vendasFaltam = Math.max(0, vendasMetaTri - vendasTri);
       const ritmoNecessario = leadsRestantes > 0 ? (vendasFaltam / leadsRestantes) * 100 : 0;
       const gapPP = convTri - metaTri;
@@ -697,14 +692,17 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                   <th className="px-2 py-1.5 text-right font-medium">Meta %</th>
                   <th className="px-2 py-1.5 text-right font-medium">Meta vd</th>
                   <th className="px-2 py-1.5 text-right font-medium">Real</th>
-                  <th className="px-2 py-1.5 text-right font-medium" title="Vendas que faltaram nos meses já fechados">
-                    Gap fech.
+                  <th
+                    className="px-2 py-1.5 text-right font-medium"
+                    title="Soma do que faltou (ou sobrou) do real vs meta em Jul + Ago + Set"
+                  >
+                    Gap
                   </th>
                   <th
                     className="px-2 py-1.5 text-right font-medium"
-                    title="Meta dos meses restantes + gap dos meses fechados"
+                    title="Total que ainda falta vender no trimestre (meta total − realizado)"
                   >
-                    Meta ajust.
+                    Falta vender
                   </th>
                 </tr>
               </thead>
@@ -763,7 +761,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                     </td>
                     <td
                       className="px-2 py-3 text-right tabular-nums font-bold text-amber-500"
-                      title="Meta dos meses que ainda faltam + gap acumulado dos meses fechados"
+                      title="Total que ainda falta vender no trimestre, já somando o gap"
                     >
                       {l.metaAjustadaRestante}
                     </td>
