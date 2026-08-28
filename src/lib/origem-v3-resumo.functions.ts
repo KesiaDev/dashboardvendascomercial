@@ -100,13 +100,20 @@ export const fetchOrigemV3ResumoFn = createServerFn({ method: "GET" })
     }
 
     for (const s of sales as any[]) {
-      const funilDecl = String(s.funnel ?? "");
+      const funilDecl = String(s.funnel ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
       const declaradoV3 = /pipeline[\s_-]*comercial[\s_-]*v3/i.test(funilDecl);
+      // Todo funil declarado como "Sessão Estratégica" (funil próprio ou legado)
+      // entra na linha Sessão Estratégica, igual ao card "Vendas por Funil".
+      const declaradoSessao = /sessao\s*estrateg/i.test(funilDecl);
       const bucketDeclarado = /minicurso/i.test(funilDecl)
         ? "Minicurso V3"
         : /e-?book/i.test(funilDecl)
           ? "Ebook V3"
-          : null;
+          : declaradoSessao
+            ? "Sessão Estratégica"
+            : null;
       if (!declaradoV3 && !bucketDeclarado) continue;
       const email = normEmail(s.client_email);
       const linha = bucketDeclarado ?? (email ? bucketByEmail.get(email) : undefined) ?? "Sessão Estratégica";
