@@ -577,7 +577,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
             })()}
           </div>
         )}
-      </CardContent>
+      </CardContent>}
     </Card>
   );
 }
