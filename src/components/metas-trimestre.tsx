@@ -347,8 +347,9 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
 
       const vendasMetaTri = metaVendasMes.reduce((a, b) => a + b, 0);
       // Gap acumulado dos meses já fechados (o que deixou de vender e "sobra" para os meses restantes)
+      // Gap assinado: positivo = faltou vender (sobra p/ os meses restantes); negativo = vendeu a mais
       const gapFechados = meses.reduce(
-        (a, m, i) => a + (mesDias[i].completo ? Math.max(0, (metaVendasMes[i] ?? 0) - m.vendas) : 0),
+        (a, m, i) => a + (mesDias[i].completo ? (metaVendasMes[i] ?? 0) - m.vendas : 0),
         0,
       );
       const metaRestante = metaVendasMes.reduce(
@@ -654,6 +655,8 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                     <td className="px-2 py-3 text-right tabular-nums">
                       {l.gapFechados > 0 ? (
                         <span className="text-red-500 font-semibold">+{l.gapFechados}</span>
+                      ) : l.gapFechados < 0 ? (
+                        <span className="text-emerald-500 font-semibold">{l.gapFechados}</span>
                       ) : (
                         <span className="text-emerald-500">0</span>
                       )}
