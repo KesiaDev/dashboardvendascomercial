@@ -692,14 +692,17 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                   <th className="px-2 py-1.5 text-right font-medium">Meta %</th>
                   <th className="px-2 py-1.5 text-right font-medium">Meta vd</th>
                   <th className="px-2 py-1.5 text-right font-medium">Real</th>
-                  <th className="px-2 py-1.5 text-right font-medium" title="Vendas que faltaram nos meses já fechados">
-                    Gap fech.
+                  <th
+                    className="px-2 py-1.5 text-right font-medium"
+                    title="Soma do que faltou (ou sobrou) do real vs meta em Jul + Ago + Set"
+                  >
+                    Gap
                   </th>
                   <th
                     className="px-2 py-1.5 text-right font-medium"
-                    title="Meta dos meses restantes + gap dos meses fechados"
+                    title="Total que ainda falta vender no trimestre (meta total − realizado)"
                   >
-                    Meta ajust.
+                    Falta vender
                   </th>
                 </tr>
               </thead>
@@ -758,7 +761,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                     </td>
                     <td
                       className="px-2 py-3 text-right tabular-nums font-bold text-amber-500"
-                      title="Meta dos meses que ainda faltam + gap acumulado dos meses fechados"
+                      title="Total que ainda falta vender no trimestre, já somando o gap"
                     >
                       {l.metaAjustadaRestante}
                     </td>
