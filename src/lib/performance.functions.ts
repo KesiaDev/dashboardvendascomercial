@@ -173,18 +173,14 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     const startTS = `${startDate}T00:00:00.000Z`;
     const endTS   = `${endDate}T23:59:59.999Z`;
 
-    // Leads novos usam semana sexta→quinta (apenas quando range = week).
-    // Âncora = hoje quando a semana comercial ainda está em curso; caso
-    // contrário o fim da semana. Assim a janela é sempre a última sexta
-    // que já passou (e não uma sexta futura, que devolveria 0 leads).
+    // Leads novos usam EXATAMENTE a mesma janela do período (dia / semana
+    // comercial / mês) para bater com os "Funis Perpétuos" dos Resultados.
     const todayISO = todayBR();
-    const leadsAnchor = todayISO < startDate ? startDate : (todayISO > endDate ? endDate : todayISO);
-    const leadsWin = data.range === "week" ? leadsWeekBounds(leadsAnchor) : { startDate, endDate };
-    const leadsStartTS = `${leadsWin.startDate}T00:00:00.000Z`;
-    const leadsEndTS   = `${leadsWin.endDate}T23:59:59.999Z`;
-    const leadsLabel = data.range === "week"
-      ? `Semana de leads (${leadsWin.startDate.slice(8)}/${leadsWin.startDate.slice(5, 7)}–${leadsWin.endDate.slice(8)}/${leadsWin.endDate.slice(5, 7)}) · sex→qui`
-      : label;
+    const leadsWin = { startDate, endDate };
+    const leadsStartTS = startTS;
+    const leadsEndTS   = endTS;
+    const leadsLabel = label;
+    const { LEADS_ORIGINS, leadBucket } = await import("@/lib/leads-comercial.server");
 
 
     // 1-3. Paralelizamos as três queries independentes (vendas, conversas do
