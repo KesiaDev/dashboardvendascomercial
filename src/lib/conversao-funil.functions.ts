@@ -28,7 +28,9 @@ export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
       FUNIS_VENDEDOR,
       isVendedorExcluido,
       isComercialDeal,
+      funnelVisibleInPeriod,
     } = await import("@/lib/conversao-funil.server");
+
 
     const [created, lostRows, sales] = await Promise.all([
       pagedDeals(supabaseAdmin, "created_at", data.from, data.to),
