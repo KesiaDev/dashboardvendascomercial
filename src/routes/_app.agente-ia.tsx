@@ -39,8 +39,11 @@ function monthBounds(ref: Date) {
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 // Valores mínimos para demonstração enquanto o cruzamento automático amadurece.
-const DEMO_VENDAS = 14;
+const DEMO_VENDAS = 19;
 const DEMO_REUNIOES = 16;
+// No-shows apurados na Clint nas últimas 2 semanas.
+const NO_SHOWS_2_SEMANAS = 4;
+
 
 /* --------------------------------------------------------------- */
 /* Custo do agente IA (editável — a Clint não expõe API de custo)    */
