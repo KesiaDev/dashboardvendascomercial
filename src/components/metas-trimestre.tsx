@@ -57,7 +57,7 @@ function funilId(funnel: string): FunilTriId | null {
 /* Config editável                                                     */
 /* ------------------------------------------------------------------ */
 
-const STORE_KEY = "metas-trimestre-v2";
+const STORE_KEY = "metas-trimestre-v3";
 
 type TriConfig = {
   metaTri: Record<FunilTriId, number>;
@@ -65,14 +65,15 @@ type TriConfig = {
   metaTriQtd: Record<FunilTriId, number>;
   /** modo de edição da meta trimestral */
   modo: "pct" | "qtd";
-  rampa: Record<FunilTriId, [number, number, number]>;
+  /** peso de cada mês do trimestre (média = 1) */
+  pesos: [number, number, number];
 };
 
 const DEFAULT_TRI: TriConfig = {
   metaTri: { WGT: 1.5, MINICURSO: 5, EBOOK: 5, SESSAO: 10 },
   metaTriQtd: { WGT: 12, MINICURSO: 25, EBOOK: 25, SESSAO: 40 },
   modo: "pct",
-  rampa: { ...RAMPA_PADRAO },
+  pesos: [...PESOS_PADRAO] as [number, number, number],
 };
 
 function loadTri(): TriConfig {
@@ -81,16 +82,18 @@ function loadTri(): TriConfig {
     const raw = window.localStorage.getItem(STORE_KEY);
     if (!raw) return DEFAULT_TRI;
     const p = JSON.parse(raw) as Partial<TriConfig>;
+    const pesos = Array.isArray(p.pesos) && p.pesos.length === 3 ? (p.pesos as [number, number, number]) : DEFAULT_TRI.pesos;
     return {
       metaTri: { ...DEFAULT_TRI.metaTri, ...(p.metaTri ?? {}) },
       metaTriQtd: { ...DEFAULT_TRI.metaTriQtd, ...(p.metaTriQtd ?? {}) },
       modo: p.modo === "qtd" ? "qtd" : "pct",
-      rampa: { ...DEFAULT_TRI.rampa, ...(p.rampa ?? {}) },
+      pesos,
     };
   } catch {
     return DEFAULT_TRI;
   }
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Datas do trimestre                                                  */
