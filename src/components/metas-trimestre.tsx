@@ -707,6 +707,12 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                       >
                         {totRealTri}
                       </td>
+                      <td className="px-2 py-3 text-right tabular-nums text-red-500">
+                        +{linhas.reduce((a, l) => a + l.gapFechados, 0)}
+                      </td>
+                      <td className="px-2 py-3 text-right tabular-nums text-amber-500">
+                        {linhas.reduce((a, l) => a + l.metaAjustadaRestante, 0)}
+                      </td>
                     </tr>
                   );
                 })()}
