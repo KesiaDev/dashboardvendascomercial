@@ -228,13 +228,29 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setCollapsed((v) => !v)}
+            className="text-sm font-semibold flex items-center gap-1.5 transition-opacity hover:opacity-80"
+          >
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`} />
             <Gauge className="h-4 w-4 text-muted-foreground" />
             Meta de Aproveitamento — visão trimestral
-          </h3>
-          {toggle}
+          </button>
+          <div className="flex items-center gap-2">
+            {collapsed && (
+              <button
+                type="button"
+                onClick={() => setCollapsed(false)}
+                className="rounded-md border border-border px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted"
+              >
+                Mostrar
+              </button>
+            )}
+            {toggle}
+          </div>
         </div>
-        <MetasTrimestreCard refDate={to} />
+        {!collapsed && <MetasTrimestreCard refDate={to} />}
       </div>
     );
   }
