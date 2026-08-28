@@ -355,12 +355,15 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       // — mesmo que o lead tenha entrado em meses anteriores.
       const funilDecl = String(s.funnel ?? "");
       const declaradoV3 = /pipeline[\s_-]*comercial[\s_-]*v3/i.test(funilDecl);
-      // Vendedor pode declarar direto o sub-funil do V3 (Minicurso V3 / Ebook V3).
+      // Vendedor pode declarar direto o sub-funil do V3 (Minicurso V3 / Ebook V3 /
+      // Sessão Estratégica) — tudo isso pertence ao funil V3 no fechamento.
       const bucketDeclarado = /minicurso/i.test(funilDecl)
         ? "Minicurso V3"
         : /e-?book/i.test(funilDecl)
           ? "Ebook V3"
-          : null;
+          : /sess[aã]o[\s_-]*estrat/i.test(funilDecl)
+            ? "Sessão Estratégica"
+            : null;
       if (!declaradoV3 && !bucketDeclarado) continue;
       const v3Touch = [...sorted]
         .reverse()
