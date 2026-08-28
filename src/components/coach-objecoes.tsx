@@ -178,6 +178,8 @@ export function ObjecoesTab() {
               <tr>
                 <th className="text-left p-2">Objeção</th>
                 <th className="text-right p-2">Casos</th>
+                <th className="text-right p-2">Msg</th>
+                <th className="text-right p-2">Ligação</th>
                 <th className="text-right p-2">% do total</th>
                 <th className="text-right p-2">Nota média</th>
                 <th className="text-left p-2">Mais frequente em</th>
@@ -314,12 +316,13 @@ function Field({ titulo, texto }: { titulo: string; texto: string }) {
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <Card>
       <CardContent className="pt-4">
         <p className="text-[11px] text-muted-foreground">{label}</p>
         <p className="text-2xl font-bold">{value}</p>
+        {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
       </CardContent>
     </Card>
   );
