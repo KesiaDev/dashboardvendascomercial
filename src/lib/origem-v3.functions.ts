@@ -189,25 +189,31 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     }
 
     // --- Interação real com vendedor (mensagem enviada por humano) ---
+    // Páginas buscadas em PARALELO (antes eram até 30 round-trips em série,
+    // o que deixava a tela lenta para carregar).
+    const [convPages, msgPages] = await Promise.all([
+      Promise.all(
+        Array.from({ length: 8 }, (_, page) =>
+          supabaseAdmin
+            .from("coach_conversations")
+            .select("id,contact_email,contact_name,is_ai_conversation")
+            .range(page * pageSize, page * pageSize + pageSize - 1),
+        ),
+      ),
+      Promise.all(
+        Array.from({ length: 20 }, (_, page) =>
+          supabaseAdmin
+            .from("coach_messages")
+            .select("conversation_id")
+            .eq("author", "vendedor")
+            .range(page * pageSize, page * pageSize + pageSize - 1),
+        ),
+      ),
+    ]);
     const convRows: any[] = [];
-    for (let page = 0; page < 10; page++) {
-      const { data: c } = await supabaseAdmin
-        .from("coach_conversations")
-        .select("id,contact_email,contact_name,is_ai_conversation")
-        .range(page * pageSize, page * pageSize + pageSize - 1);
-      convRows.push(...(c ?? []));
-      if ((c ?? []).length < pageSize) break;
-    }
+    for (const p of convPages) convRows.push(...(p.data ?? []));
     const humanConvIds = new Set<string>();
-    for (let page = 0; page < 20; page++) {
-      const { data: c } = await supabaseAdmin
-        .from("coach_messages")
-        .select("conversation_id")
-        .eq("author", "vendedor")
-        .range(page * pageSize, page * pageSize + pageSize - 1);
-      for (const m of c ?? []) humanConvIds.add((m as any).conversation_id);
-      if ((c ?? []).length < pageSize) break;
-    }
+    for (const p of msgPages) for (const m of p.data ?? []) humanConvIds.add((m as any).conversation_id);
     const humanEmails = new Set<string>();
     const humanNames = new Set<string>();
     const anyConvEmails = new Set<string>();
