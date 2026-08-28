@@ -346,6 +346,16 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       const projecao = leadsProj > 0 ? ((vendasTri + (leadsRestantes * convRef) / 100) / leadsProj) * 100 : 0;
 
       const vendasMetaTri = metaVendasMes.reduce((a, b) => a + b, 0);
+      // Gap acumulado dos meses já fechados (o que deixou de vender e "sobra" para os meses restantes)
+      const gapFechados = meses.reduce(
+        (a, m, i) => a + (mesDias[i].completo ? Math.max(0, (metaVendasMes[i] ?? 0) - m.vendas) : 0),
+        0,
+      );
+      const metaRestante = metaVendasMes.reduce(
+        (a, v, i) => a + (mesDias[i].completo ? 0 : v),
+        0,
+      );
+      const metaAjustadaRestante = metaRestante + gapFechados;
       const vendasFaltam = Math.max(0, vendasMetaTri - vendasTri);
       const ritmoNecessario = leadsRestantes > 0 ? (vendasFaltam / leadsRestantes) * 100 : 0;
       const gapPP = convTri - metaTri;
@@ -369,6 +379,8 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
         gapPP,
         leadsRestantes,
         vendasMetaTri,
+        gapFechados,
+        metaAjustadaRestante,
         vendasFaltam,
         ritmoNecessario,
         projecao,
@@ -562,7 +574,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                       {m.label}
                     </th>
                   ))}
-                  <th colSpan={3} className="px-2 py-2 text-center font-bold bg-purple-500/20 text-purple-400">
+                  <th colSpan={5} className="px-2 py-2 text-center font-bold bg-purple-500/20 text-purple-400">
                     Trimestre
                   </th>
                 </tr>
@@ -584,6 +596,15 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                   <th className="px-2 py-1.5 text-right font-medium">Meta %</th>
                   <th className="px-2 py-1.5 text-right font-medium">Meta vd</th>
                   <th className="px-2 py-1.5 text-right font-medium">Real</th>
+                  <th className="px-2 py-1.5 text-right font-medium" title="Vendas que faltaram nos meses já fechados">
+                    Gap fech.
+                  </th>
+                  <th
+                    className="px-2 py-1.5 text-right font-medium"
+                    title="Meta dos meses restantes + gap dos meses fechados"
+                  >
+                    Meta ajust.
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -630,6 +651,19 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                     >
                       {l.vendasTri}
                     </td>
+                    <td className="px-2 py-3 text-right tabular-nums">
+                      {l.gapFechados > 0 ? (
+                        <span className="text-red-500 font-semibold">+{l.gapFechados}</span>
+                      ) : (
+                        <span className="text-emerald-500">0</span>
+                      )}
+                    </td>
+                    <td
+                      className="px-2 py-3 text-right tabular-nums font-bold text-amber-500"
+                      title="Meta dos meses que ainda faltam + gap acumulado dos meses fechados"
+                    >
+                      {l.metaAjustadaRestante}
+                    </td>
                   </tr>
                 ))}
                 {/* ---------- Linha TOTAL ---------- */}
@@ -673,6 +707,12 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                       >
                         {totRealTri}
                       </td>
+                      <td className="px-2 py-3 text-right tabular-nums text-red-500">
+                        +{linhas.reduce((a, l) => a + l.gapFechados, 0)}
+                      </td>
+                      <td className="px-2 py-3 text-right tabular-nums text-amber-500">
+                        {linhas.reduce((a, l) => a + l.metaAjustadaRestante, 0)}
+                      </td>
                     </tr>
                   );
                 })()}
@@ -690,6 +730,22 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                   linhas.reduce((a, l) => a + l.vendasTri, 0),
               )}{" "}
               vendas
+              {" · "}
+              <strong className="text-foreground">Gap dos meses fechados:</strong>{" "}
+              <span className="text-red-500 font-semibold">
+                {linhas.reduce((a, l) => a + l.gapFechados, 0)}
+              </span>{" "}
+              vendas
+              {" · "}
+              <strong className="text-foreground">Meta ajustada do que resta:</strong>{" "}
+              <span className="text-amber-500 font-semibold">
+                {linhas.reduce((a, l) => a + l.metaAjustadaRestante, 0)}
+              </span>{" "}
+              vendas
+              <div className="mt-1">
+                O que ficou para trás nos meses já fechados não some: ele é somado à meta dos meses que
+                ainda faltam (Meta ajust. = meta dos meses restantes + gap acumulado).
+              </div>
             </div>
           </div>
         </CardContent>
