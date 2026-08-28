@@ -333,7 +333,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-0">
+      {!collapsed && <CardContent className="p-0">
         {isLoading ? (
           <p className="text-sm text-muted-foreground px-4 py-6">Carregando metas…</p>
         ) : rows.length === 0 ? (
