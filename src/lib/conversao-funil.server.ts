@@ -7,12 +7,18 @@ export function canonicalFunnel(raw: string | null | undefined): string {
   const k = (raw ?? "").trim();
   if (!k) return "— sem funil —";
   const u = k.toUpperCase();
+  if (/^IGT\s*24/.test(u)) return "IGT 24";
   if (/^IGT\s*23/.test(u)) return "IGT 23";
   if (/^IGT\s*22/.test(u)) return "IGT 22";
   if (/^WGT/.test(u)) return "WGT - Perpétuo";
-  if (u.includes("PIPELINE_COMERCIAL") || u.includes("COMERCIAL-V3") || u.includes("COMERCIAL V3"))
-    return "PIPELINE_COMERCIAL-V3";
-  if (/SESS[AÃ]O\s+ESTRAT[EÉ]GICA/.test(u)) return "Sessão Estratégica";
+  // Tudo que vem do pipeline comercial V3 é trabalho de Sessão Estratégica
+  if (
+    u.includes("PIPELINE_COMERCIAL") ||
+    u.includes("COMERCIAL-V3") ||
+    u.includes("COMERCIAL V3") ||
+    /SESS[AÃ]O\s+ESTRAT[EÉ]GICA/.test(u)
+  )
+    return "Sessão Estratégica";
   if (u.includes("MASTER AND SCALE") || u.includes("MAS_")) return "Master and Scale";
   if (u.includes("RENOVA")) return "Renovação";
   if (u.includes("FOLLOW")) return "Follow-up Mentoria";
@@ -21,6 +27,18 @@ export function canonicalFunnel(raw: string | null | undefined): string {
   if (u.includes("PALESTRA")) return "Funil de Palestras";
   return k;
 }
+
+/**
+ * IGT é sazonal: a turma 23 roda entre julho e agosto/2026 e a 24 só começa
+ * em setembro/2026. Fora da janela o funil não deve aparecer no relatório.
+ */
+export function funnelVisibleInPeriod(funnel: string, refDate: string): boolean {
+  const ym = refDate.slice(0, 7); // YYYY-MM
+  if (funnel === "IGT 24") return ym >= "2026-09";
+  if (funnel === "IGT 23") return ym < "2026-09";
+  return true;
+}
+
 
 /**
  * Funis que os vendedores realmente trabalham — mesma lista do formulário de
