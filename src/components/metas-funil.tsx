@@ -314,21 +314,32 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                 </button>
               ))}
             </div>
-            {toggle}
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
-
-              <RotateCcw className="h-3.5 w-3.5 mr-1" />
-              Metas do trimestre
-            </Button>
-            <Button size="sm" className="h-7 text-xs" disabled={!dirty} onClick={persist}>
-              <Save className="h-3.5 w-3.5 mr-1" />
-              {dirty ? "Salvar metas" : "Salvo"}
-            </Button>
-            {dirty ? (
-              <span className="text-[11px] text-amber-500">alterações não salvas</span>
-            ) : savedAt ? (
-              <span className="text-[11px] text-emerald-500">salvo às {savedAt}</span>
-            ) : null}
+            {collapsed ? (
+              <button
+                type="button"
+                onClick={() => setCollapsed(false)}
+                className="rounded-md border border-border px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted"
+              >
+                Mostrar
+              </button>
+            ) : (
+              <>
+                {toggle}
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => save(DEFAULT_CONFIG)}>
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                  Metas do trimestre
+                </Button>
+                <Button size="sm" className="h-7 text-xs" disabled={!dirty} onClick={persist}>
+                  <Save className="h-3.5 w-3.5 mr-1" />
+                  {dirty ? "Salvar metas" : "Salvo"}
+                </Button>
+                {dirty ? (
+                  <span className="text-[11px] text-amber-500">alterações não salvas</span>
+                ) : savedAt ? (
+                  <span className="text-[11px] text-emerald-500">salvo às {savedAt}</span>
+                ) : null}
+              </>
+            )}
 
           </div>
         </div>
