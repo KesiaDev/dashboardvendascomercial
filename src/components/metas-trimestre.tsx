@@ -570,29 +570,38 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
 
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">
-              Status do trimestre
-            </CardTitle>
+            <button
+              type="button"
+              onClick={() => setStatusOpen((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground"
+            >
+              <span className="flex items-center gap-1">
+                {statusOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                Status do trimestre
+              </span>
+            </button>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-emerald-500 tabular-nums">{resumoStatus.ok}</p>
-                <p className="text-[11px] text-muted-foreground">No ritmo</p>
+          {statusOpen && (
+            <CardContent className="pt-0">
+              <div className="flex items-center gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-emerald-500 tabular-nums">{resumoStatus.ok}</p>
+                  <p className="text-[11px] text-muted-foreground">No ritmo</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-amber-500 tabular-nums">{resumoStatus.atencao}</p>
+                  <p className="text-[11px] text-muted-foreground">Atenção</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-red-500 tabular-nums">{resumoStatus.risco}</p>
+                  <p className="text-[11px] text-muted-foreground">Abaixo</p>
+                </div>
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-amber-500 tabular-nums">{resumoStatus.atencao}</p>
-                <p className="text-[11px] text-muted-foreground">Atenção</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-red-500 tabular-nums">{resumoStatus.risco}</p>
-                <p className="text-[11px] text-muted-foreground">Abaixo</p>
-              </div>
-            </div>
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              Q{qi.q}/{qi.year} · {qi.diasCorridos}/{qi.diasTotais} dias · {mesesRestantes} mês(es) restante(s)
-            </p>
-          </CardContent>
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Q{qi.q}/{qi.year} · {qi.diasCorridos}/{qi.diasTotais} dias · {mesesRestantes} mês(es) restante(s)
+              </p>
+            </CardContent>
+          )}
         </Card>
       </div>
 
