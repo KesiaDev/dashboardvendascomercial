@@ -174,12 +174,20 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
   const [dirty, setDirty] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [showConfig, setShowConfig] = useState(false);
   useEffect(() => setCfg(loadTri()), []);
 
   const change = (next: TriConfig) => {
     setCfg(next);
     setDirty(true);
   };
+
+  /** Cor distinta por mês do trimestre (index 0..2) */
+  const MONTH_CLR = [
+    "bg-orange-500/20 text-orange-400", // Jul
+    "bg-amber-500/20 text-amber-400", // Ago
+    "bg-yellow-500/20 text-yellow-400", // Set
+  ];
   const persist = () => {
     try {
       window.localStorage.setItem(STORE_KEY, JSON.stringify(cfg));
