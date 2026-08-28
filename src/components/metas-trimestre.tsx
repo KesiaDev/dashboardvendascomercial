@@ -610,7 +610,9 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                 </>
               ) : (
                 <span className="italic">
-                  Clique em “Editar metas” no card acima para alterar %, metas e pesos.
+                  {metaCardOpen
+                    ? "Clique em “Editar metas” no card acima para alterar %, metas e pesos."
+                    : "Abra o card “Meta trimestral” acima para alterar %, metas e pesos."}
                 </span>
               )}
             </div>
