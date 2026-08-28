@@ -174,12 +174,20 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
   const [dirty, setDirty] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [showConfig, setShowConfig] = useState(false);
   useEffect(() => setCfg(loadTri()), []);
 
   const change = (next: TriConfig) => {
     setCfg(next);
     setDirty(true);
   };
+
+  /** Cor distinta por mês do trimestre (index 0..2) */
+  const MONTH_CLR = [
+    "bg-orange-500/20 text-orange-400", // Jul
+    "bg-amber-500/20 text-amber-400", // Ago
+    "bg-yellow-500/20 text-yellow-400", // Set
+  ];
   const persist = () => {
     try {
       window.localStorage.setItem(STORE_KEY, JSON.stringify(cfg));
@@ -419,6 +427,16 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
     />
   );
 
+  /** Versão que respeita o modo de edição (read-only quando showConfig=false) */
+  const numCell = (key: string, value: number, onNum: (n: number) => void, width = "w-16") =>
+    showConfig ? (
+      numInput(key, value, onNum, width)
+    ) : (
+      <span className={`inline-block ${width} text-right text-xs tabular-nums text-foreground/80`}>
+        {Number(value.toFixed(2))}
+      </span>
+    );
+
   return (
     <div className="space-y-4">
       {/* ---------- Visão executiva ---------- */}
@@ -429,19 +447,32 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
               <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">
                 Meta trimestral
               </CardTitle>
-              <div className="flex rounded-md border border-border p-0.5">
-                {(["pct", "qtd"] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => change({ ...cfg, modo: m })}
-                    className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
-                      cfg.modo === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    {m === "pct" ? "%" : "Vendas"}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowConfig((v) => !v)}
+                  className={`rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                    showConfig
+                      ? "bg-primary text-primary-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {showConfig ? "Fechar edição" : "Editar metas"}
+                </button>
+                <div className="flex rounded-md border border-border p-0.5">
+                  {(["pct", "qtd"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => change({ ...cfg, modo: m })}
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                        cfg.modo === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {m === "pct" ? "%" : "Vendas"}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -451,7 +482,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                 <span className="truncate text-muted-foreground">{l.label}</span>
                 {cfg.modo === "qtd" ? (
                   <span className="flex items-center gap-1">
-                    {numInput(`tq:${l.id}`, l.metaQtd, (n) =>
+                    {numCell(`tq:${l.id}`, l.metaQtd, (n) =>
                       change({ ...cfg, metaTriQtd: { ...cfg.metaTriQtd, [l.id]: n } }),
                     )}
                     <span className="text-[10px] text-muted-foreground tabular-nums">
@@ -460,7 +491,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                   </span>
                 ) : (
                   <span className="flex items-center gap-1">
-                    {numInput(`t:${l.id}`, l.metaTri, (n) =>
+                    {numCell(`t:${l.id}`, l.metaTri, (n) =>
                       change({ ...cfg, metaTri: { ...cfg.metaTri, [l.id]: n } }),
                     )}
                     <span
@@ -542,17 +573,25 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
               Como a meta do trimestre se divide entre {qi.months.map((m) => m.short).join(", ")}
             </CardTitle>
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <span>Peso do mês:</span>
-              {qi.months.map((m, i) => (
-                <span key={m.from} className="flex items-center gap-1">
-                  <span>{m.short}</span>
-                  {numInput(`p:${i}`, cfg.pesos[i], (n) => {
-                    const p = [...cfg.pesos] as [number, number, number];
-                    p[i] = n;
-                    change({ ...cfg, pesos: p });
-                  }, "w-14")}
+              {showConfig ? (
+                <>
+                  <span>Peso do mês:</span>
+                  {qi.months.map((m, i) => (
+                    <span key={m.from} className="flex items-center gap-1">
+                      <span>{m.short}</span>
+                      {numCell(`p:${i}`, cfg.pesos[i], (n) => {
+                        const p = [...cfg.pesos] as [number, number, number];
+                        p[i] = n;
+                        change({ ...cfg, pesos: p });
+                      }, "w-14")}
+                    </span>
+                  ))}
+                </>
+              ) : (
+                <span className="italic">
+                  Clique em “Editar metas” no card acima para alterar %, metas e pesos.
                 </span>
-              ))}
+              )}
             </div>
           </div>
         </CardHeader>
@@ -569,8 +608,8 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                       key={m.from}
                       colSpan={3}
                       className={`px-2 py-2 text-center font-bold border-r border-border/60 ${
-                        i === mesAtualIdx ? "bg-blue-500/20 text-blue-400" : "text-muted-foreground"
-                      }`}
+                        MONTH_CLR[i % MONTH_CLR.length]
+                      } ${i === mesAtualIdx ? "ring-1 ring-inset ring-primary/40" : ""}`}
                     >
                       {m.label}
                     </th>
