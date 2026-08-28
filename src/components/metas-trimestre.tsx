@@ -175,6 +175,8 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [showConfig, setShowConfig] = useState(false);
+  /** Card "Meta trimestral" fica oculto por padrão; só abre ao clicar. */
+  const [metaCardOpen, setMetaCardOpen] = useState(false);
   useEffect(() => setCfg(loadTri()), []);
 
   const change = (next: TriConfig) => {
