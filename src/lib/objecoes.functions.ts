@@ -21,6 +21,7 @@ export type ObjecaoEvidencia = {
   contato: string;
   seller: string;
   trecho: string;
+  fonte: "mensagem" | "ligacao";
 };
 
 export type ObjecaoRow = {
@@ -28,6 +29,8 @@ export type ObjecaoRow = {
   total: number;
   pct: number;
   avg_score: number | null;
+  mensagens: number;
+  ligacoes: number;
   sellers: { seller: string; total: number }[];
   funis: { funil: string; total: number }[];
   evidencias: ObjecaoEvidencia[];
@@ -39,6 +42,9 @@ export type ObjecoesResult = {
   sample_size: number;
   conversas_analisadas: number;
   total_objecoes: number;
+  objecoes_mensagens: number;
+  objecoes_ligacoes: number;
+  ligacoes_analisadas: number;
   avg_score: number | null;
   ranking: ObjecaoRow[];
   evolucao: { mes: string; [k: string]: number | string }[];
@@ -46,6 +52,18 @@ export type ObjecoesResult = {
   sellers: string[];
   funis: string[];
 };
+
+/**
+ * Sinal de que o vendedor CONDUZIU para o fecho (proposta / valor / matrícula /
+ * pós-reunião). As objeções que interessam são as que o lead levanta DEPOIS
+ * disso — as dúvidas iniciais ("nunca ouvi falar", "como funciona") são
+ * nutrição, não objeção de fecho.
+ */
+const FECHAMENTO_RE =
+  /(investimento|valor d|valores|quanto (custa|fica|é)|pre[cç]o|matr[ií]cula|contrato|pagamento|pix|boleto|cart[aã]o|parcel|entrada de|condi[cç][oõ]es|proposta|desconto|link de pagamento|fechar (hoje|agora|com)|garantir (sua |a )?vaga|reserva(r)? (sua )?vaga|ap[oó]s (a |nossa )?reuni[aã]o|depois d[ao] (call|reuni[aã]o)|como combinamos na (call|reuni[aã]o))/i;
+
+/** Mapa das objeções escritas em texto livre nas ligações → catálogo fechado. */
+const LIGACAO_MAP: { re: RegExp; label: (typeof OBJECOES)[number] }[] = [];
 
 // Catálogo fechado de objeções — a IA precisa escolher uma destas, sempre com
 // trecho literal do lead. Nada é "forçado" para o topo: o ranking é o real.
