@@ -83,6 +83,28 @@ export const OBJECOES = [
 
 const SEM_OBJECAO = "Nenhuma objeção declarada";
 
+/** Objeções das ligações vêm em texto livre → mapeadas para o catálogo. */
+const LIGACAO_MAP: { re: RegExp; label: string }[] = [
+  { re: /(dinheiro|valor|pre[cç]o|caro|matr[ií]cula|invest|pagar|salario|sal[aá]rio|or[cç]amento|financ)/i, label: "Preço / não tem o dinheiro agora" },
+  { re: /(medo de n[aã]o|n[aã]o vou conseguir|inseguran|d[uú]vida se funciona|ser[aá] que d[aá] certo|resultado)/i, label: "Medo de não conseguir resultado" },
+  { re: /(tempo|agenda|trabalha|hor[aá]rio|corrido)/i, label: "Falta de tempo para estudar/aplicar" },
+  { re: /(pensar|decidir depois|depois|amanh[aã]|semana que vem|viagem|f[eé]rias|analisar)/i, label: "Vai decidir depois (data/motivo concreto)" },
+  { re: /(golpe|confian|desconfi|seguran[cç]a|garantia)/i, label: "Desconfiança / medo de golpe" },
+  { re: /(esposa|marido|mulher|c[oô]njuge|fam[ií]lia|s[oó]cio|pais)/i, label: "Precisa falar com cônjuge/família" },
+  { re: /(j[aá] tentou|j[aá] fiz|outro curso antes|n[aã]o deu certo)/i, label: "Já tentou antes e não deu certo" },
+  { re: /(comparar|outra mentoria|outro curso|concorr)/i, label: "Quer comparar com outro curso/mentoria" },
+  { re: /(gr[aá]tis|gratuito|n[aã]o sabia que era pago|achou que era)/i, label: "Achou que era grátis / não esperava pagar" },
+  { re: /(sem interesse|n[aã]o quer|n[aã]o tem interesse|n[aã]o é para mim|desistiu)/i, label: "Sem interesse real / não é o público" },
+  { re: /(d[uú]vida|como funciona|entrega|conte[uú]do|aula|suporte)/i, label: "Dúvidas sobre o produto ou a entrega" },
+];
+
+function mapLigacaoObjecao(txt: string): string | null {
+  const t = String(txt ?? "").trim();
+  if (!t || t.length < 3) return null;
+  for (const m of LIGACAO_MAP) if (m.re.test(t)) return m.label;
+  return null;
+}
+
 // Mensagens de automação / opt-in — não são conversa real do lead.
 const AUTOMACAO_PATTERNS = [
   "acabei de inscrever", "acabei de me inscrever", "gostaria de receb", "quero receber o ebook",
