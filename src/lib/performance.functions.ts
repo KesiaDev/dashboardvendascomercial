@@ -204,8 +204,8 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         .limit(5000),
       supabaseAdmin
         .from("clint_deals")
-        .select("id,contact_id,created_at,user_email,user_name")
-        .in("origin_name", FUNIS_LEADS)
+        .select("id,contact_id,created_at,user_email,user_name,origin_name,contact_tags")
+        .in("origin_name", LEADS_ORIGINS)
         .gte("created_at", leadsStartTS)
         .lte("created_at", leadsEndTS)
         .limit(20000),
