@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, TrendingUp } from "lucide-react";
+import { Save, RotateCcw } from "lucide-react";
 import { fetchConversaoFunilFn, type ConversaoRow } from "@/lib/conversao-funil.functions";
 import { fetchOrigemV3ResumoFn } from "@/lib/origem-v3-resumo.functions";
 
