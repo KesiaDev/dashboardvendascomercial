@@ -40,9 +40,9 @@ const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","A
 
 // Valores mínimos para demonstração enquanto o cruzamento automático amadurece.
 const DEMO_VENDAS = 19;
-const DEMO_REUNIOES = 16;
+const DEMO_REUNIOES = 75;
 // No-shows apurados na Clint nas últimas 2 semanas.
-const NO_SHOWS_2_SEMANAS = 4;
+const NO_SHOWS_2_SEMANAS = 16;
 
 
 /* --------------------------------------------------------------- */
