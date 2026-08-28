@@ -533,30 +533,38 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
 
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">
-              Realizado no trimestre
-            </CardTitle>
+            <button
+              type="button"
+              onClick={() => setRealizadoOpen((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground"
+            >
+              <span className="flex items-center gap-1">
+                {realizadoOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                Realizado no trimestre
+              </span>
+            </button>
           </CardHeader>
-          <CardContent className="space-y-1.5 pt-0">
-            {linhas.map((l) => (
-              <div key={l.id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="truncate text-muted-foreground">{l.label}</span>
-                <span
-                  className={`tabular-nums font-semibold ${
-                    l.convTri >= l.metaTri
-                      ? "text-emerald-500"
-                      : l.convTri >= l.metaTri * 0.85
-                        ? "text-amber-500"
-                        : "text-red-500"
-                  }`}
-                  title={`${l.vendasTri} vendas / ${l.leadsTri} leads`}
-                >
-                  {pct(l.convTri)}
-                </span>
-              </div>
-            ))}
-          </CardContent>
-
+          {realizadoOpen && (
+            <CardContent className="space-y-1.5 pt-0">
+              {linhas.map((l) => (
+                <div key={l.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate text-muted-foreground">{l.label}</span>
+                  <span
+                    className={`tabular-nums font-semibold ${
+                      l.convTri >= l.metaTri
+                        ? "text-emerald-500"
+                        : l.convTri >= l.metaTri * 0.85
+                          ? "text-amber-500"
+                          : "text-red-500"
+                    }`}
+                    title={`${l.vendasTri} vendas / ${l.leadsTri} leads`}
+                  >
+                    {pct(l.convTri)}
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          )}
         </Card>
 
 
