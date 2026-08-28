@@ -723,43 +723,43 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                   const totRealTri = linhas.reduce((a, l) => a + l.vendasTri, 0);
                   const totFaltaTri = Math.max(0, totMetaTri - totRealTri);
                   return (
-                    <tr className="border-t-2 border-border bg-muted/30 font-bold">
-                      <td className="px-3 py-3 whitespace-nowrap border-r border-border/40 uppercase text-xs tracking-wide">
+                    <tr className="border-t-2 border-primary/40 bg-gradient-to-r from-primary/10 via-primary/5 to-muted/20 font-bold">
+                      <td className="px-3 py-3.5 whitespace-nowrap border-r border-border/40 uppercase text-xs tracking-wide text-primary-foreground">
                         Total
                       </td>
                       {qi.months.map((m, i) => (
                         <Fragment key={m.from}>
-                          <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">—</td>
-                          <td className="px-2 py-3 text-right tabular-nums">{totMetaMes[i]}</td>
+                          <td className="px-2 py-3.5 text-right tabular-nums text-muted-foreground">—</td>
+                          <td className="px-2 py-3.5 text-right tabular-nums">{totMetaMes[i]}</td>
                           <td
-                            className={`px-2 py-3 text-right tabular-nums border-r border-border/40 ${
-                              totRealMes[i] >= totMetaMes[i] ? "text-emerald-500" : "text-red-500"
+                            className={`px-2 py-3.5 text-right tabular-nums border-r border-border/40 ${
+                              totRealMes[i] >= totMetaMes[i] ? "text-emerald-400" : "text-red-400"
                             }`}
                           >
                             {totRealMes[i]}
                           </td>
                         </Fragment>
                       ))}
-                      <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">—</td>
-                      <td className="px-2 py-3 text-right tabular-nums">{totMetaTri}</td>
+                      <td className="px-2 py-3.5 text-right tabular-nums text-muted-foreground">—</td>
+                      <td className="px-2 py-3.5 text-right tabular-nums">{totMetaTri}</td>
                       <td
-                        className={`px-2 py-3 text-right tabular-nums ${
-                          totRealTri >= totMetaTri ? "text-emerald-500" : "text-red-500"
+                        className={`px-2 py-3.5 text-right tabular-nums ${
+                          totRealTri >= totMetaTri ? "text-emerald-400" : "text-red-400"
                         }`}
                       >
                         {totRealTri}
                       </td>
                       <td
-                        className={`px-2 py-3 text-right tabular-nums ${
+                        className={`px-2 py-3.5 text-right tabular-nums ${
                           linhas.reduce((a, l) => a + l.gapFechados, 0) > 0
-                            ? "text-red-500"
-                            : "text-emerald-500 font-semibold"
+                            ? "text-red-400"
+                            : "text-emerald-400 font-semibold"
                         }`}
                       >
                         {linhas.reduce((a, l) => a + l.gapFechados, 0) > 0 ? "+" : ""}
                         {linhas.reduce((a, l) => a + l.gapFechados, 0)}
                       </td>
-                      <td className="px-2 py-3 text-right tabular-nums text-amber-500">
+                      <td className="px-2 py-3.5 text-right tabular-nums text-amber-400">
                         {linhas.reduce((a, l) => a + l.metaAjustadaRestante, 0)}
                       </td>
                     </tr>
