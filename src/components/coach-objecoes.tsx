@@ -70,6 +70,13 @@ export function ObjecoesTab() {
           <div className="space-y-1">
             <Label className="text-[11px] text-muted-foreground">De</Label>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9 w-[150px]" />
+            <button
+              type="button"
+              className="text-[10px] text-muted-foreground underline"
+              onClick={() => { setFrom(inicioDoMes()); setTo(iso(new Date())); }}
+            >
+              mês atual
+            </button>
           </div>
           <div className="space-y-1">
             <Label className="text-[11px] text-muted-foreground">Até</Label>
@@ -102,12 +109,22 @@ export function ObjecoesTab() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-4">
-        <Kpi label="Conversas lidas (mensagens)" value={String(data?.conversas_analisadas ?? 0)} />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <Kpi label="Conversas lidas (fase de fecho)" value={String(data?.conversas_analisadas ?? 0)} />
         <Kpi label="Conversas com objeção" value={String(data?.sample_size ?? 0)} />
-        <Kpi label="Objeções detectadas" value={String(data?.total_objecoes ?? 0)} />
+        <Kpi label="Objeções por mensagem" value={String(data?.objecoes_mensagens ?? 0)} />
+        <Kpi
+          label="Objeções em ligações"
+          value={String(data?.objecoes_ligacoes ?? 0)}
+          hint={`${data?.ligacoes_analisadas ?? 0} ligações analisadas`}
+        />
         <Kpi label="Nota média dessas conversas" value={data?.avg_score != null ? data.avg_score.toFixed(2) : "—"} />
       </div>
+      <p className="text-[11px] text-muted-foreground -mt-1">
+        Só entram as objeções levantadas <strong>depois</strong> de o vendedor conduzir para o fecho (valor, proposta,
+        matrícula, pós-reunião) — dúvidas iniciais de nutrição ficam de fora. Inclui também o que a IA detectou nas
+        análises das ligações.
+      </p>
 
 
       <div className="grid gap-4 lg:grid-cols-2">
