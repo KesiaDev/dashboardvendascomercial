@@ -233,40 +233,72 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
     );
     const ids = list.map((c) => String(c.id));
 
-    // 2) Texto real do lead (inbound, sem automação/duplicados)
-    const textById = new Map<string, string>();
-    const inbound = new Map<string, number>();
-    const outbound = new Map<string, number>();
+    // 2) Mensagens ordenadas por conversa (precisamos da ordem para saber
+    //    onde começou a conducão para o fecho).
+    const msgsById = new Map<string, { at: string; dir: string; body: string }[]>();
     const chunks: string[][] = [];
     for (let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100));
     for (let i = 0; i < chunks.length; i += 5) {
       const res = await Promise.all(
         chunks.slice(i, i + 5).map((ch) =>
-          db.from("coach_messages").select("conversation_id, body, direction").in("conversation_id", ch).limit(40000),
+          db
+            .from("coach_messages")
+            .select("conversation_id, body, direction, sent_at")
+            .in("conversation_id", ch)
+            .limit(40000),
         ),
       );
-      const seen = new Map<string, Set<string>>();
       for (const r of res) {
         for (const m of ((r.data ?? []) as any[])) {
           if (!m.body) continue;
           const cid = String(m.conversation_id);
-          const body = String(m.body);
-          if (String(m.direction) !== "inbound") {
-            outbound.set(cid, (outbound.get(cid) ?? 0) + 1);
-            continue;
-          }
-          if (isAutomacao(body)) continue;
-          const k = normalize(body).replace(/\s+/g, " ").slice(0, 120);
-          let s = seen.get(cid);
-          if (!s) { s = new Set(); seen.set(cid, s); }
-          if (s.has(k)) continue;
-          s.add(k);
-          inbound.set(cid, (inbound.get(cid) ?? 0) + 1);
-          const prev = textById.get(cid) ?? "";
-          if (prev.length > 7000) continue;
-          textById.set(cid, `${prev} ${body}`);
+          let arr = msgsById.get(cid);
+          if (!arr) { arr = []; msgsById.set(cid, arr); }
+          arr.push({ at: String(m.sent_at ?? ""), dir: String(m.direction), body: String(m.body) });
         }
       }
+    }
+
+    // 2b) Recorte da FASE DE FECHO: só o que o lead disse depois de o vendedor
+    //     puxar valor/proposta/pós-reunião. Sem esse gatilho, usamos a parte
+    //     final da conversa (últimas falas), nunca as perguntas iniciais.
+    const textById = new Map<string, string>();
+    const inbound = new Map<string, number>();
+    const outbound = new Map<string, number>();
+    const comFechamento = new Set<string>();
+
+    for (const [cid, arrRaw] of msgsById) {
+      const arr = arrRaw.slice().sort((a, b) => a.at.localeCompare(b.at));
+      let cut = -1;
+      for (let i = 0; i < arr.length; i++) {
+        const m = arr[i]!;
+        if (m.dir !== "inbound" && FECHAMENTO_RE.test(m.body)) { cut = i; break; }
+      }
+      if (cut >= 0) comFechamento.add(cid);
+      const leadAll = arr.filter((m) => m.dir === "inbound" && !isAutomacao(m.body));
+      const out = arr.filter((m) => m.dir !== "inbound");
+      outbound.set(cid, out.length);
+
+      let lead = cut >= 0 ? arr.slice(cut).filter((m) => m.dir === "inbound" && !isAutomacao(m.body)) : [];
+      if (lead.length === 0) {
+        // fallback: metade final das falas do lead (mínimo 3 últimas)
+        const keep = Math.max(3, Math.ceil(leadAll.length / 2));
+        lead = leadAll.slice(-keep);
+      }
+
+      const seen = new Set<string>();
+      let text = "";
+      let n = 0;
+      for (const m of lead) {
+        const k = normalize(m.body).replace(/\s+/g, " ").slice(0, 120);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        n++;
+        if (text.length > 7000) continue;
+        text += ` ${m.body}`;
+      }
+      inbound.set(cid, n);
+      textById.set(cid, text);
     }
 
     // conversa real: o lead falou e o vendedor respondeu
