@@ -710,8 +710,15 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                       >
                         {totRealTri}
                       </td>
-                      <td className="px-2 py-3 text-right tabular-nums text-red-500">
-                        +{linhas.reduce((a, l) => a + l.gapFechados, 0)}
+                      <td
+                        className={`px-2 py-3 text-right tabular-nums ${
+                          linhas.reduce((a, l) => a + l.gapFechados, 0) > 0
+                            ? "text-red-500"
+                            : "text-emerald-500 font-semibold"
+                        }`}
+                      >
+                        {linhas.reduce((a, l) => a + l.gapFechados, 0) > 0 ? "+" : ""}
+                        {linhas.reduce((a, l) => a + l.gapFechados, 0)}
                       </td>
                       <td className="px-2 py-3 text-right tabular-nums text-amber-500">
                         {linhas.reduce((a, l) => a + l.metaAjustadaRestante, 0)}
@@ -735,7 +742,14 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
               vendas
               {" · "}
               <strong className="text-foreground">Gap dos meses fechados:</strong>{" "}
-              <span className="text-red-500 font-semibold">
+              <span
+                className={`font-semibold ${
+                  linhas.reduce((a, l) => a + l.gapFechados, 0) > 0
+                    ? "text-red-500"
+                    : "text-emerald-500"
+                }`}
+              >
+                {linhas.reduce((a, l) => a + l.gapFechados, 0) > 0 ? "+" : ""}
                 {linhas.reduce((a, l) => a + l.gapFechados, 0)}
               </span>{" "}
               vendas
