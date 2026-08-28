@@ -651,6 +651,19 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                     >
                       {l.vendasTri}
                     </td>
+                    <td className="px-2 py-3 text-right tabular-nums">
+                      {l.gapFechados > 0 ? (
+                        <span className="text-red-500 font-semibold">+{l.gapFechados}</span>
+                      ) : (
+                        <span className="text-emerald-500">0</span>
+                      )}
+                    </td>
+                    <td
+                      className="px-2 py-3 text-right tabular-nums font-bold text-amber-500"
+                      title="Meta dos meses que ainda faltam + gap acumulado dos meses fechados"
+                    >
+                      {l.metaAjustadaRestante}
+                    </td>
                   </tr>
                 ))}
                 {/* ---------- Linha TOTAL ---------- */}
