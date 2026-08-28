@@ -408,6 +408,51 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       }))
       .sort((a, b) => b.leads - a.leads || b.ganhos - a.ganhos);
 
+    // --- WGT – Perpétuo: funil perpétuo separado do V3, mas mostrado na mesma visão ---
+    let wgtLeads = 0;
+    let wgtGanhos = 0;
+    let wgtValor = 0;
+    for (let page = 0; page < 20; page++) {
+      const { data: w, error: wErr } = await supabaseAdmin
+        .from("clint_deals")
+        .select("id,status,created_at")
+        .eq("origin_name", "WGT - Perpétuo")
+        .gte("created_at", data.from)
+        .lte("created_at", `${data.to}T23:59:59`)
+        .order("created_at", { ascending: false })
+        .range(page * pageSize, page * pageSize + pageSize - 1);
+      if (wErr) throw new Error(wErr.message);
+      wgtLeads += (w ?? []).length;
+      if ((w ?? []).length < pageSize) break;
+    }
+    // Vendas do WGT no período (funil declarado WGT no fechamento manual)
+    const { data: wgtSales } = await supabaseAdmin
+      .from("manual_sales")
+      .select("id,value_eur")
+      .eq("installment_number", 1)
+      .ilike("funnel", "%WGT%")
+      .gte("sale_date", data.from)
+      .lte("sale_date", data.to);
+    for (const s of wgtSales ?? []) {
+      wgtGanhos++;
+      wgtValor += Number((s as any).value_eur ?? 0);
+    }
+    if (wgtLeads > 0 || wgtGanhos > 0) {
+      result.push({
+        origem: "WGT – Perpétuo",
+        leads: wgtLeads,
+        abertos: 0,
+        perdidos: 0,
+        ganhos: wgtGanhos,
+        valor: wgtValor,
+        ganhosSemContato: 0,
+        valorSemContato: 0,
+        atendidos: 0,
+        soIa: 0,
+        campanhas: [],
+      });
+    }
+
     return {
       rows: result,
       auditoria: auditoria.sort((a, b) => (a.saleDate < b.saleDate ? 1 : -1)),
