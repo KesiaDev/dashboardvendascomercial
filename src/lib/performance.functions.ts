@@ -353,11 +353,17 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       if (cur) { cur.vendas += 1; cur.faturamento += Number(s.value_eur ?? 0); }
     }
 
-    // Leads novos — Pipeline Comercial V3 (já buscado em paralelo acima)
+    // Leads novos — mesma classificação dos "Funis Perpétuos" (Sessão
+    // Estratégica / Minicurso V3 / Ebook V3). Negócio sem tag comercial na
+    // Clint fica de fora nas duas telas, para os números baterem.
     let leadsNovos = 0;
+    const leadsPorOrigemMap = new Map<string, number>();
     const leadContactIds: string[] = [];
     for (const l of leads) {
       if (!l.created_at) continue;
+      const hit = leadBucket((l as any).origin_name, (l as any).contact_tags);
+      if (!hit) continue;
+      leadsPorOrigemMap.set(hit.bucket, (leadsPorOrigemMap.get(hit.bucket) ?? 0) + 1);
       leadsNovos += 1;
       if (l.contact_id) leadContactIds.push(String(l.contact_id));
       const k = new Date(l.created_at).toISOString().slice(0, 10);
