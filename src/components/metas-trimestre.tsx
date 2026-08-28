@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -569,17 +569,17 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                 <tr className="border-b border-border bg-muted/20 text-[10px] uppercase text-muted-foreground">
                   <th className="px-3 py-1.5 border-r border-border/60" />
                   {qi.months.map((m) => (
-                    <>
-                      <th key={`${m.from}-a`} className="px-2 py-1.5 text-right font-medium">
+                    <Fragment key={m.from}>
+                      <th className="px-2 py-1.5 text-right font-medium">
                         Meta %
                       </th>
-                      <th key={`${m.from}-b`} className="px-2 py-1.5 text-right font-medium">
+                      <th className="px-2 py-1.5 text-right font-medium">
                         Meta vd
                       </th>
-                      <th key={`${m.from}-c`} className="px-2 py-1.5 text-right font-medium border-r border-border/60">
+                      <th className="px-2 py-1.5 text-right font-medium border-r border-border/60">
                         Real
                       </th>
-                    </>
+                    </Fragment>
                   ))}
                   <th className="px-2 py-1.5 text-right font-medium">Meta %</th>
                   <th className="px-2 py-1.5 text-right font-medium">Meta vd</th>
@@ -591,22 +591,19 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                   <tr key={l.id} className="border-t border-border/50 hover:bg-muted/20">
                     <td className="px-3 py-3 font-semibold whitespace-nowrap border-r border-border/40">{l.label}</td>
                     {l.detalheMeses.map((d) => (
-                      <>
+                      <Fragment key={`${l.id}-${d.label}`}>
                         <td
-                          key={`${l.id}-${d.label}-p`}
                           className={`px-2 py-3 text-right tabular-nums ${d.atual ? "bg-blue-500/5" : ""}`}
                         >
                           {d.metaPct.toFixed(2)}%
                         </td>
                         <td
-                          key={`${l.id}-${d.label}-m`}
                           className={`px-2 py-3 text-right tabular-nums font-semibold ${d.atual ? "bg-blue-500/5" : ""}`}
                           title={`${d.leadsEst} leads ${d.leads === d.leadsEst ? "reais" : "estimados"} × ${d.metaPct.toFixed(2)}%`}
                         >
                           {d.metaVendas}
                         </td>
                         <td
-                          key={`${l.id}-${d.label}-r`}
                           className={`px-2 py-3 text-right tabular-nums border-r border-border/40 ${d.atual ? "bg-blue-500/5" : ""}`}
                         >
                           {d.futuro ? (
@@ -622,7 +619,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                             </span>
                           )}
                         </td>
-                      </>
+                      </Fragment>
                     ))}
                     <td className="px-2 py-3 text-right tabular-nums">{l.metaTri.toFixed(2)}%</td>
                     <td className="px-2 py-3 text-right tabular-nums font-semibold">{l.vendasMetaTri}</td>
