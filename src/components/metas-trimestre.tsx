@@ -573,17 +573,25 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
               Como a meta do trimestre se divide entre {qi.months.map((m) => m.short).join(", ")}
             </CardTitle>
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <span>Peso do mês:</span>
-              {qi.months.map((m, i) => (
-                <span key={m.from} className="flex items-center gap-1">
-                  <span>{m.short}</span>
-                  {numInput(`p:${i}`, cfg.pesos[i], (n) => {
-                    const p = [...cfg.pesos] as [number, number, number];
-                    p[i] = n;
-                    change({ ...cfg, pesos: p });
-                  }, "w-14")}
+              {showConfig ? (
+                <>
+                  <span>Peso do mês:</span>
+                  {qi.months.map((m, i) => (
+                    <span key={m.from} className="flex items-center gap-1">
+                      <span>{m.short}</span>
+                      {numCell(`p:${i}`, cfg.pesos[i], (n) => {
+                        const p = [...cfg.pesos] as [number, number, number];
+                        p[i] = n;
+                        change({ ...cfg, pesos: p });
+                      }, "w-14")}
+                    </span>
+                  ))}
+                </>
+              ) : (
+                <span className="italic">
+                  Clique em “Editar metas” no card acima para alterar %, metas e pesos.
                 </span>
-              ))}
+              )}
             </div>
           </div>
         </CardHeader>
@@ -600,8 +608,8 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                       key={m.from}
                       colSpan={3}
                       className={`px-2 py-2 text-center font-bold border-r border-border/60 ${
-                        i === mesAtualIdx ? "bg-blue-500/20 text-blue-400" : "text-muted-foreground"
-                      }`}
+                        MONTH_CLR[i % MONTH_CLR.length]
+                      } ${i === mesAtualIdx ? "ring-1 ring-inset ring-primary/40" : ""}`}
                     >
                       {m.label}
                     </th>
