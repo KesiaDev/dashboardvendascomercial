@@ -596,6 +596,15 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                   <th className="px-2 py-1.5 text-right font-medium">Meta %</th>
                   <th className="px-2 py-1.5 text-right font-medium">Meta vd</th>
                   <th className="px-2 py-1.5 text-right font-medium">Real</th>
+                  <th className="px-2 py-1.5 text-right font-medium" title="Vendas que faltaram nos meses já fechados">
+                    Gap fech.
+                  </th>
+                  <th
+                    className="px-2 py-1.5 text-right font-medium"
+                    title="Meta dos meses restantes + gap dos meses fechados"
+                  >
+                    Meta ajust.
+                  </th>
                 </tr>
               </thead>
               <tbody>
