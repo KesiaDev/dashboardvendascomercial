@@ -19,25 +19,13 @@ export const PRODUCTS = [
 ] as const;
 
 export const FUNNELS = [
-  "PIPELINE_COMERCIAL-V3",
+  "Sessão Estratégica",
   "Minicurso V3",
   "Ebook V3",
-  "IGT23",
-  "Master and Scale — LDP_03_MAS_MGT",
-  "Funil - Sessão Estratégica",
-  "SESSÃO ESTRATÉGICA",
-  "MGM - Teste",
-  "Funil de Indicações",
-  "WGRS 1",
-  "Renovação Mariana",
-  "Funil Retomada de Leads Perdidos",
-  "Funil Potencial Compra Futura",
-  "Renovação",
-  "Retrabalho Leads",
   "WGT - Perpétuo",
-  "WGT-2",
-  "CONVIDAR PARA IMERSÃO",
-  "TESTE",
+  "Renovação",
+  "Master and Scale",
+  "IGT 24",
 ] as const;
 
 export const SELLERS = [
