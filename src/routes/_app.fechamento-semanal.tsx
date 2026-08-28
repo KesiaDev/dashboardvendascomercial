@@ -754,7 +754,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
       <FunnelBreakdownCard sales={monthSales} title={`Vendas por Funil — ${monthLabel}`}/>
 
       {/* Origem dos leads V3 */}
-      <OrigemV3Card from={`${yearMonth}-01`} to={monthEndISO} title={`PIPELINE_COMERCIAL-V3 — leads por tag · ${monthLabel}`}/>
+      <OrigemV3Card from={`${yearMonth}-01`} to={monthEndISO} title="Funis Perpétuos"/>
 
       {/* Meta de aproveitamento por funil */}
       <MetasFunilCard from={`${yearMonth}-01`} to={monthEndISO} period="mes" title={`Meta de Aproveitamento por Funil — ${monthLabel}`}/>
