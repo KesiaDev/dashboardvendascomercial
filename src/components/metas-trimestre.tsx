@@ -175,8 +175,10 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [showConfig, setShowConfig] = useState(false);
-  /** Card "Meta trimestral" fica oculto por padrão; só abre ao clicar. */
+  /** Os três cards da visão executiva são recolhíveis. Meta trimestral começa oculto. */
   const [metaCardOpen, setMetaCardOpen] = useState(false);
+  const [realizadoOpen, setRealizadoOpen] = useState(true);
+  const [statusOpen, setStatusOpen] = useState(true);
   useEffect(() => setCfg(loadTri()), []);
 
   const change = (next: TriConfig) => {
