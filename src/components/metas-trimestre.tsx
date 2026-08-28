@@ -427,6 +427,16 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
     />
   );
 
+  /** Versão que respeita o modo de edição (read-only quando showConfig=false) */
+  const numCell = (key: string, value: number, onNum: (n: number) => void, width = "w-16") =>
+    showConfig ? (
+      numInput(key, value, onNum, width)
+    ) : (
+      <span className={`inline-block ${width} text-right text-xs tabular-nums text-foreground/80`}>
+        {Number(value.toFixed(2))}
+      </span>
+    );
+
   return (
     <div className="space-y-4">
       {/* ---------- Visão executiva ---------- */}
