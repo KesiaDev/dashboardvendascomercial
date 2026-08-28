@@ -94,11 +94,12 @@ export function dealMatchesTagFilter(tags: string[], tagFilter: string): boolean
 
 /**
  * No WGT (webinar perpétuo) a maior parte dos inscritos é responsabilidade do
- * marketing. Só entra na análise comercial o lead que chegou em "Abandono de
- * carrinho" (ou etapa posterior) — a partir daí quem trabalha é o comercial.
+ * marketing. Só entra na análise comercial o lead que "Acessou" a oferta (ou
+ * etapa posterior) — a partir daí quem trabalha é o comercial.
  */
 const WGT_STAGES_COMERCIAL = new Set(
   [
+    "acessou",
     "abandono de carrinho",
     "abandono de checkout",
     "iniciou checkout",
