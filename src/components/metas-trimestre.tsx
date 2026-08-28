@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,13 +33,13 @@ const FUNIS: {
   { id: "SESSAO", label: "Sessão Estratégica (funil + V3)", metaTri: 10, origem: "sessao estrategica" },
 ];
 
-/** rampa padrão de meta mensal (mês 1, 2, 3 do trimestre) */
-const RAMPA_PADRAO: Record<FunilTriId, [number, number, number]> = {
-  WGT: [1.0, 1.5, 2.0],
-  MINICURSO: [3.5, 5.0, 6.5],
-  EBOOK: [3.5, 5.0, 6.5],
-  SESSAO: [6, 10, 14],
-};
+/**
+ * Peso de cada mês do trimestre. A média dos 3 pesos é 1, então a meta média
+ * do trimestre continua sendo exatamente a meta trimestral definida.
+ * Padrão: mês 1 e mês 3 mais fortes, mês 2 (férias) mais leve.
+ */
+const PESOS_PADRAO: [number, number, number] = [1.15, 0.75, 1.1];
+
 
 function norm(s: string) {
   return s
@@ -57,7 +57,7 @@ function funilId(funnel: string): FunilTriId | null {
 /* Config editável                                                     */
 /* ------------------------------------------------------------------ */
 
-const STORE_KEY = "metas-trimestre-v2";
+const STORE_KEY = "metas-trimestre-v3";
 
 type TriConfig = {
   metaTri: Record<FunilTriId, number>;
@@ -65,14 +65,15 @@ type TriConfig = {
   metaTriQtd: Record<FunilTriId, number>;
   /** modo de edição da meta trimestral */
   modo: "pct" | "qtd";
-  rampa: Record<FunilTriId, [number, number, number]>;
+  /** peso de cada mês do trimestre (média = 1) */
+  pesos: [number, number, number];
 };
 
 const DEFAULT_TRI: TriConfig = {
   metaTri: { WGT: 1.5, MINICURSO: 5, EBOOK: 5, SESSAO: 10 },
   metaTriQtd: { WGT: 12, MINICURSO: 25, EBOOK: 25, SESSAO: 40 },
   modo: "pct",
-  rampa: { ...RAMPA_PADRAO },
+  pesos: [...PESOS_PADRAO] as [number, number, number],
 };
 
 function loadTri(): TriConfig {
@@ -81,16 +82,18 @@ function loadTri(): TriConfig {
     const raw = window.localStorage.getItem(STORE_KEY);
     if (!raw) return DEFAULT_TRI;
     const p = JSON.parse(raw) as Partial<TriConfig>;
+    const pesos = Array.isArray(p.pesos) && p.pesos.length === 3 ? (p.pesos as [number, number, number]) : DEFAULT_TRI.pesos;
     return {
       metaTri: { ...DEFAULT_TRI.metaTri, ...(p.metaTri ?? {}) },
       metaTriQtd: { ...DEFAULT_TRI.metaTriQtd, ...(p.metaTriQtd ?? {}) },
       modo: p.modo === "qtd" ? "qtd" : "pct",
-      rampa: { ...DEFAULT_TRI.rampa, ...(p.rampa ?? {}) },
+      pesos,
     };
   } catch {
     return DEFAULT_TRI;
   }
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Datas do trimestre                                                  */
@@ -251,6 +254,27 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
   );
   const mesesRestantes = qi.months.length - 1 - mesAtualIdx;
 
+  /** dias de cada mês do trimestre e quantos já correram (para projetar leads) */
+  const mesDias = useMemo(
+    () =>
+      qi.months.map((m) => {
+        const total =
+          Math.round(
+            (new Date(`${m.to}T00:00:00Z`).getTime() - new Date(`${m.from}T00:00:00Z`).getTime()) / 86400000,
+          ) + 1;
+        const corridos =
+          refDate < m.from ? 0 : refDate > m.to ? total : Math.min(total, Math.max(1, Number(refDate.slice(8, 10))));
+        return { total, corridos, completo: refDate > m.to };
+      }),
+    [qi, refDate],
+  );
+
+  const pesosNorm = useMemo(() => {
+    const p = cfg.pesos.map((x) => (Number.isFinite(x) && x > 0 ? x : 0)) as [number, number, number];
+    const soma = p[0] + p[1] + p[2];
+    return (soma > 0 ? p.map((x) => (x * 3) / soma) : [1, 1, 1]) as [number, number, number];
+  }, [cfg.pesos]);
+
   const linhas = useMemo(() => {
     return FUNIS.map((f) => {
       const meses = porFunil[f.id].meses;
@@ -258,30 +282,70 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       const leadsTri = meses.reduce((a, m) => a + m.leads, 0);
       const vendasTri = meses.reduce((a, m) => a + m.vendas, 0);
 
-      const metaMes = cfg.rampa[f.id][mesAtualIdx] ?? 0;
+      // --- leads estimados por mês (real quando o mês já passou) ---
+      const completos = mesDias
+        .map((d, i) => (d.completo ? meses[i].leads : null))
+        .filter((v): v is number => v !== null);
+      const mesCorrenteProj =
+        mesDias[mesAtualIdx].corridos > 0
+          ? (mes.leads / mesDias[mesAtualIdx].corridos) * mesDias[mesAtualIdx].total
+          : 0;
+      const mediaMes = completos.length
+        ? completos.reduce((a, b) => a + b, 0) / completos.length
+        : mesCorrenteProj;
 
-      const convMes = mes.leads > 0 ? (mes.vendas / mes.leads) * 100 : 0;
-      const convTri = leadsTri > 0 ? (vendasTri / leadsTri) * 100 : 0;
-
-      // leads restantes estimados pelo ritmo diário do trimestre
-      const leadsDia = leadsTri / qi.diasCorridos;
-      const leadsRestantes = Math.round(leadsDia * qi.diasRestantes);
-      const leadsProj = leadsTri + leadsRestantes;
+      const leadsEst = meses.map((m, i) => {
+        if (mesDias[i].completo) return m.leads;
+        if (i === mesAtualIdx) return Math.max(m.leads, Math.round(mesCorrenteProj));
+        return Math.round(mediaMes);
+      });
+      const leadsProj = leadsEst.reduce((a, b) => a + b, 0);
+      const leadsRestantes = Math.max(0, leadsProj - leadsTri);
 
       const isQtd = cfg.modo === "qtd";
       const metaQtd = Math.max(0, Math.round(cfg.metaTriQtd[f.id] ?? 0));
-      // no modo quantidade a meta % é derivada dos leads projetados do trimestre
       const metaTri = isQtd
         ? leadsProj > 0
           ? (metaQtd / leadsProj) * 100
           : 0
         : (cfg.metaTri[f.id] ?? f.metaTri);
 
+      // --- distribuição da meta pelos 3 meses ---
+      const metaPctMes = pesosNorm.map((p) => metaTri * p);
+      const pesoLeads = leadsEst.map((l, i) => l * pesosNorm[i]);
+      const somaPesoLeads = pesoLeads.reduce((a, b) => a + b, 0);
+      const metaVendasMes = isQtd
+        ? pesoLeads.map((p) => (somaPesoLeads > 0 ? Math.round((metaQtd * p) / somaPesoLeads) : 0))
+        : leadsEst.map((l, i) => Math.ceil((l * metaPctMes[i]) / 100));
+
+      const detalheMeses = qi.months.map((m, i) => {
+        const real = meses[i];
+        const conv = real.leads > 0 ? (real.vendas / real.leads) * 100 : 0;
+        const metaV = metaVendasMes[i] ?? 0;
+        return {
+          label: m.short,
+          full: m.label,
+          futuro: refDate < m.from,
+          atual: i === mesAtualIdx,
+          leads: real.leads,
+          leadsEst: leadsEst[i],
+          vendas: real.vendas,
+          conv,
+          metaPct: metaPctMes[i] ?? 0,
+          metaVendas: metaV,
+          atg: metaV > 0 ? (real.vendas / metaV) * 100 : 0,
+        };
+      });
+
+      const metaMes = metaPctMes[mesAtualIdx] ?? 0;
+      const convMes = mes.leads > 0 ? (mes.vendas / mes.leads) * 100 : 0;
+      const convTri = leadsTri > 0 ? (vendasTri / leadsTri) * 100 : 0;
+
       // conversão de referência para projeção: mês corrente se tiver volume, senão trimestre
       const convRef = mes.leads >= 20 ? convMes : convTri;
       const projecao = leadsProj > 0 ? ((vendasTri + (leadsRestantes * convRef) / 100) / leadsProj) * 100 : 0;
 
-      const vendasMetaTri = isQtd ? metaQtd : Math.ceil((leadsProj * metaTri) / 100);
+      const vendasMetaTri = metaVendasMes.reduce((a, b) => a + b, 0);
       const vendasFaltam = Math.max(0, vendasMetaTri - vendasTri);
       const ritmoNecessario = leadsRestantes > 0 ? (vendasFaltam / leadsRestantes) * 100 : 0;
       const gapPP = convTri - metaTri;
@@ -293,11 +357,15 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
         metaMes,
         mes,
         convMes,
-        atgMes: metaMes > 0 ? (convMes / metaMes) * 100 : 0,
+        atgMes:
+          (metaVendasMes[mesAtualIdx] ?? 0) > 0 ? (mes.vendas / metaVendasMes[mesAtualIdx]!) * 100 : 0,
+        metaVendasMesAtual: metaVendasMes[mesAtualIdx] ?? 0,
+        detalheMeses,
         leadsTri,
+        leadsProj,
         vendasTri,
         convTri,
-        atgTri: metaTri > 0 ? (convTri / metaTri) * 100 : 0,
+        atgTri: vendasMetaTri > 0 ? (vendasTri / vendasMetaTri) * 100 : 0,
         gapPP,
         leadsRestantes,
         vendasMetaTri,
@@ -307,7 +375,8 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
         status: statusOf(projecao, metaTri),
       };
     });
-  }, [porFunil, cfg, mesAtualIdx, qi]);
+  }, [porFunil, cfg, mesAtualIdx, qi, mesDias, pesosNorm]);
+
 
 
   const resumoStatus = linhas.reduce(
@@ -452,6 +521,132 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
         </Card>
       </div>
 
+      {/* ---------- Distribuição da meta pelos 3 meses ---------- */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-sm font-semibold">
+              Como a meta do trimestre se divide entre {qi.months.map((m) => m.short).join(", ")}
+            </CardTitle>
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span>Peso do mês:</span>
+              {qi.months.map((m, i) => (
+                <span key={m.from} className="flex items-center gap-1">
+                  <span>{m.short}</span>
+                  {numInput(`p:${i}`, cfg.pesos[i], (n) => {
+                    const p = [...cfg.pesos] as [number, number, number];
+                    p[i] = n;
+                    change({ ...cfg, pesos: p });
+                  }, "w-14")}
+                </span>
+              ))}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-t border-b border-border text-[11px] uppercase tracking-wide bg-muted/30">
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground border-r border-border/60">
+                    Funil
+                  </th>
+                  {qi.months.map((m, i) => (
+                    <th
+                      key={m.from}
+                      colSpan={3}
+                      className={`px-2 py-2 text-center font-bold border-r border-border/60 ${
+                        i === mesAtualIdx ? "bg-blue-500/20 text-blue-400" : "text-muted-foreground"
+                      }`}
+                    >
+                      {m.label}
+                    </th>
+                  ))}
+                  <th colSpan={3} className="px-2 py-2 text-center font-bold bg-purple-500/20 text-purple-400">
+                    Trimestre
+                  </th>
+                </tr>
+                <tr className="border-b border-border bg-muted/20 text-[10px] uppercase text-muted-foreground">
+                  <th className="px-3 py-1.5 border-r border-border/60" />
+                  {qi.months.map((m) => (
+                    <Fragment key={m.from}>
+                      <th className="px-2 py-1.5 text-right font-medium">
+                        Meta %
+                      </th>
+                      <th className="px-2 py-1.5 text-right font-medium">
+                        Meta vd
+                      </th>
+                      <th className="px-2 py-1.5 text-right font-medium border-r border-border/60">
+                        Real
+                      </th>
+                    </Fragment>
+                  ))}
+                  <th className="px-2 py-1.5 text-right font-medium">Meta %</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Meta vd</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Real</th>
+                </tr>
+              </thead>
+              <tbody>
+                {linhas.map((l) => (
+                  <tr key={l.id} className="border-t border-border/50 hover:bg-muted/20">
+                    <td className="px-3 py-3 font-semibold whitespace-nowrap border-r border-border/40">{l.label}</td>
+                    {l.detalheMeses.map((d) => (
+                      <Fragment key={`${l.id}-${d.label}`}>
+                        <td
+                          className={`px-2 py-3 text-right tabular-nums ${d.atual ? "bg-blue-500/5" : ""}`}
+                        >
+                          {d.metaPct.toFixed(2)}%
+                        </td>
+                        <td
+                          className={`px-2 py-3 text-right tabular-nums font-semibold ${d.atual ? "bg-blue-500/5" : ""}`}
+                          title={`${d.leadsEst} leads ${d.leads === d.leadsEst ? "reais" : "estimados"} × ${d.metaPct.toFixed(2)}%`}
+                        >
+                          {d.metaVendas}
+                        </td>
+                        <td
+                          className={`px-2 py-3 text-right tabular-nums border-r border-border/40 ${d.atual ? "bg-blue-500/5" : ""}`}
+                        >
+                          {d.futuro ? (
+                            <span className="text-muted-foreground">—</span>
+                          ) : (
+                            <span
+                              className={
+                                d.vendas >= d.metaVendas ? "text-emerald-500 font-semibold" : "text-red-500 font-semibold"
+                              }
+                              title={`${d.vendas} vendas / ${d.leads} leads = ${d.conv.toFixed(2)}%`}
+                            >
+                              {d.vendas}
+                            </span>
+                          )}
+                        </td>
+                      </Fragment>
+                    ))}
+                    <td className="px-2 py-3 text-right tabular-nums">{l.metaTri.toFixed(2)}%</td>
+                    <td className="px-2 py-3 text-right tabular-nums font-semibold">{l.vendasMetaTri}</td>
+                    <td
+                      className={`px-2 py-3 text-right tabular-nums font-semibold ${
+                        l.vendasTri >= l.vendasMetaTri ? "text-emerald-500" : "text-red-500"
+                      }`}
+                    >
+                      {l.vendasTri}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="border-t border-border/50 px-4 py-3 text-[11px] leading-relaxed text-muted-foreground">
+              A meta do trimestre (WGT {cfg.metaTri.WGT}%, Minicurso {cfg.metaTri.MINICURSO}%, Ebook{" "}
+              {cfg.metaTri.EBOOK}%, Sessão {cfg.metaTri.SESSAO}%) é distribuída pelos 3 meses com os pesos acima —
+              hoje {qi.months.map((m, i) => `${m.short} ${pesosNorm[i].toFixed(2)}`).join(" · ")} — mantendo a média
+              do trimestre igual à meta. Meses de férias ficam com peso menor. “Meta vd” = leads do mês (reais ou
+              projetados) × meta % do mês.
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+
+
       {/* ---------- Tabela trimestral ---------- */}
       <Card>
         <CardHeader className="pb-2">
@@ -465,7 +660,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                 variant="ghost"
                 size="sm"
                 className="h-7 text-xs"
-                onClick={() => change({ ...DEFAULT_TRI, modo: cfg.modo, rampa: { ...RAMPA_PADRAO } })}
+                onClick={() => change({ ...DEFAULT_TRI, modo: cfg.modo })}
               >
                 <RotateCcw className="h-3.5 w-3.5 mr-1" />
                 Padrão
