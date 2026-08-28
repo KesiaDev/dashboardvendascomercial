@@ -374,14 +374,25 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
     const agg = new Map<
       string,
       {
-        total: number; scores: number[]; sellers: Map<string, number>; funis: Map<string, number>;
+        total: number; mensagens: number; ligacoes: number;
+        scores: number[]; sellers: Map<string, number>; funis: Map<string, number>;
         evidencias: ObjecaoEvidencia[];
       }
     >();
+    const bucket = (label: string) => {
+      let a = agg.get(label);
+      if (!a) {
+        a = { total: 0, mensagens: 0, ligacoes: 0, scores: [], sellers: new Map(), funis: new Map(), evidencias: [] };
+        agg.set(label, a);
+      }
+      return a;
+    };
     const evoMap = new Map<string, Map<string, number>>();
     let sample = 0;
     let analisadas = 0;
     let totalObj = 0;
+    let objMsg = 0;
+    let objCall = 0;
     const allScores: number[] = [];
 
     for (const c of validos) {
