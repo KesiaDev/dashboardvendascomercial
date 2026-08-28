@@ -447,19 +447,32 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
               <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">
                 Meta trimestral
               </CardTitle>
-              <div className="flex rounded-md border border-border p-0.5">
-                {(["pct", "qtd"] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => change({ ...cfg, modo: m })}
-                    className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
-                      cfg.modo === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    {m === "pct" ? "%" : "Vendas"}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowConfig((v) => !v)}
+                  className={`rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                    showConfig
+                      ? "bg-primary text-primary-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {showConfig ? "Fechar edição" : "Editar metas"}
+                </button>
+                <div className="flex rounded-md border border-border p-0.5">
+                  {(["pct", "qtd"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => change({ ...cfg, modo: m })}
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                        cfg.modo === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {m === "pct" ? "%" : "Vendas"}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -469,7 +482,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                 <span className="truncate text-muted-foreground">{l.label}</span>
                 {cfg.modo === "qtd" ? (
                   <span className="flex items-center gap-1">
-                    {numInput(`tq:${l.id}`, l.metaQtd, (n) =>
+                    {numCell(`tq:${l.id}`, l.metaQtd, (n) =>
                       change({ ...cfg, metaTriQtd: { ...cfg.metaTriQtd, [l.id]: n } }),
                     )}
                     <span className="text-[10px] text-muted-foreground tabular-nums">
@@ -478,7 +491,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                   </span>
                 ) : (
                   <span className="flex items-center gap-1">
-                    {numInput(`t:${l.id}`, l.metaTri, (n) =>
+                    {numCell(`t:${l.id}`, l.metaTri, (n) =>
                       change({ ...cfg, metaTri: { ...cfg.metaTri, [l.id]: n } }),
                     )}
                     <span
