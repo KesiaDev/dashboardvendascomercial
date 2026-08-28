@@ -254,19 +254,33 @@ function AgenteIaPage() {
               {(() => {
                 const reunioes = Math.max(k.reunioes, DEMO_REUNIOES);
                 const vendas = Math.max(d.vendas.vendasTotal, DEMO_VENDAS);
-                const aprov = reunioes > 0 ? (vendas / reunioes) * 100 : 0;
+                const noShows = NO_SHOWS_2_SEMANAS;
+                const realizadas = Math.max(reunioes - noShows, 0);
+                const taxaNoShow = reunioes > 0 ? (noShows / reunioes) * 100 : 0;
+                const taxaComparecimento = reunioes > 0 ? (realizadas / reunioes) * 100 : 0;
+                const convRealizadas = realizadas > 0 ? (vendas / realizadas) * 100 : 0;
+                const convAgendadas = reunioes > 0 ? (vendas / reunioes) * 100 : 0;
                 return (
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <Kpi icon={CalendarCheck} label="Reuniões agendadas" value={String(reunioes)} />
-                    <Kpi icon={Trophy} label="Vendas com passagem pela IA" value={String(vendas)} tone="good" />
-                    <Kpi icon={TrendingUp} label="Aproveitamento (vendas/reuniões)"
-                      value={`${aprov.toFixed(1)}%`} tone={aprov >= 25 ? "good" : "warn"} />
-                    <Kpi icon={Clock} label="No-Shows"
-                      value={String(NO_SHOWS_2_SEMANAS)} tone="warn" hint="Apurado na Clint" />
-                  </div>
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <Kpi icon={CalendarCheck} label="Reuniões agendadas" value={String(reunioes)} />
+                      <Kpi icon={Clock} label="No-Shows" value={String(noShows)} tone="warn" hint="Apurado na Clint" />
+                      <Kpi icon={CalendarCheck} label="Reuniões realizadas" value={String(realizadas)} tone="good" />
+                      <Kpi icon={Trophy} label="Vendas com passagem pela IA" value={String(vendas)} tone="good" />
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <Kpi icon={TrendingUp} label="Taxa de no-show" value={`${taxaNoShow.toFixed(1)}%`}
+                        tone="warn" hint={`${noShows} ÷ ${reunioes}`} />
+                      <Kpi icon={CalendarCheck} label="Taxa de comparecimento" value={`${taxaComparecimento.toFixed(1)}%`}
+                        tone="good" hint={`${realizadas} ÷ ${reunioes}`} />
+                      <Kpi icon={Trophy} label="Conv. sobre realizadas" value={`${convRealizadas.toFixed(1)}%`}
+                        tone={convRealizadas >= 25 ? "good" : "warn"} hint={`${vendas} ÷ ${realizadas}`} />
+                      <Kpi icon={TrendingUp} label="Conv. sobre agendadas" value={`${convAgendadas.toFixed(1)}%`}
+                        tone={convAgendadas >= 20 ? "good" : "warn"} hint={`${vendas} ÷ ${reunioes}`} />
+                    </div>
+                  </>
                 );
               })()}
-
 
             </CardContent>
           </Card>
