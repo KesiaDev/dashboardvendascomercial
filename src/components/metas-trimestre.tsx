@@ -767,42 +767,6 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                 })()}
               </tbody>
             </table>
-            <div className="border-t border-border/50 px-4 py-3 text-[11px] leading-relaxed text-muted-foreground">
-              <strong className="text-foreground">Realizado:</strong> {linhas.reduce((a, l) => a + l.vendasTri, 0)} vendas
-              {" · "}
-              <strong className="text-foreground">Meta:</strong> {linhas.reduce((a, l) => a + l.vendasMetaTri, 0)} vendas
-              {" · "}
-              <strong className="text-foreground">Faltam:</strong>{" "}
-              {Math.max(
-                0,
-                linhas.reduce((a, l) => a + l.vendasMetaTri, 0) -
-                  linhas.reduce((a, l) => a + l.vendasTri, 0),
-              )}{" "}
-              vendas
-              {" · "}
-              <strong className="text-foreground">Gap dos meses fechados:</strong>{" "}
-              <span
-                className={`font-semibold ${
-                  linhas.reduce((a, l) => a + l.gapFechados, 0) > 0
-                    ? "text-red-500"
-                    : "text-emerald-500"
-                }`}
-              >
-                {linhas.reduce((a, l) => a + l.gapFechados, 0) > 0 ? "+" : ""}
-                {linhas.reduce((a, l) => a + l.gapFechados, 0)}
-              </span>{" "}
-              vendas
-              {" · "}
-              <strong className="text-foreground">Meta ajustada do que resta:</strong>{" "}
-              <span className="text-amber-500 font-semibold">
-                {linhas.reduce((a, l) => a + l.metaAjustadaRestante, 0)}
-              </span>{" "}
-              vendas
-              <div className="mt-1">
-                O que ficou para trás nos meses já fechados não some: ele é somado à meta dos meses que
-                ainda faltam (Meta ajust. = meta dos meses restantes + gap acumulado).
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
