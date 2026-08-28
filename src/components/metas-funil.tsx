@@ -256,14 +256,19 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
   }
 
   return (
-    <Card>
+    <Card className={collapsed ? "overflow-hidden" : "overflow-hidden"}>
 
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="text-base font-semibold tracking-tight flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setCollapsed((v) => !v)}
+            className="text-base font-semibold tracking-tight flex items-center gap-2 transition-opacity hover:opacity-80"
+          >
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`} />
             <Gauge className="h-4 w-4 text-primary" />
             {title}
-          </CardTitle>
+          </button>
           <div className="flex items-center gap-3 flex-wrap text-xs">
             <label className="flex items-center gap-1 text-muted-foreground">
               Comparecimento
