@@ -473,7 +473,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
       <FunnelBreakdownCard sales={weekSales} title={`Vendas por Funil — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
 
       {/* Origem dos leads V3 */}
-      <OrigemV3Card from={start} to={end} title={`PIPELINE_COMERCIAL-V3 — leads por tag · S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
+      <OrigemV3Card from={start} to={end} title="Funis Perpétuos"/>
 
       {/* Meta de aproveitamento por funil */}
       <MetasFunilCard from={start} to={end} period="semana" title={`Meta de Aproveitamento por Funil — S${weekIdx+1+WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}/>
