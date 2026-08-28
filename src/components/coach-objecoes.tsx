@@ -201,6 +201,8 @@ export function ObjecoesTab() {
                       )}
                     </td>
                     <td className="p-2 text-right">{r.total}</td>
+                    <td className="p-2 text-right text-muted-foreground">{r.mensagens}</td>
+                    <td className="p-2 text-right text-muted-foreground">{r.ligacoes}</td>
                     <td className="p-2 text-right">{r.pct.toFixed(1)}%</td>
                     <td className={`p-2 text-right ${r.avg_score != null && r.avg_score < 6 ? "text-red-500 font-semibold" : ""}`}>
                       {r.avg_score != null ? r.avg_score.toFixed(2) : "—"}
