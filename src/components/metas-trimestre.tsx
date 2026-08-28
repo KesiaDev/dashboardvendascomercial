@@ -441,9 +441,28 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       </span>
     );
 
+  const allOpen = metaCardOpen && realizadoOpen && statusOpen;
+  const toggleAll = () => {
+    const next = !allOpen;
+    setMetaCardOpen(next);
+    setRealizadoOpen(next);
+    setStatusOpen(next);
+  };
+
   return (
     <div className="space-y-4">
       {/* ---------- Visão executiva ---------- */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={toggleAll}
+          className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          title={allOpen ? "Recolher os 3 cards" : "Expandir os 3 cards"}
+        >
+          {allOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          {allOpen ? "Recolher tudo" : "Expandir tudo"}
+        </button>
+      </div>
       <div className="grid gap-3 md:grid-cols-3">
         {/* Card "Meta trimestral" — oculto por padrão, abre ao clicar */}
         {metaCardOpen ? (
