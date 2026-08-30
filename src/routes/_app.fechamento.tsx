@@ -142,7 +142,7 @@ function LoginCard() {
           <Button className="w-full" disabled={busy} onClick={async () => {
             setBusy(true);
             window.sessionStorage.setItem("dashcomercial_google_next", "/fechamento");
-            const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+            const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/auth/callback` });
             if ((res as any)?.error) {
               const message = String((res as any).error?.message ?? (res as any).error);
               toast.error(message === "Sign in was cancelled" ? "Login cancelado ou interrompido. Toque em Entrar com Google novamente." : `Falha no login: ${message}`);

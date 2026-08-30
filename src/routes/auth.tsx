@@ -10,6 +10,16 @@ import { isAdminUser, getSessionFast } from "@/lib/auth";
 import logoIcon from "@/assets/logo-icon.png";
 
 export const Route = createFileRoute("/auth")({
+  head: () => ({
+    meta: [
+      { title: "Entrar | Dashcomercial LLMídia" },
+      { name: "description", content: "Acesse o painel comercial da LLMídia com sua conta autorizada." },
+      { property: "og:title", content: "Entrar | Dashcomercial LLMídia" },
+      { property: "og:description", content: "Acesse o painel comercial da LLMídia com sua conta autorizada." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: AuthPage,
 });
 
@@ -39,11 +49,8 @@ function AuthPage() {
     const go = (u: any) => {
       navigate({ to: getPendingDestination(u), replace: true });
     };
-    getSessionFast().then((session) => {
-      if (session) go(session.user);
-    });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
+      if (event === "SIGNED_IN" && session) {
         go(session.user);
       }
     });
@@ -70,7 +77,7 @@ function AuthPage() {
       const next = safeNext(new URLSearchParams(window.location.search).get("next"));
       if (next) window.sessionStorage.setItem(GOOGLE_NEXT_KEY, next);
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: `${window.location.origin}/auth/callback`,
       });
       if (result.error) {
         const message = result.error.message || "Falha ao entrar com Google";
@@ -79,10 +86,14 @@ function AuthPage() {
       }
       if (result.redirected) return;
 
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        navigate({ to: getPendingDestination(data.session.user), replace: true });
+      const session = await getSessionFast(2500);
+      if (session) {
+        navigate({ to: getPendingDestination(session.user), replace: true });
+      } else {
+        toast.error("O Google concluiu o acesso, mas a sessão demorou para responder. Tente novamente.");
       }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível abrir o login com Google.");
     } finally {
       setGoogleLoading(false);
     }

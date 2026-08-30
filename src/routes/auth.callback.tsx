@@ -5,8 +5,20 @@ import { isAdminUser, ALLOWED_NON_ADMIN_ROUTES } from "@/lib/auth";
 import logoIcon from "@/assets/logo-icon.png";
 
 export const Route = createFileRoute("/auth/callback")({
+  head: () => ({
+    meta: [
+      { title: "Concluindo acesso | Dashcomercial LLMídia" },
+      { name: "description", content: "Conclusão segura do acesso ao painel comercial da LLMídia." },
+      { property: "og:title", content: "Concluindo acesso | Dashcomercial LLMídia" },
+      { property: "og:description", content: "Conclusão segura do acesso ao painel comercial da LLMídia." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: AuthCallbackPage,
 });
+
+const GOOGLE_NEXT_KEY = "dashcomercial_google_next";
 
 function safeNext(value: string | null): string | null {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
@@ -23,14 +35,18 @@ async function completeOAuthSession() {
   const url = new URL(window.location.href);
   const code = url.searchParams.get("code");
   if (code) {
-    await supabase.auth.exchangeCodeForSession(code);
+    const result = await supabase.auth.exchangeCodeForSession(code);
+    if (result.error) throw result.error;
+    return result;
   }
 
   const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   const accessToken = hashParams.get("access_token");
   const refreshToken = hashParams.get("refresh_token");
   if (accessToken && refreshToken) {
-    await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    const result = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    if (result.error) throw result.error;
+    return result;
   }
 
   return supabase.auth.getSession();
@@ -42,7 +58,9 @@ function AuthCallbackPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const next = safeNext(new URLSearchParams(window.location.search).get("next"));
+    const queryNext = safeNext(new URLSearchParams(window.location.search).get("next"));
+    const storedNext = safeNext(window.sessionStorage.getItem(GOOGLE_NEXT_KEY));
+    const next = queryNext ?? storedNext;
     async function finish() {
       try {
         const { data, error } = await completeOAuthSession();
@@ -50,6 +68,7 @@ function AuthCallbackPage() {
         const session = data.session;
         if (!session) throw new Error("Sessão não encontrada após o login.");
         if (cancelled) return;
+        window.sessionStorage.removeItem(GOOGLE_NEXT_KEY);
         navigate({ to: getDestination(session.user, next), replace: true });
       } catch (error) {
         if (cancelled) return;
