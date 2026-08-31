@@ -194,6 +194,23 @@ export const confirmManualSaleFn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ── Regra das parcelas de 166 € ───────────────────────────────────────────────
+
+/** Parcela padrão de 166 € (499 € em 3x) — sempre vira 3 parcelas mensais. */
+export function isParcela166(valueEur: number): boolean {
+  return valueEur >= 165 && valueEur <= 167;
+}
+
+/** Soma meses mantendo o dia; se o mês não tiver o dia (31), usa o último dia. */
+export function addMonthsKeepingDay(isoDate: string, months: number): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const lastDay = new Date(y!, m! - 1 + months + 1, 0).getDate();
+  const day = Math.min(d!, lastDay);
+  const mm = String(((m! - 1 + months) % 12) + 1).padStart(2, "0");
+  const yy = y! + Math.floor((m! - 1 + months) / 12);
+  return `${yy}-${mm}-${String(day).padStart(2, "0")}`;
+}
+
 // ── Criar venda ───────────────────────────────────────────────────────────────
 
 export const createManualSale = createServerFn({ method: "POST" })
