@@ -206,6 +206,11 @@ function FechamentoForm({ session }: { session: any }) {
     installments: "1" | "2" | "3";
   };
   const emptyItem = (): Item => ({ product: "", value: "", clientName: "", clientEmail: "", roleta: "", bonus: "", installments: "1" });
+  /** Parcela padrão de 166 € (499 € em 3x) — sempre 3 parcelas mensais. */
+  const is166 = (v: string) => {
+    const n = Number(String(v).replace(",", "."));
+    return Number.isFinite(n) && n >= 165 && n <= 167;
+  };
   const [items, setItems] = useState<Item[]>([emptyItem()]);
 
   const updateItem = (i: number, patch: Partial<Item>) =>
