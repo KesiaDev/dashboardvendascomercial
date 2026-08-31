@@ -289,11 +289,9 @@ export const createManualSale = createServerFn({ method: "POST" })
 
     // Parcelas 2..N — pendentes, agendadas +1, +2 meses
     if (data.installment_total > 1) {
-      const [y, m, d] = data.sale_date.split("-").map(Number);
       const rows = [] as any[];
       for (let n = 2; n <= data.installment_total; n++) {
-        const due = new Date(y, m - 1 + (n - 1), d);
-        const dueIso = due.toISOString().slice(0, 10);
+        const dueIso = addMonthsKeepingDay(data.sale_date, n - 1);
         rows.push({
           ...base,
           sale_date: dueIso,
