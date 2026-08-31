@@ -206,6 +206,11 @@ function FechamentoForm({ session }: { session: any }) {
     installments: "1" | "2" | "3";
   };
   const emptyItem = (): Item => ({ product: "", value: "", clientName: "", clientEmail: "", roleta: "", bonus: "", installments: "1" });
+  /** Parcela padrão de 166 € (499 € em 3x) — sempre 3 parcelas mensais. */
+  const is166 = (v: string) => {
+    const n = Number(String(v).replace(",", "."));
+    return Number.isFinite(n) && n >= 165 && n <= 167;
+  };
   const [items, setItems] = useState<Item[]>([emptyItem()]);
 
   const updateItem = (i: number, patch: Partial<Item>) =>
@@ -244,7 +249,7 @@ function FechamentoForm({ session }: { session: any }) {
               notes: notes || undefined,
               roleta_type: it.roleta || null,
               bonus_semanal_eur: it.bonus ? (Number(it.bonus) as 30 | 60) : null,
-              installment_total: Number(it.installments),
+              installment_total: is166(it.value) ? 3 : Number(it.installments),
             },
           })
         )
@@ -444,7 +449,8 @@ function FechamentoForm({ session }: { session: any }) {
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label className="text-xs">Parcelamento</Label>
                         <Select
-                          value={it.installments}
+                          value={is166(it.value) ? "3" : it.installments}
+                          disabled={is166(it.value)}
                           onValueChange={(v) => updateItem(i, { installments: v as "1" | "2" | "3" })}
                         >
                           <SelectTrigger><SelectValue /></SelectTrigger>
@@ -454,11 +460,16 @@ function FechamentoForm({ session }: { session: any }) {
                             <SelectItem value="3">3x — agenda +2 parcelas nos próximos meses</SelectItem>
                           </SelectContent>
                         </Select>
-                        {it.installments !== "1" && it.value && (
+                        {is166(it.value) ? (
+                          <p className="text-xs text-amber-600 dark:text-amber-400">
+                            Regra fixa: parcela de 166 € é sempre <b>3x</b> — as 2 parcelas seguintes entram
+                            automaticamente nos 2 meses seguintes (mesmo dia da venda).
+                          </p>
+                        ) : it.installments !== "1" && it.value ? (
                           <p className="text-xs text-muted-foreground">
                             Serão criadas <b>{Number(it.installments) - 1}</b> parcela(s) futura(s) de {moneyEur(Number(it.value.replace(",", ".")) || 0)} pendentes de pagamento.
                           </p>
-                        )}
+                        ) : null}
                       </div>
 
 
