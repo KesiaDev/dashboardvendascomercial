@@ -264,6 +264,8 @@ export type RoletaLine = {
 export type AttributedSaleRow = SaleRow & {
   seller: string | null;
   source: "afiliado" | "sck" | "manual" | null;
+  /** Afiliado Hotmart divergente do SCK vencedor (regra: vale o link/checkout). */
+  conflito_afiliado: string | null;
   base_brl: number;
   override: SaleOverride | null;
 };
@@ -380,6 +382,7 @@ export function calculateCommissions(
       produto_grupo,
       seller: ov?.excluir ? null : seller,
       source: ov?.excluir ? null : source,
+      conflito_afiliado: auto.conflito_afiliado,
       base_brl: hotmartBaseBrl(s, cotacao),
       override: ov,
     };

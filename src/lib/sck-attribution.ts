@@ -6,6 +6,7 @@ const SCK_NAME_MAP: Record<string, string> = {
   gisele: "Gisele",
   joao: "João",
   luana: "Luana",
+  pamela: "Pamela",
   nadal: "Nadal",
   rita: "Rita",
   kesia: "Késia",
@@ -72,21 +73,34 @@ export function isIgnoredOrigin(origemCheckout: string | null | undefined): bool
 
 /**
  * Regra única de atribuição de uma venda Hotmart:
- * 1. Nome do Afiliado (comissão paga direto pela Hotmart) — tem prioridade absoluta.
- *    Ex.: venda com afiliado Nadal e SCK ".joao" pertence ao **Nadal**.
- * 2. SCK (origem_checkout) — só quando não há afiliado reconhecido.
- * 3. Origens de marketing ou pessoas fora do comercial → não atribui a ninguém.
+ * 1. Quando afiliado e SCK apontam para vendedores DIFERENTES, **vale o
+ *    link/checkout (SCK)** — regra definida no fecho de agosto/26.
+ *    Ex.: venda com afiliado Nadal e SCK "mse.joao" pertence ao **João**.
+ *    O afiliado "perdedor" volta em `conflito_afiliado` para auditoria
+ *    (a Hotmart ainda paga o split ao afiliado — conferir no fecho).
+ * 2. Nome do Afiliado, quando não há SCK de outro vendedor.
+ * 3. SCK (origem_checkout), quando não há afiliado reconhecido.
+ * 4. Origens de marketing ou pessoas fora do comercial → não atribui a ninguém.
  */
 export function resolveSaleSeller(
   nomeAfiliado: string | null | undefined,
   origemCheckout: string | null | undefined,
   affiliateToSeller?: Map<string, string>,
-): { seller: string | null; source: "afiliado" | "sck" | null } {
+): {
+  seller: string | null;
+  source: "afiliado" | "sck" | null;
+  /** Afiliado Hotmart divergente do SCK vencedor (venda em conflito). */
+  conflito_afiliado: string | null;
+} {
   const byAff =
     affiliateToSeller?.get((nomeAfiliado ?? "").toLowerCase()) ?? sellerFromAffiliate(nomeAfiliado);
-  if (byAff) return { seller: byAff, source: "afiliado" };
-  if (isIgnoredOrigin(origemCheckout)) return { seller: null, source: null };
-  const bySck = sellerFromSck(origemCheckout);
-  if (bySck) return { seller: bySck, source: "sck" };
-  return { seller: null, source: null };
+  const bySck = isIgnoredOrigin(origemCheckout) ? null : sellerFromSck(origemCheckout);
+
+  // Conflito afiliado × link: vale o link (SCK). Guardamos o afiliado para auditoria.
+  if (byAff && bySck && byAff !== bySck)
+    return { seller: bySck, source: "sck", conflito_afiliado: byAff };
+
+  if (byAff) return { seller: byAff, source: "afiliado", conflito_afiliado: null };
+  if (bySck) return { seller: bySck, source: "sck", conflito_afiliado: null };
+  return { seller: null, source: null, conflito_afiliado: null };
 }
