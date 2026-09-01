@@ -1078,6 +1078,15 @@ function VendaRow({
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
         )}
+        {v.conflito_afiliado ? (
+          <Badge
+            variant="destructive"
+            className="ml-1 text-[10px]"
+            title={`Conflito: afiliado Hotmart é ${v.conflito_afiliado}, mas o link (SCK) é de ${v.seller ?? "outro vendedor"} — vale o link. Conferir o split pago pela Hotmart ao afiliado.`}
+          >
+            conflito: {v.conflito_afiliado}
+          </Badge>
+        ) : null}
       </td>
       <td className="px-3 py-1.5">
         <Select
