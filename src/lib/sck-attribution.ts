@@ -9,7 +9,7 @@ const SCK_NAME_MAP: Record<string, string> = {
   pamela: "Pamela",
   nadal: "Nadal",
   rita: "Rita",
-  kesia: "Késia",
+  kesia: "Kesia Nandi",
 };
 
 function stripAccents(s: string): string {
