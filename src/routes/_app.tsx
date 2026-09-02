@@ -24,7 +24,7 @@ const ALL_NAV_ITEMS = [
 
   { to: "/comissionamento",     label: "Comissionamento",    icon: DollarSign,       adminOnly: true },
   { to: "/coach",               label: "Análise Comercial",  icon: Sparkles,         adminOnly: false },
-  { to: "/leads-dia",           label: "Leads por Dia",      icon: CalendarRange,    adminOnly: true },
+  { to: "/leads-dia",           label: "Leads por Dia",      icon: CalendarRange,    adminOnly: false },
   { to: "/agente-ia",           label: "Agente IA",          icon: Bot,              adminOnly: true },
   { to: "/arena",               label: "Arena Comercial",    icon: Swords,           adminOnly: false },
   { to: "/indicacoes",          label: "Indicações",         icon: Share2,           adminOnly: false },
