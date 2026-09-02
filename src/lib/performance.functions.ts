@@ -128,7 +128,7 @@ const SELLER_ALIASES: { match: string[]; name: string }[] = [
   { name: "Fabio Nadal",     match: ["fabionadal", "fabio nadal", "nadal"] },
   { name: "Rita Bandeira",   match: ["ritabandeira", "rita bandeira", "rita"] },
   { name: "Luana Guimarães", match: ["luanaguimaraes", "luana.guimaraes", "luana guimaraes", "luana guimarães", "luana"] },
-  { name: "Kesia Nandi", match: ["kesiawnandi", "kesia nandi", "kesia"] },
+  { name: "Kesia Nandi", match: ["kesiawnandi", "kesia nandi", "kesia", "késia", "nandi"] },
 ];
 
 // Fora das métricas de performance: Luana saiu da empresa.
