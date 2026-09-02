@@ -225,8 +225,8 @@ export function filterByPeriodCreated(deals: Deal[], start: Date | null, end: Da
 const EXCLUDED_SELLERS = new Set([
   "camila faria",
   "aline gonçalves",
-  "késia nandi",
 ]);
+
 
 export function isExcludedSeller(name: string | null | undefined): boolean {
   if (!name) return false;
