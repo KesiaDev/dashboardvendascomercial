@@ -477,7 +477,7 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       if (++page > 50) break;
     }
 
-    const EXCLUDED = new Set(["camila faria", "aline goncalves", "kesia nandi"]);
+    const EXCLUDED = new Set(["camila faria", "aline goncalves"]);
     const normStr = (s: string) =>
       s.trim().toLowerCase().replace(/\s+/g, " ")
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "");

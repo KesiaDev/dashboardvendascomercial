@@ -225,8 +225,8 @@ export function filterByPeriodCreated(deals: Deal[], start: Date | null, end: Da
 const EXCLUDED_SELLERS = new Set([
   "camila faria",
   "aline gonçalves",
-  "késia nandi",
 ]);
+
 
 export function isExcludedSeller(name: string | null | undefined): boolean {
   if (!name) return false;
@@ -443,14 +443,34 @@ function isResetRelacional(produtoOriginal: string): boolean {
 }
 
 /**
+ * Nome canónico de cada vendedor + tokens que identificam a pessoa (comparação
+ * sem acento). Serve para que "Késia weige Nandi" (Clint), "Kesia Nandi"
+ * (fechamento manual) e "kesia@llmidiaco.com" virem UMA única linha nos
+ * relatórios em vez de duplicar/triplicar o mesmo vendedor.
+ */
+const CANONICAL_SELLERS: { name: string; tokens: string[] }[] = [
+  { name: "Kesia Nandi", tokens: ["kesia", "nandi"] },
+  { name: "Gisele Pimentel", tokens: ["gisele"] },
+  { name: "Fabio Nadal", tokens: ["nadal"] },
+  { name: "João Pessoa", tokens: ["pessoa"] },
+  { name: "Rita Bandeira", tokens: ["rita"] },
+  { name: "Pamela", tokens: ["pamela"] },
+];
+
+/**
  * Colapsa espaços duplos (comuns em nomes vindos da Clint, ex.: "Fabio  Nadal")
- * antes de usar o nome como chave de agrupamento — sem isso, a mesma pessoa
- * vira duas linhas diferentes quando uma venda casa por afiliado (nome limpo)
- * e outra pelo cruzamento Clint (nome com espaço duplo).
+ * e unifica variantes conhecidas do mesmo vendedor num nome canónico único.
  */
 export function cleanSellerName(name: string): string {
-  return name.trim().replace(/\s+/g, " ");
+  const cleaned = name.trim().replace(/\s+/g, " ");
+  if (!cleaned) return cleaned;
+  const norm = normalizeName(cleaned.includes("@") ? cleaned.split("@")[0] : cleaned);
+  for (const s of CANONICAL_SELLERS) {
+    if (s.tokens.some((t) => norm.includes(t))) return s.name;
+  }
+  return cleaned;
 }
+
 
 export async function fetchAllSales(): Promise<SaleRecord[]> {
   return (await fetchAllSalesFn()) as SaleRecord[];
