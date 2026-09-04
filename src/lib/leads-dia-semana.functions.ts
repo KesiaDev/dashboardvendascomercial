@@ -74,7 +74,9 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<LeadsDiaSemanaResult> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { leadBucket, LEADS_ORIGINS } = await import("@/lib/leads-comercial.server");
+    const { leadBucket, LEADS_ORIGINS, levantouMao } = await import(
+      "@/lib/leads-comercial.server"
+    );
 
     // Só os funis comerciais interessam (leadBucket descarta o resto de qualquer
     // forma). Filtrar no banco tira ~23k linhas da leitura e usa o índice
@@ -88,9 +90,10 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
       created_at: string;
       origin_name: string | null;
       contact_tags: string[] | null;
+      stage: string | null;
     }>(
       ({ from, to }) =>
-        f(supabaseAdmin.from("clint_deals").select("created_at,origin_name,contact_tags"))
+        f(supabaseAdmin.from("clint_deals").select("created_at,origin_name,contact_tags,stage"))
           .order("created_at", { ascending: true })
           .range(from, to),
       () => f(supabaseAdmin.from("clint_deals").select("*", { count: "exact", head: true })),
@@ -98,23 +101,36 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
 
 
     const dias = new Map<string, { dow: number; leads: number }>();
-    const porDow = new Map<number, { leads: number; porBucket: Record<string, number> }>();
+    const porDow = new Map<
+      number,
+      { leads: number; atendidos: number; porBucket: Record<string, number> }
+    >();
     const porHora = new Array(24).fill(0);
     const semanas = new Map<string, number[]>();
     const bucketSet = new Set<string>();
+    const estagios = new Map<string, { leads: number; atendido: boolean }>();
+    let totalAtendidos = 0;
 
     for (const r of rows) {
       const cls = leadBucket(r.origin_name, r.contact_tags ?? null);
       if (!cls) continue;
       bucketSet.add(cls.bucket);
-      const { dow, date, hour } = spParts(r.created_at);
+      const { dow, date, hour } = lisbonParts(r.created_at);
+      const atendido = levantouMao(r.stage);
+      if (atendido) totalAtendidos++;
+
+      const est = String(r.stage ?? "").trim() || "Sem estágio";
+      const e = estagios.get(est) ?? { leads: 0, atendido };
+      e.leads++;
+      estagios.set(est, e);
 
       const d = dias.get(date) ?? { dow, leads: 0 };
       d.leads++;
       dias.set(date, d);
 
-      const dd = porDow.get(dow) ?? { leads: 0, porBucket: {} };
+      const dd = porDow.get(dow) ?? { leads: 0, atendidos: 0, porBucket: {} };
       dd.leads++;
+      if (atendido) dd.atendidos++;
       dd.porBucket[cls.bucket] = (dd.porBucket[cls.bucket] ?? 0) + 1;
       porDow.set(dow, dd);
 
@@ -125,6 +141,7 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
       arr[dow - 1]++;
       semanas.set(wk, arr);
     }
+
 
     // quantos dias de calendário de cada dia da semana existem no período
     const diasPorDow = new Array(8).fill(0);
