@@ -81,7 +81,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { isAllowedSellerEmail, isCaseOwnerEmail } from "@/lib/auth";
 import { canonicalSellerName, isMetricSeller as isMetricSellerCanonical } from "@/lib/sellers";
-import { useAppAuth } from "@/routes/_app";
+import { useAppAuth } from "@/lib/app-auth";
 import { CasesTab } from "@/components/coach-cases";
 import { ObjecoesTab } from "@/components/coach-objecoes";
 import { PerfisTab } from "@/components/coach-perfis";
