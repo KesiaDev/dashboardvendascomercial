@@ -33,11 +33,12 @@ Se a regra que você precisa não tem um módulo próprio, **crie o módulo** em
 
 | Regra | Módulo canônico |
 |---|---|
-| Cotação EUR→BRL de pagamento | `src/lib/eur-rate.ts` |
 | Quem é vendedor, e desde/até quando | `src/lib/sellers.ts` |
 | IDs de funil da Clint | `src/lib/pipeline-origins.ts` |
 | Paginação de leitura no Supabase | `src/lib/supabase-paging.ts` |
 | Taxa de conversão | `src/lib/conversion.ts` |
+| Calendário, bônus e roleta do comissionamento | `src/lib/commission-rules.ts` |
+| Cotação EUR→BRL de pagamento | `src/lib/eur-rate.ts` |
 | "Esta venda conta como aprovada?" | `src/lib/sales-status.ts` |
 | Agrupamento e categoria de produto | `src/lib/product-groups.ts` |
 | Cálculo de comissão | `src/lib/commission.ts` |
@@ -71,6 +72,24 @@ continuam contando com eles. Camila e Aline nunca contam (equipe interna).
 
 Ao ler dados históricos, passe a data da linha. Para preencher um seletor de
 "quem vendeu" num formulário novo, use `activeSellers(new Date())`.
+
+## Comissionamento
+
+Especificação completa em `docs/logica-comissionamento.md`. Os pontos que mais
+pegam quem mexe pela primeira vez:
+
+- **A semana vai de quarta a terça**, e o "mês" é um bloco de 4 ou 5 semanas —
+  não o mês de calendário. A primeira semana de um período pode ser curta.
+- **`sales.numero_parcela` NÃO é o índice da parcela**: é a quantidade de
+  parcelas do parcelamento. Cada transação é uma linha só. Filtrar por `<= 1`
+  elimina toda venda parcelada. "Primeira venda" = não é renovação
+  (`isPrimeiraVenda`).
+- **Não existe fallback de câmbio.** Sem `cotacao_eur` no período, a tela avisa
+  e não calcula; o servidor lança. Isso é deliberado — ver a nota no módulo.
+- **Bônus de meta é faixa única e não cumulativo**, igual para todos: €900→€30,
+  €1.600→€60 na semana; €3.200→€30, €6.400→€60 no mês.
+- **Giro de roleta é gerado automaticamente** da venda da Hotmart e é idempotente
+  por transação. Só o VALOR do prêmio é lançado à mão.
 
 ## Taxa de conversão
 
