@@ -3,6 +3,8 @@ import {
   bonusMensalEur,
   bonusSemanalEur,
   isBonusProduct,
+  managerRatePct,
+  rateInEffect,
   roletaSpinFor,
   weeksOfPeriod,
 } from "./commission-rules";
@@ -150,5 +152,55 @@ describe("isBonusProduct", () => {
   it("renovação não conta", () => {
     expect(isBonusProduct("renov_mentoria")).toBe(false);
     expect(isBonusProduct("outros", "Renovação Mentoria")).toBe(false);
+  });
+});
+
+describe("managerRatePct — a comissão de gestora que não era calculada", () => {
+  it("1% sobre os produtos normais", () => {
+    for (const g of ["accelerator", "gtp_au", "formacao_rs", "master_scale", "traffic_master"]) {
+      expect(managerRatePct(g), g).toBe(1);
+    }
+  });
+
+  it("0% em renovação", () => {
+    for (const g of ["renov_mentoria", "renov_acc", "renov_tm"]) {
+      expect(managerRatePct(g), g).toBe(0);
+    }
+  });
+});
+
+describe("rateInEffect — percentual vigente na data", () => {
+  const rows = [
+    { rate_pct: 17.5, effective_from: "2026-01-01" },
+    { rate_pct: 16.5, effective_from: "2026-09-02" },
+  ];
+
+  // A regressão que motivou a correção: effective_from existia na tabela mas o
+  // cálculo ignorava, ficando com a última linha que aparecesse. Mudar um
+  // percentual reescrevia meses já fechados e pagos, em silêncio.
+  it("agosto continua com o percentual da época", () => {
+    expect(rateInEffect(rows, "2026-08-01")?.rate_pct).toBe(17.5);
+  });
+
+  it("setembro pega o percentual novo", () => {
+    expect(rateInEffect(rows, "2026-09-02")?.rate_pct).toBe(16.5);
+    expect(rateInEffect(rows, "2026-10-15")?.rate_pct).toBe(16.5);
+  });
+
+  it("a ordem das linhas não importa", () => {
+    expect(rateInEffect([...rows].reverse(), "2026-08-01")?.rate_pct).toBe(17.5);
+  });
+
+  it("antes de qualquer vigência, não há percentual", () => {
+    expect(rateInEffect(rows, "2025-12-31")).toBeNull();
+  });
+
+  it("linha sem data vale desde sempre", () => {
+    const semData = [{ rate_pct: 5, effective_from: null }];
+    expect(rateInEffect(semData, "2020-01-01")?.rate_pct).toBe(5);
+  });
+
+  it("aceita timestamp completo, não só YYYY-MM-DD", () => {
+    expect(rateInEffect(rows, "2026-09-02T00:00:00Z")?.rate_pct).toBe(16.5);
   });
 });

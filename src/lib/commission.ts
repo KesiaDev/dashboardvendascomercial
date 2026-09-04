@@ -4,6 +4,8 @@ import {
   bonusSemanalEur,
   isBonusProduct,
   isPrimeiraVenda,
+  managerRatePct,
+  rateInEffect,
   valorCheioEur,
   weeksOfPeriod,
   type WeekSlot,
@@ -57,13 +59,25 @@ export type SellerConfig = {
   clint_user_name: string | null;
   moeda_padrao: string;
   is_active: boolean;
+  /**
+   * Quem recebe a comissão de gestora sobre o faturamento da equipe.
+   * Fica no cadastro (bi_seller_config), não como nome fixo no código.
+   */
+  is_manager?: boolean | null;
 };
+
+/** A pessoa é a gestora, segundo o cadastro? */
+function managerOf(sellers: SellerConfig[], sellerName: string): boolean {
+  return sellers.some((s) => s.seller_name === sellerName && s.is_manager === true);
+}
 
 export type CommissionRate = {
   seller_name: string;
   produto_grupo: string;
   rate_pct: number;
   manager_rate_pct: number;
+  /** A partir de quando este percentual vale. Ver rateInEffect. */
+  effective_from?: string | null;
 };
 
 export type WisePayment = {
@@ -275,6 +289,10 @@ export type SellerCommission = {
   // Auditoria SCK
   hotmart_sales_by_affiliate: number;
   hotmart_sales_by_sck: number;
+  /** Quanto ESTE vendedor gera de comissão para a gestora. */
+  gera_comissao_gestora_brl: number;
+  /** Só a gestora tem valor aqui: a soma do que a equipe gerou. */
+  comissao_gestora_brl: number;
   /** Total que a EMPRESA vai pagar (não inclui o split direto da Hotmart). */
   total_a_pagar: number;
 };
@@ -313,8 +331,21 @@ export function calculateCommissions(
   const overrideIndex = new Map<string, SaleOverride>();
   for (const o of overrides) overrideIndex.set(o.transacao, o);
 
+  // Percentual VIGENTE na data de início do período. Antes o índice ficava com
+  // a última linha que aparecesse, sem olhar effective_from — então qualquer
+  // ajuste de percentual reescrevia meses já fechados e pagos, em silêncio.
+  const ratesByKey = new Map<string, CommissionRate[]>();
+  for (const r of rates) {
+    const k = `${r.seller_name}||${r.produto_grupo}`;
+    const arr = ratesByKey.get(k);
+    if (arr) arr.push(r);
+    else ratesByKey.set(k, [r]);
+  }
   const rateIndex = new Map<string, CommissionRate>();
-  for (const r of rates) rateIndex.set(`${r.seller_name}||${r.produto_grupo}`, r);
+  for (const [k, arr] of ratesByKey) {
+    const vigente = rateInEffect(arr, period.data_inicio);
+    if (vigente) rateIndex.set(k, vigente);
+  }
 
   // Hotmart no período (aprovadas)
   const hotmartInPeriod = hotmartSales.filter((s) => {
@@ -523,6 +554,8 @@ export function calculateCommissions(
     const wiseSemProdutoQtd = myWise.filter((w) => !w.produto_grupo).length;
     if (wiseSemProdutoBrl !== 0) allProductIds.add("outros");
 
+    // Quanto ESTE vendedor gera de comissão para a gestora. Somado no fim.
+    let comissaoGestoraBrl = 0;
     const byProduct: ProductLine[] = [];
     for (const pg of allProductIds) {
       const rpct = rateIndex.get(`${sc.seller_name}||${pg}`)?.rate_pct ?? 0;
@@ -554,6 +587,9 @@ export function calculateCommissions(
       // Hotmart/SCK entram líquidos (0,935); Wise entra cheio.
       const comissao_hotmart_direto = fat_hotmart * TAXA_LIQUIDO_HOTMART * r;
       const comissao_a_pagar = fat_sck * TAXA_LIQUIDO_HOTMART * r + fat_wise * r;
+
+      // Base da comissão de gestora: todo o faturamento do vendedor no produto.
+      comissaoGestoraBrl += faturamento_total * (managerRatePct(pg) / 100);
 
       byProduct.push({
         produto_grupo: pg,
@@ -623,6 +659,8 @@ export function calculateCommissions(
       bonus_metas_brl: metas.bonus_total_eur * cotacao,
       hotmart_sales_by_affiliate,
       hotmart_sales_by_sck,
+      gera_comissao_gestora_brl: comissaoGestoraBrl,
+      comissao_gestora_brl: 0,
       total_a_pagar:
         comissao_a_pagar_vendas +
         bonus_total -
@@ -630,6 +668,22 @@ export function calculateCommissions(
         rGanho.brl +
         metas.bonus_total_eur * cotacao,
     });
+  }
+
+  // ── Comissão de gestora ───────────────────────────────────────────────────
+  // A gestora recebe um percentual sobre o faturamento de CADA vendedor (1%,
+  // 0% em renovação). Não estava sendo calculada: manager_rate_pct existia na
+  // tabela, o formulário gravava 0 e o motor nunca lia. Confirmado com a Kesia
+  // em 04/09/2026 que a regra é a do documento.
+  //
+  // Os valores já estão todos em BRL — cada vendedor contribui com a base dele
+  // convertida, então não há conversão extra aqui.
+  const gestora = sellerResults.find((s) => managerOf(sellers, s.sellerName));
+  if (gestora) {
+    gestora.comissao_gestora_brl = sellerResults
+      .filter((s) => s.sellerName !== gestora.sellerName)
+      .reduce((acc, s) => acc + s.gera_comissao_gestora_brl, 0);
+    gestora.total_a_pagar += gestora.comissao_gestora_brl;
   }
 
   return {

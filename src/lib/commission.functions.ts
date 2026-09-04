@@ -29,7 +29,9 @@ export const fetchSellerConfigFn = createServerFn({ method: "GET" })
     const db = await admin();
     const { data, error } = await db
       .from("bi_seller_config")
-      .select("seller_name,hotmart_affiliate_name,clint_user_name,moeda_padrao,is_active")
+      .select(
+        "seller_name,hotmart_affiliate_name,clint_user_name,moeda_padrao,is_active,is_manager",
+      )
       .order("seller_name");
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -86,6 +88,12 @@ type UpsertRateInput = {
   produto_grupo: string;
   rate_pct: number;
   manager_rate_pct: number;
+  /**
+   * A partir de quando o percentual vale (YYYY-MM-DD). Omitido = hoje.
+   * Gravar uma data NOVA cria uma linha nova e preserva a anterior, para que
+   * meses já fechados continuem calculando com o percentual da época.
+   */
+  effective_from?: string;
 };
 
 export const upsertCommissionRateFn = createServerFn({ method: "POST" })
@@ -94,12 +102,13 @@ export const upsertCommissionRateFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     assertAdmin(context.claims);
     const db = await admin();
-    const { error } = await db
-      .from("bi_commission_rates")
-      .upsert(
-        { ...data, effective_from: "2026-01-01" },
-        { onConflict: "seller_name,produto_grupo,effective_from" },
-      );
+    const { error } = await db.from("bi_commission_rates").upsert(
+      // effective_from era chumbado em "2026-01-01", o que impedia qualquer
+      // histórico: mudar um percentual reescrevia todos os meses. Agora o
+      // chamador informa a partir de quando vale (padrão: hoje).
+      { ...data, effective_from: data.effective_from ?? new Date().toISOString().slice(0, 10) },
+      { onConflict: "seller_name,produto_grupo,effective_from" },
+    );
     if (error) throw new Error(error.message);
     return { ok: true };
   });

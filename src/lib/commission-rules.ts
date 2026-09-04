@@ -241,3 +241,58 @@ export function roletaSpinFor(sale: RoletaCandidate): RoletaWheel | null {
   if (!Number.isFinite(valor) || valor < ROLETA_MIN_EUR) return null;
   return valor >= ROLETA_WHEEL_Y_MIN_EUR ? "Y" : "X";
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. COMISSÃO DE GESTORA
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Percentual que a gestora recebe sobre o faturamento de cada vendedor.
+ *
+ * Da especificação (§7): 1% sobre tudo, 0% em renovações.
+ *
+ * Isto NÃO estava sendo calculado. A coluna `manager_rate_pct` existe em
+ * `bi_commission_rates`, o formulário a grava como 0 e o motor de cálculo nunca
+ * a lia — ou seja, a comissão de gestora simplesmente não entrava no total.
+ * Confirmado com a Kesia em 04/09/2026 que a regra é a do documento.
+ */
+export const MANAGER_RATE_PCT = 1;
+export const MANAGER_RATE_PCT_RENOVACAO = 0;
+
+/** Percentual de gestora aplicável a um grupo de produto. */
+export function managerRatePct(produtoGrupo: string | null | undefined): number {
+  return (produtoGrupo ?? "").startsWith("renov_") ? MANAGER_RATE_PCT_RENOVACAO : MANAGER_RATE_PCT;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. VIGÊNCIA DE PERCENTUAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Escolhe, entre as linhas de percentual de um vendedor+produto, a que estava
+ * vigente numa data.
+ *
+ * `bi_commission_rates.effective_from` existia mas era LETRA MORTA: o cálculo
+ * indexava por `vendedor||produto` e ficava com a última linha que aparecesse,
+ * sem olhar data nenhuma — e a gravação chumbava "2026-01-01". Na prática havia
+ * um percentual por vendedor+produto para sempre, e qualquer ajuste reescrevia
+ * meses já fechados e pagos, em silêncio.
+ *
+ * Agora vale a linha com o maior `effective_from` que seja <= à data de
+ * referência (o início do período). Assim mudar um percentual passa a valer
+ * daí para a frente, sem tocar no que já foi pago.
+ */
+export function rateInEffect<T extends { effective_from?: string | null }>(
+  rows: T[],
+  on: string,
+): T | null {
+  const day = on.slice(0, 10);
+  let best: T | null = null;
+  for (const r of rows) {
+    const from = (r.effective_from ?? "1970-01-01").slice(0, 10);
+    if (from > day) continue;
+    const bestFrom = (best?.effective_from ?? "1970-01-01").slice(0, 10);
+    if (!best || from > bestFrom) best = r;
+  }
+  return best;
+}

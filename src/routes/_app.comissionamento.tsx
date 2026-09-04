@@ -916,11 +916,17 @@ function SellerDetail({
         </div>
 
         {/* Fecho do vendedor */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 rounded-md border border-border/60 bg-muted/20 p-3 text-sm">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 rounded-md border border-border/60 bg-muted/20 p-3 text-sm">
           <div>
             <p className="text-xs text-muted-foreground">Comissão vendas (empresa)</p>
             <p className="font-semibold tabular-nums">{m(s.comissao_a_pagar_vendas)}</p>
           </div>
+          {s.comissao_gestora_brl > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground">Comissão de gestora</p>
+              <p className="font-semibold tabular-nums">{m(s.comissao_gestora_brl)}</p>
+            </div>
+          )}
           <div>
             <p className="text-xs text-muted-foreground">Bônus de metas</p>
             <p className="font-semibold tabular-nums">{m(s.bonus_metas_brl)}</p>
