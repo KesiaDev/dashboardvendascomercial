@@ -74,11 +74,8 @@ const MONTHS = [
   "Dezembro",
 ];
 
-// Valores mínimos para demonstração enquanto o cruzamento automático amadurece.
-const DEMO_VENDAS = 19;
-const DEMO_REUNIOES = 75;
-// No-shows apurados na Clint nas últimas 2 semanas.
-const NO_SHOWS_2_SEMANAS = 16;
+// Os números de reuniões, no-shows e vendas vêm agora direto da Clint (ver agente-ia.functions.ts).
+
 
 /* --------------------------------------------------------------- */
 /* Custo do agente IA (editável — a Clint não expõe API de custo)    */
