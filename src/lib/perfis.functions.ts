@@ -716,7 +716,9 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         sellers: Map<string, number>;
         profissoes: Map<string, { nome: string; total: number; vendas: number; ganhos: number }>;
         conversas: PerfilConversa[];
+        vendasClientes: VendaPerfil[];
         semPergunta: number;
+
       }
     >();
     let classificadas = 0;
