@@ -6,7 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { CalendarRange, Loader2, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
+import {
+  CalendarRange,
+  Loader2,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  Hand,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_app/leads-dia")({
   component: LeadsDiaPage,
@@ -75,7 +82,7 @@ function LeadsDiaPage() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">Leads por dia da semana</h1>
           <p className="text-sm text-muted-foreground">
-            Sessão Estratégica · Minicurso V3 · Ebook V3 — mesma base dos Funis Perpétuos
+            Sessão Estratégica · Minicurso V3 · Ebook V3 — horário de Lisboa
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -143,6 +150,18 @@ function LeadsDiaPage() {
             </Card>
             <Card>
               <CardContent className="pt-5">
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Hand className="h-4 w-4 text-sky-500" /> Levantada de mão
+                </p>
+                <p className="text-3xl font-black tabular-nums">{data.totalAtendidos}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {data.total ? ((data.totalAtendidos / data.total) * 100).toFixed(1) : "0"}% dos
+                  leads viraram responsabilidade do vendedor
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-5">
                 <p className="text-sm text-muted-foreground">Discrepância entre dias</p>
                 <p className="text-3xl font-black tabular-nums">
                   {data.pior && data.pior.media > 0 && data.melhor
@@ -196,6 +215,7 @@ function LeadsDiaPage() {
                     <th className="pb-2 pr-4 font-medium text-right">Dias no período</th>
                     <th className="pb-2 pr-4 font-medium text-right">Média/dia</th>
                     <th className="pb-2 pr-4 font-medium text-right">% do total</th>
+                    <th className="pb-2 pr-4 font-medium text-right">Levantada de mão</th>
                     <th className="pb-2 font-medium">Origem</th>
                   </tr>
                 </thead>
@@ -209,6 +229,12 @@ function LeadsDiaPage() {
                       </td>
                       <td className="py-2.5 pr-4 text-right tabular-nums">{d.media.toFixed(1)}</td>
                       <td className="py-2.5 pr-4 text-right tabular-nums">{d.share.toFixed(1)}%</td>
+                      <td className="py-2.5 pr-4 text-right tabular-nums">
+                        {d.atendidos}{" "}
+                        <span className="text-muted-foreground text-xs">
+                          ({d.taxaAtendimento.toFixed(0)}%)
+                        </span>
+                      </td>
                       <td className="py-2.5">
                         <div className="flex flex-wrap gap-1">
                           {Object.entries(d.porBucket)
@@ -219,6 +245,48 @@ function LeadsDiaPage() {
                               </Badge>
                             ))}
                         </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+
+          {/* Estágios na Clint */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Hand className="h-4 w-4 text-sky-500" /> Onde o lead parou na Clint
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <p className="text-xs text-muted-foreground mb-3">
+                Contamos como “levantada de mão” o lead que saiu da automação (base, nutrição,
+                abertura) e passou a ser conduzido pelo vendedor — respondeu template, foi
+                contactado, agendou reunião ou recebeu proposta.
+              </p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-muted-foreground border-b border-border">
+                    <th className="pb-2 pr-4 font-medium">Estágio</th>
+                    <th className="pb-2 pr-4 font-medium text-right">Leads</th>
+                    <th className="pb-2 pr-4 font-medium text-right">% do total</th>
+                    <th className="pb-2 font-medium">Conta como levantada de mão?</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.porEstagio.map((e) => (
+                    <tr key={e.estagio} className="border-b border-border/50 hover:bg-secondary/30">
+                      <td className="py-2 pr-4 font-medium">{e.estagio}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums font-bold">{e.leads}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">
+                        {data.total ? ((e.leads / data.total) * 100).toFixed(1) : "0"}%
+                      </td>
+                      <td className="py-2">
+                        <Badge variant={e.atendido ? "default" : "secondary"} className="text-xs">
+                          {e.atendido ? "Sim — vendedor assumiu" : "Não — ainda na automação"}
+                        </Badge>
                       </td>
                     </tr>
                   ))}
@@ -330,7 +398,7 @@ function LeadsDiaPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium">
-                Horário de chegada dos leads (Brasília)
+                Horário de chegada dos leads (Lisboa)
               </CardTitle>
             </CardHeader>
             <CardContent>
