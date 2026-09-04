@@ -378,7 +378,6 @@ function FechamentoForm({ session }: { session: any }) {
 
   // Parcelas futuras não pagas NÃO entram no total até serem confirmadas
   const paidSales = salesFiltered.filter((s) => s.installment_paid);
-  const pendingInstallments = salesFiltered.filter((s) => !s.installment_paid);
 
   const todaySales = paidSales.filter((s) => s.sale_date === today);
   const todayTotal = todaySales.reduce((acc, s) => acc + Number(s.value_eur), 0);
