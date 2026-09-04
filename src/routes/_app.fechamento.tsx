@@ -782,35 +782,6 @@ function FechamentoForm({ session }: { session: any }) {
             </CardContent>
           </Card>
 
-          {/* Parcelas pendentes do mês */}
-          {pendingInstallments.length > 0 && (
-            <Card className="border-warning/40 bg-warning/10">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-warning-fg" />
-                  Parcelas pendentes ({pendingInstallments.length})
-                </CardTitle>
-                <CardDescription>
-                  Parcelas agendadas cujo pagamento ainda não foi confirmado. Marque como paga assim
-                  que o cliente pagar.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {pendingInstallments.map((s) => (
-                  <SaleCard
-                    key={s.id}
-                    sale={s}
-                    isAdmin={isAdmin}
-                    onEdit={() => setEditing(s)}
-                    onDelete={() => setDeleting(s)}
-                    onConfirm={() => setConfirmingId(s.id)}
-                    onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })}
-                  />
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
           {/* Vendas do mês */}
           <Card>
             <CardHeader>
