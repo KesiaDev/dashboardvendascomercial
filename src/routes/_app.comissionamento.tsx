@@ -111,20 +111,182 @@ function ComissionamentoPage() {
   // A proteção real é no servidor: as 18 server functions de comissionamento
   // exigem requireSupabaseAuth + assertAdmin(context.claims). Aqui só evitamos
   // mostrar a tela a quem não vai receber dado nenhum de qualquer forma.
-  const { admin, loading } = useAppAuth();
+  //
+  // Vendedor não-admin vê apenas o próprio comissionamento: o cálculo roda no
+  // servidor (fetchMyCommissionFn) e só a linha dele volta para o browser.
+  const { admin, loading, user } = useAppAuth();
   if (loading) return <div className="text-sm text-muted-foreground">Carregando…</div>;
   if (!admin) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
-        <Lock className="h-8 w-8 text-muted-foreground" />
-        <p className="text-sm font-medium">Área restrita</p>
-        <p className="max-w-xs text-xs text-muted-foreground">
-          O comissionamento é visível apenas para administradores.
-        </p>
-      </div>
-    );
+    if (!sellerNameForEmail(user?.email)) {
+      return (
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
+          <Lock className="h-8 w-8 text-muted-foreground" />
+          <p className="text-sm font-medium">Área restrita</p>
+          <p className="max-w-xs text-xs text-muted-foreground">
+            Não há comissionamento associado a este utilizador.
+          </p>
+        </div>
+      );
+    }
+    return <MinhaComissao />;
   }
   return <Dashboard />;
+}
+
+// ── Visão individual do vendedor ─────────────────────────────────────────────
+
+function MinhaComissao() {
+  const [periodId, setPeriodId] = useState<number | null>(null);
+  const { data, isLoading } = useQuery({
+    queryKey: ["my_commission", periodId],
+    queryFn: async () => await fetchMyCommissionFn({ data: { periodId } }),
+  });
+
+  if (isLoading) return <div className="text-sm text-muted-foreground">Carregando…</div>;
+  if (!data) return <div className="text-sm text-muted-foreground">Nenhum período configurado.</div>;
+
+  const { me, period, periods, cotacao, rates, spins, vendas, sellerName } = data;
+  const moeda = (me?.moeda ?? "BRL").toUpperCase() === "EUR" ? "EUR" : "BRL";
+  const m = (brl: number) => money(moeda === "EUR" ? brl / (cotacao || 1) : brl, moeda);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Meu comissionamento</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {sellerName} · {period.nome} ({fmtDate(period.data_inicio)} a {fmtDate(period.data_fim)}
+            )
+          </p>
+        </div>
+        <Select value={String(period.id)} onValueChange={(v) => setPeriodId(Number(v))}>
+          <SelectTrigger className="w-[190px]">
+            <SelectValue placeholder="Período" />
+          </SelectTrigger>
+          <SelectContent>
+            {periods.map((p) => (
+              <SelectItem key={p.id} value={String(p.id)}>
+                {p.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {!me ? (
+        <Card>
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            Ainda não há vendas registadas para si neste período.
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <Card className="border-primary/40 bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Wallet className="h-4 w-4 text-primary" /> Resumo do período
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <Kpi label="Meu faturamento" value={m(me.faturamento_total_brl)} />
+              <Kpi label="Comissão total" value={m(me.comissao_total)} />
+              <Kpi
+                label="Metas + roleta + bônus"
+                value={m(me.bonus_metas_brl + me.roleta_ganho_brl + me.bonus_total)}
+              />
+              <Kpi label="A receber da empresa" value={m(me.total_a_pagar)} emphasis />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Por produto</CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto p-0">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="px-4 py-2">Produto</th>
+                    <th className="px-3 py-2 text-right">Faturamento</th>
+                    <th className="px-3 py-2 text-right">%</th>
+                    <th className="px-4 py-2 text-right">Comissão</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {me.byProduct.map((p) => (
+                    <tr key={p.produto_grupo} className="border-b border-border/40 last:border-0">
+                      <td className="px-4 py-2 font-medium">{p.label}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {m(p.faturamento_total)}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                        {pct(
+                          p.rate_pct ||
+                            rates.find((r: any) => r.produto_grupo === p.produto_grupo)?.rate_pct ||
+                            0,
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums">{m(p.comissao_total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Target className="h-4 w-4" /> Metas e roleta
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <Linha label="Bônus de metas" value={m(me.bonus_metas_brl)} />
+                <Linha
+                  label={`Roleta (${spins.length} giro${spins.length === 1 ? "" : "s"})`}
+                  value={m(me.roleta_ganho_brl)}
+                />
+                <Linha label="Outros bônus" value={m(me.bonus_total)} />
+                <Linha label="Descontos" value={`− ${m(me.descontos)}`} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Trophy className="h-4 w-4" /> Minhas vendas do período
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="max-h-[320px] space-y-1.5 overflow-y-auto text-sm">
+                {vendas.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Nenhuma venda Hotmart atribuída.</p>
+                ) : (
+                  vendas.map((v: any) => (
+                    <div key={v.transacao} className="flex justify-between gap-3 border-b border-border/40 pb-1">
+                      <span className="truncate">
+                        {fmtDate(v.data_venda)} · {v.nome_cliente ?? "—"}
+                      </span>
+                      <span className="tabular-nums">{m(v.base_brl)}</span>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Linha({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between border-b border-border/40 pb-1 last:border-0">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="tabular-nums font-medium">{value}</span>
+    </div>
+  );
 }
 
 function Dashboard() {
