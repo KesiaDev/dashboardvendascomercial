@@ -25,7 +25,8 @@ export default defineConfig({
           // paguem recharts.
           manualChunks(id: string) {
             if (!id.includes("node_modules")) return;
-            if (/recharts|victory-vendor|[\/]d3-/.test(id)) return "charts";
+            if (/lodash/.test(id)) return "lodash";
+            if (/recharts|victory-vendor|react-smooth|[\/]d3-/.test(id)) return "graficos";
             if (id.includes("@supabase")) return "supabase";
             if (id.includes("@tanstack")) return "tanstack";
             if (/react-day-picker|date-fns/.test(id)) return "dates";
