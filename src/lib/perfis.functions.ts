@@ -45,6 +45,18 @@ export type PerfilRow = {
   profissoes: { nome: string; total: number; vendas: number; ganhos: number }[];
   sem_pergunta: number;
   conversas: PerfilConversa[];
+  vendas_clientes: VendaPerfil[];
+};
+
+export type VendaPerfil = {
+  cliente: string;
+  email: string | null;
+  seller: string;
+  produto: string;
+  funil: string;
+  data: string;
+  perfil: string;
+  vinculo: "conversa" | "sem_conversa";
 };
 
 export type PerfisResult = {
@@ -54,8 +66,12 @@ export type PerfisResult = {
   classificadas: number;
   nao_identificados: number;
   origem: "todas" | "humano" | "ia";
+  total_vendas: number;
+  vendas_sem_conversa: number;
+  vendas: VendaPerfil[];
   ranking: PerfilRow[];
 };
+
 
 // o comercial perguntou sobre trabalho/profissão do lead?
 const PERGUNTA_PROF = [
