@@ -44,7 +44,7 @@ function Executivo() {
   const [area, setArea] = useState<BusinessArea>("COMERCIAL");
   // `brlPerEur` não é mais lido aqui: o servidor devolve BRL e `money()` faz a
   // conversão na exibição. `currency` continua só para rotular o ranking.
-  const { format: money, currency } = useCurrency();
+  const { format: money, currency, brlPerEur: rate } = useCurrency();
 
   const { start, end } = periodRange(period);
 
@@ -57,13 +57,17 @@ function Executivo() {
   // e o `money()` do currency-context converte na exibição. Trocar BRL/EUR no
   // toggle deixou de disparar refetch e recálculo.
   const { data, isLoading } = useQuery({
-    queryKey: ["executivo", period, area],
+    // A cotação entra na chave porque negócios em EUR precisam ser convertidos
+    // no servidor. Ela muda uma vez por sessão, quando a API de câmbio
+    // responde — e o payload agora é pequeno, então o refetch é barato.
+    queryKey: ["executivo", period, area, rate],
     queryFn: () =>
       fetchExecutivoDashboardFn({
         data: {
           from: start ? start.toISOString() : null,
           to: end ? end.toISOString() : null,
           area,
+          rate,
         },
       }),
   });

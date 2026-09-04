@@ -52,10 +52,13 @@ import { AREA_ORDER, type BusinessArea } from "@/lib/pipeline-areas";
  * ─────────────────────────────────────────────────────────────────────────────
  * MOEDA
  *
- * O resultado sai sempre em BRL e o cliente converte para EUR com a cotação de
- * mercado dele. Como a conversão é linear, converter cada negócio e somar dá o
- * mesmo que somar e converter — e assim trocar a moeda no toggle deixa de
- * disparar refetch e recálculo.
+ * O resultado sai sempre em BRL, e o cliente converte para EUR na exibição.
+ *
+ * A cotação PRECISA vir do cliente: há negócios em EUR na base, e somá-los sem
+ * converter trataria euro como real. Com o total em BRL, `money()` no cliente
+ * produz exatamente o mesmo número que a versão anterior produzia — a conversão
+ * é linear, então (soma_BRL + soma_EUR x cotação) / cotação = soma_EUR +
+ * soma_BRL / cotação.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -77,7 +80,9 @@ export type ExecutivoDashboard = {
 
 export const fetchExecutivoDashboardFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { from: string | null; to: string | null; area: BusinessArea }) => d)
+  .inputValidator(
+    (d: { from: string | null; to: string | null; area: BusinessArea; rate: number }) => d,
+  )
   .handler(async ({ data }): Promise<ExecutivoDashboard> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const db = supabaseAdmin as any;
@@ -147,13 +152,22 @@ export const fetchExecutivoDashboardFn = createServerFn({ method: "GET" })
     const phantomWonIds = findPhantomWonDeals(deals, sales);
     const dealsInArea = filterDealsByArea(deals, areaMap, data.area);
 
-    // "BRL" fixo e taxa 1: o cliente converte. Ver a nota sobre moeda acima.
-    const kpis = computeAreaKpis(dealsInArea, start, end, "BRL", 1, phantomWonIds);
-    const sellers = rankSellers(dealsInArea, start, end, "BRL", 1, phantomWonIds);
+    // Sempre em BRL, com a cotação do cliente para converter os negócios em
+    // EUR. Ver a nota sobre moeda acima.
+    const rate = data.rate > 0 ? data.rate : 1;
+    const kpis = computeAreaKpis(dealsInArea, start, end, "BRL", rate, phantomWonIds);
+    const sellers = rankSellers(dealsInArea, start, end, "BRL", rate, phantomWonIds);
 
     const byArea = AREA_ORDER.filter((a) => a !== "TESTES" && a !== "OUTROS").map((a) => ({
       area: a,
-      ...computeAreaKpis(filterDealsByArea(deals, areaMap, a), start, end, "BRL", 1, phantomWonIds),
+      ...computeAreaKpis(
+        filterDealsByArea(deals, areaMap, a),
+        start,
+        end,
+        "BRL",
+        rate,
+        phantomWonIds,
+      ),
     }));
 
     const metaComparison = compareMetaRealizado(
