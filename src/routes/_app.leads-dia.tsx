@@ -253,6 +253,48 @@ function LeadsDiaPage() {
             </CardContent>
           </Card>
 
+          {/* Estágios na Clint */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Hand className="h-4 w-4 text-sky-500" /> Onde o lead parou na Clint
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <p className="text-xs text-muted-foreground mb-3">
+                Contamos como “levantada de mão” o lead que saiu da automação (base, nutrição,
+                abertura) e passou a ser conduzido pelo vendedor — respondeu template, foi
+                contactado, agendou reunião ou recebeu proposta.
+              </p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-muted-foreground border-b border-border">
+                    <th className="pb-2 pr-4 font-medium">Estágio</th>
+                    <th className="pb-2 pr-4 font-medium text-right">Leads</th>
+                    <th className="pb-2 pr-4 font-medium text-right">% do total</th>
+                    <th className="pb-2 font-medium">Conta como levantada de mão?</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.porEstagio.map((e) => (
+                    <tr key={e.estagio} className="border-b border-border/50 hover:bg-secondary/30">
+                      <td className="py-2 pr-4 font-medium">{e.estagio}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums font-bold">{e.leads}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">
+                        {data.total ? ((e.leads / data.total) * 100).toFixed(1) : "0"}%
+                      </td>
+                      <td className="py-2">
+                        <Badge variant={e.atendido ? "default" : "secondary"} className="text-xs">
+                          {e.atendido ? "Sim — vendedor assumiu" : "Não — ainda na automação"}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+
           {/* Heatmap semana × dia */}
           <Card>
             <CardHeader>
