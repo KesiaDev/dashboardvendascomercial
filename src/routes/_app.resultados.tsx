@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+import { memo, useMemo, useState, useRef, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -219,85 +219,46 @@ function formatWeekLabel(iso: string): string {
 }
 
 // ── Célula editável genérica ────────────────────────────────────────────────
-function EditableCell({
-  value,
-  onSave,
-  format,
-  parse,
-  className,
-  suffix,
-}: {
+type EditableCellProps = {
   value: number;
   onSave: (v: number) => Promise<void>;
   format: (v: number) => string;
   parse?: (s: string) => number;
   className?: string;
   suffix?: string;
-}) {
+};
+
+/**
+ * Célula editável — em modo leitura, custa UM hook.
+ *
+ * Esta grade monta ~859 células editáveis de uma vez (7 produtos × 2 linhas
+ * manuais × 52 semanas, mais os blocos mensais). Quando o estado de edição vivia
+ * direto aqui, cada uma delas montava 3 useState + 1 useRef + 1 useEffect: cerca
+ * de 4.300 hooks e outros tantos nós de DOM só para exibir números que quase
+ * nunca são editados.
+ *
+ * Agora o maquinário de edição vive em <CellEditor>, que só é montado na célula
+ * efetivamente clicada. Em repouso resta um useState booleano por célula, e o
+ * memo evita que digitar numa célula re-renderize as outras 858.
+ *
+ * A API pública é a mesma — nenhum dos 10 pontos de uso mudou.
+ */
+function EditableCell(props: EditableCellProps) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [saving, setSaving] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  if (editing) return <CellEditor {...props} onDone={() => setEditing(false)} />;
+  return <ReadOnlyCell {...props} onEdit={() => setEditing(true)} />;
+}
 
-  useEffect(() => {
-    if (editing) inputRef.current?.focus();
-  }, [editing]);
-
-  async function commit() {
-    const parsed = parse ? parse(draft) : Number(draft.replace(",", "."));
-    if (Number.isNaN(parsed)) {
-      setEditing(false);
-      return;
-    }
-    setSaving(true);
-    try {
-      await onSave(parsed);
-      setEditing(false);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao salvar");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  if (editing) {
-    return (
-      <div className="flex items-center gap-1">
-        <Input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
-            if (e.key === "Escape") setEditing(false);
-          }}
-          disabled={saving}
-          className="h-7 w-24 text-xs px-2"
-        />
-        <button
-          onClick={commit}
-          disabled={saving}
-          className="text-success-fg hover:text-success-fg"
-        >
-          <Check className="h-3.5 w-3.5" />
-        </button>
-        <button
-          onClick={() => setEditing(false)}
-          disabled={saving}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    );
-  }
-
+const ReadOnlyCell = memo(function ReadOnlyCell({
+  value,
+  format,
+  className,
+  suffix,
+  onEdit,
+}: Omit<EditableCellProps, "onSave" | "parse"> & { onEdit: () => void }) {
   return (
     <button
-      onClick={() => {
-        setDraft(String(value));
-        setEditing(true);
-      }}
+      onClick={onEdit}
       title="Clique para editar"
       className={`group inline-flex items-center gap-1 rounded px-1 -mx-1 border-b border-dashed border-muted-foreground/30 hover:border-primary hover:bg-primary/5 hover:text-primary transition-colors ${className ?? ""}`}
     >
@@ -307,6 +268,69 @@ function EditableCell({
       </span>
       <Pencil className="h-3 w-3 opacity-40 group-hover:opacity-90" />
     </button>
+  );
+});
+
+/** Só existe enquanto a célula está sendo editada. */
+function CellEditor({ value, onSave, parse, onDone }: EditableCellProps & { onDone: () => void }) {
+  const [draft, setDraft] = useState(String(value));
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  async function commit() {
+    const parsed = parse ? parse(draft) : Number(draft.replace(",", "."));
+    if (Number.isNaN(parsed)) {
+      onDone();
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(parsed);
+      onDone();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao salvar");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        ref={inputRef}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") onDone();
+        }}
+        onBlur={() => !saving && onDone()}
+        disabled={saving}
+        className="h-7 w-24 text-xs px-2"
+        aria-label="Novo valor"
+      />
+      <button
+        onClick={commit}
+        disabled={saving}
+        aria-label="Salvar"
+        className="text-success-fg hover:text-success-fg"
+      >
+        <Check className="h-3.5 w-3.5" />
+      </button>
+      <button
+        onClick={onDone}
+        disabled={saving}
+        aria-label="Cancelar"
+        className="text-muted-foreground hover:text-foreground"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
   );
 }
 
