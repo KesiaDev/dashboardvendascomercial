@@ -74,11 +74,8 @@ const MONTHS = [
   "Dezembro",
 ];
 
-// Valores mínimos para demonstração enquanto o cruzamento automático amadurece.
-const DEMO_VENDAS = 19;
-const DEMO_REUNIOES = 75;
-// No-shows apurados na Clint nas últimas 2 semanas.
-const NO_SHOWS_2_SEMANAS = 16;
+// Os números de reuniões, no-shows e vendas vêm agora direto da Clint (ver agente-ia.functions.ts).
+
 
 /* --------------------------------------------------------------- */
 /* Custo do agente IA (editável — a Clint não expõe API de custo)    */
@@ -299,7 +296,7 @@ function AgenteIaPage() {
             <Kpi
               icon={CalendarCheck}
               label="Reuniões agendadas"
-              value={String(Math.max(k.reunioes, DEMO_REUNIOES))}
+              value={String(Math.max(k.reunioes, d.clint.reunioesAgendadas))}
               hint={`${k.conversaoReuniaoPct}% de conversão · ${k.agendaClint} na Agenda`}
               tone="good"
             />
@@ -330,9 +327,10 @@ function AgenteIaPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {(() => {
-                const reunioes = Math.max(k.reunioes, DEMO_REUNIOES);
-                const vendas = Math.max(d.vendas.vendasTotal, DEMO_VENDAS);
-                const noShows = NO_SHOWS_2_SEMANAS;
+                const reunioes = Math.max(k.reunioes, d.clint.reunioesAgendadas);
+                const vendas = Math.max(d.vendas.vendasTotal, d.clint.ganhos);
+                const noShows = d.clint.noShows;
+
                 const realizadas = Math.max(reunioes - noShows, 0);
                 const taxaNoShow = reunioes > 0 ? (noShows / reunioes) * 100 : 0;
                 const taxaComparecimento = reunioes > 0 ? (realizadas / reunioes) * 100 : 0;
@@ -402,10 +400,58 @@ function AgenteIaPage() {
             </CardContent>
           </Card>
 
+          <Card className="border-primary/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Bot className="h-4 w-4 text-primary" /> IA de Marketing → Comercial (ponte do
+                ebook)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <Kpi
+                  icon={MessageSquare}
+                  label="Leads falaram com a IA de mkt"
+                  value={String(d.ponte.leadsMktIa)}
+                  hint="tag FALOU COM IA - MKT"
+                />
+                <Kpi icon={Bot} label="Vindos do Ebook" value={String(d.ponte.ebookComIa)} />
+                <Kpi
+                  icon={Bot}
+                  label="Vindos do Minicurso"
+                  value={String(d.ponte.minicursoComIa)}
+                />
+                <Kpi
+                  icon={TrendingUp}
+                  label="Passados ao comercial"
+                  value={String(d.ponte.passadosAoComercial)}
+                  tone="good"
+                  hint={
+                    d.ponte.leadsMktIa > 0
+                      ? `${((d.ponte.passadosAoComercial / d.ponte.leadsMktIa) * 100).toFixed(1)}% de passagem`
+                      : undefined
+                  }
+                />
+                <Kpi
+                  icon={CalendarCheck}
+                  label="Chegaram a reunião"
+                  value={String(d.ponte.comReuniao)}
+                  tone="good"
+                  hint={`${d.ponte.ganhos} venda(s) ganha(s)`}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Contamos como “passado ao comercial” o lead que a IA de marketing atendeu (ebook ou
+                minicurso) e que já tem negócio aberto no funil comercial.
+              </p>
+            </CardContent>
+          </Card>
+
           <CustoIaCard
-            vendas={Math.max(d.vendas.vendasTotal, DEMO_VENDAS)}
+            vendas={Math.max(d.vendas.vendasTotal, d.clint.ganhos)}
             receitaEur={d.vendas.valorEur}
           />
+
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
