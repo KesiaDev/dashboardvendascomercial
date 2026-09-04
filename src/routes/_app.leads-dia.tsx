@@ -44,12 +44,44 @@ function iso(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+// Últimos 12 meses, do mais recente para o mais antigo.
+const MONTH_OPTIONS = (() => {
+  const now = new Date();
+  const fmt = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
+  return Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const value = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    const label = fmt.format(d);
+    return { value, label: label.charAt(0).toUpperCase() + label.slice(1) };
+  });
+})();
+
+function monthRange(value: string) {
+  const [y, m] = value.split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const last = new Date(Date.UTC(y, m, 0));
+  const today = new Date();
+  const end = last > today ? today : last;
+  return { from: iso(first), to: iso(end) };
+}
+
 function LeadsDiaPage() {
   const today = new Date();
+  const currentMonth = `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, "0")}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [to, setTo] = useState(iso(today));
   const [from, setFrom] = useState(
     iso(new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1))),
   );
+
+  function applyMonth(value: string) {
+    setSelectedMonth(value);
+    if (value === "custom") return;
+    const r = monthRange(value);
+    setFrom(r.from);
+    setTo(r.to);
+  }
+
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["leads-dia-semana", from, to],
