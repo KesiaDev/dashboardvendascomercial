@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { lazy, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { fetchManualSalesForCommissionFn } from "@/lib/commission.functions";
@@ -30,11 +30,22 @@ import {
   Filter,
 } from "lucide-react";
 import { isRenewalProduct } from "@/lib/product-groups";
-import { ConversaoFunilCard } from "@/components/conversao-funil";
-import { OrigemV3Card } from "@/components/origem-v3";
+import { LazySection } from "@/components/lazy-section";
 
-import { MetasFunilCard } from "@/components/metas-funil";
-import { MetasIgt23Card } from "@/components/metas-igt23";
+// Painéis analíticos abaixo da dobra: código e dados só chegam quando o usuário
+// rola até eles (ver LazySection).
+const ConversaoFunilCard = lazy(() =>
+  import("@/components/conversao-funil").then((m) => ({ default: m.ConversaoFunilCard })),
+);
+const OrigemV3Card = lazy(() =>
+  import("@/components/origem-v3").then((m) => ({ default: m.OrigemV3Card })),
+);
+const MetasFunilCard = lazy(() =>
+  import("@/components/metas-funil").then((m) => ({ default: m.MetasFunilCard })),
+);
+const MetasIgt23Card = lazy(() =>
+  import("@/components/metas-igt23").then((m) => ({ default: m.MetasIgt23Card })),
+);
 
 // ─── Breakdown por funil ──────────────────────────────────────────────────────
 
@@ -725,22 +736,28 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
       />
 
       {/* Origem dos leads V3 */}
-      <OrigemV3Card from={start} to={end} title="Funis Perpétuos" />
+      <LazySection label="Funis Perpétuos…">
+        <OrigemV3Card from={start} to={end} title="Funis Perpétuos" />
+      </LazySection>
 
       {/* Meta de aproveitamento por funil */}
-      <MetasFunilCard
+      <LazySection label="Meta de aproveitamento…">
+        <MetasFunilCard
         from={start}
         to={end}
         period="semana"
         title={`Meta de Aproveitamento por Funil — S${weekIdx + 1 + WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}
-      />
+        />
+      </LazySection>
 
       {/* Conversão por vendedor × funil */}
-      <ConversaoFunilCard
-        from={start}
-        to={end}
-        title={`Conversão por Vendedor × Funil — S${weekIdx + 1 + WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}
-      />
+      <LazySection label="Conversão por vendedor…">
+        <ConversaoFunilCard
+          from={start}
+          to={end}
+          title={`Conversão por Vendedor × Funil — S${weekIdx + 1 + WEEK_LABEL_OFFSET} da temporada · ${fmtDate(start)}–${fmtDate(end)}`}
+        />
+      </LazySection>
 
       {/* Histórico + destaques */}
       <div className="grid gap-5 lg:grid-cols-[1fr_260px]">
@@ -1204,18 +1221,24 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
       <FunnelBreakdownCard sales={monthSales} title={`Vendas por Funil — ${monthLabel}`} />
 
       {/* Origem dos leads V3 */}
-      <OrigemV3Card from={`${yearMonth}-01`} to={monthEndISO} title="Funis Perpétuos" />
+      <LazySection label="Funis Perpétuos…">
+        <OrigemV3Card from={`${yearMonth}-01`} to={monthEndISO} title="Funis Perpétuos" />
+      </LazySection>
 
       {/* Meta de aproveitamento por funil */}
-      <MetasFunilCard
-        from={`${yearMonth}-01`}
-        to={monthEndISO}
-        period="mes"
-        title={`Meta de Aproveitamento por Funil — ${monthLabel}`}
-      />
+      <LazySection label="Meta de aproveitamento…">
+        <MetasFunilCard
+          from={`${yearMonth}-01`}
+          to={monthEndISO}
+          period="mes"
+          title={`Meta de Aproveitamento por Funil — ${monthLabel}`}
+        />
+      </LazySection>
 
       {/* Meta IGT23: Marketing x Comercial */}
-      <MetasIgt23Card />
+      <LazySection label="Meta IGT23…">
+        <MetasIgt23Card />
+      </LazySection>
 
       {/* Tabela de semanas do mês */}
       <Card>
