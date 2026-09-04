@@ -51,12 +51,14 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<LeadsDiaSemanaResult> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { leadBucket } = await import("@/lib/leads-comercial.server");
+    const { leadBucket, LEADS_ORIGINS } = await import("@/lib/leads-comercial.server");
 
-    // Eram até 60 páginas com await dentro do for — 60 idas ao banco em série,
-    // ~60 x latência. Agora o count vem primeiro e as páginas vão em paralelo.
+    // Só os funis comerciais interessam (leadBucket descarta o resto de qualquer
+    // forma). Filtrar no banco tira ~23k linhas da leitura e usa o índice
+    // (origin_name, created_at) — antes a query estourava o statement timeout.
     const f = <Q>(q: Q) =>
       (q as any)
+        .in("origin_name", LEADS_ORIGINS)
         .gte("created_at", `${data.from}T00:00:00Z`)
         .lte("created_at", `${data.to}T23:59:59Z`);
     const rows = await fetchAllRows<{
@@ -70,6 +72,7 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
           .range(from, to),
       () => f(supabaseAdmin.from("clint_deals").select("*", { count: "exact", head: true })),
     );
+
 
     const dias = new Map<string, { dow: number; leads: number }>();
     const porDow = new Map<number, { leads: number; porBucket: Record<string, number> }>();
