@@ -14,13 +14,10 @@ import {
   Share2,
   LogOut,
   Users,
-  Plane,
   Swords,
   Bot,
   Megaphone,
   Network,
-  Receipt,
-  Upload,
 } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
