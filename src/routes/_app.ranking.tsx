@@ -8,12 +8,30 @@ import { formatCurrency } from "@/lib/format";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getSellerPhoto } from "@/lib/seller-photos";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { getSellerPhoto, getSellerPhotoSrcSet } from "@/lib/seller-photos";
 import { Crown, Star, TrendingUp, CalendarDays, Trophy, Sparkles } from "lucide-react";
 
-const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
-  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const MONTHS_PT = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
 
 function buildMonthOptions() {
   const now = new Date();
@@ -30,14 +48,16 @@ function buildMonthOptions() {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     return {
       value: `${d.getFullYear()}-${d.getMonth() + 1}`,
-      label: i === 0 ? `${MONTHS_PT[d.getMonth()]} ${d.getFullYear()} (atual)` : `${MONTHS_PT[d.getMonth()]} ${d.getFullYear()}`,
+      label:
+        i === 0
+          ? `${MONTHS_PT[d.getMonth()]} ${d.getFullYear()} (atual)`
+          : `${MONTHS_PT[d.getMonth()]} ${d.getFullYear()}`,
       year: d.getFullYear(),
       month: d.getMonth() + 1,
     };
   });
   return [future, ...past];
 }
-
 
 export const Route = createFileRoute("/_app/ranking")({ component: RankingPage });
 
@@ -58,7 +78,16 @@ function Confetti() {
     resize();
     window.addEventListener("resize", resize);
 
-    const COLORS = ["#FFD700","#FF6B6B","#4ECDC4","#45B7D1","#C084FC","#F472B6","#34D399","#FBBF24"];
+    const COLORS = [
+      "#FFD700",
+      "#FF6B6B",
+      "#4ECDC4",
+      "#45B7D1",
+      "#C084FC",
+      "#F472B6",
+      "#34D399",
+      "#FBBF24",
+    ];
     const particles = Array.from({ length: 160 }, () => ({
       x: Math.random() * window.innerWidth,
       y: Math.random() * -400 - 20,
@@ -117,11 +146,22 @@ function Confetti() {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function initials(name: string) {
-  return name.split(" ").slice(0, 2).map((w) => w[0] ?? "").join("").toUpperCase();
+  return name
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0] ?? "")
+    .join("")
+    .toUpperCase();
 }
 
 const SPARK_POSITIONS = ["left-[5%]", "left-[20%]", "left-[50%]", "left-[75%]", "left-[90%]"];
-const SPARK_CLASSES   = ["rk-spark-0","rk-spark-1","rk-spark-2","rk-spark-3","rk-spark-4"] as const;
+const SPARK_CLASSES = [
+  "rk-spark-0",
+  "rk-spark-1",
+  "rk-spark-2",
+  "rk-spark-3",
+  "rk-spark-4",
+] as const;
 
 function SellerAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg" | "xl" }) {
   const photo = getSellerPhoto(name);
@@ -129,8 +169,10 @@ function SellerAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" 
   const tx = { sm: "text-xs", md: "text-sm", lg: "text-lg", xl: "text-xl" }[size];
   return (
     <Avatar className={`${sz} ring-2 ring-white/20`}>
-      <AvatarImage src={photo} alt={name} />
-      <AvatarFallback className={`bg-gradient-to-br from-amber-400/30 to-purple-500/30 font-bold ${tx}`}>
+      <AvatarImage src={photo} srcSet={getSellerPhotoSrcSet(name)} alt={name} loading="lazy" />
+      <AvatarFallback
+        className={`bg-gradient-to-br from-amber-400/30 to-purple-500/30 font-bold ${tx}`}
+      >
         {initials(name)}
       </AvatarFallback>
     </Avatar>
@@ -141,7 +183,10 @@ function SellerAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" 
 function computeRanks(list: SellerStats[]): number[] {
   const out: number[] = [];
   for (let i = 0; i < list.length; i++) {
-    if (i === 0) { out.push(0); continue; }
+    if (i === 0) {
+      out.push(0);
+      continue;
+    }
     const prev = list[i - 1];
     const cur = list[i];
     const tied = prev.won === cur.won && prev.revenue === cur.revenue;
@@ -160,9 +205,20 @@ const PODIUM: PodiumPos[] = [
 const PODIUM_EMOJI = ["🥇", "🥈", "🥉"] as const;
 const PODIUM_BADGE = ["rk-badge-1", "rk-badge-2", "rk-badge-3"] as const;
 
-function Podium({ top3, currency, hideRevenue }: { top3: SellerStats[]; currency: string; hideRevenue?: boolean }) {
+function Podium({
+  top3,
+  currency,
+  hideRevenue,
+}: {
+  top3: SellerStats[];
+  currency: string;
+  hideRevenue?: boolean;
+}) {
   const [show, setShow] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setShow(true), 150); return () => clearTimeout(t); }, []);
+  useEffect(() => {
+    const t = setTimeout(() => setShow(true), 150);
+    return () => clearTimeout(t);
+  }, []);
 
   if (top3.length === 0) return null;
 
@@ -180,7 +236,9 @@ function Podium({ top3, currency, hideRevenue }: { top3: SellerStats[]; currency
       <div className="mb-8 text-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-5 py-2">
           <Trophy className="rk-crown-pulse rk-d0 h-5 w-5 text-amber-400" />
-          <span className="text-sm font-bold tracking-wide text-amber-300 uppercase">Pódio do Mês</span>
+          <span className="text-sm font-bold tracking-wide text-amber-300 uppercase">
+            Pódio do Mês
+          </span>
           <Trophy className="rk-crown-pulse rk-d1 h-5 w-5 text-amber-400" />
         </div>
       </div>
@@ -188,7 +246,10 @@ function Podium({ top3, currency, hideRevenue }: { top3: SellerStats[]; currency
       <div className="flex items-end justify-center gap-3">
         {(() => {
           const podiumRanks = computeRanks(top3);
-          const crownedIdx = podiumRanks.reduce<number[]>((acc, r, i) => (r === 0 ? [...acc, i] : acc), []);
+          const crownedIdx = podiumRanks.reduce<number[]>(
+            (acc, r, i) => (r === 0 ? [...acc, i] : acc),
+            [],
+          );
           return PODIUM.map(({ pos, delayClass }) => {
             const idx = pos - 1;
             const seller = top3[idx];
@@ -212,7 +273,9 @@ function Podium({ top3, currency, hideRevenue }: { top3: SellerStats[]; currency
                 <div className="text-center">
                   <p className="text-sm font-bold text-white">{seller.name.split(" ")[0]}</p>
                   {!hideRevenue && (
-                    <p className={`text-xs font-semibold tabular-nums ${displayRank === 0 ? "text-amber-300" : displayRank === 1 ? "text-slate-300" : "text-orange-400"}`}>
+                    <p
+                      className={`text-xs font-semibold tabular-nums ${displayRank === 0 ? "text-amber-300" : displayRank === 1 ? "text-slate-300" : "text-orange-400"}`}
+                    >
                       {formatCurrency(seller.revenue, currency)}
                     </p>
                   )}
@@ -221,7 +284,9 @@ function Podium({ top3, currency, hideRevenue }: { top3: SellerStats[]; currency
                   </p>
                 </div>
 
-                <div className={`rk-pedestal-${pos} w-24 rounded-t-2xl flex items-center justify-center text-3xl font-black`}>
+                <div
+                  className={`rk-pedestal-${pos} w-24 rounded-t-2xl flex items-center justify-center text-3xl font-black`}
+                >
                   <span className={badgeClass}>{emoji}</span>
                 </div>
               </div>
@@ -237,17 +302,32 @@ function Podium({ top3, currency, hideRevenue }: { top3: SellerStats[]; currency
 const DESTAQUE_SPARKS = ["left-[15%]", "left-[55%]", "left-[80%]"];
 
 function DestaqueCard({
-  label, icon: Icon, seller, accentClass, isTop, currency, fadeClass, hideRevenue,
+  label,
+  icon: Icon,
+  seller,
+  accentClass,
+  isTop,
+  currency,
+  fadeClass,
+  hideRevenue,
 }: {
-  label: string; icon: React.ElementType; seller: SellerStats | null;
-  accentClass: string; isTop?: boolean; currency: string; fadeClass: string; hideRevenue?: boolean;
+  label: string;
+  icon: React.ElementType;
+  seller: SellerStats | null;
+  accentClass: string;
+  isTop?: boolean;
+  currency: string;
+  fadeClass: string;
+  hideRevenue?: boolean;
 }) {
   if (!seller) {
     return (
       <div className={`rounded-2xl border border-border/50 bg-card/60 p-5 ${fadeClass}`}>
         <div className="flex items-center gap-2 mb-3">
           <Icon className={`h-4 w-4 ${accentClass}`} />
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {label}
+          </span>
         </div>
         <p className="text-sm text-muted-foreground">Sem vendas nesse período.</p>
       </div>
@@ -255,7 +335,9 @@ function DestaqueCard({
   }
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border p-5 transition-all ${isTop ? "rk-destaque-top" : "rk-destaque-base"} ${fadeClass}`}>
+    <div
+      className={`relative overflow-hidden rounded-2xl border p-5 transition-all ${isTop ? "rk-destaque-top" : "rk-destaque-base"} ${fadeClass}`}
+    >
       {isTop && (
         <>
           <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-amber-400/15 blur-2xl" />
@@ -271,7 +353,9 @@ function DestaqueCard({
       )}
       <div className="relative mb-4 flex items-center gap-2">
         <Icon className={`h-4 w-4 ${accentClass}`} />
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {label}
+        </span>
       </div>
       <div className="relative flex items-center gap-4">
         <SellerAvatar name={seller.name} size="lg" />
@@ -296,20 +380,43 @@ function DestaqueCard({
 
 // ── Rank row ────────────────────────────────────────────────────────────────
 const MEDALS = ["🥇", "🥈", "🥉"];
-const ROW_CLASSES = ["rk-row-0","rk-row-1","rk-row-2","rk-row-3","rk-row-4","rk-row-5"] as const;
+const ROW_CLASSES = [
+  "rk-row-0",
+  "rk-row-1",
+  "rk-row-2",
+  "rk-row-3",
+  "rk-row-4",
+  "rk-row-5",
+] as const;
 
-function RankRow({ rank, displayRank, seller, currency, hideRevenue }: { rank: number; displayRank: number; seller: SellerStats; currency: string; hideRevenue?: boolean }) {
+function RankRow({
+  rank,
+  displayRank,
+  seller,
+  currency,
+  hideRevenue,
+}: {
+  rank: number;
+  displayRank: number;
+  seller: SellerStats;
+  currency: string;
+  hideRevenue?: boolean;
+}) {
   const rowAnim = ROW_CLASSES[Math.min(rank, ROW_CLASSES.length - 1)];
   return (
     <div
       className={`${rowAnim} flex items-center justify-between rounded-xl border px-4 py-3 transition-all ${
-        displayRank === 0 ? "border-amber-400/25 bg-gradient-to-r from-amber-400/10 to-transparent"
-        : displayRank === 1 ? "border-slate-400/20 bg-gradient-to-r from-slate-400/5 to-transparent"
-        : "border-border/50 bg-card/50"
+        displayRank === 0
+          ? "border-amber-400/25 bg-gradient-to-r from-amber-400/10 to-transparent"
+          : displayRank === 1
+            ? "border-slate-400/20 bg-gradient-to-r from-slate-400/5 to-transparent"
+            : "border-border/50 bg-card/50"
       }`}
     >
       <div className="flex items-center gap-3">
-        <div className="w-8 text-center text-xl">{MEDALS[displayRank] ?? `#${displayRank + 1}`}</div>
+        <div className="w-8 text-center text-xl">
+          {MEDALS[displayRank] ?? `#${displayRank + 1}`}
+        </div>
         <SellerAvatar name={seller.name} size="sm" />
         <div>
           <div className="text-sm font-semibold">{seller.name.split(" ")[0]}</div>
@@ -320,7 +427,9 @@ function RankRow({ rank, displayRank, seller, currency, hideRevenue }: { rank: n
       </div>
       {!hideRevenue && (
         <div className="text-right">
-          <div className="tabular-nums text-sm font-bold">{formatCurrency(seller.revenue, currency)}</div>
+          <div className="tabular-nums text-sm font-bold">
+            {formatCurrency(seller.revenue, currency)}
+          </div>
           <div className="text-xs text-muted-foreground">
             {seller.won > 0
               ? `${formatCurrency(Math.round(seller.revenue / seller.won), currency)} ticket`
@@ -341,7 +450,8 @@ function RankingPage() {
   const monthOptions = buildMonthOptions();
   const [selectedValue, setSelectedValue] = useState(monthOptions[0].value);
   const selected = monthOptions.find((o) => o.value === selectedValue) ?? monthOptions[0];
-  const isCurrentMonth = selected.year === now.getFullYear() && selected.month === now.getMonth() + 1;
+  const isCurrentMonth =
+    selected.year === now.getFullYear() && selected.month === now.getMonth() + 1;
   // Junho/2026 e anteriores: ranking só por quantidade (valor escondido).
   // Julho/2026 em diante: ranking com valor + quantidade (fechamento manual).
   const hideRevenue = selected.year < 2026 || (selected.year === 2026 && selected.month <= 6);
@@ -354,9 +464,9 @@ function RankingPage() {
 
   const destaques = data?.destaques ?? { dia: null, semana: null, mes: null };
   const ranking = {
-    mes:    (data?.mes    ?? []) as SellerStats[],
+    mes: (data?.mes ?? []) as SellerStats[],
     semana: (data?.semana ?? []) as SellerStats[],
-    dia:    (data?.dia    ?? []) as SellerStats[],
+    dia: (data?.dia ?? []) as SellerStats[],
   };
 
   return (
@@ -371,7 +481,9 @@ function RankingPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Ranking de Campeões</h1>
-              <p className="text-sm text-muted-foreground">Performance da equipe em tempo real 🚀</p>
+              <p className="text-sm text-muted-foreground">
+                Performance da equipe em tempo real 🚀
+              </p>
             </div>
           </div>
           <Select value={selectedValue} onValueChange={setSelectedValue}>
@@ -380,7 +492,9 @@ function RankingPage() {
             </SelectTrigger>
             <SelectContent>
               {monthOptions.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -395,13 +509,47 @@ function RankingPage() {
           </div>
           {isCurrentMonth ? (
             <div className="grid gap-4 sm:grid-cols-3">
-              <DestaqueCard label="Vendas de hoje (parcial)" icon={CalendarDays} seller={destaques.dia}    accentClass="text-blue-400"   currency={currency} fadeClass="rk-fadein-2" hideRevenue={hideRevenue} />
-              <DestaqueCard label="Destaque da semana"       icon={TrendingUp}   seller={destaques.semana} accentClass="text-violet-400" currency={currency} fadeClass="rk-fadein-3" hideRevenue={hideRevenue} />
-              <DestaqueCard label="Campeão do mês"           icon={Crown}        seller={destaques.mes}    accentClass="text-amber-400"  currency={currency} fadeClass="rk-fadein-4" isTop hideRevenue={hideRevenue} />
+              <DestaqueCard
+                label="Vendas de hoje (parcial)"
+                icon={CalendarDays}
+                seller={destaques.dia}
+                accentClass="text-blue-400"
+                currency={currency}
+                fadeClass="rk-fadein-2"
+                hideRevenue={hideRevenue}
+              />
+              <DestaqueCard
+                label="Destaque da semana"
+                icon={TrendingUp}
+                seller={destaques.semana}
+                accentClass="text-violet-400"
+                currency={currency}
+                fadeClass="rk-fadein-3"
+                hideRevenue={hideRevenue}
+              />
+              <DestaqueCard
+                label="Campeão do mês"
+                icon={Crown}
+                seller={destaques.mes}
+                accentClass="text-amber-400"
+                currency={currency}
+                fadeClass="rk-fadein-4"
+                isTop
+                hideRevenue={hideRevenue}
+              />
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-1 max-w-sm">
-              <DestaqueCard label={`Campeão — ${selected.label}`} icon={Crown} seller={destaques.mes} accentClass="text-amber-400" currency={currency} fadeClass="rk-fadein-2" isTop hideRevenue={hideRevenue} />
+              <DestaqueCard
+                label={`Campeão — ${selected.label}`}
+                icon={Crown}
+                seller={destaques.mes}
+                accentClass="text-amber-400"
+                currency={currency}
+                fadeClass="rk-fadein-2"
+                isTop
+                hideRevenue={hideRevenue}
+              />
             </div>
           )}
         </section>
@@ -417,18 +565,29 @@ function RankingPage() {
             {isCurrentMonth ? (
               <Tabs defaultValue="mes">
                 <TabsList>
-              <TabsTrigger value="dia">Hoje</TabsTrigger>
-              <TabsTrigger value="semana">Semana</TabsTrigger>
-              <TabsTrigger value="mes">Mês</TabsTrigger>
+                  <TabsTrigger value="dia">Hoje</TabsTrigger>
+                  <TabsTrigger value="semana">Semana</TabsTrigger>
+                  <TabsTrigger value="mes">Mês</TabsTrigger>
                 </TabsList>
                 {(["dia", "semana", "mes"] as const).map((tab) => {
                   const ranks = computeRanks(ranking[tab]);
                   return (
                     <TabsContent key={tab} value={tab} className="mt-4 space-y-2">
                       {ranking[tab].length === 0 ? (
-                        <p className="py-6 text-center text-sm text-muted-foreground">Sem vendas fechadas nesse período.</p>
+                        <p className="py-6 text-center text-sm text-muted-foreground">
+                          Sem vendas fechadas nesse período.
+                        </p>
                       ) : (
-                        ranking[tab].map((s, i) => <RankRow key={s.user_id} rank={i} displayRank={ranks[i]} seller={s} currency={currency} hideRevenue={hideRevenue} />)
+                        ranking[tab].map((s, i) => (
+                          <RankRow
+                            key={s.user_id}
+                            rank={i}
+                            displayRank={ranks[i]}
+                            seller={s}
+                            currency={currency}
+                            hideRevenue={hideRevenue}
+                          />
+                        ))
                       )}
                     </TabsContent>
                   );
@@ -437,18 +596,28 @@ function RankingPage() {
             ) : (
               <div className="mt-2 space-y-2">
                 {ranking.mes.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">Sem vendas nesse mês.</p>
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    Sem vendas nesse mês.
+                  </p>
                 ) : (
                   (() => {
                     const ranks = computeRanks(ranking.mes);
-                    return ranking.mes.map((s, i) => <RankRow key={s.user_id} rank={i} displayRank={ranks[i]} seller={s} currency={currency} hideRevenue={hideRevenue} />);
+                    return ranking.mes.map((s, i) => (
+                      <RankRow
+                        key={s.user_id}
+                        rank={i}
+                        displayRank={ranks[i]}
+                        seller={s}
+                        currency={currency}
+                        hideRevenue={hideRevenue}
+                      />
+                    ));
                   })()
                 )}
               </div>
             )}
           </CardContent>
         </Card>
-
       </div>
     </>
   );

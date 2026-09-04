@@ -1,34 +1,48 @@
 import { Link, Outlet, createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ClipboardCheck, CalendarDays, CalendarRange, Trophy, DollarSign, Menu, Sparkles, Share2, LogOut, Users, Target, Plane, Swords, Bot } from "lucide-react";
+import {
+  ClipboardCheck,
+  CalendarDays,
+  CalendarRange,
+  Trophy,
+  DollarSign,
+  Menu,
+  Sparkles,
+  Share2,
+  LogOut,
+  Users,
+  Target,
+  Plane,
+  Swords,
+  Bot,
+} from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { isAdminUser, ALLOWED_NON_ADMIN_ROUTES, getSessionFast } from "@/lib/auth";
-import logoIcon from "@/assets/logo-icon.png";
+import logoIcon from "@/assets/logo-icon.webp";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
 });
 
 const ALL_NAV_ITEMS = [
-  { to: "/fechamento",          label: "Fechamento",         icon: ClipboardCheck,   adminOnly: false },
-  { to: "/fechamento-semanal",  label: "Fechamento Semanal", icon: CalendarDays,     adminOnly: false },
-  
-  { to: "/ferias",              label: "Férias da Equipe",   icon: Plane,            adminOnly: false },
-  { to: "/ranking",             label: "Ranking",            icon: Trophy,           adminOnly: true },
-  { to: "/metas-comercial",     label: "Metas Comercial",    icon: Target,           adminOnly: true },
-  
+  { to: "/fechamento", label: "Fechamento", icon: ClipboardCheck, adminOnly: false },
+  { to: "/fechamento-semanal", label: "Fechamento Semanal", icon: CalendarDays, adminOnly: false },
 
-  { to: "/comissionamento",     label: "Comissionamento",    icon: DollarSign,       adminOnly: true },
-  { to: "/coach",               label: "Análise Comercial",  icon: Sparkles,         adminOnly: false },
-  { to: "/leads-dia",           label: "Leads por Dia",      icon: CalendarRange,    adminOnly: false },
-  { to: "/agente-ia",           label: "Agente IA",          icon: Bot,              adminOnly: true },
-  { to: "/arena",               label: "Arena Comercial",    icon: Swords,           adminOnly: false },
-  { to: "/indicacoes",          label: "Indicações",         icon: Share2,           adminOnly: false },
-  { to: "/usuarios",            label: "Usuários",           icon: Users,            adminOnly: true },
+  { to: "/ferias", label: "Férias da Equipe", icon: Plane, adminOnly: false },
+  { to: "/ranking", label: "Ranking", icon: Trophy, adminOnly: true },
+  { to: "/metas-comercial", label: "Metas Comercial", icon: Target, adminOnly: true },
+
+  { to: "/comissionamento", label: "Comissionamento", icon: DollarSign, adminOnly: true },
+  { to: "/coach", label: "Análise Comercial", icon: Sparkles, adminOnly: false },
+  { to: "/leads-dia", label: "Leads por Dia", icon: CalendarRange, adminOnly: false },
+  { to: "/agente-ia", label: "Agente IA", icon: Bot, adminOnly: true },
+  { to: "/arena", label: "Arena Comercial", icon: Swords, adminOnly: false },
+  { to: "/indicacoes", label: "Indicações", icon: Share2, adminOnly: false },
+  { to: "/usuarios", label: "Usuários", icon: Users, adminOnly: true },
 ] as const;
 
 function AppLayout() {
@@ -42,12 +56,20 @@ function AppLayout() {
     let cancelled = false;
     getSessionFast().then((session) => {
       if (cancelled) return;
-      setUser(session?.user ? { email: session.user.email ?? null, user_metadata: session.user.user_metadata } : null);
+      setUser(
+        session?.user
+          ? { email: session.user.email ?? null, user_metadata: session.user.user_metadata }
+          : null,
+      );
       setStatus(session ? "ready" : "auth");
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
-      setUser(session?.user ? { email: session.user.email ?? null, user_metadata: session.user.user_metadata } : null);
+      setUser(
+        session?.user
+          ? { email: session.user.email ?? null, user_metadata: session.user.user_metadata }
+          : null,
+      );
       setStatus(session ? "ready" : "auth");
     });
     return () => {
@@ -65,7 +87,9 @@ function AppLayout() {
   useEffect(() => {
     if (status !== "ready") return;
     if (admin) return;
-    const allowed = ALLOWED_NON_ADMIN_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
+    const allowed = ALLOWED_NON_ADMIN_ROUTES.some(
+      (r) => pathname === r || pathname.startsWith(r + "/"),
+    );
     if (!allowed) {
       navigate({ to: "/fechamento", replace: true });
     }
@@ -100,7 +124,13 @@ function AppLayout() {
               <SheetContent side="left" className="w-72 p-0">
                 <SheetHeader className="border-b border-border px-6 py-4">
                   <SheetTitle className="flex items-center gap-3">
-                    <img src={logoIcon} alt="" className="h-8 w-8 object-contain" />
+                    <img
+                      src={logoIcon}
+                      alt=""
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 object-contain"
+                    />
                     <span className="text-sm">Dashcomercial LLMídia</span>
                   </SheetTitle>
                 </SheetHeader>
@@ -119,7 +149,13 @@ function AppLayout() {
                 </nav>
               </SheetContent>
             </Sheet>
-            <img src={logoIcon} alt="Dashcomercial LLMídia" className="h-9 w-9 object-contain" />
+            <img
+              src={logoIcon}
+              alt="Dashcomercial LLMídia"
+              width={36}
+              height={36}
+              className="h-9 w-9 object-contain"
+            />
             <span className="text-sm font-semibold">Dashcomercial LLMídia</span>
           </div>
           <div className="flex items-center gap-2">

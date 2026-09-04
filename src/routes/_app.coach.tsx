@@ -5,12 +5,39 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  Sparkles, Upload, AlertTriangle, Settings, MessageSquare,
-  TrendingUp, Clock, Target, Users, RefreshCw, Trash2, CheckCircle2,
-  Zap, Copy, Eye, BarChart2, TrendingDown, Phone, Plus, X, Award, CalendarIcon, GraduationCap,
+  Sparkles,
+  Upload,
+  AlertTriangle,
+  Settings,
+  MessageSquare,
+  TrendingUp,
+  Clock,
+  Target,
+  Users,
+  RefreshCw,
+  Trash2,
+  CheckCircle2,
+  Zap,
+  Copy,
+  Eye,
+  BarChart2,
+  TrendingDown,
+  Phone,
+  Plus,
+  X,
+  Award,
+  CalendarIcon,
+  GraduationCap,
 } from "lucide-react";
-import { fetchPerformanceFn, generatePerformanceFeedbackFn, rangeBoundsFor, type PerfRange, type SellerPerf, type PerfResult } from "@/lib/performance.functions";
-import { getSellerPhoto } from "@/lib/seller-photos";
+import {
+  fetchPerformanceFn,
+  generatePerformanceFeedbackFn,
+  rangeBoundsFor,
+  type PerfRange,
+  type SellerPerf,
+  type PerfResult,
+} from "@/lib/performance.functions";
+import { getSellerPhoto, getSellerPhotoSrcSet } from "@/lib/seller-photos";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,29 +51,55 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  listCoachConversationsFn, listCoachAlertsFn, uploadConversationFn,
-  analyzeConversationFn, runAlertsScanFn, resolveCoachAlertFn,
-  deleteCoachConversationFn, getCoachConfigFn, saveCoachConfigFn,
-  fetchClintWebhookStatsFn, fetchClintIntegrationLogsFn, runClintMigrationsFn,
-  fetchWeeklyStatsFn, runAutoAnalysisFn, syncClintMessagesFn,
-  generateTeamInsightsFn, type TeamInsights,
-  type CoachConfig, type WeeklyStats,
+  listCoachConversationsFn,
+  listCoachAlertsFn,
+  uploadConversationFn,
+  analyzeConversationFn,
+  runAlertsScanFn,
+  resolveCoachAlertFn,
+  deleteCoachConversationFn,
+  getCoachConfigFn,
+  saveCoachConfigFn,
+  fetchClintWebhookStatsFn,
+  fetchClintIntegrationLogsFn,
+  runClintMigrationsFn,
+  fetchWeeklyStatsFn,
+  runAutoAnalysisFn,
+  syncClintMessagesFn,
+  generateTeamInsightsFn,
+  type TeamInsights,
+  type CoachConfig,
+  type WeeklyStats,
 } from "@/lib/coach.functions";
 import { getHotmartWebhookTokenFn } from "@/lib/hotmart-webhook.functions";
-import { syncCcpbxCallsFn, listCcpbxCallsFn, analyzeCallFn, type CallRow } from "@/lib/ccpbx.functions";
+import {
+  syncCcpbxCallsFn,
+  listCcpbxCallsFn,
+  analyzeCallFn,
+  type CallRow,
+} from "@/lib/ccpbx.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { isAdminUser, isAllowedSellerEmail, isCaseOwnerEmail } from "@/lib/auth";
 import { CasesTab } from "@/components/coach-cases";
 import { ObjecoesTab } from "@/components/coach-objecoes";
 import { PerfisTab } from "@/components/coach-perfis";
 
-
 export const Route = createFileRoute("/_app/coach")({
   component: CoachPage,
 });
 
-type CoachUserInfo = { isAdmin: boolean; email: string | null; sellerNameGuess: string | null; isAllowedSeller: boolean };
-const CoachUserCtx = React.createContext<CoachUserInfo>({ isAdmin: true, email: null, sellerNameGuess: null, isAllowedSeller: false });
+type CoachUserInfo = {
+  isAdmin: boolean;
+  email: string | null;
+  sellerNameGuess: string | null;
+  isAllowedSeller: boolean;
+};
+const CoachUserCtx = React.createContext<CoachUserInfo>({
+  isAdmin: true,
+  email: null,
+  sellerNameGuess: null,
+  isAllowedSeller: false,
+});
 const useCoachUser = () => React.useContext(CoachUserCtx);
 
 function SemAcessoIndividual() {
@@ -60,7 +113,11 @@ function SemAcessoIndividual() {
 function fmtDate(iso: string | null | undefined) {
   if (!iso) return "—";
   const d = new Date(iso);
-  return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return (
+    d.toLocaleDateString("pt-BR") +
+    " " +
+    d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+  );
 }
 function fmtEur(n: number | null | undefined) {
   if (n == null) return "—";
@@ -72,12 +129,18 @@ function sentimentColor(s: string | null | undefined) {
   return "bg-slate-500/15 text-slate-700 dark:text-slate-300";
 }
 const SELLER_NAME_MAP: { match: string[]; name: string }[] = [
-  { name: "João Pessoa",      match: ["joaopessoa", "jpessoa20", "joao pessoa", "joão pessoa"] },
-  { name: "Fabio Nadal",      match: ["fabionadal", "fabio nadal", "nadal"] },
-  { name: "Luana Guimarães",  match: ["luanaguimaraes", "luana.guimaraes", "luana guimaraes", "luana guimarães", "luana"] },
+  { name: "João Pessoa", match: ["joaopessoa", "jpessoa20", "joao pessoa", "joão pessoa"] },
+  { name: "Fabio Nadal", match: ["fabionadal", "fabio nadal", "nadal"] },
+  {
+    name: "Luana Guimarães",
+    match: ["luanaguimaraes", "luana.guimaraes", "luana guimaraes", "luana guimarães", "luana"],
+  },
   { name: "Kesia Nandi", match: ["kesiawnandi", "kesia nandi", "kesia", "késia", "nandi"] },
-  { name: "Gisele Pimentel",  match: ["giselegagliano", "gisele gagliano", "gisele pimentel", "gisele"] },
-  { name: "Rita Bandeira",    match: ["ritabandeira", "rita bandeira", "rita"] },
+  {
+    name: "Gisele Pimentel",
+    match: ["giselegagliano", "gisele gagliano", "gisele pimentel", "gisele"],
+  },
+  { name: "Rita Bandeira", match: ["ritabandeira", "rita bandeira", "rita"] },
 ];
 function displaySellerName(nameOrEmail: string | null | undefined): string {
   const raw = (nameOrEmail ?? "").trim().replace(/\s+/g, " ");
@@ -99,7 +162,6 @@ function isMetricSeller(nameOrEmail: string | null | undefined): boolean {
   return !EXCLUDED_SELLER_KEYS.some((k) => n.includes(k));
 }
 function scoreColor(n: number | null | undefined) {
-
   if (n == null) return "text-muted-foreground";
   if (n >= 8) return "text-emerald-600 dark:text-emerald-400";
   if (n >= 6) return "text-amber-600 dark:text-amber-400";
@@ -110,19 +172,34 @@ function CoachPage() {
   const [user, setUser] = useState<{ email: string | null; user_metadata?: any } | null>(null);
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user ? { email: data.user.email ?? null, user_metadata: data.user.user_metadata } : null);
+      setUser(
+        data.user
+          ? { email: data.user.email ?? null, user_metadata: data.user.user_metadata }
+          : null,
+      );
     });
   }, []);
   const isAdmin = isAdminUser(user);
   const sellerNameGuess = user?.email ? displaySellerName(user.email) : null;
   const isAllowedSeller = isAllowedSellerEmail(user?.email);
   const isCaseOwner = isCaseOwnerEmail(user?.email);
-  const userInfo: CoachUserInfo = { isAdmin, email: user?.email ?? null, sellerNameGuess, isAllowedSeller };
+  const userInfo: CoachUserInfo = {
+    isAdmin,
+    email: user?.email ?? null,
+    sellerNameGuess,
+    isAllowedSeller,
+  };
 
   const [tab, setTab] = useState(isAdmin ? "visao" : "performance");
-  useEffect(() => { if (!isAdmin) setTab("performance"); }, [isAdmin]);
+  useEffect(() => {
+    if (!isAdmin) setTab("performance");
+  }, [isAdmin]);
   const qc = useQueryClient();
-  const { data: cfg } = useQuery({ queryKey: ["coach-config"], queryFn: () => getCoachConfigFn(), enabled: isAdmin });
+  const { data: cfg } = useQuery({
+    queryKey: ["coach-config"],
+    queryFn: () => getCoachConfigFn(),
+    enabled: isAdmin,
+  });
 
   const autoEnabled = cfg?.auto_analysis ?? true;
   const analysisIntervalMs = (cfg?.analysis_interval_hours ?? 1) * 60 * 60 * 1000;
@@ -131,10 +208,18 @@ function CoachPage() {
 
   useEffect(() => {
     if (!isAdmin) return;
-    scanTimerRef.current = setInterval(async () => {
-      try { await runAlertsScanFn(); qc.invalidateQueries({ queryKey: ["coach-alerts"] }); } catch {}
-    }, 5 * 60 * 1000);
-    return () => { if (scanTimerRef.current) clearInterval(scanTimerRef.current); };
+    scanTimerRef.current = setInterval(
+      async () => {
+        try {
+          await runAlertsScanFn();
+          qc.invalidateQueries({ queryKey: ["coach-alerts"] });
+        } catch {}
+      },
+      5 * 60 * 1000,
+    );
+    return () => {
+      if (scanTimerRef.current) clearInterval(scanTimerRef.current);
+    };
   }, [qc, isAdmin]);
 
   useEffect(() => {
@@ -154,65 +239,172 @@ function CoachPage() {
     // worker. O backfill periódico é responsabilidade do cron em
     // /api/public/sync/coach-auto; aqui só mantemos o refresh da sessão aberta.
     analysisTimerRef.current = setInterval(runAnalysis, analysisIntervalMs);
-    return () => { if (analysisTimerRef.current) clearInterval(analysisTimerRef.current); };
+    return () => {
+      if (analysisTimerRef.current) clearInterval(analysisTimerRef.current);
+    };
   }, [autoEnabled, analysisIntervalMs, qc, isAdmin]);
 
   return (
     <CoachUserCtx.Provider value={userInfo}>
-    <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
-      <div className="flex items-center gap-3">
-        <Sparkles className="h-6 w-6 text-muted-foreground" />
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold">Análise Comercial</h1>
-          <p className="text-xs text-muted-foreground">
-            {isAdmin ? "Análise inteligente das conversas dos vendedores" : `Sua visão pessoal${sellerNameGuess ? " · " + sellerNameGuess : ""}`}
-          </p>
+      <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
+        <div className="flex items-center gap-3">
+          <Sparkles className="h-6 w-6 text-muted-foreground" />
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold">Análise Comercial</h1>
+            <p className="text-xs text-muted-foreground">
+              {isAdmin
+                ? "Análise inteligente das conversas dos vendedores"
+                : `Sua visão pessoal${sellerNameGuess ? " · " + sellerNameGuess : ""}`}
+            </p>
+          </div>
+
+          {isAdmin && autoEnabled && (
+            <Badge
+              variant="outline"
+              className="ml-auto text-[10px] text-emerald-600 border-emerald-500/40"
+            >
+              ● auto-análise ativa
+            </Badge>
+          )}
         </div>
 
-        {isAdmin && autoEnabled && (
-          <Badge variant="outline" className="ml-auto text-[10px] text-emerald-600 border-emerald-500/40">
-            ● auto-análise ativa
-          </Badge>
-        )}
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="w-full flex-wrap h-auto">
+            {isAdmin && (
+              <TabsTrigger value="visao">
+                <TrendingUp className="h-4 w-4 mr-1" />
+                Visão geral
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="performance">
+              <Award className="h-4 w-4 mr-1" />
+              Performance
+            </TabsTrigger>
+            <TabsTrigger value="conversas">
+              <MessageSquare className="h-4 w-4 mr-1" />
+              Conversas
+            </TabsTrigger>
+            <TabsTrigger value="ligacoes">
+              <Phone className="h-4 w-4 mr-1" />
+              Ligações
+            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="objecoes">
+                <TrendingDown className="h-4 w-4 mr-1" />
+                Objeções
+              </TabsTrigger>
+            )}
+            {isAdmin && (
+              <TabsTrigger value="perfis">
+                <Users className="h-4 w-4 mr-1" />
+                Perfis de leads
+              </TabsTrigger>
+            )}
+            {isCaseOwner && (
+              <TabsTrigger value="cases">
+                <GraduationCap className="h-4 w-4 mr-1" />
+                Cases
+              </TabsTrigger>
+            )}
+            {isAdmin && (
+              <TabsTrigger value="alertas">
+                <AlertTriangle className="h-4 w-4 mr-1" />
+                Alertas
+              </TabsTrigger>
+            )}
+            {isAdmin && (
+              <TabsTrigger value="upload">
+                <Upload className="h-4 w-4 mr-1" />
+                Nova análise
+              </TabsTrigger>
+            )}
+            {isAdmin && (
+              <TabsTrigger value="config">
+                <Settings className="h-4 w-4 mr-1" />
+                Config
+              </TabsTrigger>
+            )}
+            {isAdmin && (
+              <TabsTrigger value="integracao">
+                <Zap className="h-4 w-4 mr-1" />
+                Integração Clint
+              </TabsTrigger>
+            )}
+          </TabsList>
+          {isAdmin && (
+            <TabsContent value="visao">
+              <VisaoGeral />
+            </TabsContent>
+          )}
+          <TabsContent value="performance">
+            {isAdmin || isAllowedSeller ? <PerformanceTab /> : <SemAcessoIndividual />}
+          </TabsContent>
+          <TabsContent value="conversas">
+            {isAdmin || isAllowedSeller ? <Conversas /> : <SemAcessoIndividual />}
+          </TabsContent>
+          <TabsContent value="ligacoes">
+            {isAdmin || isAllowedSeller ? <LigacoesTab /> : <SemAcessoIndividual />}
+          </TabsContent>
+          {isAdmin && (
+            <TabsContent value="objecoes">
+              <ObjecoesTab />
+            </TabsContent>
+          )}
+          {isAdmin && (
+            <TabsContent value="perfis">
+              <PerfisTab />
+            </TabsContent>
+          )}
+
+          {isCaseOwner && (
+            <TabsContent value="cases">
+              <CasesTab />
+            </TabsContent>
+          )}
+          {isAdmin && (
+            <TabsContent value="alertas">
+              <Alertas />
+            </TabsContent>
+          )}
+          {isAdmin && (
+            <TabsContent value="upload">
+              <UploadTab onDone={() => setTab("conversas")} />
+            </TabsContent>
+          )}
+          {isAdmin && (
+            <TabsContent value="config">
+              <ConfigTab />
+            </TabsContent>
+          )}
+          {isAdmin && (
+            <TabsContent value="integracao">
+              <IntegracaoClint />
+            </TabsContent>
+          )}
+        </Tabs>
       </div>
-
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="w-full flex-wrap h-auto">
-          {isAdmin && <TabsTrigger value="visao"><TrendingUp className="h-4 w-4 mr-1" />Visão geral</TabsTrigger>}
-          <TabsTrigger value="performance"><Award className="h-4 w-4 mr-1" />Performance</TabsTrigger>
-          <TabsTrigger value="conversas"><MessageSquare className="h-4 w-4 mr-1" />Conversas</TabsTrigger>
-          <TabsTrigger value="ligacoes"><Phone className="h-4 w-4 mr-1" />Ligações</TabsTrigger>
-          {isAdmin && <TabsTrigger value="objecoes"><TrendingDown className="h-4 w-4 mr-1" />Objeções</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="perfis"><Users className="h-4 w-4 mr-1" />Perfis de leads</TabsTrigger>}
-          {isCaseOwner && <TabsTrigger value="cases"><GraduationCap className="h-4 w-4 mr-1" />Cases</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="alertas"><AlertTriangle className="h-4 w-4 mr-1" />Alertas</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="upload"><Upload className="h-4 w-4 mr-1" />Nova análise</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="config"><Settings className="h-4 w-4 mr-1" />Config</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="integracao"><Zap className="h-4 w-4 mr-1" />Integração Clint</TabsTrigger>}
-        </TabsList>
-        {isAdmin && <TabsContent value="visao"><VisaoGeral /></TabsContent>}
-        <TabsContent value="performance">{isAdmin || isAllowedSeller ? <PerformanceTab /> : <SemAcessoIndividual />}</TabsContent>
-        <TabsContent value="conversas">{isAdmin || isAllowedSeller ? <Conversas /> : <SemAcessoIndividual />}</TabsContent>
-        <TabsContent value="ligacoes">{isAdmin || isAllowedSeller ? <LigacoesTab /> : <SemAcessoIndividual />}</TabsContent>
-        {isAdmin && <TabsContent value="objecoes"><ObjecoesTab /></TabsContent>}
-        {isAdmin && <TabsContent value="perfis"><PerfisTab /></TabsContent>}
-
-        {isCaseOwner && <TabsContent value="cases"><CasesTab /></TabsContent>}
-        {isAdmin && <TabsContent value="alertas"><Alertas /></TabsContent>}
-        {isAdmin && <TabsContent value="upload"><UploadTab onDone={() => setTab("conversas")} /></TabsContent>}
-        {isAdmin && <TabsContent value="config"><ConfigTab /></TabsContent>}
-        {isAdmin && <TabsContent value="integracao"><IntegracaoClint /></TabsContent>}
-      </Tabs>
-    </div>
     </CoachUserCtx.Provider>
   );
 }
 
-function KpiCard({ icon, label, value, valueClass = "" }: { icon: React.ReactNode; label: string; value: string; valueClass?: string }) {
+function KpiCard({
+  icon,
+  label,
+  value,
+  valueClass = "",
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
   return (
     <Card className="h-full">
       <CardContent className="h-full pt-4 pb-3 flex flex-col justify-between">
-        <div className="flex items-start gap-2 text-xs text-muted-foreground min-h-[2.5rem] leading-tight">{icon}{label}</div>
+        <div className="flex items-start gap-2 text-xs text-muted-foreground min-h-[2.5rem] leading-tight">
+          {icon}
+          {label}
+        </div>
         <p className={"text-2xl font-bold " + valueClass}>{value}</p>
       </CardContent>
     </Card>
@@ -220,7 +412,9 @@ function KpiCard({ icon, label, value, valueClass = "" }: { icon: React.ReactNod
 }
 
 function WeeklyChart({ stats }: { stats: WeeklyStats[] }) {
-  const weeks = [...new Set(stats.map((s) => s.week_start))].sort((a, b) => b.localeCompare(a)).slice(0, 6);
+  const weeks = [...new Set(stats.map((s) => s.week_start))]
+    .sort((a, b) => b.localeCompare(a))
+    .slice(0, 6);
   // Dedup por nome canônico (mesmo vendedor pode aparecer como email + variantes)
   type Agg = { sum: number; n: number };
   const byCanonical = new Map<string, Map<string, Agg>>(); // canonical → week → agg
@@ -229,12 +423,15 @@ function WeeklyChart({ stats }: { stats: WeeklyStats[] }) {
     if (!isMetricSeller(canonical)) continue;
     let weekMap = byCanonical.get(canonical);
 
-
-    if (!weekMap) { weekMap = new Map(); byCanonical.set(canonical, weekMap); }
+    if (!weekMap) {
+      weekMap = new Map();
+      byCanonical.set(canonical, weekMap);
+    }
     const w = s.week_start;
     const cur = weekMap.get(w) ?? { sum: 0, n: 0 };
     const score = Number(s.avg_score ?? 0);
-    cur.sum += score; cur.n += 1;
+    cur.sum += score;
+    cur.n += 1;
     weekMap.set(w, cur);
   }
   const sellers = Array.from(byCanonical.keys()).sort();
@@ -245,10 +442,18 @@ function WeeklyChart({ stats }: { stats: WeeklyStats[] }) {
       <table className="w-full text-xs border-separate border-spacing-0">
         <thead>
           <tr>
-            <th className="text-left py-1 pr-3 text-muted-foreground font-normal min-w-[120px]">Vendedor</th>
+            <th className="text-left py-1 pr-3 text-muted-foreground font-normal min-w-[120px]">
+              Vendedor
+            </th>
             {weeks.map((w) => (
-              <th key={w} className="px-2 text-center text-muted-foreground font-normal whitespace-nowrap">
-                {new Date(w + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+              <th
+                key={w}
+                className="px-2 text-center text-muted-foreground font-normal whitespace-nowrap"
+              >
+                {new Date(w + "T12:00:00").toLocaleDateString("pt-BR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                })}
               </th>
             ))}
           </tr>
@@ -278,26 +483,42 @@ function WeeklyChart({ stats }: { stats: WeeklyStats[] }) {
   );
 }
 
-
 function VisaoGeral() {
-  const { data: convs = [] } = useQuery({ queryKey: ["coach-convs"], queryFn: () => listCoachConversationsFn() });
-  const { data: alerts = [] } = useQuery({ queryKey: ["coach-alerts"], queryFn: () => listCoachAlertsFn() });
-  const { data: weekly = [] } = useQuery({ queryKey: ["coach-weekly"], queryFn: () => fetchWeeklyStatsFn(), staleTime: 5 * 60_000 });
+  const { data: convs = [] } = useQuery({
+    queryKey: ["coach-convs"],
+    queryFn: () => listCoachConversationsFn(),
+  });
+  const { data: alerts = [] } = useQuery({
+    queryKey: ["coach-alerts"],
+    queryFn: () => listCoachAlertsFn(),
+  });
+  const { data: weekly = [] } = useQuery({
+    queryKey: ["coach-weekly"],
+    queryFn: () => fetchWeeklyStatsFn(),
+    staleTime: 5 * 60_000,
+  });
 
   const analyzed = convs.filter(
     (c: any) =>
-      c.analysis &&
-      c.analysis.status === "ok" &&
-      isMetricSeller(c.seller_name ?? c.seller_email),
+      c.analysis && c.analysis.status === "ok" && isMetricSeller(c.seller_name ?? c.seller_email),
   );
 
   const avgScore = analyzed.length
-    ? Number((analyzed.reduce((s: number, c: any) => s + Number(c.analysis.score_geral ?? 0), 0) / analyzed.length).toFixed(1))
+    ? Number(
+        (
+          analyzed.reduce((s: number, c: any) => s + Number(c.analysis.score_geral ?? 0), 0) /
+          analyzed.length
+        ).toFixed(1),
+      )
     : null;
   const tentativas = analyzed.length
-    ? Math.round((analyzed.filter((c: any) => c.analysis.tentou_fechar).length / analyzed.length) * 100)
+    ? Math.round(
+        (analyzed.filter((c: any) => c.analysis.tentou_fechar).length / analyzed.length) * 100,
+      )
     : 0;
-  const respTimes = analyzed.map((c: any) => c.analysis.tempo_medio_resposta_min).filter((x: any) => x != null);
+  const respTimes = analyzed
+    .map((c: any) => c.analysis.tempo_medio_resposta_min)
+    .filter((x: any) => x != null);
   const avgResp = respTimes.length
     ? Math.round(respTimes.reduce((a: number, b: number) => a + b, 0) / respTimes.length)
     : null;
@@ -311,14 +532,14 @@ function VisaoGeral() {
     if (!isMetricSeller(canonical)) continue;
     const cur = bySeller.get(canonical) ?? { name: canonical, count: 0, sum: 0, wins: 0 };
 
-    cur.count += 1; cur.sum += Number(a.score_geral ?? 0);
+    cur.count += 1;
+    cur.sum += Number(a.score_geral ?? 0);
     if (a.tentou_fechar) cur.wins += 1;
     bySeller.set(canonical, cur);
   }
   const ranking = Array.from(bySeller.values())
     .map((s) => ({ ...s, avg: Number((s.sum / s.count).toFixed(1)) }))
     .sort((a, b) => b.avg - a.avg);
-
 
   const objCount = new Map<string, number>();
   for (const c of analyzed) {
@@ -328,39 +549,70 @@ function VisaoGeral() {
       if (k) objCount.set(k, (objCount.get(k) ?? 0) + 1);
     }
   }
-  const topObj = Array.from(objCount.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const topObj = Array.from(objCount.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
 
   return (
     <div className="space-y-4 mt-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard icon={<Target className="h-4 w-4" />} label="Nota média equipa" value={avgScore != null ? avgScore.toFixed(1) : "—"} valueClass={scoreColor(avgScore)} />
-        <KpiCard icon={<TrendingUp className="h-4 w-4" />} label="% com tentativa de fecho" value={tentativas + "%"} />
-        <KpiCard icon={<Clock className="h-4 w-4" />} label="Tempo médio resposta" value={avgResp != null ? avgResp + " min" : "—"} />
-        <KpiCard icon={<AlertTriangle className="h-4 w-4" />} label="Alertas abertos" value={String(openAlerts)} valueClass={openAlerts > 0 ? "text-rose-600 dark:text-rose-400" : ""} />
+        <KpiCard
+          icon={<Target className="h-4 w-4" />}
+          label="Nota média equipa"
+          value={avgScore != null ? avgScore.toFixed(1) : "—"}
+          valueClass={scoreColor(avgScore)}
+        />
+        <KpiCard
+          icon={<TrendingUp className="h-4 w-4" />}
+          label="% com tentativa de fecho"
+          value={tentativas + "%"}
+        />
+        <KpiCard
+          icon={<Clock className="h-4 w-4" />}
+          label="Tempo médio resposta"
+          value={avgResp != null ? avgResp + " min" : "—"}
+        />
+        <KpiCard
+          icon={<AlertTriangle className="h-4 w-4" />}
+          label="Alertas abertos"
+          value={String(openAlerts)}
+          valueClass={openAlerts > 0 ? "text-rose-600 dark:text-rose-400" : ""}
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" />Ranking por qualidade</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Ranking por qualidade
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {ranking.length === 0 && <p className="text-sm text-muted-foreground">Sem análises ainda.</p>}
+            {ranking.length === 0 && (
+              <p className="text-sm text-muted-foreground">Sem análises ainda.</p>
+            )}
             {ranking.map((s, i) => (
               <div key={s.name} className="flex items-center gap-3">
                 <span className="text-xs font-bold w-5 text-muted-foreground">{i + 1}º</span>
                 <span className="flex-1 text-sm truncate">{displaySellerName(s.name)}</span>
                 <span className="text-xs text-muted-foreground">{s.count} conv.</span>
-                <span className={"text-sm font-bold w-10 text-right " + scoreColor(s.avg)}>{s.avg.toFixed(1)}</span>
+                <span className={"text-sm font-bold w-10 text-right " + scoreColor(s.avg)}>
+                  {s.avg.toFixed(1)}
+                </span>
               </div>
             ))}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">Principais objeções</CardTitle></CardHeader>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Principais objeções</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-2">
-            {topObj.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma objeção catalogada.</p>}
+            {topObj.length === 0 && (
+              <p className="text-sm text-muted-foreground">Nenhuma objeção catalogada.</p>
+            )}
             {topObj.map(([o, n]) => (
               <div key={o} className="flex items-center gap-3">
                 <span className="flex-1 text-sm capitalize">{o}</span>
@@ -375,7 +627,8 @@ function VisaoGeral() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <BarChart2 className="h-4 w-4" />Nota média por vendedor · semanas recentes
+              <BarChart2 className="h-4 w-4" />
+              Nota média por vendedor · semanas recentes
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -390,16 +643,22 @@ function VisaoGeral() {
 function Conversas() {
   const { isAdmin, sellerNameGuess } = useCoachUser();
   const qc = useQueryClient();
-  const { data: convs = [], isLoading } = useQuery({ queryKey: ["coach-convs"], queryFn: () => listCoachConversationsFn() });
+  const { data: convs = [], isLoading } = useQuery({
+    queryKey: ["coach-convs"],
+    queryFn: () => listCoachConversationsFn(),
+  });
   const [q, setQ] = useState("");
   const [minScore, setMinScore] = useState("");
   const [sellerFilter, setSellerFilter] = useState("");
   const [atendFilter, setAtendFilter] = useState<"humano" | "misto" | "todas">("humano");
 
   const analyze = useMutation({
-    mutationFn: (id: string) => analyzeConversationFn({ data: { conversationId: id, force: true } }),
+    mutationFn: (id: string) =>
+      analyzeConversationFn({ data: { conversationId: id, force: true } }),
     onSuccess: (r: any) => {
-      toast.success(r?.status === "insufficient_data" ? "Dados insuficientes" : "Análise concluída");
+      toast.success(
+        r?.status === "insufficient_data" ? "Dados insuficientes" : "Análise concluída",
+      );
       qc.invalidateQueries({ queryKey: ["coach-convs"] });
       qc.invalidateQueries({ queryKey: ["coach-alerts"] });
       qc.invalidateQueries({ queryKey: ["coach-weekly"] });
@@ -408,7 +667,10 @@ function Conversas() {
   });
   const del = useMutation({
     mutationFn: (id: string) => deleteCoachConversationFn({ data: { id } }),
-    onSuccess: () => { toast.success("Conversa apagada"); qc.invalidateQueries({ queryKey: ["coach-convs"] }); },
+    onSuccess: () => {
+      toast.success("Conversa apagada");
+      qc.invalidateQueries({ queryKey: ["coach-convs"] });
+    },
   });
 
   const [syncingId, setSyncingId] = useState<string | null>(null);
@@ -432,16 +694,22 @@ function Conversas() {
     }
   };
 
-  const [bulk, setBulk] = useState<{ running: boolean; done: number; total: number; mode: "" | "analyze" | "sync" }>({ running: false, done: 0, total: 0, mode: "" });
+  const [bulk, setBulk] = useState<{
+    running: boolean;
+    done: number;
+    total: number;
+    mode: "" | "analyze" | "sync";
+  }>({ running: false, done: 0, total: 0, mode: "" });
   const bulkCancelRef = useRef(false);
-
 
   const autoSyncedRef = useRef(false);
   useEffect(() => {
     if (autoSyncedRef.current || !convs.length) return;
     autoSyncedRef.current = true;
     const targets = convs.filter((c: any) => (c.message_count ?? 0) === 0).slice(0, 5);
-    (async () => { for (const c of targets) await syncOne(c.id, true); })();
+    (async () => {
+      for (const c of targets) await syncOne(c.id, true);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [convs.length]);
 
@@ -458,22 +726,26 @@ function Conversas() {
   const filtered = useMemo(() => {
     let list = convs;
     // Conversas trabalhadas pela IA/automação ficam fora por padrão
-    if (atendFilter === "humano") list = list.filter((c: any) => (c.atendimento ?? "humano") === "humano");
+    if (atendFilter === "humano")
+      list = list.filter((c: any) => (c.atendimento ?? "humano") === "humano");
     else if (atendFilter === "misto") list = list.filter((c: any) => c.atendimento === "misto");
     if (!isAdmin && sellerNameGuess) {
       const target = sellerNameGuess.toLowerCase();
-      list = list.filter((c: any) =>
-        displaySellerName(c.seller_name ?? c.seller_email ?? "").toLowerCase() === target
+      list = list.filter(
+        (c: any) =>
+          displaySellerName(c.seller_name ?? c.seller_email ?? "").toLowerCase() === target,
       );
     } else if (sellerFilter) {
       list = list.filter((c: any) => (c.seller_email ?? c.seller_name ?? "") === sellerFilter);
     }
     if (q) {
       const s = q.toLowerCase();
-      list = list.filter((c: any) =>
-        (c.seller_name ?? "").toLowerCase().includes(s) ||
-        (c.contact_name ?? "").toLowerCase().includes(s) ||
-        (c.deal_id ?? "").toLowerCase().includes(s));
+      list = list.filter(
+        (c: any) =>
+          (c.seller_name ?? "").toLowerCase().includes(s) ||
+          (c.contact_name ?? "").toLowerCase().includes(s) ||
+          (c.deal_id ?? "").toLowerCase().includes(s),
+      );
     }
     if (minScore) {
       const m = Number(minScore);
@@ -484,12 +756,19 @@ function Conversas() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const toggleSel = (id: string) =>
-    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelected((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
   const filteredIds = useMemo(() => (filtered as any[]).map((c) => c.id), [filtered]);
   const selectedInFilter = filteredIds.filter((id) => selected.has(id));
   const allSelected = filteredIds.length > 0 && selectedInFilter.length === filteredIds.length;
   const targets = useMemo(
-    () => (selectedInFilter.length ? (filtered as any[]).filter((c) => selected.has(c.id)) : (filtered as any[])),
+    () =>
+      selectedInFilter.length
+        ? (filtered as any[]).filter((c) => selected.has(c.id))
+        : (filtered as any[]),
     [filtered, selected, selectedInFilter.length],
   );
 
@@ -505,7 +784,9 @@ function Conversas() {
           >
             <option value="">Todos os vendedores</option>
             {sellerOptions.map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
+              <option key={key} value={key}>
+                {label}
+              </option>
             ))}
           </select>
         )}
@@ -519,106 +800,159 @@ function Conversas() {
           <option value="misto">Vendedor + IA</option>
           <option value="todas">Todas</option>
         </select>
-        <Input placeholder="Buscar por vendedor, cliente, deal…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
-        <Input placeholder="Nota mínima" type="number" min={0} max={10} value={minScore} onChange={(e) => setMinScore(e.target.value)} className="max-w-[120px]" />
+        <Input
+          placeholder="Buscar por vendedor, cliente, deal…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="max-w-xs"
+        />
+        <Input
+          placeholder="Nota mínima"
+          type="number"
+          min={0}
+          max={10}
+          value={minScore}
+          onChange={(e) => setMinScore(e.target.value)}
+          className="max-w-[120px]"
+        />
         {(sellerFilter || q || minScore || atendFilter !== "humano") && (
-          <Button size="sm" variant="ghost" onClick={() => { setSellerFilter(""); setQ(""); setMinScore(""); setAtendFilter("humano"); }}>Limpar</Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setSellerFilter("");
+              setQ("");
+              setMinScore("");
+              setAtendFilter("humano");
+            }}
+          >
+            Limpar
+          </Button>
         )}
-        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} de {convs.length}</span>
+        <span className="text-xs text-muted-foreground ml-auto">
+          {filtered.length} de {convs.length}
+        </span>
       </div>
 
       {isAdmin && (
-      <div className="flex flex-wrap gap-2 items-center">
-        <label className="flex items-center gap-2 text-xs text-muted-foreground select-none cursor-pointer">
-          <input
-            type="checkbox"
-            className="h-4 w-4 accent-primary"
-            checked={allSelected}
-            onChange={() => setSelected(allSelected ? new Set() : new Set(filteredIds))}
-          />
-          Selecionar todas
-        </label>
-        {selectedInFilter.length > 0 && (
-          <>
-            <Badge variant="secondary" className="text-[11px]">{selectedInFilter.length} selecionada(s)</Badge>
-            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Limpar seleção</Button>
-          </>
-        )}
-        <Button
-          size="sm"
-          variant="default"
-          disabled={bulk.running || targets.length === 0}
-          onClick={async () => {
-            const list = targets;
-            if (!list.length) return;
-            if (!confirm(`Analisar ${list.length} conversa(s)? Isto pode demorar.`)) return;
-            bulkCancelRef.current = false;
-            setBulk({ running: true, done: 0, total: list.length, mode: "analyze" });
-            let ok = 0, fail = 0;
-            for (let i = 0; i < list.length; i++) {
-              if (bulkCancelRef.current) break;
-              try {
-                await analyzeConversationFn({ data: { conversationId: list[i].id, force: true } });
-                ok++;
-              } catch { fail++; }
-              setBulk((b) => ({ ...b, done: i + 1 }));
-            }
-            setBulk({ running: false, done: 0, total: 0, mode: "" });
-            qc.invalidateQueries({ queryKey: ["coach-convs"] });
-            qc.invalidateQueries({ queryKey: ["coach-alerts"] });
-            qc.invalidateQueries({ queryKey: ["coach-weekly"] });
-            toast.success(`Análise concluída: ${ok} ok · ${fail} falhas`);
-          }}
-        >
-          <Sparkles className={"h-3.5 w-3.5 mr-1 " + (bulk.running && bulk.mode === "analyze" ? "animate-pulse" : "")} />
-          {selectedInFilter.length ? `Analisar selecionadas (${targets.length})` : `Analisar todas (${targets.length})`}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={bulk.running || targets.length === 0}
-          onClick={async () => {
-            const list = targets;
-            if (!list.length) return;
-            if (!confirm(`Sincronizar mensagens de ${list.length} conversa(s)?`)) return;
-            bulkCancelRef.current = false;
-            setBulk({ running: true, done: 0, total: list.length, mode: "sync" });
-            let ok = 0, fail = 0;
-            for (let i = 0; i < list.length; i++) {
-              if (bulkCancelRef.current) break;
-              const r = await syncOne(list[i].id, true);
-              if (r) ok++; else fail++;
-              setBulk((b) => ({ ...b, done: i + 1 }));
-            }
-            setBulk({ running: false, done: 0, total: 0, mode: "" });
-            qc.invalidateQueries({ queryKey: ["coach-convs"] });
-            toast.success(`Sync concluído: ${ok} ok · ${fail} falhas`);
-          }}
-        >
-          <RefreshCw className={"h-3.5 w-3.5 mr-1 " + (bulk.running && bulk.mode === "sync" ? "animate-spin" : "")} />
-          {selectedInFilter.length ? "Sincronizar selecionadas" : "Sincronizar todas"}
-        </Button>
-        {bulk.running && (
-          <>
-            <span className="text-xs text-muted-foreground">
-              {bulk.mode === "analyze" ? "Analisando" : "Sincronizando"} {bulk.done}/{bulk.total}…
-            </span>
-            <Button size="sm" variant="ghost" onClick={() => { bulkCancelRef.current = true; }}>
-              Cancelar
-            </Button>
-          </>
-        )}
-      </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground select-none cursor-pointer">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-primary"
+              checked={allSelected}
+              onChange={() => setSelected(allSelected ? new Set() : new Set(filteredIds))}
+            />
+            Selecionar todas
+          </label>
+          {selectedInFilter.length > 0 && (
+            <>
+              <Badge variant="secondary" className="text-[11px]">
+                {selectedInFilter.length} selecionada(s)
+              </Badge>
+              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+                Limpar seleção
+              </Button>
+            </>
+          )}
+          <Button
+            size="sm"
+            variant="default"
+            disabled={bulk.running || targets.length === 0}
+            onClick={async () => {
+              const list = targets;
+              if (!list.length) return;
+              if (!confirm(`Analisar ${list.length} conversa(s)? Isto pode demorar.`)) return;
+              bulkCancelRef.current = false;
+              setBulk({ running: true, done: 0, total: list.length, mode: "analyze" });
+              let ok = 0,
+                fail = 0;
+              for (let i = 0; i < list.length; i++) {
+                if (bulkCancelRef.current) break;
+                try {
+                  await analyzeConversationFn({
+                    data: { conversationId: list[i].id, force: true },
+                  });
+                  ok++;
+                } catch {
+                  fail++;
+                }
+                setBulk((b) => ({ ...b, done: i + 1 }));
+              }
+              setBulk({ running: false, done: 0, total: 0, mode: "" });
+              qc.invalidateQueries({ queryKey: ["coach-convs"] });
+              qc.invalidateQueries({ queryKey: ["coach-alerts"] });
+              qc.invalidateQueries({ queryKey: ["coach-weekly"] });
+              toast.success(`Análise concluída: ${ok} ok · ${fail} falhas`);
+            }}
+          >
+            <Sparkles
+              className={
+                "h-3.5 w-3.5 mr-1 " +
+                (bulk.running && bulk.mode === "analyze" ? "animate-pulse" : "")
+              }
+            />
+            {selectedInFilter.length
+              ? `Analisar selecionadas (${targets.length})`
+              : `Analisar todas (${targets.length})`}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulk.running || targets.length === 0}
+            onClick={async () => {
+              const list = targets;
+              if (!list.length) return;
+              if (!confirm(`Sincronizar mensagens de ${list.length} conversa(s)?`)) return;
+              bulkCancelRef.current = false;
+              setBulk({ running: true, done: 0, total: list.length, mode: "sync" });
+              let ok = 0,
+                fail = 0;
+              for (let i = 0; i < list.length; i++) {
+                if (bulkCancelRef.current) break;
+                const r = await syncOne(list[i].id, true);
+                if (r) ok++;
+                else fail++;
+                setBulk((b) => ({ ...b, done: i + 1 }));
+              }
+              setBulk({ running: false, done: 0, total: 0, mode: "" });
+              qc.invalidateQueries({ queryKey: ["coach-convs"] });
+              toast.success(`Sync concluído: ${ok} ok · ${fail} falhas`);
+            }}
+          >
+            <RefreshCw
+              className={
+                "h-3.5 w-3.5 mr-1 " + (bulk.running && bulk.mode === "sync" ? "animate-spin" : "")
+              }
+            />
+            {selectedInFilter.length ? "Sincronizar selecionadas" : "Sincronizar todas"}
+          </Button>
+          {bulk.running && (
+            <>
+              <span className="text-xs text-muted-foreground">
+                {bulk.mode === "analyze" ? "Analisando" : "Sincronizando"} {bulk.done}/{bulk.total}…
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  bulkCancelRef.current = true;
+                }}
+              >
+                Cancelar
+              </Button>
+            </>
+          )}
+        </div>
       )}
-
-
-
 
       {isLoading && <p className="text-sm text-muted-foreground">A carregar…</p>}
       {!isLoading && filtered.length === 0 && (
-        <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
-          Nenhuma conversa. Vai à aba <b>Nova análise</b> para colar uma transcrição de WhatsApp.
-        </CardContent></Card>
+        <Card>
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            Nenhuma conversa. Vai à aba <b>Nova análise</b> para colar uma transcrição de WhatsApp.
+          </CardContent>
+        </Card>
       )}
 
       <div className="space-y-2">
@@ -634,9 +968,22 @@ function Conversas() {
                   aria-label="Selecionar conversa"
                 />
               )}
-              <div className={"h-12 w-12 rounded-lg flex flex-col items-center justify-center shrink-0 " + (c.analysis?.status === "ok" ? "bg-muted" : "bg-muted/50")}>
-                <span className={"text-lg font-bold leading-none " + scoreColor(c.analysis?.score_geral)}>
-                  {c.analysis?.status === "ok" ? Number(c.analysis.score_geral ?? 0).toFixed(1) : c.analysis?.status === "insufficient_data" ? "—" : "?"}
+              <div
+                className={
+                  "h-12 w-12 rounded-lg flex flex-col items-center justify-center shrink-0 " +
+                  (c.analysis?.status === "ok" ? "bg-muted" : "bg-muted/50")
+                }
+              >
+                <span
+                  className={
+                    "text-lg font-bold leading-none " + scoreColor(c.analysis?.score_geral)
+                  }
+                >
+                  {c.analysis?.status === "ok"
+                    ? Number(c.analysis.score_geral ?? 0).toFixed(1)
+                    : c.analysis?.status === "insufficient_data"
+                      ? "—"
+                      : "?"}
                 </span>
                 <span className="text-[10px] text-muted-foreground mt-0.5">nota</span>
               </div>
@@ -644,39 +991,85 @@ function Conversas() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-semibold text-sm">{c.contact_name ?? "Contacto —"}</span>
                   <span className="text-xs text-muted-foreground">•</span>
-                  <span className="text-xs text-muted-foreground">{c.seller_name ?? c.seller_email ?? "sem vendedor"}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {c.seller_name ?? c.seller_email ?? "sem vendedor"}
+                  </span>
                   {c.atendimento === "misto" && (
-                    <Badge variant="outline" className="text-[10px] text-sky-600 border-sky-500/40">IA + vendedor ({c.ia_msgs})</Badge>
+                    <Badge variant="outline" className="text-[10px] text-sky-600 border-sky-500/40">
+                      IA + vendedor ({c.ia_msgs})
+                    </Badge>
                   )}
                   {c.atendimento === "ia" && (
-                    <Badge variant="outline" className="text-[10px] text-sky-600 border-sky-500/40">só IA</Badge>
+                    <Badge variant="outline" className="text-[10px] text-sky-600 border-sky-500/40">
+                      só IA
+                    </Badge>
                   )}
                   {c.analysis?.sentimento && (
-                    <span className={"text-[10px] px-1.5 py-0.5 rounded " + sentimentColor(c.analysis.sentimento)}>{c.analysis.sentimento}</span>
+                    <span
+                      className={
+                        "text-[10px] px-1.5 py-0.5 rounded " + sentimentColor(c.analysis.sentimento)
+                      }
+                    >
+                      {c.analysis.sentimento}
+                    </span>
                   )}
                   {c.analysis?.tentou_fechar === true && (
-                    <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-500/40">tentou fechar</Badge>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] text-emerald-600 border-emerald-500/40"
+                    >
+                      tentou fechar
+                    </Badge>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1 truncate">
-                  {c.origin_name ?? "—"} · {c.stage ?? "—"} · {c.message_count} msgs · Última: {fmtDate(c.last_message_at)} · {fmtEur(c.deal_value)}
+                  {c.origin_name ?? "—"} · {c.stage ?? "—"} · {c.message_count} msgs · Última:{" "}
+                  {fmtDate(c.last_message_at)} · {fmtEur(c.deal_value)}
                 </p>
-                {c.analysis?.resumo && <p className="text-xs mt-1 line-clamp-2">{c.analysis.resumo}</p>}
+                {c.analysis?.resumo && (
+                  <p className="text-xs mt-1 line-clamp-2">{c.analysis.resumo}</p>
+                )}
                 {c.analysis?.justificativa_nota && (
-                  <p className="text-[10px] text-muted-foreground mt-0.5 italic line-clamp-1">{c.analysis.justificativa_nota}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 italic line-clamp-1">
+                    {c.analysis.justificativa_nota}
+                  </p>
                 )}
               </div>
               <div className="flex flex-col gap-1 shrink-0">
                 <Link to="/coach/$id" params={{ id: c.id }}>
-                  <Button size="sm" variant="outline">Abrir</Button>
+                  <Button size="sm" variant="outline">
+                    Abrir
+                  </Button>
                 </Link>
-                <Button size="sm" variant="ghost" title="Sincronizar mensagens da Clint" onClick={() => syncOne(c.id)} disabled={syncingId === c.id}>
-                  <RefreshCw className={"h-3.5 w-3.5 " + (syncingId === c.id ? "animate-spin" : "")} />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  title="Sincronizar mensagens da Clint"
+                  onClick={() => syncOne(c.id)}
+                  disabled={syncingId === c.id}
+                >
+                  <RefreshCw
+                    className={"h-3.5 w-3.5 " + (syncingId === c.id ? "animate-spin" : "")}
+                  />
                 </Button>
-                <Button size="sm" variant="ghost" title="Re-analisar" onClick={() => analyze.mutate(c.id)} disabled={analyze.isPending}>
-                  <Sparkles className={"h-3.5 w-3.5 " + (analyze.isPending ? "animate-pulse" : "")} />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  title="Re-analisar"
+                  onClick={() => analyze.mutate(c.id)}
+                  disabled={analyze.isPending}
+                >
+                  <Sparkles
+                    className={"h-3.5 w-3.5 " + (analyze.isPending ? "animate-pulse" : "")}
+                  />
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => { if (confirm("Apagar conversa?")) del.mutate(c.id); }}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    if (confirm("Apagar conversa?")) del.mutate(c.id);
+                  }}
+                >
                   <Trash2 className="h-3.5 w-3.5 text-rose-500" />
                 </Button>
               </div>
@@ -693,14 +1086,19 @@ function TeamInsightsPanel() {
   const [data, setData] = useState<TeamInsights | null>(null);
   const gen = useMutation({
     mutationFn: () => generateTeamInsightsFn({ data: { days } }),
-    onSuccess: (r) => { setData(r); toast.success(`Insights gerados (${r.sample_size} conversas)`); },
+    onSuccess: (r) => {
+      setData(r);
+      toast.success(`Insights gerados (${r.sample_size} conversas)`);
+    },
     onError: (e: any) => toast.error(e?.message ?? "Falha ao gerar insights"),
   });
 
   const prioColor = (p: string) =>
-    p === "alta" ? "bg-red-500/15 text-red-600 dark:text-red-400"
-    : p === "media" ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-    : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
+    p === "alta"
+      ? "bg-red-500/15 text-red-600 dark:text-red-400"
+      : p === "media"
+        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+        : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
 
   return (
     <Card className="border-primary/20">
@@ -730,7 +1128,8 @@ function TeamInsightsPanel() {
         </div>
         {!data && !gen.isPending && (
           <p className="text-xs text-muted-foreground">
-            Cruza todas as análises recentes e devolve padrões comuns, treinos recomendados e boas práticas para compartilhar entre o time.
+            Cruza todas as análises recentes e devolve padrões comuns, treinos recomendados e boas
+            práticas para compartilhar entre o time.
           </p>
         )}
       </CardHeader>
@@ -766,16 +1165,26 @@ function TeamInsightsPanel() {
               <div className="text-xs font-semibold text-red-600 dark:text-red-400 mb-2 flex items-center gap-1">
                 <AlertTriangle className="h-3.5 w-3.5" /> Pontos a melhorar (padrões do time)
               </div>
-              {data.top_weaknesses.length === 0 && <p className="text-xs text-muted-foreground">Sem padrões relevantes.</p>}
+              {data.top_weaknesses.length === 0 && (
+                <p className="text-xs text-muted-foreground">Sem padrões relevantes.</p>
+              )}
               <ul className="space-y-2">
                 {data.top_weaknesses.map((w, i) => (
                   <li key={i} className="text-xs">
                     <div className="flex items-baseline gap-2">
                       <span className="font-semibold">{w.theme}</span>
-                      <Badge variant="outline" className="text-[10px]">{w.frequency}×</Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        {w.frequency}×
+                      </Badge>
                     </div>
-                    {w.example && <div className="text-muted-foreground italic mt-0.5">“{w.example}”</div>}
-                    {w.sellers?.length > 0 && <div className="text-[10px] text-muted-foreground mt-0.5">Afeta: {w.sellers.join(", ")}</div>}
+                    {w.example && (
+                      <div className="text-muted-foreground italic mt-0.5">“{w.example}”</div>
+                    )}
+                    {w.sellers?.length > 0 && (
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        Afeta: {w.sellers.join(", ")}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -793,16 +1202,26 @@ function TeamInsightsPanel() {
                   <li key={"s" + i} className="text-xs">
                     <div className="flex items-baseline gap-2">
                       <span className="font-semibold">{w.theme}</span>
-                      <Badge variant="outline" className="text-[10px]">{w.frequency}×</Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        {w.frequency}×
+                      </Badge>
                     </div>
-                    {w.example && <div className="text-muted-foreground italic mt-0.5">“{w.example}”</div>}
-                    {w.sellers?.length > 0 && <div className="text-[10px] text-muted-foreground mt-0.5">Referência: {w.sellers.join(", ")}</div>}
+                    {w.example && (
+                      <div className="text-muted-foreground italic mt-0.5">“{w.example}”</div>
+                    )}
+                    {w.sellers?.length > 0 && (
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        Referência: {w.sellers.join(", ")}
+                      </div>
+                    )}
                   </li>
                 ))}
                 {data.shareable_best_practices.map((p, i) => (
                   <li key={"p" + i} className="text-xs border-t pt-2">
                     <div>{p.practice}</div>
-                    <div className="text-[10px] text-muted-foreground">Vindo de: {p.from_seller}</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      Vindo de: {p.from_seller}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -814,14 +1233,22 @@ function TeamInsightsPanel() {
               <div className="text-xs font-semibold mb-2 flex items-center gap-1">
                 <Target className="h-3.5 w-3.5" /> Treinamentos recomendados
               </div>
-              {data.training_recommendations.length === 0 && <p className="text-xs text-muted-foreground">—</p>}
+              {data.training_recommendations.length === 0 && (
+                <p className="text-xs text-muted-foreground">—</p>
+              )}
               <ul className="space-y-2">
                 {data.training_recommendations.map((t, i) => (
                   <li key={i} className="text-xs">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold">{t.title}</span>
-                      <span className={"text-[10px] px-1.5 py-0.5 rounded " + prioColor(t.priority)}>{t.priority}</span>
-                      <Badge variant="outline" className="text-[10px]">{t.format}</Badge>
+                      <span
+                        className={"text-[10px] px-1.5 py-0.5 rounded " + prioColor(t.priority)}
+                      >
+                        {t.priority}
+                      </span>
+                      <Badge variant="outline" className="text-[10px]">
+                        {t.format}
+                      </Badge>
                     </div>
                     <div className="text-muted-foreground mt-0.5">{t.why}</div>
                   </li>
@@ -839,7 +1266,9 @@ function TeamInsightsPanel() {
                   <li key={i} className="text-xs">
                     <div className="font-semibold">{s.seller}</div>
                     <div className="text-muted-foreground">{s.focus}</div>
-                    <div className="mt-0.5"><span className="text-[10px] text-primary">Ação:</span> {s.suggested_action}</div>
+                    <div className="mt-0.5">
+                      <span className="text-[10px] text-primary">Ação:</span> {s.suggested_action}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -851,7 +1280,9 @@ function TeamInsightsPanel() {
               <div className="text-xs font-semibold mb-2">Objeções mais frequentes</div>
               <div className="flex flex-wrap gap-1.5">
                 {data.top_objections.map((o, i) => (
-                  <Badge key={i} variant="secondary" className="text-[10px]">{o.theme} · {o.frequency}×</Badge>
+                  <Badge key={i} variant="secondary" className="text-[10px]">
+                    {o.theme} · {o.frequency}×
+                  </Badge>
                 ))}
               </div>
             </div>
@@ -864,17 +1295,29 @@ function TeamInsightsPanel() {
 
 function Alertas() {
   const qc = useQueryClient();
-  const { data: alerts = [], isLoading } = useQuery({ queryKey: ["coach-alerts"], queryFn: () => listCoachAlertsFn() });
+  const { data: alerts = [], isLoading } = useQuery({
+    queryKey: ["coach-alerts"],
+    queryFn: () => listCoachAlertsFn(),
+  });
 
   const scan = useMutation({
     mutationFn: () => runAlertsScanFn(),
-    onSuccess: (r: any) => { toast.success(`${r.created} novos alertas`); qc.invalidateQueries({ queryKey: ["coach-alerts"] }); },
+    onSuccess: (r: any) => {
+      toast.success(`${r.created} novos alertas`);
+      qc.invalidateQueries({ queryKey: ["coach-alerts"] });
+    },
   });
   const setState = useMutation({
     mutationFn: ({ id, state }: { id: string; state: "aberto" | "visto" | "resolvido" }) =>
       resolveCoachAlertFn({ data: { id, state } }),
     onSuccess: (_r, v) => {
-      toast.success(v.state === "resolvido" ? "Alerta resolvido" : v.state === "visto" ? "Marcado como visto" : "Alerta reaberto");
+      toast.success(
+        v.state === "resolvido"
+          ? "Alerta resolvido"
+          : v.state === "visto"
+            ? "Marcado como visto"
+            : "Alerta reaberto",
+      );
       qc.invalidateQueries({ queryKey: ["coach-alerts"] });
     },
     onError: (e: any) => toast.error(`Falha ao atualizar alerta: ${e?.message ?? e}`),
@@ -899,7 +1342,9 @@ function Alertas() {
     resolvido: "border-emerald-400 text-emerald-600",
   };
 
-  const openCount = alerts.filter((a: any) => a.state === "aberto" || (!a.state && !a.resolved)).length;
+  const openCount = alerts.filter(
+    (a: any) => a.state === "aberto" || (!a.state && !a.resolved),
+  ).length;
   const vistoCount = alerts.filter((a: any) => a.state === "visto").length;
   const resolvidoCount = alerts.filter((a: any) => a.state === "resolvido" || a.resolved).length;
 
@@ -910,13 +1355,18 @@ function Alertas() {
           {openCount} abertos · {vistoCount} vistos · {resolvidoCount} resolvidos
         </p>
         <Button size="sm" onClick={() => scan.mutate()} disabled={scan.isPending}>
-          <RefreshCw className={"h-4 w-4 mr-1 " + (scan.isPending ? "animate-spin" : "")} />Rodar scan
+          <RefreshCw className={"h-4 w-4 mr-1 " + (scan.isPending ? "animate-spin" : "")} />
+          Rodar scan
         </Button>
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">A carregar…</p>}
       {!isLoading && alerts.length === 0 && (
-        <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Nenhum alerta.</CardContent></Card>
+        <Card>
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            Nenhum alerta.
+          </CardContent>
+        </Card>
       )}
 
       {alerts.map((a: any) => {
@@ -925,34 +1375,51 @@ function Alertas() {
         return (
           <Card key={a.id} className={isResolved ? "opacity-60" : ""}>
             <CardContent className="p-3 flex items-start gap-3">
-              <Badge className={"shrink-0 border " + (sevColor[a.severity] ?? "")}>{a.severity}</Badge>
+              <Badge className={"shrink-0 border " + (sevColor[a.severity] ?? "")}>
+                {a.severity}
+              </Badge>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-sm font-semibold">{typeLabel[a.type] ?? a.type}</p>
-                  <Badge variant="outline" className={"text-[10px] " + (stateBadge[currentState] ?? "")}>
+                  <Badge
+                    variant="outline"
+                    className={"text-[10px] " + (stateBadge[currentState] ?? "")}
+                  >
                     {currentState}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">{a.seller_name ?? a.seller_email ?? "—"} · {fmtDate(a.created_at)}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {a.seller_name ?? a.seller_email ?? "—"} · {fmtDate(a.created_at)}
+                </p>
                 <p className="text-sm mt-1">{a.message}</p>
               </div>
               <div className="flex flex-col gap-1 shrink-0">
                 {a.conversation_id && (
                   <Link to="/coach/$id" params={{ id: a.conversation_id }}>
-                    <Button size="sm" variant="outline">Abrir</Button>
+                    <Button size="sm" variant="outline">
+                      Abrir
+                    </Button>
                   </Link>
                 )}
                 {currentState === "aberto" && (
-                  <Button size="sm" variant="outline" onClick={() => setState.mutate({ id: a.id, state: "visto" })}>
-                    <Eye className="h-3.5 w-3.5 mr-1" />Visto
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setState.mutate({ id: a.id, state: "visto" })}
+                  >
+                    <Eye className="h-3.5 w-3.5 mr-1" />
+                    Visto
                   </Button>
                 )}
                 <Button
                   size="sm"
                   variant={isResolved ? "outline" : "default"}
-                  onClick={() => setState.mutate({ id: a.id, state: isResolved ? "aberto" : "resolvido" })}
+                  onClick={() =>
+                    setState.mutate({ id: a.id, state: isResolved ? "aberto" : "resolvido" })
+                  }
                 >
-                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" />{isResolved ? "Reabrir" : "Resolver"}
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                  {isResolved ? "Reabrir" : "Resolver"}
                 </Button>
               </div>
             </CardContent>
@@ -967,18 +1434,32 @@ function UploadTab({ onDone }: { onDone: () => void }) {
   const qc = useQueryClient();
   const nav = useNavigate();
   const [form, setForm] = useState({
-    sellerName: "", sellerEmail: "", contactName: "", contactEmail: "",
-    originName: "", stage: "", dealValue: "", transcript: "",
+    sellerName: "",
+    sellerEmail: "",
+    contactName: "",
+    contactEmail: "",
+    originName: "",
+    stage: "",
+    dealValue: "",
+    transcript: "",
   });
   const upload = useMutation({
     mutationFn: async () => {
-      const res = await uploadConversationFn({ data: {
-        sellerName: form.sellerName || undefined, sellerEmail: form.sellerEmail || undefined,
-        contactName: form.contactName || undefined, contactEmail: form.contactEmail || undefined,
-        originName: form.originName || undefined, stage: form.stage || undefined,
-        dealValue: form.dealValue ? Number(form.dealValue) : undefined, transcript: form.transcript,
-      }});
-      try { await analyzeConversationFn({ data: { conversationId: res.id } }); } catch {}
+      const res = await uploadConversationFn({
+        data: {
+          sellerName: form.sellerName || undefined,
+          sellerEmail: form.sellerEmail || undefined,
+          contactName: form.contactName || undefined,
+          contactEmail: form.contactEmail || undefined,
+          originName: form.originName || undefined,
+          stage: form.stage || undefined,
+          dealValue: form.dealValue ? Number(form.dealValue) : undefined,
+          transcript: form.transcript,
+        },
+      });
+      try {
+        await analyzeConversationFn({ data: { conversationId: res.id } });
+      } catch {}
       return res;
     },
     onSuccess: (r) => {
@@ -992,27 +1473,79 @@ function UploadTab({ onDone }: { onDone: () => void }) {
   return (
     <div className="mt-4 space-y-3">
       <Card>
-        <CardHeader><CardTitle className="text-base">Nova análise de conversa</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Nova análise de conversa</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
-            <div><Label className="text-xs">Vendedor</Label><Input value={form.sellerName} onChange={(e) => setForm({ ...form, sellerName: e.target.value })} placeholder="Ex: Gisele Pimentel" /></div>
-            <div><Label className="text-xs">Email vendedor</Label><Input value={form.sellerEmail} onChange={(e) => setForm({ ...form, sellerEmail: e.target.value })} /></div>
-            <div><Label className="text-xs">Cliente</Label><Input value={form.contactName} onChange={(e) => setForm({ ...form, contactName: e.target.value })} /></div>
-            <div><Label className="text-xs">Email cliente</Label><Input value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>
-            <div><Label className="text-xs">Origem/Funil</Label><Input value={form.originName} onChange={(e) => setForm({ ...form, originName: e.target.value })} /></div>
-            <div><Label className="text-xs">Etapa</Label><Input value={form.stage} onChange={(e) => setForm({ ...form, stage: e.target.value })} /></div>
-            <div><Label className="text-xs">Valor negócio (€)</Label><Input type="number" value={form.dealValue} onChange={(e) => setForm({ ...form, dealValue: e.target.value })} /></div>
+            <div>
+              <Label className="text-xs">Vendedor</Label>
+              <Input
+                value={form.sellerName}
+                onChange={(e) => setForm({ ...form, sellerName: e.target.value })}
+                placeholder="Ex: Gisele Pimentel"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Email vendedor</Label>
+              <Input
+                value={form.sellerEmail}
+                onChange={(e) => setForm({ ...form, sellerEmail: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Cliente</Label>
+              <Input
+                value={form.contactName}
+                onChange={(e) => setForm({ ...form, contactName: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Email cliente</Label>
+              <Input
+                value={form.contactEmail}
+                onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Origem/Funil</Label>
+              <Input
+                value={form.originName}
+                onChange={(e) => setForm({ ...form, originName: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Etapa</Label>
+              <Input
+                value={form.stage}
+                onChange={(e) => setForm({ ...form, stage: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Valor negócio (€)</Label>
+              <Input
+                type="number"
+                value={form.dealValue}
+                onChange={(e) => setForm({ ...form, dealValue: e.target.value })}
+              />
+            </div>
           </div>
           <div>
             <Label className="text-xs">Transcrição da conversa</Label>
             <Textarea
-              rows={12} value={form.transcript}
+              rows={12}
+              value={form.transcript}
               onChange={(e) => setForm({ ...form, transcript: e.target.value })}
-              placeholder={"Cola aqui o export do WhatsApp. Exemplo:\n[12/07/2026, 14:32] Gisele: Bom dia!\n[12/07/2026, 14:40] João: Olá, sim"}
+              placeholder={
+                "Cola aqui o export do WhatsApp. Exemplo:\n[12/07/2026, 14:32] Gisele: Bom dia!\n[12/07/2026, 14:40] João: Olá, sim"
+              }
               className="font-mono text-xs"
             />
           </div>
-          <Button onClick={() => upload.mutate()} disabled={upload.isPending || form.transcript.trim().length < 20}>
+          <Button
+            onClick={() => upload.mutate()}
+            disabled={upload.isPending || form.transcript.trim().length < 20}
+          >
             {upload.isPending ? "A processar…" : "Analisar com IA"}
           </Button>
         </CardContent>
@@ -1028,60 +1561,95 @@ function ConfigTab() {
   const current = form ?? cfg;
 
   const save = useMutation({
-    mutationFn: () => saveCoachConfigFn({ data: {
-      nota_minima: Number(current!.nota_minima),
-      horas_lead_quente: Number(current!.horas_lead_quente),
-      dias_sem_resposta: Number(current!.dias_sem_resposta),
-      auto_analysis: current!.auto_analysis ?? true,
-      analysis_interval_hours: Number(current!.analysis_interval_hours ?? 1),
-      seller_phones: current!.seller_phones ?? [],
-    }}),
-    onSuccess: () => { toast.success("Config salva"); qc.invalidateQueries({ queryKey: ["coach-config"] }); setForm(null); },
+    mutationFn: () =>
+      saveCoachConfigFn({
+        data: {
+          nota_minima: Number(current!.nota_minima),
+          horas_lead_quente: Number(current!.horas_lead_quente),
+          dias_sem_resposta: Number(current!.dias_sem_resposta),
+          auto_analysis: current!.auto_analysis ?? true,
+          analysis_interval_hours: Number(current!.analysis_interval_hours ?? 1),
+          seller_phones: current!.seller_phones ?? [],
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Config salva");
+      qc.invalidateQueries({ queryKey: ["coach-config"] });
+      setForm(null);
+    },
   });
 
   if (!current) return <p className="text-sm text-muted-foreground mt-4">A carregar…</p>;
   const phones = current.seller_phones ?? [];
 
   function updatePhone(idx: number, field: "name" | "phone", value: string) {
-    setForm({ ...current!, seller_phones: phones.map((p, i) => i === idx ? { ...p, [field]: value } : p) });
+    setForm({
+      ...current!,
+      seller_phones: phones.map((p, i) => (i === idx ? { ...p, [field]: value } : p)),
+    });
   }
 
   return (
     <div className="mt-4 space-y-4 max-w-lg">
       <Card>
-        <CardHeader><CardTitle className="text-base">Parâmetros de alerta</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Parâmetros de alerta</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-3">
           <div>
             <Label className="text-xs">Nota mínima aceitável (0–10)</Label>
-            <Input type="number" min={0} max={10} value={current.nota_minima}
-              onChange={(e) => setForm({ ...current, nota_minima: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={0}
+              max={10}
+              value={current.nota_minima}
+              onChange={(e) => setForm({ ...current, nota_minima: Number(e.target.value) })}
+            />
           </div>
           <div>
             <Label className="text-xs">Horas até "lead quente sem resposta"</Label>
-            <Input type="number" min={1} value={current.horas_lead_quente}
-              onChange={(e) => setForm({ ...current, horas_lead_quente: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={1}
+              value={current.horas_lead_quente}
+              onChange={(e) => setForm({ ...current, horas_lead_quente: Number(e.target.value) })}
+            />
           </div>
           <div>
             <Label className="text-xs">Dias sem resposta = conversa parada</Label>
-            <Input type="number" min={1} value={current.dias_sem_resposta}
-              onChange={(e) => setForm({ ...current, dias_sem_resposta: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={1}
+              value={current.dias_sem_resposta}
+              onChange={(e) => setForm({ ...current, dias_sem_resposta: Number(e.target.value) })}
+            />
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Auto-análise</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Auto-análise</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
             <Label className="text-sm">Ativar auto-análise de conversas Clint</Label>
-            <Switch checked={current.auto_analysis ?? true}
-              onCheckedChange={(v) => setForm({ ...current, auto_analysis: v })} />
+            <Switch
+              checked={current.auto_analysis ?? true}
+              onCheckedChange={(v) => setForm({ ...current, auto_analysis: v })}
+            />
           </div>
           {(current.auto_analysis ?? true) && (
             <div>
               <Label className="text-xs">Intervalo mínimo entre análises (horas)</Label>
-              <Input type="number" min={1} value={current.analysis_interval_hours ?? 1}
-                onChange={(e) => setForm({ ...current, analysis_interval_hours: Number(e.target.value) })} />
+              <Input
+                type="number"
+                min={1}
+                value={current.analysis_interval_hours ?? 1}
+                onChange={(e) =>
+                  setForm({ ...current, analysis_interval_hours: Number(e.target.value) })
+                }
+              />
               <p className="text-[10px] text-muted-foreground mt-1">
                 Só analisa conversas com última mensagem há pelo menos este número de horas.
               </p>
@@ -1093,7 +1661,8 @@ function ConfigTab() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <Phone className="h-4 w-4" />Telefones dos vendedores
+            <Phone className="h-4 w-4" />
+            Telefones dos vendedores
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -1102,19 +1671,38 @@ function ConfigTab() {
           </p>
           {phones.map((p, idx) => (
             <div key={idx} className="flex gap-2 items-center">
-              <Input placeholder="Ex: 351910000000" value={p.phone}
-                onChange={(e) => updatePhone(idx, "phone", e.target.value)} className="text-xs flex-1" />
-              <Input placeholder="Nome" value={p.name}
-                onChange={(e) => updatePhone(idx, "name", e.target.value)} className="text-xs flex-1" />
-              <Button size="sm" variant="ghost"
-                onClick={() => setForm({ ...current, seller_phones: phones.filter((_, i) => i !== idx) })}>
+              <Input
+                placeholder="Ex: 351910000000"
+                value={p.phone}
+                onChange={(e) => updatePhone(idx, "phone", e.target.value)}
+                className="text-xs flex-1"
+              />
+              <Input
+                placeholder="Nome"
+                value={p.name}
+                onChange={(e) => updatePhone(idx, "name", e.target.value)}
+                className="text-xs flex-1"
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  setForm({ ...current, seller_phones: phones.filter((_, i) => i !== idx) })
+                }
+              >
                 <X className="h-3.5 w-3.5 text-rose-500" />
               </Button>
             </div>
           ))}
-          <Button size="sm" variant="outline"
-            onClick={() => setForm({ ...current, seller_phones: [...phones, { name: "", phone: "" }] })}>
-            <Plus className="h-3.5 w-3.5 mr-1" />Adicionar vendedor
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              setForm({ ...current, seller_phones: [...phones, { name: "", phone: "" }] })
+            }
+          >
+            <Plus className="h-3.5 w-3.5 mr-1" />
+            Adicionar vendedor
           </Button>
         </CardContent>
       </Card>
@@ -1128,19 +1716,23 @@ function ConfigTab() {
 
 function IntegracaoClint() {
   const qc = useQueryClient();
-  const isPreview = typeof window !== "undefined" && window.location.hostname.includes("lovableproject.com");
+  const isPreview =
+    typeof window !== "undefined" && window.location.hostname.includes("lovableproject.com");
   const webhookUrl = isPreview
     ? "https://dashboardvendascomercial.lovable.app/api/clint/webhook"
     : typeof window !== "undefined"
       ? `${window.location.origin}/api/clint/webhook`
       : "/api/clint/webhook";
 
-
   const { data: stats } = useQuery({
-    queryKey: ["clint-webhook-stats"], queryFn: () => fetchClintWebhookStatsFn(), refetchInterval: 30_000,
+    queryKey: ["clint-webhook-stats"],
+    queryFn: () => fetchClintWebhookStatsFn(),
+    refetchInterval: 30_000,
   });
   const { data: logs = [] } = useQuery({
-    queryKey: ["clint-integration-logs"], queryFn: () => fetchClintIntegrationLogsFn(), refetchInterval: 30_000,
+    queryKey: ["clint-integration-logs"],
+    queryFn: () => fetchClintIntegrationLogsFn(),
+    refetchInterval: 30_000,
   });
 
   const [migrationSql, setMigrationSql] = React.useState<string | null>(null);
@@ -1154,7 +1746,8 @@ function IntegracaoClint() {
     },
     onError: (e: unknown) => {
       const msg = (e as Error).message ?? "";
-      if (msg.startsWith("MIGRATION_NEEDED:")) setMigrationSql(msg.replace("MIGRATION_NEEDED:", ""));
+      if (msg.startsWith("MIGRATION_NEEDED:"))
+        setMigrationSql(msg.replace("MIGRATION_NEEDED:", ""));
       else toast.error(msg || "Falha ao verificar migrations");
     },
   });
@@ -1166,50 +1759,75 @@ function IntegracaoClint() {
   return (
     <div className="mt-4 space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Card><CardContent className="pt-4 pb-3">
-          <p className="text-xs text-muted-foreground mb-1">Status</p>
-          <span className={"text-sm font-semibold px-2 py-1 rounded " + statusColor}>
-            {stats?.is_connected ? "Conectado" : "Aguardando eventos"}
-          </span>
-        </CardContent></Card>
-        <Card><CardContent className="pt-4 pb-3">
-          <p className="text-xs text-muted-foreground mb-1">Conversas via webhook</p>
-          <p className="text-2xl font-bold">{stats?.webhook_conversation_count ?? 0}</p>
-        </CardContent></Card>
-        <Card><CardContent className="pt-4 pb-3">
-          <p className="text-xs text-muted-foreground mb-1">Último evento</p>
-          <p className="text-sm">{stats?.last_event_at ? fmtDate(stats.last_event_at) : "—"}</p>
-        </CardContent></Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs text-muted-foreground mb-1">Status</p>
+            <span className={"text-sm font-semibold px-2 py-1 rounded " + statusColor}>
+              {stats?.is_connected ? "Conectado" : "Aguardando eventos"}
+            </span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs text-muted-foreground mb-1">Conversas via webhook</p>
+            <p className="text-2xl font-bold">{stats?.webhook_conversation_count ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs text-muted-foreground mb-1">Último evento</p>
+            <p className="text-sm">{stats?.last_event_at ? fmtDate(stats.last_event_at) : "—"}</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">URL do webhook</CardTitle></CardHeader>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">URL do webhook</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-2">
           <div className="flex items-center gap-2">
-            <code className="flex-1 bg-muted px-3 py-2 rounded text-xs font-mono break-all">{webhookUrl}</code>
-            <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(webhookUrl); toast.success("URL copiada!"); }}>
+            <code className="flex-1 bg-muted px-3 py-2 rounded text-xs font-mono break-all">
+              {webhookUrl}
+            </code>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard.writeText(webhookUrl);
+                toast.success("URL copiada!");
+              }}
+            >
               <Copy className="h-3.5 w-3.5" />
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Configure em <b>Clint → Configurações → Integrações → Webhooks</b>.
-            Selecione "Qualquer mudança de etapa" e mensagens de atendimento.
+            Configure em <b>Clint → Configurações → Integrações → Webhooks</b>. Selecione "Qualquer
+            mudança de etapa" e mensagens de atendimento.
           </p>
         </CardContent>
       </Card>
 
       <HotmartWebhookCard />
 
-
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Credenciais Clint</CardTitle></CardHeader>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Credenciais Clint</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">API Token Clint</Label>
-              <Input type="password" placeholder="U2FsdGVkX1/+..." className="font-mono text-xs"
-                defaultValue={import.meta.env.VITE_CLINT_TOKEN ?? ""} readOnly />
-              <p className="text-[10px] text-muted-foreground mt-1">Definido via VITE_CLINT_TOKEN</p>
+              <Input
+                type="password"
+                placeholder="U2FsdGVkX1/+..."
+                className="font-mono text-xs"
+                defaultValue={import.meta.env.VITE_CLINT_TOKEN ?? ""}
+                readOnly
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Definido via VITE_CLINT_TOKEN
+              </p>
             </div>
             <div>
               <Label className="text-xs">API Base URL</Label>
@@ -1220,7 +1838,9 @@ function IntegracaoClint() {
       </Card>
 
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Inicialização do banco</CardTitle></CardHeader>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Inicialização do banco</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
             Verifica se as tabelas v2 foram aplicadas.
@@ -1231,7 +1851,9 @@ function IntegracaoClint() {
           </Button>
           {migrationSql && (
             <div className="space-y-2">
-              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">{migrationSql}</p>
+              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+                {migrationSql}
+              </p>
             </div>
           )}
         </CardContent>
@@ -1241,7 +1863,11 @@ function IntegracaoClint() {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Log de eventos recentes</CardTitle>
-            <Button size="sm" variant="ghost" onClick={() => qc.invalidateQueries({ queryKey: ["clint-integration-logs"] })}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => qc.invalidateQueries({ queryKey: ["clint-integration-logs"] })}
+            >
               <RefreshCw className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -1255,22 +1881,30 @@ function IntegracaoClint() {
           <div className="space-y-1.5">
             {logs.map((log) => (
               <div key={log.id} className="flex items-start gap-2 text-xs">
-                <span className={"shrink-0 px-1.5 py-0.5 rounded font-medium " + (
-                  log.status === "processed" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                  : log.status === "error" ? "bg-rose-500/15 text-rose-700 dark:text-rose-400"
-                  : "bg-slate-500/15 text-slate-600 dark:text-slate-400"
-                )}>{log.status}</span>
+                <span
+                  className={
+                    "shrink-0 px-1.5 py-0.5 rounded font-medium " +
+                    (log.status === "processed"
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                      : log.status === "error"
+                        ? "bg-rose-500/15 text-rose-700 dark:text-rose-400"
+                        : "bg-slate-500/15 text-slate-600 dark:text-slate-400")
+                  }
+                >
+                  {log.status}
+                </span>
                 <span className="text-muted-foreground shrink-0">{fmtDate(log.created_at)}</span>
-                <span className={
-                  log.event_type === "unknown"
-                    ? "font-mono text-amber-500"
-                    : "font-mono"
-                }>
-                  {log.event_type === "unknown" ? "⚠ unknown (evento não reconhecido)" : log.event_type ?? "—"}
+                <span
+                  className={
+                    log.event_type === "unknown" ? "font-mono text-amber-500" : "font-mono"
+                  }
+                >
+                  {log.event_type === "unknown"
+                    ? "⚠ unknown (evento não reconhecido)"
+                    : (log.event_type ?? "—")}
                 </span>
                 {log.error_msg && <span className="text-rose-500 truncate">{log.error_msg}</span>}
               </div>
-
             ))}
           </div>
         </CardContent>
@@ -1284,33 +1918,50 @@ function HotmartWebhookCard() {
     queryKey: ["hotmart-webhook-token"],
     queryFn: () => getHotmartWebhookTokenFn(),
   });
-  const isPreview = typeof window !== "undefined" && window.location.hostname.includes("lovableproject.com");
+  const isPreview =
+    typeof window !== "undefined" && window.location.hostname.includes("lovableproject.com");
   const origin = isPreview
     ? "https://dashboardvendascomercial.lovable.app"
-    : typeof window !== "undefined" ? window.location.origin : "";
+    : typeof window !== "undefined"
+      ? window.location.origin
+      : "";
   const token = data?.token ?? "";
-  const url = token ? `${origin}/api/hotmart/webhook?hottok=${token}` : `${origin}/api/hotmart/webhook?hottok=…`;
+  const url = token
+    ? `${origin}/api/hotmart/webhook?hottok=${token}`
+    : `${origin}/api/hotmart/webhook?hottok=…`;
   return (
     <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-base">Hotmart Webhook</CardTitle></CardHeader>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Hotmart Webhook</CardTitle>
+      </CardHeader>
       <CardContent className="space-y-2">
         <div className="flex items-center gap-2">
-          <code className="flex-1 bg-muted px-3 py-2 rounded text-xs font-mono break-all">{url}</code>
-          <Button size="sm" variant="outline" disabled={!token}
-            onClick={() => { navigator.clipboard.writeText(url); toast.success("URL copiada!"); }}>
+          <code className="flex-1 bg-muted px-3 py-2 rounded text-xs font-mono break-all">
+            {url}
+          </code>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!token}
+            onClick={() => {
+              navigator.clipboard.writeText(url);
+              toast.success("URL copiada!");
+            }}
+          >
             <Copy className="h-3.5 w-3.5" />
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Configure em <b>Hotmart → Ferramentas → Webhook</b>. Eventos: <code>PURCHASE_APPROVED</code>,
-          <code>PURCHASE_COMPLETE</code>, <code>PURCHASE_REFUNDED</code>, <code>PURCHASE_CHARGEBACK</code>,
-          <code>PURCHASE_CANCELED</code>, <code>PURCHASE_DISPUTE</code>. Alimenta a tabela <code>sales</code> automaticamente.
+          Configure em <b>Hotmart → Ferramentas → Webhook</b>. Eventos:{" "}
+          <code>PURCHASE_APPROVED</code>,<code>PURCHASE_COMPLETE</code>,{" "}
+          <code>PURCHASE_REFUNDED</code>, <code>PURCHASE_CHARGEBACK</code>,
+          <code>PURCHASE_CANCELED</code>, <code>PURCHASE_DISPUTE</code>. Alimenta a tabela{" "}
+          <code>sales</code> automaticamente.
         </p>
       </CardContent>
     </Card>
   );
 }
-
 
 // ==================== PERFORMANCE TAB ====================
 function fmtEUR(n: number) {
@@ -1321,9 +1972,26 @@ function fmtPct(n: number) {
 }
 function SellerAvatar({ name, size = 32 }: { name: string; size?: number }) {
   const photo = getSellerPhoto(name);
-  const initials = name.split(" ").slice(0, 2).map((p) => p[0]).join("").toUpperCase();
+  const initials = name
+    .split(" ")
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase();
   if (photo) {
-    return <img src={photo} alt={name} className="rounded-full object-cover" style={{ width: size, height: size }} />;
+    return (
+      <img
+        src={photo}
+        srcSet={getSellerPhotoSrcSet(name)}
+        alt={name}
+        loading="lazy"
+        decoding="async"
+        width={size}
+        height={size}
+        className="rounded-full object-cover"
+        style={{ width: size, height: size }}
+      />
+    );
   }
   return (
     <div
@@ -1346,17 +2014,34 @@ function PerformanceTab() {
 
   // Lista de meses disponíveis desde o início da temporada (jun/2026) até o mês atual
   const monthOptions = useMemo(() => {
-    const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    const MESES = [
+      "Janeiro",
+      "Fevereiro",
+      "Março",
+      "Abril",
+      "Maio",
+      "Junho",
+      "Julho",
+      "Agosto",
+      "Setembro",
+      "Outubro",
+      "Novembro",
+      "Dezembro",
+    ];
     const months: { value: string; label: string }[] = [];
     const now = new Date();
-    let y = 2026, m = 6; // junho/2026 — início da temporada
+    let y = 2026,
+      m = 6; // junho/2026 — início da temporada
     while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
       months.push({
         value: `${y}-${String(m).padStart(2, "0")}-01`,
         label: `${MESES[m - 1]} ${y}`,
       });
       m++;
-      if (m > 12) { m = 1; y++; }
+      if (m > 12) {
+        m = 1;
+        y++;
+      }
     }
     return months.reverse(); // mais recente primeiro
   }, []);
@@ -1364,7 +2049,12 @@ function PerformanceTab() {
 
   const effectiveRefDate = refDate;
 
-  const { data: perf, isLoading, isFetching, error: perfError } = useQuery({
+  const {
+    data: perf,
+    isLoading,
+    isFetching,
+    error: perfError,
+  } = useQuery({
     queryKey: ["coach-perf", range, effectiveRefDate ?? "today"],
     queryFn: () => fetchPerformanceFn({ data: { range, refDate: effectiveRefDate } }),
     placeholderData: (prev) => prev,
@@ -1377,19 +2067,27 @@ function PerformanceTab() {
     const target = sellerNameGuess?.toLowerCase();
     if (!target) return;
     const match = perf.sellers.find(
-      (s) => displaySellerName(s.name).toLowerCase() === target
-        || displaySellerName(s.email ?? "").toLowerCase() === target
+      (s) =>
+        displaySellerName(s.name).toLowerCase() === target ||
+        displaySellerName(s.email ?? "").toLowerCase() === target,
     );
-    if (match) { setScope("seller"); setSellerKey(match.key); }
+    if (match) {
+      setScope("seller");
+      setSellerKey(match.key);
+    }
   }, [isAdmin, perf, sellerNameGuess, sellerKey]);
 
   const fbMutation = useMutation({
-    mutationFn: () => generatePerformanceFeedbackFn({ data: { range, scope, sellerKey: sellerKey ?? undefined, refDate: effectiveRefDate } }),
+    mutationFn: () =>
+      generatePerformanceFeedbackFn({
+        data: { range, scope, sellerKey: sellerKey ?? undefined, refDate: effectiveRefDate },
+      }),
     onSuccess: (r) => setFeedback((r as any).text ?? ""),
     onError: (e: any) => toast.error(String(e?.message ?? e)),
   });
 
-  const rangeLabel = perf?.periodLabel ?? (range === "day" ? "Hoje" : range === "week" ? "Semana" : "Mês");
+  const rangeLabel =
+    perf?.periodLabel ?? (range === "day" ? "Hoje" : range === "week" ? "Semana" : "Mês");
 
   return (
     <div className="space-y-4">
@@ -1402,7 +2100,9 @@ function PerformanceTab() {
               onClick={() => setRange(r)}
               className={
                 "px-3 py-1 text-xs rounded-md transition " +
-                (range === r ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")
+                (range === r
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground")
               }
             >
               {r === "day" ? "Diário" : r === "week" ? "Semanal" : "Mensal"}
@@ -1419,7 +2119,9 @@ function PerformanceTab() {
                 className="text-xs border rounded-md px-2 py-1 bg-background"
               >
                 {monthOptions.map((mo) => (
-                  <option key={mo.value} value={mo.value}>{mo.label}</option>
+                  <option key={mo.value} value={mo.value}>
+                    {mo.label}
+                  </option>
                 ))}
               </select>
             </>
@@ -1441,7 +2143,9 @@ function PerformanceTab() {
             <button
               onClick={() => setRefDate(todayISO)}
               className="text-[11px] text-muted-foreground hover:text-foreground underline"
-            >hoje</button>
+            >
+              hoje
+            </button>
           )}
         </div>
 
@@ -1449,13 +2153,30 @@ function PerformanceTab() {
           {isAdmin && (
             <div className="inline-flex rounded-lg border p-1 bg-card">
               <button
-                onClick={() => { setScope("team"); setSellerKey(null); }}
-                className={"px-3 py-1 text-xs rounded-md " + (scope === "team" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
-              >Equipe</button>
+                onClick={() => {
+                  setScope("team");
+                  setSellerKey(null);
+                }}
+                className={
+                  "px-3 py-1 text-xs rounded-md " +
+                  (scope === "team"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground")
+                }
+              >
+                Equipe
+              </button>
               <button
                 onClick={() => setScope("seller")}
-                className={"px-3 py-1 text-xs rounded-md " + (scope === "seller" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
-              >Por vendedor</button>
+                className={
+                  "px-3 py-1 text-xs rounded-md " +
+                  (scope === "seller"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground")
+                }
+              >
+                Por vendedor
+              </button>
             </div>
           )}
           {isAdmin && scope === "seller" && perf && (
@@ -1466,7 +2187,9 @@ function PerformanceTab() {
             >
               <option value="">— escolher —</option>
               {perf.sellers.map((s) => (
-                <option key={s.key} value={s.key}>{s.name}</option>
+                <option key={s.key} value={s.key}>
+                  {s.name}
+                </option>
               ))}
             </select>
           )}
@@ -1493,80 +2216,116 @@ function PerformanceTab() {
       )}
 
       {/* KPIs — respeitam o filtro Equipe / Por vendedor */}
-      {perf && (() => {
-        const showAttendance = (perf.periodStart ?? "") >= "2026-08-01";
-        const selected = scope === "seller" && sellerKey
-          ? perf.sellers.find((s) => s.key === sellerKey) ?? null
-          : null;
-        const isSeller = !!selected;
-        const view = selected
-          ? {
-              leadsNovos: selected.leadsNovos,
-              atendimentos: selected.atendimentos,
-              leadsSemAtendimento: 0,
-              vendas: selected.vendas,
-              faturamento: selected.faturamento,
-              conversaoLead: selected.conversaoLead,
-              taxaConversao: selected.taxaConversao,
-              leadPorVenda: selected.vendas > 0 ? selected.leadsNovos / selected.vendas : null,
-              coberturaAtendimento: selected.leadsNovos > 0 ? selected.atendimentos / selected.leadsNovos : 0,
-              notaMedia: selected.notaMedia,
-            }
-          : perf.team;
-        const scopeLabel = isSeller ? selected!.name : rangeLabel;
-        return (
-          <>
-            {isSeller && (
-              <div className="text-xs text-muted-foreground -mb-1">
-                Mostrando apenas: <span className="font-medium text-foreground">{selected!.name}</span>
-              </div>
-            )}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 auto-rows-fr">
-              <KpiCard icon={<Users className="h-3 w-3" />} label={`Leads novos (${scopeLabel})`} value={String(view.leadsNovos)} />
-              <KpiCard icon={<CheckCircle2 className="h-3 w-3" />} label="Vendas" value={String(view.vendas)} />
-              <KpiCard icon={<TrendingUp className="h-3 w-3" />} label="Faturamento" value={fmtEUR(view.faturamento)} />
-              <KpiCard
-                icon={<Target className="h-3 w-3" />}
-                label="Conv. lead→venda"
-                value={fmtPct(view.conversaoLead)}
-                valueClass="text-emerald-600"
-              />
-              <KpiCard icon={<Sparkles className="h-3 w-3" />} label="Nota média" value={view.notaMedia != null ? view.notaMedia.toFixed(1) : "—"} valueClass={scoreColor(view.notaMedia)} />
-            </div>
-            {!isSeller && (perf?.team.leadsPorOrigem?.length ?? 0) > 0 && (
-              <div className="flex flex-wrap items-center gap-2 -mt-1 text-[11px]">
-                <span className="text-muted-foreground">Leads por funil ({rangeLabel}):</span>
-                {perf!.team.leadsPorOrigem.map((o) => (
-                  <span key={o.origem} className="rounded-full border px-2 py-0.5">
-                    {o.origem}: <span className="font-semibold text-foreground">{o.leads}</span>
-                  </span>
-                ))}
-                <span className="text-muted-foreground">
-                  · mesma base dos Funis Perpétuos em Resultados
-                </span>
-              </div>
-            )}
-            {showAttendance ? (
-              <div className="text-[11px] text-muted-foreground -mt-2 px-1 space-y-1">
-                <div>
-                  {!isSeller && (<>Cobertura de atendimento V3: <span className="font-medium text-foreground">{fmtPct(view.coberturaAtendimento)}</span>{" · "}</>)}
-                  Taxa atendimento→venda: <span className="font-medium text-foreground">{fmtPct(view.taxaConversao)}</span>
-                  {view.leadPorVenda != null && (
-                    <> · Leads por venda: <span className="font-medium text-foreground">{view.leadPorVenda.toFixed(1)}</span></>
-                  )}
+      {perf &&
+        (() => {
+          const showAttendance = (perf.periodStart ?? "") >= "2026-08-01";
+          const selected =
+            scope === "seller" && sellerKey
+              ? (perf.sellers.find((s) => s.key === sellerKey) ?? null)
+              : null;
+          const isSeller = !!selected;
+          const view = selected
+            ? {
+                leadsNovos: selected.leadsNovos,
+                atendimentos: selected.atendimentos,
+                leadsSemAtendimento: 0,
+                vendas: selected.vendas,
+                faturamento: selected.faturamento,
+                conversaoLead: selected.conversaoLead,
+                taxaConversao: selected.taxaConversao,
+                leadPorVenda: selected.vendas > 0 ? selected.leadsNovos / selected.vendas : null,
+                coberturaAtendimento:
+                  selected.leadsNovos > 0 ? selected.atendimentos / selected.leadsNovos : 0,
+                notaMedia: selected.notaMedia,
+              }
+            : perf.team;
+          const scopeLabel = isSeller ? selected!.name : rangeLabel;
+          return (
+            <>
+              {isSeller && (
+                <div className="text-xs text-muted-foreground -mb-1">
+                  Mostrando apenas:{" "}
+                  <span className="font-medium text-foreground">{selected!.name}</span>
                 </div>
+              )}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 auto-rows-fr">
+                <KpiCard
+                  icon={<Users className="h-3 w-3" />}
+                  label={`Leads novos (${scopeLabel})`}
+                  value={String(view.leadsNovos)}
+                />
+                <KpiCard
+                  icon={<CheckCircle2 className="h-3 w-3" />}
+                  label="Vendas"
+                  value={String(view.vendas)}
+                />
+                <KpiCard
+                  icon={<TrendingUp className="h-3 w-3" />}
+                  label="Faturamento"
+                  value={fmtEUR(view.faturamento)}
+                />
+                <KpiCard
+                  icon={<Target className="h-3 w-3" />}
+                  label="Conv. lead→venda"
+                  value={fmtPct(view.conversaoLead)}
+                  valueClass="text-emerald-600"
+                />
+                <KpiCard
+                  icon={<Sparkles className="h-3 w-3" />}
+                  label="Nota média"
+                  value={view.notaMedia != null ? view.notaMedia.toFixed(1) : "—"}
+                  valueClass={scoreColor(view.notaMedia)}
+                />
               </div>
-            ) : (
-              <div className="text-[11px] text-muted-foreground -mt-2 px-1">
-                Métricas de atendimento ocultas até 01/08/2026 enquanto concluímos o backfill do histórico de conversas.
-              </div>
-            )}
-          </>
-        );
-      })()}
-
-
-
+              {!isSeller && (perf?.team.leadsPorOrigem?.length ?? 0) > 0 && (
+                <div className="flex flex-wrap items-center gap-2 -mt-1 text-[11px]">
+                  <span className="text-muted-foreground">Leads por funil ({rangeLabel}):</span>
+                  {perf!.team.leadsPorOrigem.map((o) => (
+                    <span key={o.origem} className="rounded-full border px-2 py-0.5">
+                      {o.origem}: <span className="font-semibold text-foreground">{o.leads}</span>
+                    </span>
+                  ))}
+                  <span className="text-muted-foreground">
+                    · mesma base dos Funis Perpétuos em Resultados
+                  </span>
+                </div>
+              )}
+              {showAttendance ? (
+                <div className="text-[11px] text-muted-foreground -mt-2 px-1 space-y-1">
+                  <div>
+                    {!isSeller && (
+                      <>
+                        Cobertura de atendimento V3:{" "}
+                        <span className="font-medium text-foreground">
+                          {fmtPct(view.coberturaAtendimento)}
+                        </span>
+                        {" · "}
+                      </>
+                    )}
+                    Taxa atendimento→venda:{" "}
+                    <span className="font-medium text-foreground">
+                      {fmtPct(view.taxaConversao)}
+                    </span>
+                    {view.leadPorVenda != null && (
+                      <>
+                        {" "}
+                        · Leads por venda:{" "}
+                        <span className="font-medium text-foreground">
+                          {view.leadPorVenda.toFixed(1)}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-[11px] text-muted-foreground -mt-2 px-1">
+                  Métricas de atendimento ocultas até 01/08/2026 enquanto concluímos o backfill do
+                  histórico de conversas.
+                </div>
+              )}
+            </>
+          );
+        })()}
 
       {/* Feedback IA */}
       {feedback && (
@@ -1574,13 +2333,29 @@ function PerformanceTab() {
           <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-fuchsia-500" />
-              Mensagem WhatsApp · {scope === "team" ? "equipe" : perf?.sellers.find((s) => s.key === sellerKey)?.name} · {rangeLabel}
+              Mensagem WhatsApp ·{" "}
+              {scope === "team"
+                ? "equipe"
+                : perf?.sellers.find((s) => s.key === sellerKey)?.name} · {rangeLabel}
             </CardTitle>
             <div className="flex gap-1">
-              <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(feedback); toast.success("Copiado! Cole no WhatsApp 📋"); }}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  navigator.clipboard.writeText(feedback);
+                  toast.success("Copiado! Cole no WhatsApp 📋");
+                }}
+              >
                 Copiar
               </Button>
-              <Button size="sm" variant="outline" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(feedback)}`, "_blank")}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  window.open(`https://wa.me/?text=${encodeURIComponent(feedback)}`, "_blank")
+                }
+              >
                 Abrir WhatsApp
               </Button>
             </div>
@@ -1589,14 +2364,16 @@ function PerformanceTab() {
             <div className="text-sm whitespace-pre-wrap leading-relaxed font-sans">{feedback}</div>
           </CardContent>
         </Card>
-
       )}
 
       {/* Daily mini-chart */}
       {perf && perf.range !== "day" && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2"><BarChart2 className="h-4 w-4" />Atendimentos × Vendas por dia</CardTitle>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <BarChart2 className="h-4 w-4" />
+              Atendimentos × Vendas por dia
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <DailyBars daily={perf.daily} />
@@ -1608,7 +2385,10 @@ function PerformanceTab() {
       {perf && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2"><Users className="h-4 w-4" />Ranking por vendedor · {rangeLabel}</CardTitle>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Ranking por vendedor · {rangeLabel}
+            </CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {isLoading ? (
@@ -1621,18 +2401,27 @@ function PerformanceTab() {
                   <tr className="border-b">
                     <th className="text-left py-2 pl-1">#</th>
                     <th className="text-left">Vendedor</th>
-                    <th className="text-right" title="Leads novos no período filtrado">Leads</th>
+                    <th className="text-right" title="Leads novos no período filtrado">
+                      Leads
+                    </th>
                     <th className="text-right">Atend.</th>
                     <th className="text-right">Vendas</th>
                     <th className="text-right">Faturamento</th>
-                    <th className="text-right" title="Vendas ÷ Leads">Conv. Lead</th>
-                    <th className="text-right" title="Vendas ÷ Atendimentos">Conv. Atend.</th>
+                    <th className="text-right" title="Vendas ÷ Leads">
+                      Conv. Lead
+                    </th>
+                    <th className="text-right" title="Vendas ÷ Atendimentos">
+                      Conv. Atend.
+                    </th>
                     <th className="text-right">Nota média</th>
                     {isAdmin && <th></th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {(scope === "seller" && sellerKey ? perf.sellers.filter((s) => s.key === sellerKey) : perf.sellers).map((s, i) => (
+                  {(scope === "seller" && sellerKey
+                    ? perf.sellers.filter((s) => s.key === sellerKey)
+                    : perf.sellers
+                  ).map((s, i) => (
                     <tr key={s.key} className="border-b last:border-0 hover:bg-muted/30">
                       <td className="py-2 pl-1 text-xs text-muted-foreground">{i + 1}º</td>
                       <td>
@@ -1640,7 +2429,9 @@ function PerformanceTab() {
                           <SellerAvatar name={s.name} />
                           <div>
                             <div className="font-medium">{s.name}</div>
-                            <div className="text-[10px] text-muted-foreground">{s.email || "—"}</div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {s.email || "—"}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -1648,7 +2439,9 @@ function PerformanceTab() {
                       <td className="text-right">{s.atendimentos}</td>
                       <td className="text-right font-medium">{s.vendas}</td>
                       <td className="text-right">{fmtEUR(s.faturamento)}</td>
-                      <td className="text-right">{s.leadsNovos > 0 ? fmtPct(s.conversaoLead) : "—"}</td>
+                      <td className="text-right">
+                        {s.leadsNovos > 0 ? fmtPct(s.conversaoLead) : "—"}
+                      </td>
                       <td className="text-right">{fmtPct(s.taxaConversao)}</td>
                       <td className={"text-right font-semibold " + scoreColor(s.notaMedia)}>
                         {s.notaMedia != null ? s.notaMedia.toFixed(1) : "—"}
@@ -1657,7 +2450,11 @@ function PerformanceTab() {
                       {isAdmin && (
                         <td className="text-right">
                           <button
-                            onClick={() => { setScope("seller"); setSellerKey(s.key); fbMutation.mutate(); }}
+                            onClick={() => {
+                              setScope("seller");
+                              setSellerKey(s.key);
+                              fbMutation.mutate();
+                            }}
                             className="text-[10px] text-fuchsia-600 hover:underline"
                             title="Gerar feedback IA para este vendedor"
                           >
@@ -1680,7 +2477,11 @@ function PerformanceTab() {
 function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
   const max = Math.max(1, ...daily.map((d) => Math.max(d.leads, d.atendimentos, d.vendas)));
   if (!daily.length) {
-    return <div className="h-40 flex items-center justify-center text-xs text-muted-foreground">Sem dados no período.</div>;
+    return (
+      <div className="h-40 flex items-center justify-center text-xs text-muted-foreground">
+        Sem dados no período.
+      </div>
+    );
   }
   const chartWidth = Math.max(420, daily.length * 88);
   const chartHeight = 180;
@@ -1693,8 +2494,20 @@ function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-3">
       <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-44 min-w-full" role="img" aria-label="Leads novos, atendimentos e vendas por dia">
-          <line x1="0" x2={chartWidth} y1={chartHeight - bottom} y2={chartHeight - bottom} className="stroke-border" strokeWidth="1" />
+        <svg
+          viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+          className="h-44 min-w-full"
+          role="img"
+          aria-label="Leads novos, atendimentos e vendas por dia"
+        >
+          <line
+            x1="0"
+            x2={chartWidth}
+            y1={chartHeight - bottom}
+            y2={chartHeight - bottom}
+            className="stroke-border"
+            strokeWidth="1"
+          />
           {daily.map((d, i) => {
             const cx = groupWidth * i + groupWidth / 2;
             const baseY = chartHeight - bottom;
@@ -1710,16 +2523,33 @@ function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
                   const h = b.v > 0 ? Math.max(6, scaleY(b.v)) : 0;
                   return (
                     <g key={b.key}>
-                      <rect x={cx + b.off} y={baseY - h} width={barWidth} height={h} rx="2" className={b.cls} />
+                      <rect
+                        x={cx + b.off}
+                        y={baseY - h}
+                        width={barWidth}
+                        height={h}
+                        rx="2"
+                        className={b.cls}
+                      />
                       {b.v > 0 && (
-                        <text x={cx + b.off + barWidth / 2} y={baseY - h - 4} textAnchor="middle" className="fill-muted-foreground text-[9px] font-medium">
+                        <text
+                          x={cx + b.off + barWidth / 2}
+                          y={baseY - h - 4}
+                          textAnchor="middle"
+                          className="fill-muted-foreground text-[9px] font-medium"
+                        >
                           {b.v}
                         </text>
                       )}
                     </g>
                   );
                 })}
-                <text x={cx} y={chartHeight - 6} textAnchor="middle" className="fill-muted-foreground text-[10px]">
+                <text
+                  x={cx}
+                  y={chartHeight - 6}
+                  textAnchor="middle"
+                  className="fill-muted-foreground text-[10px]"
+                >
                   {d.date.slice(5)}
                 </text>
               </g>
@@ -1728,9 +2558,15 @@ function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
         </svg>
       </div>
       <div className="flex flex-col gap-1 text-[10px]">
-        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-amber-500/80" /> Leads</span>
-        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-indigo-500/70" /> Atend.</span>
-        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-fuchsia-500" /> Vendas</span>
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-sm bg-amber-500/80" /> Leads
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-sm bg-indigo-500/70" /> Atend.
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-sm bg-fuchsia-500" /> Vendas
+        </span>
         <span className="mt-2 text-muted-foreground">Máx: {max}</span>
       </div>
     </div>
@@ -1739,7 +2575,8 @@ function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
 
 // ---------- Ligações (CCPBX) ----------
 function fmtDur(s: number) {
-  const m = Math.floor(s / 60), r = s % 60;
+  const m = Math.floor(s / 60),
+    r = s % 60;
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 function LigacoesTab() {
@@ -1754,14 +2591,34 @@ function LigacoesTab() {
 
   // Lista de meses disponíveis desde o início da temporada (jun/2026) até o mês atual
   const monthOptions = useMemo(() => {
-    const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    const MESES = [
+      "Janeiro",
+      "Fevereiro",
+      "Março",
+      "Abril",
+      "Maio",
+      "Junho",
+      "Julho",
+      "Agosto",
+      "Setembro",
+      "Outubro",
+      "Novembro",
+      "Dezembro",
+    ];
     const months: { value: string; label: string }[] = [];
     const now = new Date();
-    let y = 2026, m = 6;
+    let y = 2026,
+      m = 6;
     while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
-      months.push({ value: `${y}-${String(m).padStart(2, "0")}-01`, label: `${MESES[m - 1]} ${y}` });
+      months.push({
+        value: `${y}-${String(m).padStart(2, "0")}-01`,
+        label: `${MESES[m - 1]} ${y}`,
+      });
       m++;
-      if (m > 12) { m = 1; y++; }
+      if (m > 12) {
+        m = 1;
+        y++;
+      }
     }
     return months.reverse();
   }, []);
@@ -1774,7 +2631,14 @@ function LigacoesTab() {
 
   const { data: calls, isLoading } = useQuery({
     queryKey: ["ccpbx-calls", bounds.startDate, bounds.endDate],
-    queryFn: () => listCcpbxCallsFn({ data: { limit: 1000, from: `${bounds.startDate}T00:00:00.000Z`, to: `${bounds.endDate}T23:59:59.999Z` } }),
+    queryFn: () =>
+      listCcpbxCallsFn({
+        data: {
+          limit: 1000,
+          from: `${bounds.startDate}T00:00:00.000Z`,
+          to: `${bounds.endDate}T23:59:59.999Z`,
+        },
+      }),
   });
   const syncMut = useMutation({
     mutationFn: () => syncCcpbxCallsFn({ data: { days } }),
@@ -1808,25 +2672,29 @@ function LigacoesTab() {
     let l = allCalls;
     if (!isAdmin && sellerNameGuess) {
       const target = sellerNameGuess.toLowerCase();
-      l = l.filter((c) =>
-        displaySellerName(c.agent_name ?? c.agent_email ?? c.agent_user ?? "").toLowerCase() === target
+      l = l.filter(
+        (c) =>
+          displaySellerName(c.agent_name ?? c.agent_email ?? c.agent_user ?? "").toLowerCase() ===
+          target,
       );
     } else if (sellerFilter) {
       l = l.filter((c) => (c.agent_email ?? c.agent_name ?? c.agent_user ?? "") === sellerFilter);
     }
     if (q) {
       const s = q.toLowerCase();
-      l = l.filter((c) =>
-        (c.agent_name ?? "").toLowerCase().includes(s) ||
-        (c.contact_name ?? "").toLowerCase().includes(s) ||
-        (c.from_number ?? "").toLowerCase().includes(s) ||
-        (c.to_number ?? "").toLowerCase().includes(s));
+      l = l.filter(
+        (c) =>
+          (c.agent_name ?? "").toLowerCase().includes(s) ||
+          (c.contact_name ?? "").toLowerCase().includes(s) ||
+          (c.from_number ?? "").toLowerCase().includes(s) ||
+          (c.to_number ?? "").toLowerCase().includes(s),
+      );
     }
     return l;
   }, [allCalls, sellerFilter, q, isAdmin, sellerNameGuess]);
 
   const totalDur = list.reduce((a, c) => a + (c.duration_sec ?? 0), 0);
-  const analyzed = list.filter(c => c.score != null).length;
+  const analyzed = list.filter((c) => c.score != null).length;
   const avgScore = analyzed > 0 ? list.reduce((a, c) => a + (c.score ?? 0), 0) / analyzed : null;
 
   const periodLabel = range === "day" ? "Dia" : range === "week" ? "Semana" : "Mês";
@@ -1834,10 +2702,27 @@ function LigacoesTab() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard icon={<Phone className="h-4 w-4 text-indigo-600" />} label={`Ligações (${periodLabel.toLowerCase()})`} value={String(list.length)} />
-        <KpiCard icon={<Clock className="h-4 w-4 text-amber-600" />} label="Tempo total" value={fmtDur(totalDur)} />
-        <KpiCard icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} label="Analisadas" value={String(analyzed)} />
-        <KpiCard icon={<Award className="h-4 w-4 text-fuchsia-600" />} label="Nota média" value={avgScore == null ? "—" : avgScore.toFixed(1)} valueClass={scoreColor(avgScore)} />
+        <KpiCard
+          icon={<Phone className="h-4 w-4 text-indigo-600" />}
+          label={`Ligações (${periodLabel.toLowerCase()})`}
+          value={String(list.length)}
+        />
+        <KpiCard
+          icon={<Clock className="h-4 w-4 text-amber-600" />}
+          label="Tempo total"
+          value={fmtDur(totalDur)}
+        />
+        <KpiCard
+          icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+          label="Analisadas"
+          value={String(analyzed)}
+        />
+        <KpiCard
+          icon={<Award className="h-4 w-4 text-fuchsia-600" />}
+          label="Nota média"
+          value={avgScore == null ? "—" : avgScore.toFixed(1)}
+          valueClass={scoreColor(avgScore)}
+        />
       </div>
 
       <Card>
@@ -1852,7 +2737,9 @@ function LigacoesTab() {
                     onClick={() => setRange(r)}
                     className={cn(
                       "px-3 py-1 text-xs rounded-md transition",
-                      range === r ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                      range === r
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {r === "day" ? "Dia" : r === "week" ? "Semana" : "Mês"}
@@ -1866,7 +2753,9 @@ function LigacoesTab() {
                   className="h-9 text-xs border rounded-md px-2 bg-background"
                 >
                   {monthOptions.map((mo) => (
-                    <option key={mo.value} value={mo.value}>{mo.label}</option>
+                    <option key={mo.value} value={mo.value}>
+                      {mo.label}
+                    </option>
                   ))}
                 </select>
               ) : (
@@ -1890,7 +2779,14 @@ function LigacoesTab() {
               )}
               <div className="hidden sm:block h-6 w-px bg-border mx-1" />
               <Label className="text-xs hidden sm:inline">Sync:</Label>
-              <Input type="number" min={1} max={90} className="h-8 w-20" value={days} onChange={(e) => setDays(Math.max(1, Math.min(90, Number(e.target.value) || 7)))} />
+              <Input
+                type="number"
+                min={1}
+                max={90}
+                className="h-8 w-20"
+                value={days}
+                onChange={(e) => setDays(Math.max(1, Math.min(90, Number(e.target.value) || 7)))}
+              />
               <Button size="sm" onClick={() => syncMut.mutate()} disabled={syncMut.isPending}>
                 <RefreshCw className={cn("h-4 w-4 mr-1", syncMut.isPending && "animate-spin")} />
                 Sincronizar
@@ -1909,20 +2805,41 @@ function LigacoesTab() {
               >
                 <option value="">Todos os vendedores</option>
                 {sellerOptions.map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
                 ))}
               </select>
             )}
-            <Input placeholder="Buscar por agente, contato, número…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs h-9" />
+            <Input
+              placeholder="Buscar por agente, contato, número…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="max-w-xs h-9"
+            />
             {(sellerFilter || q) && (
-              <Button size="sm" variant="ghost" onClick={() => { setSellerFilter(""); setQ(""); }}>Limpar</Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setSellerFilter("");
+                  setQ("");
+                }}
+              >
+                Limpar
+              </Button>
             )}
-            <span className="text-xs text-muted-foreground ml-auto">{list.length} de {allCalls.length}</span>
+            <span className="text-xs text-muted-foreground ml-auto">
+              {list.length} de {allCalls.length}
+            </span>
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> :
-            list.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma ligação encontrada no período.</p> :
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Carregando…</p>
+          ) : list.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma ligação encontrada no período.</p>
+          ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-xs text-muted-foreground border-b">
@@ -1944,25 +2861,43 @@ function LigacoesTab() {
                       <td className="py-2 pr-2">{c.agent_name ?? c.agent_user ?? "—"}</td>
                       <td className="py-2 pr-2">
                         <div>{c.contact_name ?? "—"}</div>
-                        <div className="text-[11px] text-muted-foreground">{c.direction === "outbound" ? c.to_number : c.from_number}</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {c.direction === "outbound" ? c.to_number : c.from_number}
+                        </div>
                       </td>
                       <td className="py-2 pr-2">
-                        <Badge variant="outline" className="text-[10px]">{c.direction ?? "?"}</Badge>
+                        <Badge variant="outline" className="text-[10px]">
+                          {c.direction ?? "?"}
+                        </Badge>
                       </td>
                       <td className="py-2 pr-2">{fmtDur(c.duration_sec)}</td>
                       <td className="py-2 pr-2 text-xs">{c.status ?? "—"}</td>
-                      <td className={cn("py-2 pr-2 font-semibold", scoreColor(c.score))}>{c.score == null ? "—" : c.score.toFixed(1)}</td>
+                      <td className={cn("py-2 pr-2 font-semibold", scoreColor(c.score))}>
+                        {c.score == null ? "—" : c.score.toFixed(1)}
+                      </td>
                       <td className="py-2 pr-2 text-right">
                         <div className="flex justify-end items-center gap-1">
                           {c.recording_url && (
-                            <a href={c.recording_url} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:underline">áudio</a>
+                            <a
+                              href={c.recording_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-indigo-600 hover:underline"
+                            >
+                              áudio
+                            </a>
                           )}
                           {c.analysis && (
                             <Button size="sm" variant="outline" onClick={() => setSelected(c)}>
                               Ver análise
                             </Button>
                           )}
-                          <Button size="sm" variant="ghost" disabled={analyzeMut.isPending} onClick={() => analyzeMut.mutate(c.id)}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={analyzeMut.isPending}
+                            onClick={() => analyzeMut.mutate(c.id)}
+                          >
                             <Sparkles className="h-3 w-3 mr-1" />
                             {c.analyzed_at ? "Reanalisar" : "Analisar"}
                           </Button>
@@ -1973,7 +2908,7 @@ function LigacoesTab() {
                 </tbody>
               </table>
             </div>
-          }
+          )}
         </CardContent>
       </Card>
 
@@ -1982,74 +2917,106 @@ function LigacoesTab() {
           <DialogHeader>
             <DialogTitle>Análise da ligação</DialogTitle>
           </DialogHeader>
-          {selected && (() => {
-            const a: any = selected.analysis ?? {};
-            const list = (v: any): string[] => Array.isArray(v) ? v.filter(Boolean).map(String) : [];
-            return (
-              <div className="space-y-4 text-sm">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div className={cn("text-3xl font-bold", scoreColor(selected.score))}>
-                    {selected.score == null ? "—" : selected.score.toFixed(1)}
+          {selected &&
+            (() => {
+              const a: any = selected.analysis ?? {};
+              const list = (v: any): string[] =>
+                Array.isArray(v) ? v.filter(Boolean).map(String) : [];
+              return (
+                <div className="space-y-4 text-sm">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className={cn("text-3xl font-bold", scoreColor(selected.score))}>
+                      {selected.score == null ? "—" : selected.score.toFixed(1)}
+                    </div>
+                    {a.sentimento && (
+                      <span
+                        className={cn("text-xs px-2 py-0.5 rounded", sentimentColor(a.sentimento))}
+                      >
+                        {a.sentimento}
+                      </span>
+                    )}
+                    {a.tentou_fechar === true && (
+                      <Badge variant="outline" className="text-[10px]">
+                        Tentou fechar
+                      </Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {selected.agent_name ?? selected.agent_user ?? "—"} →{" "}
+                      {selected.contact_name ?? "—"} · {fmtDur(selected.duration_sec)}
+                    </span>
                   </div>
-                  {a.sentimento && (
-                    <span className={cn("text-xs px-2 py-0.5 rounded", sentimentColor(a.sentimento))}>{a.sentimento}</span>
+
+                  {a.resumo && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground mb-1">Resumo</p>
+                      <p>{a.resumo}</p>
+                    </div>
                   )}
-                  {a.tentou_fechar === true && <Badge variant="outline" className="text-[10px]">Tentou fechar</Badge>}
-                  <span className="text-xs text-muted-foreground ml-auto">
-                    {selected.agent_name ?? selected.agent_user ?? "—"} → {selected.contact_name ?? "—"} · {fmtDur(selected.duration_sec)}
-                  </span>
+
+                  {list(a.pontos_fortes).length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-emerald-600 mb-1">Pontos fortes</p>
+                      <ul className="list-disc pl-5 space-y-0.5">
+                        {list(a.pontos_fortes).map((s, i) => (
+                          <li key={i}>{s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {list(a.pontos_melhoria).length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-amber-600 mb-1">Pontos a melhorar</p>
+                      <ul className="list-disc pl-5 space-y-0.5">
+                        {list(a.pontos_melhoria).map((s, i) => (
+                          <li key={i}>{s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {list(a.objecoes).length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-rose-600 mb-1">Objeções</p>
+                      <ul className="list-disc pl-5 space-y-0.5">
+                        {list(a.objecoes).map((s, i) => (
+                          <li key={i}>{s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {a.proxima_acao && (
+                    <div>
+                      <p className="text-xs font-semibold text-indigo-600 mb-1">Próxima ação</p>
+                      <p>{a.proxima_acao}</p>
+                    </div>
+                  )}
+
+                  {selected.transcript && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground mb-1">
+                        Transcrição
+                      </p>
+                      <div className="p-3 rounded bg-muted text-xs whitespace-pre-wrap max-h-60 overflow-y-auto">
+                        {selected.transcript}
+                      </div>
+                    </div>
+                  )}
+
+                  {selected.recording_url && (
+                    <a
+                      href={selected.recording_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-indigo-600 hover:underline"
+                    >
+                      Ouvir gravação
+                    </a>
+                  )}
                 </div>
-
-                {a.resumo && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">Resumo</p>
-                    <p>{a.resumo}</p>
-                  </div>
-                )}
-
-                {list(a.pontos_fortes).length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-emerald-600 mb-1">Pontos fortes</p>
-                    <ul className="list-disc pl-5 space-y-0.5">{list(a.pontos_fortes).map((s, i) => <li key={i}>{s}</li>)}</ul>
-                  </div>
-                )}
-
-                {list(a.pontos_melhoria).length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-amber-600 mb-1">Pontos a melhorar</p>
-                    <ul className="list-disc pl-5 space-y-0.5">{list(a.pontos_melhoria).map((s, i) => <li key={i}>{s}</li>)}</ul>
-                  </div>
-                )}
-
-                {list(a.objecoes).length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-rose-600 mb-1">Objeções</p>
-                    <ul className="list-disc pl-5 space-y-0.5">{list(a.objecoes).map((s, i) => <li key={i}>{s}</li>)}</ul>
-                  </div>
-                )}
-
-                {a.proxima_acao && (
-                  <div>
-                    <p className="text-xs font-semibold text-indigo-600 mb-1">Próxima ação</p>
-                    <p>{a.proxima_acao}</p>
-                  </div>
-                )}
-
-                {selected.transcript && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">Transcrição</p>
-                    <div className="p-3 rounded bg-muted text-xs whitespace-pre-wrap max-h-60 overflow-y-auto">{selected.transcript}</div>
-                  </div>
-                )}
-
-                {selected.recording_url && (
-                  <a href={selected.recording_url} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:underline">
-                    Ouvir gravação
-                  </a>
-                )}
-              </div>
-            );
-          })()}
+              );
+            })()}
         </DialogContent>
       </Dialog>
     </div>
