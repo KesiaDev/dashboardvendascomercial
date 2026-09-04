@@ -448,7 +448,11 @@ function RankingPage() {
 
   const now = new Date();
   const monthOptions = buildMonthOptions();
-  const [selectedValue, setSelectedValue] = useState(monthOptions[0].value);
+  // Padrão: mês vigente (atual), não o "próximo".
+  const currentMonthValue = `${now.getFullYear()}-${now.getMonth() + 1}`;
+  const [selectedValue, setSelectedValue] = useState(
+    monthOptions.find((o) => o.value === currentMonthValue)?.value ?? monthOptions[0].value,
+  );
   const selected = monthOptions.find((o) => o.value === selectedValue) ?? monthOptions[0];
   const isCurrentMonth =
     selected.year === now.getFullYear() && selected.month === now.getMonth() + 1;
