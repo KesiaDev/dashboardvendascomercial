@@ -41,7 +41,9 @@ export const FUNNELS = [
  * Para LER dados históricos use isMetricSeller com a data do fato — o histórico
  * continua contendo quem estava no time na época.
  */
-export const SELLERS: readonly string[] = activeSellers(new Date()).map((s) => s.name);
+export function sellerOptions(): string[] {
+  return activeSellers(new Date()).map((s) => s.name);
+}
 
 export type RoletaType = "mentoria" | "accelerator";
 export type BonusSemanalEur = 30 | 60;

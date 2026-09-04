@@ -35,6 +35,8 @@ Se a regra que você precisa não tem um módulo próprio, **crie o módulo** em
 |---|---|
 | Cotação EUR→BRL de pagamento | `src/lib/eur-rate.ts` |
 | Quem é vendedor, e desde/até quando | `src/lib/sellers.ts` |
+| IDs de funil da Clint | `src/lib/pipeline-origins.ts` |
+| Paginação de leitura no Supabase | `src/lib/supabase-paging.ts` |
 | Taxa de conversão | `src/lib/conversion.ts` |
 | "Esta venda conta como aprovada?" | `src/lib/sales-status.ts` |
 | Agrupamento e categoria de produto | `src/lib/product-groups.ts` |
@@ -63,8 +65,9 @@ data — a do FATO (fechamento do negócio, data da venda), nunca "hoje". Com li
 fixa, tirar alguém do time mudaria retroativamente os meses já fechados, e o
 relatório que já foi enviado deixaria de bater.
 
-Hoje: Kesia, Gisele, João, Rita e Pamela. Fabio Nadal conta **até agosto/2026**.
-Camila, Aline e Luana nunca contam.
+Hoje: Kesia, Gisele, João, Rita e Pamela. Fabio Nadal conta **até 31/08/2026** e
+Luana Guimarães **até 07/08/2026** — ambos saíram, e os meses anteriores
+continuam contando com eles. Camila e Aline nunca contam (equipe interna).
 
 Ao ler dados históricos, passe a data da linha. Para preencher um seletor de
 "quem vendeu" num formulário novo, use `activeSellers(new Date())`.
@@ -82,18 +85,25 @@ pergunta e os dois números **não são comparáveis entre si**.
 
 Se você encostar em alguma, unifique em vez de adicionar mais uma cópia:
 
-- **41 leituras sem `.limit()`** — o item mais perigoso da lista. Ver a seção de
-  performance abaixo.
-- **`PIPELINE_ORIGINS`**: três listas de UUID hardcoded em três arquivos.
-  `bi_pipeline_areas` existe para isso.
-- **`ADMIN_EMAILS`**: três cópias, uma com typo. A tabela `user_roles` existe.
-- **29 server functions sem autenticação** em `clint`, `ccpbx`, `coach` e
-  `hotmart` — as rotas de cron chamam essas funções no servidor, sem Bearer
-  token, então elas precisam de um middleware de segredo interno antes de poderem
-  exigir `requireSupabaseAuth` como as demais.
-- **`seller-aliases.ts`** ainda mantém o mapa de e-mail canônico para agenda e
+- **`fetchAllDealsFn` / `fetchAllSalesFn`** devolvem a tabela inteira para o
+  navegador, e `/executivo`, `/produtividade` e `/comercial` ainda as usam. O
+  certo é agregar no banco (o padrão está em `conversao-funil.server.ts` e
+  `leads-dia-semana.functions.ts`). **Não crie novos consumidores delas.**
+- **`ADMIN_EMAILS` em código.** A tabela `user_roles` e a função `has_role()` já
+  existem no banco e são o mecanismo certo.
+- **IDs de funil em código.** `bi_pipeline_areas` existe para isso;
+  `pipeline-origins.ts` é só o passo intermediário.
+- **Validação de entrada**: ~95 `inputValidator` são funções identidade — a
+  tipagem some em runtime. Só `data.functions.ts` usa zod.
+- **`seller-aliases.ts`** mantém o mapa de e-mail canônico para agenda e
   permissões. É outro conceito (identidade de login, não métrica), mas vale
   consolidar com `sellers.ts` quando alguém mexer nos dois.
+- **SSR**: a sessão do Supabase vive em `localStorage` (`brokeredPreviewStorage`
+  em `client.ts`), não em cookie, então o servidor não sabe quem é o usuário e
+  `beforeLoad` não pode resolver a autenticação. Migrar para storage em cookie
+  destravaria o SSR das 26 rotas — é o maior ganho de performance ainda na mesa.
+- **520 `any`**, a maioria `supabaseAdmin as any`, que descarta o tipo
+  `Database` gerado logo na porta de entrada.
 
 ## Segurança — não negociável
 

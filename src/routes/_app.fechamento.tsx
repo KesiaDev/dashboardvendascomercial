@@ -15,7 +15,7 @@ import {
   markInstallmentPaidFn,
   PRODUCTS,
   FUNNELS,
-  SELLERS,
+  sellerOptions,
   type HotmartMatch,
   type ManualSale,
 } from "@/lib/manual-sales.functions";
@@ -439,7 +439,7 @@ function FechamentoForm({ session }: { session: any }) {
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {SELLERS.map((s) => (
+                    {sellerOptions().map((s) => (
                       <SelectItem key={s} value={s}>
                         {s}
                       </SelectItem>
@@ -687,7 +687,7 @@ function FechamentoForm({ session }: { session: any }) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos os vendedores</SelectItem>
-                    {SELLERS.map((s) => (
+                    {sellerOptions().map((s) => (
                       <SelectItem key={s} value={s}>
                         {s}
                       </SelectItem>
@@ -1109,7 +1109,7 @@ function EditDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SELLERS.map((s) => (
+                  {sellerOptions().map((s) => (
                     <SelectItem key={s} value={s}>
                       {s}
                     </SelectItem>

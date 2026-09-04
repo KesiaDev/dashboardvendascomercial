@@ -54,7 +54,7 @@ import {
   REFERRAL_STATUSES,
   type ReferralStatus,
 } from "@/lib/referrals.functions";
-import { SELLERS, PRODUCTS } from "@/lib/manual-sales.functions";
+import { sellerOptions, PRODUCTS } from "@/lib/manual-sales.functions";
 
 export const Route = createFileRoute("/_app/indicacoes")({
   component: ReferralsPage,
@@ -281,7 +281,7 @@ function NovaIndicacaoDialog({ onCreated }: { onCreated: () => void }) {
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                {SELLERS.map((s) => (
+                {sellerOptions().map((s) => (
                   <SelectItem key={s} value={s}>
                     {s}
                   </SelectItem>
@@ -592,7 +592,7 @@ function EditarIndicacaoDialog({ referral, onSaved }: { referral: any; onSaved: 
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                {SELLERS.map((s) => (
+                {sellerOptions().map((s) => (
                   <SelectItem key={s} value={s}>
                     {s}
                   </SelectItem>
@@ -769,7 +769,7 @@ function MensagemPadraoCard() {
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                {SELLERS.map((s) => (
+                {sellerOptions().map((s) => (
                   <SelectItem key={s} value={s}>
                     {s}
                   </SelectItem>
