@@ -64,7 +64,7 @@ const NAV_SECTIONS = [
   {
     section: "Metas e Dinheiro",
     items: [
-      { to: "/comissionamento", label: "Comissionamento", icon: DollarSign, adminOnly: true },
+      { to: "/comissionamento", label: "Comissionamento", icon: DollarSign, adminOnly: false },
     ],
   },
 
