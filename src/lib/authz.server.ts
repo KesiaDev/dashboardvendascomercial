@@ -12,7 +12,7 @@
  * expõem dado financeiro ou administrativo levam também `assertAdmin(context.claims)`
  * como primeira linha do handler.
  */
-import { ADMIN_EMAILS } from "@/lib/auth";
+import { ADMIN_EMAILS, sellerNameForEmail } from "@/lib/auth";
 
 type Claims = { email?: unknown; user_metadata?: { role?: unknown } | null } | null | undefined;
 
@@ -27,4 +27,25 @@ export function assertAdmin(claims: Claims): void {
   if (ADMIN_EMAILS.includes(email)) return;
   if (metaRole === "admin") return;
   throw new Error("Acesso negado: apenas administradores");
+}
+
+/**
+ * Escopo do comissionamento.
+ *
+ * Admin (gestão) vê o time inteiro. Vendedor vê exclusivamente a própria linha —
+ * e o nome usado no filtro vem do e-mail do token, nunca do cliente.
+ */
+export function commissionScope(claims: Claims): { admin: boolean; sellerName: string | null } {
+  const email = String((claims as any)?.email ?? "")
+    .trim()
+    .toLowerCase();
+  const metaRole = String((claims as any)?.user_metadata?.role ?? "")
+    .trim()
+    .toLowerCase();
+  if (ADMIN_EMAILS.includes(email) || metaRole === "admin") {
+    return { admin: true, sellerName: sellerNameForEmail(email) };
+  }
+  const sellerName = sellerNameForEmail(email);
+  if (!sellerName) throw new Error("Acesso negado: sem comissionamento associado a este utilizador");
+  return { admin: false, sellerName };
 }
