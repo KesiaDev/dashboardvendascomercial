@@ -177,11 +177,13 @@ export function PerfisTab() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-4">
         <Kpi label="Conversas analisadas" value={String(data?.total_conversas ?? 0)} />
         <Kpi label="Leads com perfil identificado" value={String(data?.classificadas ?? 0)} />
         <Kpi label="Sem perfil claro" value={String(data?.nao_identificados ?? 0)} />
+        <Kpi label="Vendas no fechamento" value={String(data?.total_vendas ?? 0)} />
       </div>
+
 
       <Card>
         <CardHeader className="pb-2">
