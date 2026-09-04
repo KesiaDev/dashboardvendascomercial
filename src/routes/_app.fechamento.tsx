@@ -20,6 +20,7 @@ import {
   type ManualSale,
 } from "@/lib/manual-sales.functions";
 import { isRenewalProduct } from "@/lib/product-groups";
+import { detectPaymentPlan } from "@/lib/payment-plans";
 import { useAppAuth } from "@/lib/app-auth";
 import { canonicalSellerName } from "@/lib/sellers";
 import { isAdminEmail } from "@/lib/auth";
@@ -248,7 +249,7 @@ function FechamentoForm({ session }: { session: any }) {
     clientEmail: string;
     roleta: "" | "mentoria" | "accelerator";
     bonus: "" | "30" | "60";
-    installments: "1" | "2" | "3";
+    installments: "1" | "2" | "3" | "4" | "5" | "6";
   };
   const emptyItem = (): Item => ({
     product: "",
@@ -259,11 +260,8 @@ function FechamentoForm({ session }: { session: any }) {
     bonus: "",
     installments: "1",
   });
-  /** Parcela padrão de 166 € (499 € em 3x) — sempre 3 parcelas mensais. */
-  const is166 = (v: string) => {
-    const n = Number(String(v).replace(",", "."));
-    return Number.isFinite(n) && n >= 165 && n <= 167;
-  };
+  /** Plano de pagamento fixo reconhecido pelo valor da parcela (166, 1160, 677, 993, 593…). */
+  const planOf = (v: string) => detectPaymentPlan(Number(String(v).replace(",", ".")));
   const [items, setItems] = useState<Item[]>([emptyItem()]);
 
   const updateItem = (i: number, patch: Partial<Item>) =>
@@ -303,7 +301,7 @@ function FechamentoForm({ session }: { session: any }) {
               notes: notes || undefined,
               roleta_type: it.roleta || null,
               bonus_semanal_eur: it.bonus ? (Number(it.bonus) as 30 | 60) : null,
-              installment_total: is166(it.value) ? 3 : Number(it.installments),
+              installment_total: planOf(it.value)?.installments ?? Number(it.installments),
             },
           }),
         ),
@@ -378,7 +376,6 @@ function FechamentoForm({ session }: { session: any }) {
 
   // Parcelas futuras não pagas NÃO entram no total até serem confirmadas
   const paidSales = salesFiltered.filter((s) => s.installment_paid);
-  const pendingInstallments = salesFiltered.filter((s) => !s.installment_paid);
 
   const todaySales = paidSales.filter((s) => s.sale_date === today);
   const todayTotal = todaySales.reduce((acc, s) => acc + Number(s.value_eur), 0);
@@ -561,10 +558,10 @@ function FechamentoForm({ session }: { session: any }) {
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label className="text-xs">Parcelamento</Label>
                         <Select
-                          value={is166(it.value) ? "3" : it.installments}
-                          disabled={is166(it.value)}
+                          value={String(planOf(it.value)?.installments ?? it.installments)}
+                          disabled={!!planOf(it.value)}
                           onValueChange={(v) =>
-                            updateItem(i, { installments: v as "1" | "2" | "3" })
+                            updateItem(i, { installments: v as Item["installments"] })
                           }
                         >
                           <SelectTrigger>
@@ -572,17 +569,18 @@ function FechamentoForm({ session }: { session: any }) {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="1">À vista (1x)</SelectItem>
-                            <SelectItem value="2">2x — agenda +1 parcela no próximo mês</SelectItem>
-                            <SelectItem value="3">
-                              3x — agenda +2 parcelas nos próximos meses
-                            </SelectItem>
+                            {[2, 3, 4, 5, 6].map((n) => (
+                              <SelectItem key={n} value={String(n)}>
+                                {n}x — agenda +{n - 1} parcelas nos próximos meses
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
-                        {is166(it.value) ? (
+                        {planOf(it.value) ? (
                           <p className="text-xs text-warning-fg">
-                            Regra fixa: parcela de 166 € é sempre <b>3x</b> — as 2 parcelas
-                            seguintes entram automaticamente nos 2 meses seguintes (mesmo dia da
-                            venda).
+                            Plano reconhecido: <b>{planOf(it.value)!.label}</b> — as{" "}
+                            {planOf(it.value)!.installments - 1} parcelas seguintes entram
+                            automaticamente nos meses seguintes (mesmo dia da venda).
                           </p>
                         ) : it.installments !== "1" && it.value ? (
                           <p className="text-xs text-muted-foreground">
@@ -781,35 +779,6 @@ function FechamentoForm({ session }: { session: any }) {
               ))}
             </CardContent>
           </Card>
-
-          {/* Parcelas pendentes do mês */}
-          {pendingInstallments.length > 0 && (
-            <Card className="border-warning/40 bg-warning/10">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-warning-fg" />
-                  Parcelas pendentes ({pendingInstallments.length})
-                </CardTitle>
-                <CardDescription>
-                  Parcelas agendadas cujo pagamento ainda não foi confirmado. Marque como paga assim
-                  que o cliente pagar.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {pendingInstallments.map((s) => (
-                  <SaleCard
-                    key={s.id}
-                    sale={s}
-                    isAdmin={isAdmin}
-                    onEdit={() => setEditing(s)}
-                    onDelete={() => setDeleting(s)}
-                    onConfirm={() => setConfirmingId(s.id)}
-                    onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })}
-                  />
-                ))}
-              </CardContent>
-            </Card>
-          )}
 
           {/* Vendas do mês */}
           <Card>
@@ -1133,7 +1102,9 @@ function EditDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {PRODUCTS.map((p) => (
+                  {Array.from(
+                    new Set([...(form.product ? [form.product] : []), ...PRODUCTS]),
+                  ).map((p) => (
                     <SelectItem key={p} value={p}>
                       {p}
                     </SelectItem>
@@ -1148,7 +1119,9 @@ function EditDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {FUNNELS.map((f) => (
+                  {Array.from(
+                    new Set([...(form.funnel ? [form.funnel] : []), ...FUNNELS]),
+                  ).map((f) => (
                     <SelectItem key={f} value={f}>
                       {f}
                     </SelectItem>

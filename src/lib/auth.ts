@@ -67,8 +67,10 @@ export function isAdminUser(user: MaybeUser): boolean {
 
 export const ALLOWED_NON_ADMIN_ROUTES = [
   "/fechamento",
+  // Cada vendedor vê apenas o próprio comissionamento (filtrado no servidor).
+  "/comissionamento",
   "/fechamento-semanal",
-  "/ferias",
+  
   "/indicacoes",
   "/coach",
   "/arena",
@@ -91,4 +93,32 @@ export const ALLOWED_SELLER_EMAILS = [
 export function isAllowedSellerEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   return ALLOWED_SELLER_EMAILS.includes(email.trim().toLowerCase());
+}
+
+/**
+ * E-mail de login → nome do vendedor em `bi_seller_config`.
+ *
+ * Serve para o comissionamento individual: cada vendedor só enxerga a própria
+ * linha, e a identidade vem SEMPRE do token (nunca do payload do cliente).
+ */
+export const SELLER_NAME_BY_EMAIL: Record<string, string> = {
+  "ritasbandeira@gmail.com": "Rita Bandeira",
+  "rita@llmidiaco.com": "Rita Bandeira",
+  "gp5230158@gmail.com": "Gisele Pimentel",
+  "giselegagliano@lucianolarrossa.com": "Gisele Pimentel",
+  "gisele@llmidiaco.com": "Gisele Pimentel",
+  "joaopessoa@llmidiaco.com": "João Pessoa",
+  "joaopessoa@lucianolarrossa.com": "João Pessoa",
+  "jpessoa20@hotmail.com": "João Pessoa",
+  "pamela@llmidiaco.com": "Pamela",
+  "fabionadal@llmidiaco.com": "Fabio Nadal",
+  "fabio.nadal19@gmail.com": "Fabio Nadal",
+  "kesia@llmidiaco.com": "Kesia Nandi",
+  "kesiawnandi@gmail.com": "Kesia Nandi",
+};
+
+/** Nome do vendedor correspondente ao e-mail de login, se houver. */
+export function sellerNameForEmail(email: string | null | undefined): string | null {
+  if (!email) return null;
+  return SELLER_NAME_BY_EMAIL[email.trim().toLowerCase()] ?? null;
 }

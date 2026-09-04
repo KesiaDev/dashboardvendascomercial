@@ -6,7 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { CalendarRange, Loader2, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
+import {
+  CalendarRange,
+  Loader2,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  Hand,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_app/leads-dia")({
   component: LeadsDiaPage,
@@ -37,10 +44,44 @@ function iso(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+// Últimos 12 meses, do mais recente para o mais antigo.
+const MONTH_OPTIONS = (() => {
+  const now = new Date();
+  const fmt = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
+  return Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const value = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    const label = fmt.format(d);
+    return { value, label: label.charAt(0).toUpperCase() + label.slice(1) };
+  });
+})();
+
+function monthRange(value: string) {
+  const [y, m] = value.split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const last = new Date(Date.UTC(y, m, 0));
+  const today = new Date();
+  const end = last > today ? today : last;
+  return { from: iso(first), to: iso(end) };
+}
+
 function LeadsDiaPage() {
   const today = new Date();
+  const currentMonth = `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, "0")}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [to, setTo] = useState(iso(today));
-  const [from, setFrom] = useState(iso(new Date(today.getTime() - 89 * 86_400_000)));
+  const [from, setFrom] = useState(
+    iso(new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1))),
+  );
+
+  function applyMonth(value: string) {
+    setSelectedMonth(value);
+    if (value === "custom") return;
+    const r = monthRange(value);
+    setFrom(r.from);
+    setTo(r.to);
+  }
+
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["leads-dia-semana", from, to],
@@ -73,21 +114,40 @@ function LeadsDiaPage() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">Leads por dia da semana</h1>
           <p className="text-sm text-muted-foreground">
-            Sessão Estratégica · Minicurso V3 · Ebook V3 — mesma base dos Funis Perpétuos
+            Sessão Estratégica · Minicurso V3 · Ebook V3 — horário de Lisboa
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={selectedMonth}
+            onChange={(e) => applyMonth(e.target.value)}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            aria-label="Escolher mês"
+          >
+            {MONTH_OPTIONS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+            <option value="custom">Período personalizado</option>
+          </select>
           <Input
             type="date"
             value={from}
-            onChange={(e) => setFrom(e.target.value)}
+            onChange={(e) => {
+              setFrom(e.target.value);
+              setSelectedMonth("custom");
+            }}
             className="w-[150px]"
           />
           <span className="text-muted-foreground text-sm">até</span>
           <Input
             type="date"
             value={to}
-            onChange={(e) => setTo(e.target.value)}
+            onChange={(e) => {
+              setTo(e.target.value);
+              setSelectedMonth("custom");
+            }}
             className="w-[150px]"
           />
         </div>
@@ -136,6 +196,18 @@ function LeadsDiaPage() {
                 <p className="text-3xl font-black text-destructive-fg">{data.pior?.label ?? "—"}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   média de {data.pior?.media.toFixed(1) ?? 0} leads/dia
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-5">
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Hand className="h-4 w-4 text-sky-500" /> Levantada de mão
+                </p>
+                <p className="text-3xl font-black tabular-nums">{data.totalAtendidos}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {data.total ? ((data.totalAtendidos / data.total) * 100).toFixed(1) : "0"}% dos
+                  leads viraram responsabilidade do vendedor
                 </p>
               </CardContent>
             </Card>
@@ -194,6 +266,7 @@ function LeadsDiaPage() {
                     <th className="pb-2 pr-4 font-medium text-right">Dias no período</th>
                     <th className="pb-2 pr-4 font-medium text-right">Média/dia</th>
                     <th className="pb-2 pr-4 font-medium text-right">% do total</th>
+                    <th className="pb-2 pr-4 font-medium text-right">Levantada de mão</th>
                     <th className="pb-2 font-medium">Origem</th>
                   </tr>
                 </thead>
@@ -207,6 +280,12 @@ function LeadsDiaPage() {
                       </td>
                       <td className="py-2.5 pr-4 text-right tabular-nums">{d.media.toFixed(1)}</td>
                       <td className="py-2.5 pr-4 text-right tabular-nums">{d.share.toFixed(1)}%</td>
+                      <td className="py-2.5 pr-4 text-right tabular-nums">
+                        {d.atendidos}{" "}
+                        <span className="text-muted-foreground text-xs">
+                          ({d.taxaAtendimento.toFixed(0)}%)
+                        </span>
+                      </td>
                       <td className="py-2.5">
                         <div className="flex flex-wrap gap-1">
                           {Object.entries(d.porBucket)
@@ -217,6 +296,48 @@ function LeadsDiaPage() {
                               </Badge>
                             ))}
                         </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+
+          {/* Estágios na Clint */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Hand className="h-4 w-4 text-sky-500" /> Onde o lead parou na Clint
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <p className="text-xs text-muted-foreground mb-3">
+                Contamos como “levantada de mão” o lead que saiu da automação (base, nutrição,
+                abertura) e passou a ser conduzido pelo vendedor — respondeu template, foi
+                contactado, agendou reunião ou recebeu proposta.
+              </p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-muted-foreground border-b border-border">
+                    <th className="pb-2 pr-4 font-medium">Estágio</th>
+                    <th className="pb-2 pr-4 font-medium text-right">Leads</th>
+                    <th className="pb-2 pr-4 font-medium text-right">% do total</th>
+                    <th className="pb-2 font-medium">Conta como levantada de mão?</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.porEstagio.map((e) => (
+                    <tr key={e.estagio} className="border-b border-border/50 hover:bg-secondary/30">
+                      <td className="py-2 pr-4 font-medium">{e.estagio}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums font-bold">{e.leads}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">
+                        {data.total ? ((e.leads / data.total) * 100).toFixed(1) : "0"}%
+                      </td>
+                      <td className="py-2">
+                        <Badge variant={e.atendido ? "default" : "secondary"} className="text-xs">
+                          {e.atendido ? "Sim — vendedor assumiu" : "Não — ainda na automação"}
+                        </Badge>
                       </td>
                     </tr>
                   ))}
@@ -328,7 +449,7 @@ function LeadsDiaPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium">
-                Horário de chegada dos leads (Brasília)
+                Horário de chegada dos leads (Lisboa)
               </CardTitle>
             </CardHeader>
             <CardContent>

@@ -8,17 +8,15 @@ import {
   Trophy,
   DollarSign,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Sparkles,
   Share2,
   LogOut,
   Users,
-  Plane,
   Swords,
   Bot,
   Megaphone,
-  Network,
-  Receipt,
-  Upload,
 } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -57,7 +55,6 @@ const NAV_SECTIONS = [
         adminOnly: false,
       },
       { to: "/leads-dia", label: "Leads por Dia", icon: CalendarRange, adminOnly: false },
-      { to: "/import", label: "Importar CSV", icon: Upload, adminOnly: true },
     ],
   },
   {
@@ -67,8 +64,7 @@ const NAV_SECTIONS = [
   {
     section: "Metas e Dinheiro",
     items: [
-      { to: "/vendas-reais", label: "Vendas Reais", icon: Receipt, adminOnly: true },
-      { to: "/comissionamento", label: "Comissionamento", icon: DollarSign, adminOnly: true },
+      { to: "/comissionamento", label: "Comissionamento", icon: DollarSign, adminOnly: false },
     ],
   },
 
@@ -77,7 +73,7 @@ const NAV_SECTIONS = [
     items: [
       { to: "/coach", label: "Coach Comercial", icon: Sparkles, adminOnly: false },
       { to: "/arena", label: "Arena Comercial", icon: Swords, adminOnly: false },
-      { to: "/ferias", label: "Férias da Equipe", icon: Plane, adminOnly: false },
+      
       { to: "/indicacoes", label: "Indicações", icon: Share2, adminOnly: false },
       { to: "/usuarios", label: "Usuários", icon: Users, adminOnly: true },
     ],
@@ -88,7 +84,6 @@ const NAV_SECTIONS = [
       { to: "/agente-ia", label: "Agente IA", icon: Bot, adminOnly: true },
       { to: "/agente", label: "Agente (chat)", icon: Bot, adminOnly: true },
       { to: "/campanha", label: "Campanhas", icon: Megaphone, adminOnly: true },
-      { to: "/areas", label: "Áreas do Pipeline", icon: Network, adminOnly: true },
     ],
   },
 ] as const;
@@ -129,6 +124,16 @@ export type { AppAuth, AppUser } from "@/lib/app-auth";
 
 function AppLayout() {
   const [open, setOpen] = useState(false);
+  const [navHidden, setNavHidden] = useState(false);
+  useEffect(() => {
+    setNavHidden(localStorage.getItem("nav-hidden") === "1");
+  }, []);
+  function toggleNav() {
+    setNavHidden((v) => {
+      localStorage.setItem("nav-hidden", v ? "0" : "1");
+      return !v;
+    });
+  }
   const [status, setStatus] = useState<"loading" | "auth" | "ready">("loading");
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<AppUser>(null);
@@ -198,11 +203,19 @@ function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[260px_1fr]">
+    <div
+      className={`min-h-screen bg-background text-foreground ${navHidden ? "" : "lg:grid lg:grid-cols-[260px_1fr]"}`}
+    >
       {/* Sidebar fixa no desktop. Antes a navegação era um Sheet em TODOS os
           breakpoints: num monitor de 27" o gestor gastava dois cliques para trocar
           de página e não tinha nenhuma noção de onde estava. */}
-      <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-r lg:border-border lg:bg-card/40 lg:backdrop-blur">
+      <aside
+        className={
+          navHidden
+            ? "hidden"
+            : "hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-r lg:border-border lg:bg-card/40 lg:backdrop-blur"
+        }
+      >
         <div className="flex items-center gap-3 border-b border-border px-5 py-4">
           <img
             src={logoIcon}
@@ -246,6 +259,19 @@ function AppLayout() {
                   </div>
                 </SheetContent>
               </Sheet>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={navHidden ? "Mostrar menu" : "Esconder menu"}
+                className="hidden lg:inline-flex"
+                onClick={toggleNav}
+              >
+                {navHidden ? (
+                  <PanelLeftOpen className="h-5 w-5" />
+                ) : (
+                  <PanelLeftClose className="h-5 w-5" />
+                )}
+              </Button>
               <img
                 src={logoIcon}
                 alt="Dashcomercial LLMídia"

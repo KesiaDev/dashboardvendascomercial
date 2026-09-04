@@ -10,12 +10,20 @@ export type DowStat = {
   media: number;
   share: number;
   porBucket: Record<string, number>;
+  /** leads que responderam/foram trabalhados pelo vendedor */
+  atendidos: number;
+  /** atendidos / leads */
+  taxaAtendimento: number;
 };
 
 export type LeadsDiaSemanaResult = {
   from: string;
   to: string;
   total: number;
+  /** total de leads que levantaram a mão (viraram responsabilidade do vendedor) */
+  totalAtendidos: number;
+  /** distribuição dos leads por estágio da Clint */
+  porEstagio: { estagio: string; leads: number; atendido: boolean }[];
   dows: DowStat[];
   melhor: { label: string; media: number } | null;
   pior: { label: string; media: number } | null;
@@ -30,12 +38,26 @@ export type LeadsDiaSemanaResult = {
 
 const DOW_LABELS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 
-/** Converte para data/hora de São Paulo (UTC-3). */
-function spParts(iso: string) {
-  const d = new Date(new Date(iso).getTime() - 3 * 3600_000);
-  const dow = ((d.getUTCDay() + 6) % 7) + 1; // 1=Seg
-  const date = d.toISOString().slice(0, 10);
-  return { dow, date, hour: d.getUTCHours() };
+/** Data/hora em Lisboa (Europe/Lisbon, com horário de verão). */
+const LISBON_FMT = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Lisbon",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  hour12: false,
+  weekday: "short",
+});
+const DOW_MAP: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
+
+function lisbonParts(iso: string) {
+  const p = LISBON_FMT.formatToParts(new Date(iso));
+  const g = (t: string) => p.find((x) => x.type === t)?.value ?? "";
+  return {
+    dow: DOW_MAP[g("weekday")] ?? 1,
+    date: `${g("year")}-${g("month")}-${g("day")}`,
+    hour: Number(g("hour")) % 24,
+  };
 }
 
 /** Segunda-feira da semana daquela data (yyyy-mm-dd). */
@@ -46,49 +68,69 @@ function mondayOf(dateStr: string) {
   return d.toISOString().slice(0, 10);
 }
 
+
 export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<LeadsDiaSemanaResult> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { leadBucket } = await import("@/lib/leads-comercial.server");
+    const { leadBucket, LEADS_ORIGINS, levantouMao } = await import(
+      "@/lib/leads-comercial.server"
+    );
 
-    // Eram até 60 páginas com await dentro do for — 60 idas ao banco em série,
-    // ~60 x latência. Agora o count vem primeiro e as páginas vão em paralelo.
+    // Só os funis comerciais interessam (leadBucket descarta o resto de qualquer
+    // forma). Filtrar no banco tira ~23k linhas da leitura e usa o índice
+    // (origin_name, created_at) — antes a query estourava o statement timeout.
     const f = <Q>(q: Q) =>
       (q as any)
+        .in("origin_name", LEADS_ORIGINS)
         .gte("created_at", `${data.from}T00:00:00Z`)
         .lte("created_at", `${data.to}T23:59:59Z`);
     const rows = await fetchAllRows<{
       created_at: string;
       origin_name: string | null;
       contact_tags: string[] | null;
+      stage: string | null;
     }>(
       ({ from, to }) =>
-        f(supabaseAdmin.from("clint_deals").select("created_at,origin_name,contact_tags"))
+        f(supabaseAdmin.from("clint_deals").select("created_at,origin_name,contact_tags,stage"))
           .order("created_at", { ascending: true })
           .range(from, to),
       () => f(supabaseAdmin.from("clint_deals").select("*", { count: "exact", head: true })),
     );
 
+
     const dias = new Map<string, { dow: number; leads: number }>();
-    const porDow = new Map<number, { leads: number; porBucket: Record<string, number> }>();
+    const porDow = new Map<
+      number,
+      { leads: number; atendidos: number; porBucket: Record<string, number> }
+    >();
     const porHora = new Array(24).fill(0);
     const semanas = new Map<string, number[]>();
     const bucketSet = new Set<string>();
+    const estagios = new Map<string, { leads: number; atendido: boolean }>();
+    let totalAtendidos = 0;
 
     for (const r of rows) {
       const cls = leadBucket(r.origin_name, r.contact_tags ?? null);
       if (!cls) continue;
       bucketSet.add(cls.bucket);
-      const { dow, date, hour } = spParts(r.created_at);
+      const { dow, date, hour } = lisbonParts(r.created_at);
+      const atendido = levantouMao(r.stage);
+      if (atendido) totalAtendidos++;
+
+      const est = String(r.stage ?? "").trim() || "Sem estágio";
+      const e = estagios.get(est) ?? { leads: 0, atendido };
+      e.leads++;
+      estagios.set(est, e);
 
       const d = dias.get(date) ?? { dow, leads: 0 };
       d.leads++;
       dias.set(date, d);
 
-      const dd = porDow.get(dow) ?? { leads: 0, porBucket: {} };
+      const dd = porDow.get(dow) ?? { leads: 0, atendidos: 0, porBucket: {} };
       dd.leads++;
+      if (atendido) dd.atendidos++;
       dd.porBucket[cls.bucket] = (dd.porBucket[cls.bucket] ?? 0) + 1;
       porDow.set(dow, dd);
 
@@ -99,6 +141,7 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
       arr[dow - 1]++;
       semanas.set(wk, arr);
     }
+
 
     // quantos dias de calendário de cada dia da semana existem no período
     const diasPorDow = new Array(8).fill(0);
@@ -113,7 +156,7 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
     const total = Array.from(porDow.values()).reduce((s, v) => s + v.leads, 0);
     const dows: DowStat[] = DOW_LABELS.map((label, i) => {
       const dow = i + 1;
-      const v = porDow.get(dow) ?? { leads: 0, porBucket: {} };
+      const v = porDow.get(dow) ?? { leads: 0, atendidos: 0, porBucket: {} };
       const nd = diasPorDow[dow] || 1;
       return {
         dow,
@@ -123,7 +166,10 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
         media: v.leads / nd,
         share: total ? (v.leads / total) * 100 : 0,
         porBucket: v.porBucket,
+        atendidos: v.atendidos,
+        taxaAtendimento: v.leads ? (v.atendidos / v.leads) * 100 : 0,
       };
+
     });
 
     const uteis = dows.filter((d) => d.dias > 0);
@@ -166,6 +212,11 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
       from: data.from,
       to: data.to,
       total,
+      totalAtendidos,
+      porEstagio: Array.from(estagios.entries())
+        .map(([estagio, v]) => ({ estagio, leads: v.leads, atendido: v.atendido }))
+        .sort((a, b) => b.leads - a.leads),
+
       dows,
       melhor: melhor ? { label: melhor.label, media: melhor.media } : null,
       pior: pior ? { label: pior.label, media: pior.media } : null,
