@@ -34,6 +34,8 @@ Se a regra que você precisa não tem um módulo próprio, **crie o módulo** em
 | Regra | Módulo canônico |
 |---|---|
 | Cotação EUR→BRL de pagamento | `src/lib/eur-rate.ts` |
+| Quem é vendedor, e desde/até quando | `src/lib/sellers.ts` |
+| Taxa de conversão | `src/lib/conversion.ts` |
 | "Esta venda conta como aprovada?" | `src/lib/sales-status.ts` |
 | Agrupamento e categoria de produto | `src/lib/product-groups.ts` |
 | Cálculo de comissão | `src/lib/commission.ts` |
@@ -54,24 +56,44 @@ Cuidado com dois pares que parecem a mesma coisa e não são:
   gráfico). Para **texto** use `--success-fg` / `--warning-fg` /
   `--destructive-fg`, que são calibrados para contraste sobre o card.
 
+## Quem conta como vendedor
+
+O quadro **muda com o tempo**, e por isso `isMetricSeller(nome, data)` exige uma
+data — a do FATO (fechamento do negócio, data da venda), nunca "hoje". Com lista
+fixa, tirar alguém do time mudaria retroativamente os meses já fechados, e o
+relatório que já foi enviado deixaria de bater.
+
+Hoje: Kesia, Gisele, João, Rita e Pamela. Fabio Nadal conta **até agosto/2026**.
+Camila, Aline e Luana nunca contam.
+
+Ao ler dados históricos, passe a data da linha. Para preencher um seletor de
+"quem vendeu" num formulário novo, use `activeSellers(new Date())`.
+
+## Taxa de conversão
+
+Definição oficial: **ganhos / (ganhos + perdidos), ambos pela data de
+fechamento**. Responde "do que fechou neste mês, quanto virou venda?" e o número
+para de mudar quando o mês acaba. Negócios em aberto não entram no denominador.
+
+Para medir qualidade de lead ou campanha existe `cohort: "created"` — é outra
+pergunta e os dois números **não são comparáveis entre si**.
+
 ## Dívida conhecida, ainda aberta
 
-Estas ainda estão duplicadas. Se você encostar em alguma, unifique em vez de
-adicionar mais uma cópia:
+Se você encostar em alguma, unifique em vez de adicionar mais uma cópia:
 
-- **Nome de vendedor**: sete listas hardcoded (`bi.ts`, `performance.functions.ts`,
-  `_app.coach.tsx`, `_app.fechamento.tsx`, `_app.resultados.tsx`,
-  `manual-sales.functions.ts`, `seller-aliases.ts`) com conteúdo divergente — a de
-  `_app.resultados.tsx` não inclui a Kesia, então as vendas dela não aparecem lá.
-  A tabela `bi_seller_config` já existe no banco e deveria ser a fonte.
-- **Exclusão de vendedor das métricas**: três listas, uma com match exato *com
-  cedilha* (`bi.ts:225`), que deixa passar `"Aline Goncalves"` vindo de CSV.
-- **Taxa de conversão**: cinco fórmulas. A de `bi.ts:357` conta perdidos por
-  `created_at` e ganhos por `won_at` — uma razão entre duas coortes diferentes.
-  Antes de unificar, é preciso decidir com o negócio qual é a definição oficial.
+- **41 leituras sem `.limit()`** — o item mais perigoso da lista. Ver a seção de
+  performance abaixo.
 - **`PIPELINE_ORIGINS`**: três listas de UUID hardcoded em três arquivos.
   `bi_pipeline_areas` existe para isso.
 - **`ADMIN_EMAILS`**: três cópias, uma com typo. A tabela `user_roles` existe.
+- **29 server functions sem autenticação** em `clint`, `ccpbx`, `coach` e
+  `hotmart` — as rotas de cron chamam essas funções no servidor, sem Bearer
+  token, então elas precisam de um middleware de segredo interno antes de poderem
+  exigir `requireSupabaseAuth` como as demais.
+- **`seller-aliases.ts`** ainda mantém o mapa de e-mail canônico para agenda e
+  permissões. É outro conceito (identidade de login, não métrica), mas vale
+  consolidar com `sellers.ts` quando alguém mexer nos dois.
 
 ## Segurança — não negociável
 
