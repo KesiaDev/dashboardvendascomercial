@@ -121,34 +121,10 @@ type NavSection = {
   items: readonly { to: string; label: string; icon: typeof Trophy }[];
 };
 
-export type AppUser = { email: string | null; user_metadata?: any } | null;
-
-export type AppAuth = {
-  session: Session | null;
-  user: AppUser;
-  admin: boolean;
-  /** true enquanto a sessão ainda não foi resolvida. */
-  loading: boolean;
-};
-
-const AppAuthCtx = createContext<AppAuth>({
-  session: null,
-  user: null,
-  admin: false,
-  loading: true,
-});
-
-/**
- * Sessão já resolvida pelo layout /_app.
- *
- * As rotas filhas NÃO devem chamar getSessionFast() nem supabase.auth.getUser()
- * de novo: /fechamento repetia o mesmo getSessionFast e /coach fazia um
- * supabase.auth.getUser(), que é uma requisição de rede ao GoTrue, como terceira
- * verificação em série antes de qualquer dado carregar.
- */
-export function useAppAuth(): AppAuth {
-  return useContext(AppAuthCtx);
-}
+// Sessão já resolvida pelo layout /_app; as rotas filhas consomem useAppAuth
+// (definido em @/lib/app-auth) em vez de repetir a verificação.
+export { useAppAuth } from "@/lib/app-auth";
+export type { AppAuth, AppUser } from "@/lib/app-auth";
 
 function AppLayout() {
   const [open, setOpen] = useState(false);
