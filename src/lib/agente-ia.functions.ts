@@ -197,6 +197,67 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
     ]);
     if (aiConvsRes.error) throw new Error(`coach_conversations: ${aiConvsRes.error.message}`);
 
+    // ---- Métricas apuradas direto nos estágios da Clint (independem das mensagens) ----
+    const COMERCIAL_ORIGINS = [V3, "Funil - Sessão Estratégica"];
+    const TAG_MKT = "FALOU COM IA - MKT";
+    const [stageRes, ponteRes, ponteComRes] = await Promise.all([
+      db
+        .from("clint_deals")
+        .select("stage,status")
+        .in("origin_name", COMERCIAL_ORIGINS)
+        .gte("updated_stage_at", startTS)
+        .lte("updated_stage_at", endTS)
+        .limit(5000),
+      // Leads que a IA de marketing tocou nos funis de captação (ebook/minicurso)
+      db
+        .from("clint_deals")
+        .select("contact_id,origin_name")
+        .contains("contact_tags", [TAG_MKT])
+        .gte("created_at", startTS)
+        .lte("created_at", endTS)
+        .limit(5000),
+      // Mesmos contactos já dentro do funil comercial
+      db
+        .from("clint_deals")
+        .select("contact_id,stage,status")
+        .in("origin_name", COMERCIAL_ORIGINS)
+        .contains("contact_tags", [TAG_MKT])
+        .limit(5000),
+    ]);
+
+    const stageRows = (stageRes.data ?? []) as any[];
+    const countStage = (s: string) =>
+      stageRows.filter((r) => String(r.stage ?? "").trim() === s).length;
+    const noShowsClint = countStage("No-Show");
+    const propostasClint = countStage("Proposta Enviada");
+    const ganhosClintStage = stageRows.filter(
+      (r) => String(r.status ?? "").toUpperCase() === "WON",
+    ).length;
+    // Reunião agendada = quem está nesse estágio + quem já avançou (no-show, proposta, ganho)
+    const reunioesClint =
+      countStage("Reunião agendada") + noShowsClint + propostasClint + ganhosClintStage;
+
+    const ponteRows = (ponteRes.data ?? []) as any[];
+    const ponteContacts = new Set(ponteRows.map((r) => r.contact_id).filter(Boolean));
+    const ebookComIa = ponteRows.filter((r) => /ebook/i.test(String(r.origin_name ?? ""))).length;
+    const minicursoComIa = ponteRows.filter((r) =>
+      /minicurso/i.test(String(r.origin_name ?? "")),
+    ).length;
+    const ponteComRows = ((ponteComRes.data ?? []) as any[]).filter((r) =>
+      ponteContacts.has(r.contact_id),
+    );
+    const ponte = {
+      leadsMktIa: ponteRows.length,
+      ebookComIa,
+      minicursoComIa,
+      passadosAoComercial: new Set(ponteComRows.map((r) => r.contact_id)).size,
+      comReuniao: ponteComRows.filter((r) =>
+        /reuni(ã|a)o agendada|no-?show|proposta/i.test(String(r.stage ?? "")),
+      ).length,
+      ganhos: ponteComRows.filter((r) => String(r.status ?? "").toUpperCase() === "WON").length,
+    };
+
+
     const convs = aiConvsRes.data ?? [];
     const totalV3 = (allConvsRes.count as number) ?? convs.length;
     const agenda = agendaRes.data ?? [];
