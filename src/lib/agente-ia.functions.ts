@@ -113,7 +113,25 @@ export type AgenteIaResult = {
       match: string;
     }[];
   };
+  /** Apurado direto nos estágios da Clint no período (não depende do cruzamento de mensagens). */
+  clint: {
+    reunioesAgendadas: number;
+    noShows: number;
+    realizadas: number;
+    propostas: number;
+    ganhos: number;
+  };
+  /** Ponte da IA de marketing (ebook/minicurso) → funil comercial. */
+  ponte: {
+    leadsMktIa: number;
+    ebookComIa: number;
+    minicursoComIa: number;
+    passadosAoComercial: number;
+    comReuniao: number;
+    ganhos: number;
+  };
 };
+
 
 function digits(s: string | null | undefined): string {
   const d = (s ?? "").replace(/\D/g, "");
