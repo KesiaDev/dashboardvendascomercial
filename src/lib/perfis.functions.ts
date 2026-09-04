@@ -45,6 +45,18 @@ export type PerfilRow = {
   profissoes: { nome: string; total: number; vendas: number; ganhos: number }[];
   sem_pergunta: number;
   conversas: PerfilConversa[];
+  vendas_clientes: VendaPerfil[];
+};
+
+export type VendaPerfil = {
+  cliente: string;
+  email: string | null;
+  seller: string;
+  produto: string;
+  funil: string;
+  data: string;
+  perfil: string;
+  vinculo: "conversa" | "sem_conversa";
 };
 
 export type PerfisResult = {
@@ -54,8 +66,12 @@ export type PerfisResult = {
   classificadas: number;
   nao_identificados: number;
   origem: "todas" | "humano" | "ia";
+  total_vendas: number;
+  vendas_sem_conversa: number;
+  vendas: VendaPerfil[];
   ranking: PerfilRow[];
 };
+
 
 // o comercial perguntou sobre trabalho/profissão do lead?
 const PERGUNTA_PROF = [
@@ -95,6 +111,10 @@ const normalize = (s: string) =>
 type PerfilDef = { nome: string; descricao: string; kw: string[] };
 
 const NAO_IDENTIFICADO = "Perfil não identificado";
+// Venda do fechamento que não tem conversa registrada na Clint (veio de call/LDP).
+// Existe para que a soma das vendas por perfil bata sempre com o fechamento.
+const SEM_CONVERSA = "Venda sem conversa registrada";
+
 
 // Heurística de perfil de lead a partir do que o PRÓPRIO lead escreve.
 const PERFIS: PerfilDef[] = [
@@ -571,24 +591,31 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     );
     const ids = list.map((c) => c.id);
 
-    // Clientes que compraram (fechamento manual) — para conversão por perfil
+    // Vendas registradas no fechamento DENTRO do período (1ª parcela = 1 venda)
+    const vendasPeriodo = (
+      (
+        await db
+          .from("manual_sales")
+          .select("id, client_name, client_email, seller_name, product, funnel, sale_date")
+          .gte("sale_date", from)
+          .lte("sale_date", to)
+          .eq("installment_number", 1)
+          .limit(3000)
+      ).data ?? []
+    ) as any[];
+
     const soldEmails = new Set<string>();
     const soldNames = new Set<string>();
-    {
-      const { data: vendas } = await db
-        .from("manual_sales")
-        .select("client_name, client_email")
-        .limit(5000);
-      for (const v of (vendas ?? []) as any[]) {
-        if (v.client_email) soldEmails.add(String(v.client_email).trim().toLowerCase());
-        if (v.client_name) soldNames.add(normalize(String(v.client_name).trim()));
-      }
+    for (const v of vendasPeriodo) {
+      if (v.client_email) soldEmails.add(String(v.client_email).trim().toLowerCase());
+      if (v.client_name) soldNames.add(normalize(String(v.client_name).trim()));
     }
     const isSold = (c: any) => {
       const em = c.contact_email ? String(c.contact_email).trim().toLowerCase() : "";
       const nm = c.contact_name ? normalize(String(c.contact_name).trim()) : "";
       return (em !== "" && soldEmails.has(em)) || (nm !== "" && soldNames.has(nm));
     };
+
 
     // Status do negócio na Clint (ganho / perdido / aberto)
     const dealStatus = new Map<string, string>();
@@ -689,7 +716,9 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         sellers: Map<string, number>;
         profissoes: Map<string, { nome: string; total: number; vendas: number; ganhos: number }>;
         conversas: PerfilConversa[];
+        vendasClientes: VendaPerfil[];
         semPergunta: number;
+
       }
     >();
     let classificadas = 0;
@@ -822,12 +851,14 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
             sellers: new Map(),
             profissoes: new Map(),
             conversas: [],
+            vendasClientes: [],
             semPergunta: 0,
+
           };
           agg.set(h, a);
         }
         a.total++;
-        if (vendeu) a.vendas++;
+        // vendas vêm da reconciliação com o fechamento (abaixo), não daqui
         if (st === "ganho") a.ganhos++;
         else if (st === "perdido") a.perdidos++;
         else a.abertos++;
@@ -868,13 +899,129 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       }
     }
 
+    // ── Reconciliação com o fechamento ────────────────────────────────────────
+    // Toda venda registrada no fechamento no período entra em algum perfil.
+    // Quem tem conversa analisada herda o perfil da conversa; quem não tem
+    // (venda de call/LDP, sem histórico na Clint) cai em "Venda sem conversa
+    // registrada". Assim a soma das vendas por perfil = vendas do fechamento.
+    const perfilPorConversa = new Map<string, string>();
+    for (const v of validos) {
+      const hits = hitsById.get(v.c.id) ?? [];
+      perfilPorConversa.set(String(v.c.id), hits[0] ?? NAO_IDENTIFICADO);
+    }
+    const convPorEmail = new Map<string, string>();
+    const convPorNome = new Map<string, string>();
+    for (const v of validos) {
+      const em = v.c.contact_email ? String(v.c.contact_email).trim().toLowerCase() : "";
+      const nm = v.c.contact_name ? normalize(String(v.c.contact_name).trim()) : "";
+      if (em && !convPorEmail.has(em)) convPorEmail.set(em, String(v.c.id));
+      if (nm && !convPorNome.has(nm)) convPorNome.set(nm, String(v.c.id));
+    }
+
+    const ensureBucket = (nome: string) => {
+      let a = agg.get(nome);
+      if (!a) {
+        a = {
+          total: 0,
+          humano: 0,
+          ia: 0,
+          vendas: 0,
+          ganhos: 0,
+          perdidos: 0,
+          abertos: 0,
+          scores: [],
+          exemplos: [],
+          sellers: new Map(),
+          profissoes: new Map(),
+          conversas: [],
+          vendasClientes: [],
+          semPergunta: 0,
+        };
+        agg.set(nome, a);
+      }
+      return a;
+    };
+
+    // Fallback: comprador sem conversa NO período pode ter conversado antes.
+    // Buscamos o histórico completo dele e reaproveitamos o perfil já em cache.
+    const emailsCompra = Array.from(
+      new Set(
+        vendasPeriodo
+          .map((s) => (s.client_email ? String(s.client_email).trim().toLowerCase() : ""))
+          .filter((e) => e && !convPorEmail.has(e)),
+      ),
+    );
+    const histPorEmail = new Map<string, string>();
+    if (emailsCompra.length) {
+      const hist = (
+        await db
+          .from("coach_conversations")
+          .select("id, contact_email, last_message_at")
+          .in("contact_email", emailsCompra)
+          .order("last_message_at", { ascending: false })
+          .limit(500)
+      ).data as any[] | null;
+      const histIds: string[] = [];
+      for (const h of hist ?? []) {
+        const em = String(h.contact_email ?? "").trim().toLowerCase();
+        if (em && !histPorEmail.has(em)) {
+          histPorEmail.set(em, String(h.id));
+          histIds.push(String(h.id));
+        }
+      }
+      if (histIds.length) {
+        const cache = (
+          await db
+            .from("lead_perfil_cache")
+            .select("conversation_id, perfil")
+            .in("conversation_id", histIds)
+        ).data as any[] | null;
+        for (const r of cache ?? []) {
+          if (r.perfil) perfilPorConversa.set(String(r.conversation_id), String(r.perfil));
+        }
+      }
+    }
+
+    const vendasDetalhe: VendaPerfil[] = [];
+    for (const s of vendasPeriodo) {
+      const em = s.client_email ? String(s.client_email).trim().toLowerCase() : "";
+      const nm = s.client_name ? normalize(String(s.client_name).trim()) : "";
+      const convId =
+        (em && convPorEmail.get(em)) ||
+        (nm && convPorNome.get(nm)) ||
+        (em && histPorEmail.get(em)) ||
+        null;
+      const perfilConv = convId ? perfilPorConversa.get(convId) : undefined;
+      const perfil = convId ? (perfilConv ?? NAO_IDENTIFICADO) : SEM_CONVERSA;
+      const item: VendaPerfil = {
+        cliente: String(s.client_name ?? s.client_email ?? "—").trim(),
+        email: s.client_email ? String(s.client_email).trim() : null,
+        seller: String(s.seller_name ?? "—").trim(),
+        produto: String(s.product ?? "—"),
+        funil: String(s.funnel ?? "—"),
+        data: String(s.sale_date ?? ""),
+        perfil,
+        vinculo: convId ? "conversa" : "sem_conversa",
+      };
+
+      vendasDetalhe.push(item);
+      const a = ensureBucket(perfil);
+      a.vendas++;
+      a.vendasClientes.push(item);
+    }
+    vendasDetalhe.sort((a, b) => b.data.localeCompare(a.data) || a.cliente.localeCompare(b.cliente));
+
+
+
     const ranking: PerfilRow[] = Array.from(agg.entries())
       .map(([perfil, a]) => ({
         perfil,
         descricao:
           perfil === NAO_IDENTIFICADO
             ? "Lead conversou, mas não revelou nada sobre a vida/profissão dele — precisa de pergunta de qualificação"
-            : (PERFIS.find((p) => p.nome === perfil)?.descricao ?? ""),
+            : perfil === SEM_CONVERSA
+              ? "Cliente do fechamento sem conversa registrada na Clint (venda por call/LDP) — entra aqui para o total bater"
+              : (PERFIS.find((p) => p.nome === perfil)?.descricao ?? ""),
 
         total: a.total,
         pct: comTexto ? (a.total / comTexto) * 100 : 0,
@@ -898,12 +1045,16 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         conversas: a.conversas.sort((x, y) =>
           (y.last_message_at ?? "").localeCompare(x.last_message_at ?? ""),
         ),
+        vendas_clientes: a.vendasClientes,
       }))
       .sort((a, b) => {
+        if (a.perfil === SEM_CONVERSA) return 1;
+        if (b.perfil === SEM_CONVERSA) return -1;
         if (a.perfil === NAO_IDENTIFICADO) return 1;
         if (b.perfil === NAO_IDENTIFICADO) return -1;
         return b.vendas - a.vendas || b.total - a.total;
       });
+
 
     return {
       from,
@@ -912,7 +1063,11 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       total_conversas: comTexto,
       classificadas,
       nao_identificados: Math.max(0, comTexto - classificadas),
+      total_vendas: vendasDetalhe.length,
+      vendas_sem_conversa: vendasDetalhe.filter((v) => v.vinculo === "sem_conversa").length,
+      vendas: vendasDetalhe,
       ranking,
+
     };
   });
 
