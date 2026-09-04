@@ -1812,15 +1812,14 @@ function IntegracaoClint() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">API Token Clint</Label>
-              <Input
-                type="password"
-                placeholder="U2FsdGVkX1/+..."
-                className="font-mono text-xs"
-                defaultValue={import.meta.env.VITE_CLINT_TOKEN ?? ""}
-                readOnly
-              />
+              {/* O campo mostrava import.meta.env.VITE_CLINT_TOKEN. O prefixo VITE_
+                  faz o Vite gravar o valor LITERAL no bundle servido a todo
+                  visitante — type="password" só esconde os caracteres na tela, o
+                  valor está no DOM e no JS. O token vive apenas no servidor
+                  (CLINT_API_TOKEN, usado em clint-contact-tags.server.ts). */}
+              <Input value="•••••••• (apenas no servidor)" readOnly className="text-xs" />
               <p className="text-[10px] text-muted-foreground mt-1">
-                Definido via VITE_CLINT_TOKEN
+                Definido em CLINT_API_TOKEN, nunca exposto ao navegador
               </p>
             </div>
             <div>
@@ -1845,9 +1844,7 @@ function IntegracaoClint() {
           </Button>
           {migrationSql && (
             <div className="space-y-2">
-              <p className="text-sm text-warning-fg font-medium">
-                {migrationSql}
-              </p>
+              <p className="text-sm text-warning-fg font-medium">{migrationSql}</p>
             </div>
           )}
         </CardContent>
@@ -1897,7 +1894,9 @@ function IntegracaoClint() {
                     ? "⚠ unknown (evento não reconhecido)"
                     : (log.event_type ?? "—")}
                 </span>
-                {log.error_msg && <span className="text-destructive-fg truncate">{log.error_msg}</span>}
+                {log.error_msg && (
+                  <span className="text-destructive-fg truncate">{log.error_msg}</span>
+                )}
               </div>
             ))}
           </div>
@@ -2960,7 +2959,9 @@ function LigacoesTab() {
 
                   {list(a.pontos_melhoria).length > 0 && (
                     <div>
-                      <p className="text-xs font-semibold text-warning-fg mb-1">Pontos a melhorar</p>
+                      <p className="text-xs font-semibold text-warning-fg mb-1">
+                        Pontos a melhorar
+                      </p>
                       <ul className="list-disc pl-5 space-y-0.5">
                         {list(a.pontos_melhoria).map((s, i) => (
                           <li key={i}>{s}</li>

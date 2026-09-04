@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertAdmin } from "@/lib/authz.server";
 import { eurBrlRate } from "./eur-rate";
 import { APPROVED_STATUS_DB_VALUES } from "./sales-status";
 
@@ -49,8 +51,10 @@ function monthRange(monthYYYYMM: string): { start: string; end: string } {
 
 // ─── Faturamento por Produto ────────────────────────────────────────────────
 export const getFaturamentoPorProdutoFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { month?: string } | undefined) => d ?? {})
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.claims);
     const db = await adminDb();
     const month = data.month ?? new Date().toISOString().slice(0, 7);
     const { start, end } = monthRange(month);
@@ -91,8 +95,10 @@ export const getFaturamentoPorProdutoFn = createServerFn({ method: "GET" })
 
 // ─── Renovações ──────────────────────────────────────────────────────────────
 export const getRenovacoesFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { month?: string } | undefined) => d ?? {})
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.claims);
     const db = await adminDb();
     const month = data.month ?? new Date().toISOString().slice(0, 7);
     const { start, end } = monthRange(month);
@@ -115,8 +121,10 @@ export const getRenovacoesFn = createServerFn({ method: "GET" })
 
 // ─── Cancelamentos ───────────────────────────────────────────────────────────
 export const getCancelamentosFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { month?: string } | undefined) => d ?? {})
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.claims);
     const db = await adminDb();
     const month = data.month ?? new Date().toISOString().slice(0, 7);
     const { start, end } = monthRange(month);
@@ -150,8 +158,10 @@ export const getCancelamentosFn = createServerFn({ method: "GET" })
 // um `* 6` cru, o que fazia as duas telas divergirem ~2,5% para as mesmas vendas.
 // Também traz breakdown por categoria e faturamento que conta para meta.
 export const getVendasPorVendedorFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { month?: string } | undefined) => d ?? {})
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.claims);
     const db = await adminDb();
     const month = data.month ?? new Date().toISOString().slice(0, 7);
     const [y, m] = month.split("-").map(Number);

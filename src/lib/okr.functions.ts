@@ -2,7 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isAdminEmail } from "@/lib/auth";
 
-export type OkrMetric = "vendas_fe" | "vendas_ht" | "vendas_mas" | "renovacoes" | "faturamento" | null;
+export type OkrMetric =
+  "vendas_fe" | "vendas_ht" | "vendas_mas" | "renovacoes" | "faturamento" | null;
 
 export type OkrInitiative = {
   id: string;
@@ -119,7 +120,8 @@ export const getOkrsFn = createServerFn({ method: "GET" })
       const keyResults: OkrKeyResult[] = (krList as any[])
         .filter((k) => k.objective_id === o.id)
         .map((k) => {
-          let realizado: number | null = k.progresso_manual != null ? Number(k.progresso_manual) : null;
+          let realizado: number | null =
+            k.progresso_manual != null ? Number(k.progresso_manual) : null;
           switch (k.metrica as OkrMetric) {
             case "vendas_fe":
               realizado = kpis.fe;
@@ -201,7 +203,10 @@ export const saveObjectiveFn = createServerFn({ method: "POST" })
       trimestre: data.trimestre,
     };
     if (data.id) {
-      const { error } = await supabaseAdmin.from("bi_okr_objectives").update(payload).eq("id", data.id);
+      const { error } = await supabaseAdmin
+        .from("bi_okr_objectives")
+        .update(payload)
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { ok: true, id: data.id };
     }
@@ -252,7 +257,10 @@ export const saveKeyResultFn = createServerFn({ method: "POST" })
       ...(data.ordem != null ? { ordem: data.ordem } : {}),
     };
     if (data.id) {
-      const { error } = await supabaseAdmin.from("bi_okr_key_results").update(payload).eq("id", data.id);
+      const { error } = await supabaseAdmin
+        .from("bi_okr_key_results")
+        .update(payload)
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { ok: true };
     }
@@ -297,7 +305,10 @@ export const saveInitiativeFn = createServerFn({ method: "POST" })
       ...(data.ordem != null ? { ordem: data.ordem } : {}),
     };
     if (data.id) {
-      const { error } = await supabaseAdmin.from("bi_okr_initiatives").update(payload).eq("id", data.id);
+      const { error } = await supabaseAdmin
+        .from("bi_okr_initiatives")
+        .update(payload)
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { ok: true };
     }

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { cleanSellerName, isExcludedSeller } from "@/lib/bi";
 import { FUNIS_LEADS } from "@/lib/performance-funnels";
 
@@ -17,7 +18,6 @@ export type SellerPerf = {
   leadsNovos: number;
   conversaoLead: number; // vendas / leadsNovos
 };
-
 
 export type PerfResult = {
   range: PerfRange;
@@ -45,13 +45,31 @@ export type PerfResult = {
     /** Leads por funil (mesma classificação dos "Funis Perpétuos"). */
     leadsPorOrigem: { origem: string; leads: number }[];
   };
-  daily: { date: string; atendimentos: number; vendas: number; faturamento: number; leads: number }[];
+  daily: {
+    date: string;
+    atendimentos: number;
+    vendas: number;
+    faturamento: number;
+    leads: number;
+  }[];
 };
-
 
 // ─── Datas (referência: SEASON_START da planilha de fechamento) ─────────────
 const SEASON_START = "2026-06-01"; // Segunda-feira, início da temporada
-const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const MONTHS_PT = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
 
 function todayBR(): string {
   return new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
@@ -64,7 +82,10 @@ function addDays(iso: string, n: number): string {
 function eachDay(startISO: string, endISO: string): string[] {
   const out: string[] = [];
   let cur = startISO;
-  while (cur <= endISO) { out.push(cur); cur = addDays(cur, 1); }
+  while (cur <= endISO) {
+    out.push(cur);
+    cur = addDays(cur, 1);
+  }
   return out;
 }
 
@@ -102,17 +123,33 @@ export function rangeBoundsFor(
   return { startDate, endDate, label: `${MONTHS_PT[m - 1]} ${y}` };
 }
 
-function rangeBounds(range: PerfRange, refDateISO?: string): { startDate: string; endDate: string; label: string } {
+function rangeBounds(
+  range: PerfRange,
+  refDateISO?: string,
+): { startDate: string; endDate: string; label: string } {
   const today = todayBR();
   const ref = refDateISO || today;
   if (range === "day") {
     const isToday = ref === today;
-    return { ...rangeBoundsFor(range, ref), label: `${isToday ? "Hoje " : ""}(${ref.slice(8)}/${ref.slice(5, 7)})` };
+    return {
+      ...rangeBoundsFor(range, ref),
+      label: `${isToday ? "Hoje " : ""}(${ref.slice(8)}/${ref.slice(5, 7)})`,
+    };
   }
   if (range === "week") {
     const { startDate, endDate } = rangeBoundsFor(range, ref);
-    const idx = Math.max(0, Math.floor((new Date(ref + "T12:00:00Z").getTime() - new Date(SEASON_START + "T12:00:00Z").getTime()) / (7 * 86_400_000)));
-    return { startDate, endDate, label: `Semana S${idx + 1} (${startDate.slice(8)}/${startDate.slice(5, 7)}–${endDate.slice(8)}/${endDate.slice(5, 7)})` };
+    const idx = Math.max(
+      0,
+      Math.floor(
+        (new Date(ref + "T12:00:00Z").getTime() - new Date(SEASON_START + "T12:00:00Z").getTime()) /
+          (7 * 86_400_000),
+      ),
+    );
+    return {
+      startDate,
+      endDate,
+      label: `Semana S${idx + 1} (${startDate.slice(8)}/${startDate.slice(5, 7)}–${endDate.slice(8)}/${endDate.slice(5, 7)})`,
+    };
   }
   return rangeBoundsFor(range, ref);
 }
@@ -123,11 +160,17 @@ function rangeBounds(range: PerfRange, refDateISO?: string): { startDate: string
 // Aliases → nome canônico. Cobre variantes de e-mail (com/sem ponto), locais
 // (joaopessoa, gisele, gagliano, pimentel...) e o próprio nome escrito.
 const SELLER_ALIASES: { match: string[]; name: string }[] = [
-  { name: "João Pessoa",     match: ["joaopessoa", "jpessoa20", "joao pessoa", "joão pessoa"] },
-  { name: "Gisele Pimentel", match: ["giselegagliano", "gisele gagliano", "gisele pimentel", "gisele"] },
-  { name: "Fabio Nadal",     match: ["fabionadal", "fabio nadal", "nadal"] },
-  { name: "Rita Bandeira",   match: ["ritabandeira", "rita bandeira", "rita"] },
-  { name: "Luana Guimarães", match: ["luanaguimaraes", "luana.guimaraes", "luana guimaraes", "luana guimarães", "luana"] },
+  { name: "João Pessoa", match: ["joaopessoa", "jpessoa20", "joao pessoa", "joão pessoa"] },
+  {
+    name: "Gisele Pimentel",
+    match: ["giselegagliano", "gisele gagliano", "gisele pimentel", "gisele"],
+  },
+  { name: "Fabio Nadal", match: ["fabionadal", "fabio nadal", "nadal"] },
+  { name: "Rita Bandeira", match: ["ritabandeira", "rita bandeira", "rita"] },
+  {
+    name: "Luana Guimarães",
+    match: ["luanaguimaraes", "luana.guimaraes", "luana guimaraes", "luana guimarães", "luana"],
+  },
   { name: "Kesia Nandi", match: ["kesiawnandi", "kesia nandi", "kesia", "késia", "nandi"] },
 ];
 
@@ -164,24 +207,24 @@ export function leadsWeekBounds(refISO: string): { startDate: string; endDate: s
 }
 
 export const fetchPerformanceFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { range: PerfRange; refDate?: string }) => d)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { startDate, endDate, label } = rangeBounds(data.range, data.refDate);
 
     // Timestamps para tabelas com coluna timestamptz
     const startTS = `${startDate}T00:00:00.000Z`;
-    const endTS   = `${endDate}T23:59:59.999Z`;
+    const endTS = `${endDate}T23:59:59.999Z`;
 
     // Leads novos usam EXATAMENTE a mesma janela do período (dia / semana
     // comercial / mês) para bater com os "Funis Perpétuos" dos Resultados.
     const todayISO = todayBR();
     const leadsWin = { startDate, endDate };
     const leadsStartTS = startTS;
-    const leadsEndTS   = endTS;
+    const leadsEndTS = endTS;
     const leadsLabel = label;
     const { LEADS_ORIGINS, leadBucket } = await import("@/lib/leads-comercial.server");
-
 
     // 1-3. Paralelizamos as três queries independentes (vendas, conversas do
     //      período e leads V3) — antes rodavam em série, o que na visão Mensal
@@ -195,7 +238,9 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         .limit(10000),
       supabaseAdmin
         .from("coach_conversations")
-        .select("id,seller_email,seller_name,first_message_at,last_message_at,clint_contact_id,origin_name")
+        .select(
+          "id,seller_email,seller_name,first_message_at,last_message_at,clint_contact_id,origin_name",
+        )
         .in("origin_name", FUNIS_LEADS)
         // Atendimentos = só vendedor humano. Conversas do Agente IA ficam na aba Agente IA.
         .eq("is_ai_conversation", false)
@@ -238,9 +283,8 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     for (const r of analysisResults) if (r.data?.length) analyses.push(...r.data);
 
     const scoreByConv = new Map<string, number>();
-    for (const a of analyses) if (a.score_geral != null) scoreByConv.set(a.conversation_id, a.score_geral);
-
-
+    for (const a of analyses)
+      if (a.score_geral != null) scoreByConv.set(a.conversation_id, a.score_geral);
 
     // ─── Dedup por contato (1 lead atendido = 1 atendimento) ─────────────
     // Bucket = clint_contact_id (fallback: id da conversa quando não houver
@@ -270,8 +314,11 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
           contactKey: key,
           sellerEmail: c.seller_email ?? null,
           sellerName: c.seller_name ?? null,
-          firstAt: fa, lastAt: la,
-          convIds: [c.id], scoreSum: 0, scoreN: 0,
+          firstAt: fa,
+          lastAt: la,
+          convIds: [c.id],
+          scoreSum: 0,
+          scoreN: 0,
         };
         buckets.set(key, b);
       } else {
@@ -286,7 +333,10 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         b.convIds.push(c.id);
       }
       const sc = scoreByConv.get(c.id);
-      if (sc != null) { b.scoreSum += sc; b.scoreN += 1; }
+      if (sc != null) {
+        b.scoreSum += sc;
+        b.scoreN += 1;
+      }
     }
 
     // Acumulador — chaveado por nome limpo do vendedor
@@ -299,11 +349,19 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       let cur = sellerMap.get(key);
       if (!cur) {
         cur = {
-          key, name: cleaned, email: email ?? "",
-          atendimentos: 0, vendas: 0, faturamento: 0,
-          taxaConversao: 0, notaMedia: null, analisesCount: 0,
-          leadsNovos: 0, conversaoLead: 0,
-          _scoreSum: 0, _scoreN: 0,
+          key,
+          name: cleaned,
+          email: email ?? "",
+          atendimentos: 0,
+          vendas: 0,
+          faturamento: 0,
+          taxaConversao: 0,
+          notaMedia: null,
+          analisesCount: 0,
+          leadsNovos: 0,
+          conversaoLead: 0,
+          _scoreSum: 0,
+          _scoreN: 0,
         };
         sellerMap.set(key, cur);
       } else if (!cur.email && email) {
@@ -326,31 +384,41 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       acc.atendimentos += 1;
       if (b.scoreN > 0) {
         const avg = b.scoreSum / b.scoreN;
-        acc._scoreSum += avg; acc._scoreN += 1; acc.analisesCount += 1;
+        acc._scoreSum += avg;
+        acc._scoreN += 1;
+        acc.analisesCount += 1;
       }
     }
 
     // Série diária — atendimentos = contatos únicos por dia (usa first_message_at
     // do bucket para não repetir o mesmo contato em vários dias).
-    const dailyMap = new Map<string, { atendimentos: number; vendas: number; faturamento: number; leads: number }>();
+    const dailyMap = new Map<
+      string,
+      { atendimentos: number; vendas: number; faturamento: number; leads: number }
+    >();
     for (const day of eachDay(startDate, endDate)) {
       dailyMap.set(day, { atendimentos: 0, vendas: 0, faturamento: 0, leads: 0 });
     }
     // garante os dias da janela de leads (sex→qui) na série diária
     for (const day of eachDay(leadsWin.startDate, leadsWin.endDate)) {
-      if (!dailyMap.has(day)) dailyMap.set(day, { atendimentos: 0, vendas: 0, faturamento: 0, leads: 0 });
+      if (!dailyMap.has(day))
+        dailyMap.set(day, { atendimentos: 0, vendas: 0, faturamento: 0, leads: 0 });
     }
 
     for (const b of buckets.values()) {
       const ref = b.firstAt ?? b.lastAt;
       if (!ref) continue;
       const k = new Date(ref).toISOString().slice(0, 10);
-      const cur = dailyMap.get(k); if (cur) cur.atendimentos += 1;
+      const cur = dailyMap.get(k);
+      if (cur) cur.atendimentos += 1;
     }
     for (const s of sales ?? []) {
       if (!s.sale_date) continue;
       const cur = dailyMap.get(s.sale_date);
-      if (cur) { cur.vendas += 1; cur.faturamento += Number(s.value_eur ?? 0); }
+      if (cur) {
+        cur.vendas += 1;
+        cur.faturamento += Number(s.value_eur ?? 0);
+      }
     }
 
     // Leads novos — mesma classificação dos "Funis Perpétuos" (Sessão
@@ -367,7 +435,8 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       leadsNovos += 1;
       if (l.contact_id) leadContactIds.push(String(l.contact_id));
       const k = new Date(l.created_at).toISOString().slice(0, 10);
-      const cur = dailyMap.get(k); if (cur) cur.leads += 1;
+      const cur = dailyMap.get(k);
+      if (cur) cur.leads += 1;
       // atribui lead ao vendedor (não cria linha nova se não houver vendedor)
       if (l.user_email || l.user_name) {
         if (isExcludedSeller(l.user_name)) continue;
@@ -394,7 +463,8 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         const convIdList = (convRows ?? []).map((r: any) => r.id);
         if (!convIdList.length) continue;
         const convToContact = new Map<string, string>();
-        for (const r of convRows ?? []) convToContact.set((r as any).id, (r as any).clint_contact_id);
+        for (const r of convRows ?? [])
+          convToContact.set((r as any).id, (r as any).clint_contact_id);
         for (let j = 0; j < convIdList.length; j += 500) {
           const cchunk = convIdList.slice(j, j + 500);
           const { data: msgs } = await supabaseAdmin
@@ -416,11 +486,13 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       leadsSemAtendimento = leadsNovos;
     }
 
-
     const sellers: SellerPerf[] = Array.from(sellerMap.values())
       .map((s) => ({
-        key: s.key, name: s.name, email: s.email,
-        atendimentos: s.atendimentos, vendas: s.vendas,
+        key: s.key,
+        name: s.name,
+        email: s.email,
+        atendimentos: s.atendimentos,
+        vendas: s.vendas,
         faturamento: s.faturamento,
         taxaConversao: s.atendimentos > 0 ? s.vendas / s.atendimentos : 0,
         notaMedia: s._scoreN > 0 ? s._scoreSum / s._scoreN : null,
@@ -431,12 +503,14 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
       .filter((s) => !EXCLUDED_PERF_KEYS.some((k) => s.name.toLowerCase().includes(k)))
       .sort((a, b) => b.faturamento - a.faturamento || b.vendas - a.vendas);
 
-
     const teamAt = sellers.reduce((a, s) => a + s.atendimentos, 0);
     const teamVd = sellers.reduce((a, s) => a + s.vendas, 0);
     const teamFat = sellers.reduce((a, s) => a + s.faturamento, 0);
     const scoreN = sellers.reduce((a, s) => a + s.analisesCount, 0);
-    const scoreSum = sellers.reduce((a, s) => a + (s.notaMedia != null ? s.notaMedia * s.analisesCount : 0), 0);
+    const scoreSum = sellers.reduce(
+      (a, s) => a + (s.notaMedia != null ? s.notaMedia * s.analisesCount : 0),
+      0,
+    );
 
     const result: PerfResult = {
       range: data.range,
@@ -449,7 +523,9 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
 
       sellers,
       team: {
-        atendimentos: teamAt, vendas: teamVd, faturamento: teamFat,
+        atendimentos: teamAt,
+        vendas: teamVd,
+        faturamento: teamFat,
         taxaConversao: teamAt > 0 ? teamVd / teamAt : 0,
         notaMedia: scoreN > 0 ? scoreSum / scoreN : null,
         analisesCount: scoreN,
@@ -475,8 +551,11 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
   });
 
 export const generatePerformanceFeedbackFn = createServerFn({ method: "POST" })
-  .inputValidator((d: { range: PerfRange; scope: "team" | "seller"; sellerKey?: string; refDate?: string }) => d)
-  .handler(async ({ data }) => {
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: { range: PerfRange; scope: "team" | "seller"; sellerKey?: string; refDate?: string }) => d,
+  )
+  .handler(async ({ data, context }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("LOVABLE_API_KEY não configurada");
 
@@ -508,9 +587,11 @@ export const generatePerformanceFeedbackFn = createServerFn({ method: "POST" })
               "Formato WhatsApp (NÃO use markdown com # ou ** — use *negrito* do WhatsApp com asteriscos simples, quebras de linha, e emojis com moderação 🔥📈💪🎯👏🚀✨). " +
               "Estrutura: (1) abertura calorosa citando o nome/período, (2) o que está brilhando 👏, (3) onde precisamos apertar 🎯, (4) 1-2 ações concretas pros próximos dias, (5) fechamento motivacional curto. " +
               "Faturamento em EUR (€). Nunca invente números — use só os dados fornecidos. Se atendimentos=0 ou vendas=0, fale disso com honestidade e chame pra ação. Máx ~12 linhas, respirada, sem parecer robô.",
-
           },
-          { role: "user", content: `Feedback para ${subject} (${rangeLabel}):\n\n${JSON.stringify(ctx, null, 2)}` },
+          {
+            role: "user",
+            content: `Feedback para ${subject} (${rangeLabel}):\n\n${JSON.stringify(ctx, null, 2)}`,
+          },
         ],
       }),
     });

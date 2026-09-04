@@ -80,7 +80,14 @@ function monthsBetween(from: Date, to: Date): string[] {
   return out;
 }
 
-async function loadCdrPage(token: string, month: string, page: number, limit: number, initDate: string, endDate: string) {
+async function loadCdrPage(
+  token: string,
+  month: string,
+  page: number,
+  limit: number,
+  initDate: string,
+  endDate: string,
+) {
   const qs = new URLSearchParams({
     month,
     page: String(page),
@@ -92,7 +99,10 @@ async function loadCdrPage(token: string, month: string, page: number, limit: nu
   const r = await fetch(`${baseUrl()}/api/v2/pbx/loadCdr?${qs.toString()}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
   });
-  if (!r.ok) throw new Error(`CCPBX loadCdr ${month} p${page}: ${r.status} ${await r.text().catch(() => "")}`);
+  if (!r.ok)
+    throw new Error(
+      `CCPBX loadCdr ${month} p${page}: ${r.status} ${await r.text().catch(() => "")}`,
+    );
   const j = (await r.json().catch(() => ({}))) as any;
   const data: any[] = Array.isArray(j?.data) ? j.data : [];
   const total: number = Number(j?.meta?.total ?? j?.total ?? data.length);
@@ -152,7 +162,7 @@ export const syncCcpbxCallsFn = createServerFn({ method: "POST" })
     for (const c of all) {
       const ccpbx_id = String(c?.id ?? c?.uuid ?? "");
       if (!ccpbx_id) continue;
-      const direction: string = String(c?.direction ?? "").toLowerCase() || null as any;
+      const direction: string = String(c?.direction ?? "").toLowerCase() || (null as any);
       const from_number: string = String(c?.callerid ?? "");
       const to_number: string = String(c?.destination ?? "");
       const ext = String(c?.src_extension ?? c?.dst_extension ?? "");
@@ -163,7 +173,9 @@ export const syncCcpbxCallsFn = createServerFn({ method: "POST" })
       const attended = String(c?.attended ?? "") === "1" || c?.attended === true;
       const status = attended ? "answered" : "no-answer";
       const month = started_at.slice(0, 7).replace("-", "");
-      const recording_url = c?.record_file ? `${baseUrl()}/api/v2/pbx/recordFile/${month}/${ccpbx_id}` : null;
+      const recording_url = c?.record_file
+        ? `${baseUrl()}/api/v2/pbx/recordFile/${month}/${ccpbx_id}`
+        : null;
 
       const phoneKey = normalizePhone(direction === "outgoing" ? to_number : from_number);
       const deal = phoneKey.length >= 8 ? dealsByPhone.get(phoneKey.slice(-9)) : null;
@@ -196,12 +208,16 @@ export const syncCcpbxCallsFn = createServerFn({ method: "POST" })
   });
 
 export const listCcpbxCallsFn = createServerFn({ method: "POST" })
-  .inputValidator((d: { limit?: number; agentEmail?: string; from?: string; to?: string } = {}) => d)
+  .inputValidator(
+    (d: { limit?: number; agentEmail?: string; from?: string; to?: string } = {}) => d,
+  )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let q = supabaseAdmin
       .from("coach_calls")
-      .select("id,ccpbx_id,started_at,duration_sec,direction,from_number,to_number,agent_user,agent_name,agent_email,deal_id,contact_name,status,recording_url,transcript,score,analyzed_at,analysis")
+      .select(
+        "id,ccpbx_id,started_at,duration_sec,direction,from_number,to_number,agent_user,agent_name,agent_email,deal_id,contact_name,status,recording_url,transcript,score,analyzed_at,analysis",
+      )
       .order("started_at", { ascending: false })
       .limit(Math.min(1000, data.limit ?? 200));
     if (data.agentEmail) q = q.eq("agent_email", data.agentEmail);
@@ -219,7 +235,10 @@ export const analyzeCallFn = createServerFn({ method: "POST" })
     if (!key) throw new Error("LOVABLE_API_KEY não configurada");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: call, error } = await supabaseAdmin
-      .from("coach_calls").select("*").eq("id", data.callId).maybeSingle();
+      .from("coach_calls")
+      .select("*")
+      .eq("id", data.callId)
+      .maybeSingle();
     if (error || !call) throw new Error("Ligação não encontrada");
 
     // Baixa áudio autenticado no CCPBX
@@ -228,7 +247,9 @@ export const analyzeCallFn = createServerFn({ method: "POST" })
     if (call.recording_url) {
       try {
         const token = await getToken();
-        const r = await fetch(call.recording_url, { headers: { Authorization: `Bearer ${token}` } });
+        const r = await fetch(call.recording_url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (r.ok) {
           const buf = Buffer.from(await r.arrayBuffer());
           if (buf.length < 20 * 1024 * 1024) {
@@ -243,15 +264,21 @@ export const analyzeCallFn = createServerFn({ method: "POST" })
       "Você é o Coach Comercial da LLMídia. Analise esta ligação de vendas e devolva SOMENTE JSON válido com o schema: " +
       `{"resumo":"string","score":0-10,"sentimento":"positivo|neutro|negativo","tentou_fechar":true|false,` +
       `"objecoes":["string"],"pontos_fortes":["string"],"pontos_melhoria":["string"],"proxima_acao":"string"}. ` +
-      "Se não houver áudio ou o áudio for muito curto/inaudível, devolva score=null e resumo=\"insufficient_data\".";
+      'Se não houver áudio ou o áudio for muito curto/inaudível, devolva score=null e resumo="insufficient_data".';
 
     const userParts: any[] = [
-      { type: "text", text:
-        `Ligação (${call.direction ?? "?"}) de ${call.from_number ?? "?"} → ${call.to_number ?? "?"}, ` +
-        `agente=${call.agent_name ?? "?"}, contato=${call.contact_name ?? "?"}, duração=${call.duration_sec}s, status=${call.status ?? "?"}.` },
+      {
+        type: "text",
+        text:
+          `Ligação (${call.direction ?? "?"}) de ${call.from_number ?? "?"} → ${call.to_number ?? "?"}, ` +
+          `agente=${call.agent_name ?? "?"}, contato=${call.contact_name ?? "?"}, duração=${call.duration_sec}s, status=${call.status ?? "?"}.`,
+      },
     ];
     if (audioB64) {
-      userParts.push({ type: "input_audio", input_audio: { data: audioB64, format: mime.includes("wav") ? "wav" : "mp3" } });
+      userParts.push({
+        type: "input_audio",
+        input_audio: { data: audioB64, format: mime.includes("wav") ? "wav" : "mp3" },
+      });
     }
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -260,20 +287,30 @@ export const analyzeCallFn = createServerFn({ method: "POST" })
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         response_format: { type: "json_object" },
-        messages: [{ role: "system", content: sys }, { role: "user", content: userParts }],
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: userParts },
+        ],
       }),
     });
     if (!resp.ok) throw new Error(`Lovable AI ${resp.status}: ${await resp.text()}`);
     const j = (await resp.json()) as any;
     let parsed: any = {};
-    try { parsed = JSON.parse(j?.choices?.[0]?.message?.content ?? "{}"); } catch { parsed = { resumo: "insufficient_data" }; }
+    try {
+      parsed = JSON.parse(j?.choices?.[0]?.message?.content ?? "{}");
+    } catch {
+      parsed = { resumo: "insufficient_data" };
+    }
 
     const score = typeof parsed.score === "number" ? parsed.score : null;
-    await supabaseAdmin.from("coach_calls").update({
-      transcript: parsed.transcricao ?? call.transcript ?? null,
-      analysis: parsed,
-      score,
-      analyzed_at: new Date().toISOString(),
-    }).eq("id", data.callId);
+    await supabaseAdmin
+      .from("coach_calls")
+      .update({
+        transcript: parsed.transcricao ?? call.transcript ?? null,
+        analysis: parsed,
+        score,
+        analyzed_at: new Date().toISOString(),
+      })
+      .eq("id", data.callId);
     return { ok: true, score, analysis: parsed };
   });

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
  * Versão LEVE do detalhamento V3, usada pelos cards de meta (mensal/trimestral).
@@ -16,14 +17,18 @@ export type OrigemV3ResumoRow = {
   ganhos: number;
 };
 
-const normEmail = (e: unknown) => String(e ?? "").trim().toLowerCase();
-const chunk = <T,>(arr: T[], size: number) => {
+const normEmail = (e: unknown) =>
+  String(e ?? "")
+    .trim()
+    .toLowerCase();
+const chunk = <T>(arr: T[], size: number) => {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
 };
 
 export const fetchOrigemV3ResumoFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<OrigemV3ResumoRow[]> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -116,7 +121,8 @@ export const fetchOrigemV3ResumoFn = createServerFn({ method: "GET" })
             : null;
       if (!declaradoV3 && !bucketDeclarado) continue;
       const email = normEmail(s.client_email);
-      const linha = bucketDeclarado ?? (email ? bucketByEmail.get(email) : undefined) ?? "Sessão Estratégica";
+      const linha =
+        bucketDeclarado ?? (email ? bucketByEmail.get(email) : undefined) ?? "Sessão Estratégica";
       ensure(String(s.sale_date).slice(0, 7), linha).ganhos++;
     }
 

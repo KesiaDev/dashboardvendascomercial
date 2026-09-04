@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertAdmin } from "@/lib/authz.server";
 import { parseWiseTab, type WiseSheetRow } from "@/lib/wise-sheet";
 
 // Planilha "Wise recebimentos" (Google Sheets) — fonte oficial dos recebimentos em EUR.
@@ -33,15 +35,18 @@ async function gatewayGet(path: string) {
 }
 
 /** Lista as abas da planilha Wise (uma por mês). */
-export const listWiseSheetTabsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const meta = await gatewayGet(
-    `/spreadsheets/${SPREADSHEET_ID}?fields=properties.title,sheets.properties.title`,
-  );
-  const tabs: string[] = (meta.sheets ?? [])
-    .map((s: any) => s?.properties?.title as string)
-    .filter(Boolean);
-  return { title: meta?.properties?.title ?? "Wise", tabs };
-});
+export const listWiseSheetTabsFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    assertAdmin(context.claims);
+    const meta = await gatewayGet(
+      `/spreadsheets/${SPREADSHEET_ID}?fields=properties.title,sheets.properties.title`,
+    );
+    const tabs: string[] = (meta.sheets ?? [])
+      .map((s: any) => s?.properties?.title as string)
+      .filter(Boolean);
+    return { title: meta?.properties?.title ?? "Wise", tabs };
+  });
 
 /**
  * Sincroniza a planilha Wise para bi_wise_payments.
@@ -49,8 +54,10 @@ export const listWiseSheetTabsFn = createServerFn({ method: "GET" }).handler(asy
  * preservando vendedor e período já atribuídos manualmente.
  */
 export const syncWiseSheetFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { tabs?: string[] } | undefined) => d ?? {})
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.claims);
     const db = await admin();
 
     let tabs = data.tabs;
@@ -63,9 +70,7 @@ export const syncWiseSheetFn = createServerFn({ method: "POST" })
         .filter((t: string) => !!t && !/hotmart/i.test(t));
     }
 
-    const rangeParams = tabs!
-      .map((t) => `ranges=${encodeURIComponent(`${t}!A1:F1000`)}`)
-      .join("&");
+    const rangeParams = tabs!.map((t) => `ranges=${encodeURIComponent(`${t}!A1:F1000`)}`).join("&");
     const batch = await gatewayGet(
       `/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${rangeParams}`,
     );
@@ -120,8 +125,6 @@ export const syncWiseSheetFn = createServerFn({ method: "POST" })
 
     const { error } = await db.from("bi_wise_payments").insert(unique);
     if (error) throw new Error(error.message);
-
-
 
     return {
       imported: unique.length,

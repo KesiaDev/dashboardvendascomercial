@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type DowStat = {
   dow: number; // 1=Seg .. 7=Dom
@@ -45,13 +46,18 @@ function mondayOf(dateStr: string) {
 }
 
 export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<LeadsDiaSemanaResult> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { leadBucket } = await import("@/lib/leads-comercial.server");
 
     const PAGE = 1000;
-    const rows: { created_at: string; origin_name: string | null; contact_tags: string[] | null }[] = [];
+    const rows: {
+      created_at: string;
+      origin_name: string | null;
+      contact_tags: string[] | null;
+    }[] = [];
     for (let page = 0; page < 60; page++) {
       const { data: batch, error } = await supabaseAdmin
         .from("clint_deals")
@@ -145,7 +151,13 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
       .map(([date, v]) => {
         const st = statsDow.get(v.dow)!;
         const z = st.sd > 0 ? (v.leads - st.mean) / st.sd : 0;
-        return { data: date, dow: DOW_LABELS[v.dow - 1], leads: v.leads, mediaDow: st.mean, desvio: z };
+        return {
+          data: date,
+          dow: DOW_LABELS[v.dow - 1],
+          leads: v.leads,
+          mediaDow: st.mean,
+          desvio: z,
+        };
       })
       .filter((o) => Math.abs(o.desvio) >= 2)
       .sort((a, b) => Math.abs(b.desvio) - Math.abs(a.desvio))

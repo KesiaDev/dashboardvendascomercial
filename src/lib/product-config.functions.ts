@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchProductConfigFn } from "@/lib/data.functions";
 
 export type ProductConfig = {
@@ -21,33 +22,38 @@ export async function fetchProductConfig(): Promise<ProductConfig[]> {
  * (fonte da verdade da taxonomia) — só o "ativo" já definido manualmente na
  * tela /areas é preservado entre syncs.
  */
-export const syncProductConfig = createServerFn({ method: "POST" }).handler(async () => {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { PRODUCT_GROUPS } = await import("@/lib/product-groups");
+export const syncProductConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { PRODUCT_GROUPS } = await import("@/lib/product-groups");
 
-  const { data: existing, error: fetchErr } = await supabaseAdmin
-    .from("bi_product_config")
-    .select("product_id,ativo");
-  if (fetchErr) throw fetchErr;
-  const ativoById = new Map((existing ?? []).map((r) => [r.product_id, r.ativo]));
+    const { data: existing, error: fetchErr } = await supabaseAdmin
+      .from("bi_product_config")
+      .select("product_id,ativo");
+    if (fetchErr) throw fetchErr;
+    const ativoById = new Map((existing ?? []).map((r) => [r.product_id, r.ativo]));
 
-  const rows = PRODUCT_GROUPS.map((g) => ({
-    product_id: g.id,
-    label: g.label,
-    categoria: g.categoria,
-    produto_pai_id: g.parentId,
-    ativo: ativoById.get(g.id) ?? true,
-    updated_at: new Date().toISOString(),
-  }));
+    const rows = PRODUCT_GROUPS.map((g) => ({
+      product_id: g.id,
+      label: g.label,
+      categoria: g.categoria,
+      produto_pai_id: g.parentId,
+      ativo: ativoById.get(g.id) ?? true,
+      updated_at: new Date().toISOString(),
+    }));
 
-  const { error } = await supabaseAdmin.from("bi_product_config").upsert(rows, { onConflict: "product_id" });
-  if (error) throw error;
-  return { synced: rows.length };
-});
+    const { error } = await supabaseAdmin
+      .from("bi_product_config")
+      .upsert(rows, { onConflict: "product_id" });
+    if (error) throw error;
+    return { synced: rows.length };
+  });
 
 export const setProductActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { productId: string; ativo: boolean }) => d)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("bi_product_config")
