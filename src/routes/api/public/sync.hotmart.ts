@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runHotmartSync } from "@/lib/hotmart.functions";
+import { requireApiKey } from "@/lib/api-auth";
 
 // Endpoint público chamado pelo pg_cron (horário) e disponível para triggers manuais.
 // Aceita GET (fácil de testar no browser) e POST. Opcional: ?days=7 ou ?start=YYYY-MM-DD&end=YYYY-MM-DD
@@ -13,6 +14,8 @@ export const Route = createFileRoute("/api/public/sync/hotmart")({
 });
 
 async function handle(request: Request) {
+  const denied = requireApiKey(request);
+  if (denied) return denied;
   try {
     const url = new URL(request.url);
     const days = url.searchParams.get("days");

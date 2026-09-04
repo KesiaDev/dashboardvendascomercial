@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runFullClintSync } from "@/lib/clint.functions";
+import { requireApiKey } from "@/lib/api-auth";
 
 // O código anterior lia um header x-clint-token enviado pelo chamador e
 // usava esse valor para sobrescrever process.env.CLINT_API_TOKEN em tempo de
 // execução — qualquer requisição não autenticada podia trocar o token usado
 // nas chamadas à API da Clint para todo o processo. Essa linha foi removida.
 async function handleSync(request: Request) {
+  const denied = requireApiKey(request);
+  if (denied) return denied;
   const url = new URL(request.url);
   const full = url.searchParams.get("full") === "true";
   try {

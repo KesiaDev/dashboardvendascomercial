@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireApiKey } from "@/lib/api-auth";
 
 // Endpoint público chamado pelo pg_cron (a cada 1h) — mesmo padrão de
 // /api/public/sync/hotmart. Reconfere as vendas manuais pendentes contra a
@@ -7,13 +8,15 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/public/audit/manual-sales")({
   server: {
     handlers: {
-      GET: async () => handle(),
-      POST: async () => handle(),
+      GET: async ({ request }) => handle(request),
+      POST: async ({ request }) => handle(request),
     },
   },
 });
 
-async function handle() {
+async function handle(request: Request) {
+  const denied = requireApiKey(request);
+  if (denied) return denied;
   try {
     const { runManualSalesAudit } = await import("@/lib/manual-sales-audit.server");
     const result = await runManualSalesAudit();

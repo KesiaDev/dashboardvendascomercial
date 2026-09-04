@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { runCoachV3Sync } from "./sync.coach-v3";
 import { syncCcpbxCallsFn, analyzeCallFn } from "@/lib/ccpbx.functions";
 import { analyzeConversationCore } from "@/lib/coach.functions";
+import { requireApiKey } from "@/lib/api-auth";
 
 // Pipeline automático: sincroniza mensagens (Clint) e ligações (CCPBX)
 // e re-analisa o que tem novidade desde a última análise.
@@ -108,12 +109,13 @@ async function runAutoPipeline(sinceDays: number, maxAnalyses: number) {
 }
 
 async function handle(request: Request) {
+  // Este é o endpoint mais caro do projeto: dispara até 30 análises por LLM por
+  // requisição, na fatura da empresa. Nunca deve ficar aberto.
+  const denied = requireApiKey(request);
+  if (denied) return denied;
   const url = new URL(request.url);
   const sinceDays = parseInt(url.searchParams.get("sinceDays") ?? "3", 10) || 3;
-  const maxAnalyses = Math.min(
-    30,
-    parseInt(url.searchParams.get("max") ?? "8", 10) || 8,
-  );
+  const maxAnalyses = Math.min(30, parseInt(url.searchParams.get("max") ?? "8", 10) || 8);
   try {
     return Response.json(await runAutoPipeline(sinceDays, maxAnalyses));
   } catch (e) {

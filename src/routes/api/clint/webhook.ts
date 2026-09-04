@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireClintWebhookToken } from "@/lib/api-auth";
 
 function parseMeetingDatetime(str: string): Date | null {
   // "Terça-feira 22/07 às 14h00" or "Segunda 21/07 às 09h00"
@@ -7,7 +8,15 @@ function parseMeetingDatetime(str: string): Date | null {
   const [, dayStr, monthStr, hourStr, minStr] = match;
   const year = new Date().getFullYear();
   // Europe/Lisbon: UTC+1 in summer → subtract 1h for UTC
-  return new Date(Date.UTC(year, parseInt(monthStr, 10) - 1, parseInt(dayStr, 10), parseInt(hourStr, 10) - 1, parseInt(minStr, 10)));
+  return new Date(
+    Date.UTC(
+      year,
+      parseInt(monthStr, 10) - 1,
+      parseInt(dayStr, 10),
+      parseInt(hourStr, 10) - 1,
+      parseInt(minStr, 10),
+    ),
+  );
 }
 
 function parseAgendaTag(content: string): Date | null {
@@ -17,7 +26,15 @@ function parseAgendaTag(content: string): Date | null {
   const [, dayStr, monthStr, hourStr, minStr] = match;
   const year = new Date().getFullYear();
   // Europe/Lisbon: UTC+1 in summer → subtract 1h for UTC
-  return new Date(Date.UTC(year, parseInt(monthStr, 10) - 1, parseInt(dayStr, 10), parseInt(hourStr, 10) - 1, parseInt(minStr, 10)));
+  return new Date(
+    Date.UTC(
+      year,
+      parseInt(monthStr, 10) - 1,
+      parseInt(dayStr, 10),
+      parseInt(hourStr, 10) - 1,
+      parseInt(minStr, 10),
+    ),
+  );
 }
 
 function detectEventType(body: Record<string, unknown>): string {
@@ -31,16 +48,19 @@ function detectEventType(body: Record<string, unknown>): string {
 
   const data = (body.data as Record<string, unknown>) ?? {};
   const fromData =
-    (data.event_type as string) ??
-    (data.event as string) ??
-    (data.type as string) ??
-    null;
+    (data.event_type as string) ?? (data.event as string) ?? (data.type as string) ?? null;
   if (fromData) return fromData;
 
-  const msg = (data.message ?? data.msg ?? body.message ?? body.msg) as Record<string, unknown> | null;
-  const hasMsg = msg != null && ((msg.content ?? msg.text ?? msg.body) != null);
+  const msg = (data.message ?? data.msg ?? body.message ?? body.msg) as Record<
+    string,
+    unknown
+  > | null;
+  const hasMsg = msg != null && (msg.content ?? msg.text ?? msg.body) != null;
   const hasStage =
-    data.deal_stage != null || data.stage != null || data.old_stage != null || body.deal_stage != null;
+    data.deal_stage != null ||
+    data.stage != null ||
+    data.old_stage != null ||
+    body.deal_stage != null;
 
   if (hasStage) return "stage_change";
   if (hasMsg) return "message";
@@ -158,11 +178,17 @@ async function handleWebhook(request: Request) {
     stageConversationId = result?.stageConversationId ?? null;
 
     if (rawId) await db.from("clint_events_raw").update({ status: "processed" }).eq("id", rawId);
-    if (logId) await db.from("coach_integration_logs").update({ status: "processed" }).eq("id", logId);
+    if (logId)
+      await db.from("coach_integration_logs").update({ status: "processed" }).eq("id", logId);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (rawId) await db.from("clint_events_raw").update({ status: "error", error_msg: msg }).eq("id", rawId);
-    if (logId) await db.from("coach_integration_logs").update({ status: "error", error_msg: msg }).eq("id", logId);
+    if (rawId)
+      await db.from("clint_events_raw").update({ status: "error", error_msg: msg }).eq("id", rawId);
+    if (logId)
+      await db
+        .from("coach_integration_logs")
+        .update({ status: "error", error_msg: msg })
+        .eq("id", logId);
   }
 
   if (stageConversationId) {
@@ -193,7 +219,8 @@ async function processWebhookEvent(
     null;
 
   const contact = (data.contact as Record<string, unknown>) ?? {};
-  const seller = (data.user as Record<string, unknown>) ?? (data.seller as Record<string, unknown>) ?? {};
+  const seller =
+    (data.user as Record<string, unknown>) ?? (data.seller as Record<string, unknown>) ?? {};
   const msg =
     (data.message as Record<string, unknown>) ??
     (data.msg as Record<string, unknown>) ??
@@ -203,7 +230,10 @@ async function processWebhookEvent(
   const contactName =
     (contact.name as string) ?? (data.contact_name as string) ?? (data.lead_name as string) ?? null;
   const contactPhone =
-    (contact.phone as string) ?? (contact.mobile as string) ?? (data.contact_phone as string) ?? null;
+    (contact.phone as string) ??
+    (contact.mobile as string) ??
+    (data.contact_phone as string) ??
+    null;
   const contactId = (contact.id as string) ?? null;
   const contactEmail = (contact.email as string) ?? (data.contact_email as string) ?? null;
 
@@ -214,10 +244,7 @@ async function processWebhookEvent(
     (data.seller_name as string) ??
     null;
   const sellerEmail =
-    (seller.email as string) ??
-    (data.seller_email as string) ??
-    (data.deal_user as string) ??
-    null;
+    (seller.email as string) ?? (data.seller_email as string) ?? (data.deal_user as string) ?? null;
 
   const originName =
     (data.origin_name as string) ??
@@ -231,12 +258,20 @@ async function processWebhookEvent(
     null;
 
   const msgContent =
-    (msg.content as string) ?? (msg.text as string) ?? (msg.body as string) ?? (data.content as string) ?? null;
+    (msg.content as string) ??
+    (msg.text as string) ??
+    (msg.body as string) ??
+    (data.content as string) ??
+    null;
 
   const hasMessageContent = msgContent != null;
-  const isMessageEvent = event.includes("message") || event.includes("mensagem") || hasMessageContent;
+  const isMessageEvent =
+    event.includes("message") || event.includes("mensagem") || hasMessageContent;
   const isStageEvent =
-    event.includes("stage") || event.includes("etapa") || event === "stage_change" || (stage != null && !hasMessageContent);
+    event.includes("stage") ||
+    event.includes("etapa") ||
+    event === "stage_change" ||
+    (stage != null && !hasMessageContent);
 
   const contactKey = contactEmail ?? contactPhone ?? null;
   if (!clintConvId && !dealId && !contactKey) return { stageConversationId: null };
@@ -256,7 +291,11 @@ async function processWebhookEvent(
       .eq("contact_id", contactId)
       .order("created_at", { ascending: false })
       .limit(20);
-    const list = (matches ?? []) as Array<{ id: string; origin_name: string | null; created_at: string | null }>;
+    const list = (matches ?? []) as Array<{
+      id: string;
+      origin_name: string | null;
+      created_at: string | null;
+    }>;
     const preferred =
       list.find((d) => d.origin_name === "PIPELINE_COMERCIAL-V3") ?? list[0] ?? null;
     if (preferred) {
@@ -264,8 +303,6 @@ async function processWebhookEvent(
       resolvedOriginName = resolvedOriginName ?? preferred.origin_name;
     }
   }
-
-
 
   // Detect meeting confirmed by AI agent (n8n posts stage_change with meeting_datetime)
   if (isStageEvent && stage && /reuni[aã]o/i.test(stage)) {
@@ -413,8 +450,7 @@ async function processWebhookEvent(
   if (!conversationId) return { stageConversationId: null };
 
   if (hasMessageContent) {
-    const rawFrom =
-      (msg.from as string) ?? (msg.author as string) ?? (msg.sender as string) ?? "";
+    const rawFrom = (msg.from as string) ?? (msg.author as string) ?? (msg.sender as string) ?? "";
 
     const directionHint: "inbound" | "outbound" =
       rawFrom === "contact" || rawFrom === "client" || (data.author_type as string) === "client"
@@ -426,7 +462,8 @@ async function processWebhookEvent(
     const author = await detectAuthor(db, rawFrom, contactPhone, directionHint);
     const direction: "inbound" | "outbound" = author === "cliente" ? "inbound" : "outbound";
     const senderName = direction === "inbound" ? contactName : sellerName;
-    const sentAt = (msg.sent_at as string) ?? (msg.timestamp as string) ?? (msg.created_at as string) ?? now;
+    const sentAt =
+      (msg.sent_at as string) ?? (msg.timestamp as string) ?? (msg.created_at as string) ?? now;
     const clintMsgId = (msg.id as string) ?? null;
 
     if (clintMsgId) {
@@ -479,7 +516,15 @@ async function processWebhookEvent(
 export const Route = createFileRoute("/api/clint/webhook")({
   server: {
     handlers: {
-      POST: ({ request }) => handleWebhook(request),
+      POST: ({ request }) => {
+        // A Clint não assina os payloads. Sem esta checagem, qualquer pessoa criava
+        // deals, conversas e reuniões na agenda de um vendedor — e cada requisição
+        // disparava análise por LLM (triggerAnalysisAsync), queimando crédito.
+        const denied = requireClintWebhookToken(request);
+        if (denied) return denied;
+        return handleWebhook(request);
+      },
+      // Health check sem segredo: não toca no banco e não revela nada.
       GET: () => Response.json({ ok: true, status: "webhook endpoint active" }),
     },
   },

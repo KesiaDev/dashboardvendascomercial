@@ -1,13 +1,23 @@
 import { createServerFn } from "@tanstack/react-start";
 
-// Combined sync function used by the public cron trigger (n8n daily 6am).
+// Sync combinado usado pelo cron público (a cada 30 min).
+//
+// A janela incremental é de 2 dias, não 90. Com 90, cada execução reescrevia via
+// upsert dezenas de milhares de linhas de clint_deals — 48 vezes por dia, cada
+// UPDATE gerando uma tupla morta e cada linha carregando a coluna `raw` JSONB
+// (TOAST). Era a causa raiz do bloat que deixava as rotas de BI progressivamente
+// mais lentas. Para recarregar o histórico inteiro, chame com { full: true }.
+const INCREMENTAL_SINCE_DAYS = 2;
+
 export async function runFullClintSync(opts?: { full?: boolean }) {
   const token = process.env.CLINT_API_TOKEN;
   if (!token) throw new Error("CLINT_API_TOKEN not configured");
   const users = await syncClintUsers();
   const origins = await syncClintOrigins();
   const areas = await syncPipelineAreas();
-  const deals = await syncClintDeals({ data: opts?.full ? { full: true } : { sinceDays: 90 } });
+  const deals = await syncClintDeals({
+    data: opts?.full ? { full: true } : { sinceDays: INCREMENTAL_SINCE_DAYS },
+  });
   return { ok: true, synced_at: new Date().toISOString(), results: { users, origins, areas, deals } };
 }
 
