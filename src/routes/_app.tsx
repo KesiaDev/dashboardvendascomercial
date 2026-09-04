@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { isAdminUser, ALLOWED_NON_ADMIN_ROUTES, getSessionFast } from "@/lib/auth";
 import logoIcon from "@/assets/logo-icon.webp";
+import { AppAuthCtx, type AppAuth, type AppUser } from "@/lib/app-auth";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
