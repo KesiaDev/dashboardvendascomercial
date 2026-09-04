@@ -557,10 +557,10 @@ function FechamentoForm({ session }: { session: any }) {
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label className="text-xs">Parcelamento</Label>
                         <Select
-                          value={is166(it.value) ? "3" : it.installments}
-                          disabled={is166(it.value)}
+                          value={String(planOf(it.value)?.installments ?? it.installments)}
+                          disabled={!!planOf(it.value)}
                           onValueChange={(v) =>
-                            updateItem(i, { installments: v as "1" | "2" | "3" })
+                            updateItem(i, { installments: v as Item["installments"] })
                           }
                         >
                           <SelectTrigger>
@@ -568,17 +568,18 @@ function FechamentoForm({ session }: { session: any }) {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="1">À vista (1x)</SelectItem>
-                            <SelectItem value="2">2x — agenda +1 parcela no próximo mês</SelectItem>
-                            <SelectItem value="3">
-                              3x — agenda +2 parcelas nos próximos meses
-                            </SelectItem>
+                            {[2, 3, 4, 5, 6].map((n) => (
+                              <SelectItem key={n} value={String(n)}>
+                                {n}x — agenda +{n - 1} parcelas nos próximos meses
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
-                        {is166(it.value) ? (
+                        {planOf(it.value) ? (
                           <p className="text-xs text-warning-fg">
-                            Regra fixa: parcela de 166 € é sempre <b>3x</b> — as 2 parcelas
-                            seguintes entram automaticamente nos 2 meses seguintes (mesmo dia da
-                            venda).
+                            Plano reconhecido: <b>{planOf(it.value)!.label}</b> — as{" "}
+                            {planOf(it.value)!.installments - 1} parcelas seguintes entram
+                            automaticamente nos meses seguintes (mesmo dia da venda).
                           </p>
                         ) : it.installments !== "1" && it.value ? (
                           <p className="text-xs text-muted-foreground">
