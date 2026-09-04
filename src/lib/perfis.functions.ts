@@ -942,12 +942,57 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       return a;
     };
 
+    // Fallback: comprador sem conversa NO período pode ter conversado antes.
+    // Buscamos o histórico completo dele e reaproveitamos o perfil já em cache.
+    const emailsCompra = Array.from(
+      new Set(
+        vendasPeriodo
+          .map((s) => (s.client_email ? String(s.client_email).trim().toLowerCase() : ""))
+          .filter((e) => e && !convPorEmail.has(e)),
+      ),
+    );
+    const histPorEmail = new Map<string, string>();
+    if (emailsCompra.length) {
+      const hist = (
+        await db
+          .from("coach_conversations")
+          .select("id, contact_email, last_message_at")
+          .in("contact_email", emailsCompra)
+          .order("last_message_at", { ascending: false })
+          .limit(500)
+      ).data as any[] | null;
+      const histIds: string[] = [];
+      for (const h of hist ?? []) {
+        const em = String(h.contact_email ?? "").trim().toLowerCase();
+        if (em && !histPorEmail.has(em)) {
+          histPorEmail.set(em, String(h.id));
+          histIds.push(String(h.id));
+        }
+      }
+      if (histIds.length) {
+        const cache = (
+          await db
+            .from("lead_perfil_cache")
+            .select("conversation_id, perfil")
+            .in("conversation_id", histIds)
+        ).data as any[] | null;
+        for (const r of cache ?? []) {
+          if (r.perfil) perfilPorConversa.set(String(r.conversation_id), String(r.perfil));
+        }
+      }
+    }
+
     const vendasDetalhe: VendaPerfil[] = [];
     for (const s of vendasPeriodo) {
       const em = s.client_email ? String(s.client_email).trim().toLowerCase() : "";
       const nm = s.client_name ? normalize(String(s.client_name).trim()) : "";
-      const convId = (em && convPorEmail.get(em)) || (nm && convPorNome.get(nm)) || null;
-      const perfil = convId ? (perfilPorConversa.get(convId) ?? NAO_IDENTIFICADO) : SEM_CONVERSA;
+      const convId =
+        (em && convPorEmail.get(em)) ||
+        (nm && convPorNome.get(nm)) ||
+        (em && histPorEmail.get(em)) ||
+        null;
+      const perfilConv = convId ? perfilPorConversa.get(convId) : undefined;
+      const perfil = convId ? (perfilConv ?? NAO_IDENTIFICADO) : SEM_CONVERSA;
       const item: VendaPerfil = {
         cliente: String(s.client_name ?? s.client_email ?? "—").trim(),
         email: s.client_email ? String(s.client_email).trim() : null,
@@ -958,6 +1003,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         perfil,
         vinculo: convId ? "conversa" : "sem_conversa",
       };
+
       vendasDetalhe.push(item);
       const a = ensureBucket(perfil);
       a.vendas++;
