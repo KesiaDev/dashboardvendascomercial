@@ -19,7 +19,7 @@ import {
   type RoletaSpinRow,
 } from "@/lib/commission.functions";
 import { RoletaSpinsCard } from "@/components/roleta-spins";
-import { useAppAuth } from "@/routes/_app";
+import { useAppAuth } from "@/lib/app-auth";
 import { FALLBACK_EUR_BRL, eurBrlRate } from "@/lib/eur-rate";
 import {
   calculateCommissions,
