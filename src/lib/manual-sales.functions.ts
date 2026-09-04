@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { APPROVED_STATUS_DB_VALUES } from "@/lib/sales-status";
+import { detectPaymentPlan } from "@/lib/payment-plans";
 import { activeSellers } from "@/lib/sellers";
 import { fetchAllRows } from "@/lib/supabase-paging";
 
