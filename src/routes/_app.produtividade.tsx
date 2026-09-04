@@ -1,17 +1,8 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  fetchAllDeals,
-  fetchPipelineAreas,
-  buildAreaMap,
-  filterDealsByArea,
-  periodRange,
-  cleanSellerName,
-  type Period,
-} from "@/lib/bi";
-import { fetchStagesFn, fetchLostStatusesFn } from "@/lib/data.functions";
-import { fetchTeamActivity, fetchFollowupActivities } from "@/lib/team-activity.functions";
+import { periodRange, type Period } from "@/lib/bi";
+import { fetchProdutividadeFn, type ProdutividadeData } from "@/lib/produtividade.functions";
 import { AREA_LABELS, AREA_ORDER, type BusinessArea } from "@/lib/pipeline-areas";
 import { useCurrency } from "@/lib/currency-context";
 import { formatInt, formatPct } from "@/lib/format";
@@ -32,22 +23,9 @@ import {
 } from "recharts";
 import { format as formatDate } from "date-fns";
 import { Users, Trophy, Target, Clock, LayoutGrid } from "lucide-react";
-import { conversionRate } from "@/lib/conversion";
-
 export const Route = createFileRoute("/_app/produtividade")({
   component: Produtividade,
 });
-
-type Stage = { id: string; origin_id: string; label: string; stage_order: number; type: string };
-type LostStatus = { id: string; label: string | null };
-
-async function fetchStages(): Promise<Stage[]> {
-  return (await fetchStagesFn()) as Stage[];
-}
-
-async function fetchLostStatuses(): Promise<LostStatus[]> {
-  return (await fetchLostStatusesFn()) as LostStatus[];
-}
 
 const COLORS = [
   "#8b5cf6",
@@ -74,202 +52,44 @@ function Produtividade() {
   const [area, setArea] = useState<BusinessArea>("COMERCIAL");
   const { format: money } = useCurrency();
 
-  const { data: deals = [], isLoading } = useQuery({
-    queryKey: ["bi_deals"],
-    queryFn: fetchAllDeals,
-  });
-  const { data: pipelineAreas = [] } = useQuery({
-    queryKey: ["bi_pipeline_areas"],
-    queryFn: fetchPipelineAreas,
-  });
-  const { data: stages = [] } = useQuery({ queryKey: ["clint_stages"], queryFn: fetchStages });
-  const { data: lostStatuses = [] } = useQuery({
-    queryKey: ["clint_lost_statuses"],
-    queryFn: fetchLostStatuses,
-  });
-  const { data: teamActivity = [] } = useQuery({
-    queryKey: ["bi_team_activity"],
-    queryFn: fetchTeamActivity,
-  });
-  const { data: followupActivities = [] } = useQuery({
-    queryKey: ["bi_followup_activities"],
-    queryFn: fetchFollowupActivities,
-  });
-
-  const areaMap = useMemo(() => buildAreaMap(pipelineAreas), [pipelineAreas]);
-  const dealsInArea = useMemo(
-    () => filterDealsByArea(deals, areaMap, area),
-    [deals, areaMap, area],
-  );
   const { start, end } = periodRange(period);
 
-  const stageLabel = useMemo(() => new Map(stages.map((s) => [s.id, s.label])), [stages]);
-  const lostLabel = useMemo(
-    () => new Map(lostStatuses.map((s) => [s.id, s.label ?? "Outro"])),
-    [lostStatuses],
+  // Toda a agregação acontece no servidor (src/lib/produtividade.functions.ts).
+  // Esta tela baixava clint_deals INTEIRA e rodava oito agregações sobre o mesmo
+  // array no navegador. Agora chegam algumas dezenas de linhas de resultado.
+  //
+  // As três janelas de tempo (período da tela, snapshot sem período do funil, e
+  // o intervalo do último CSV importado) estão documentadas no server function —
+  // recortar a leitura por período quebraria duas delas em silêncio.
+  const { data, isLoading } = useQuery({
+    queryKey: ["produtividade", period, area],
+    queryFn: () => fetchProdutividadeFn({ data: { period, area } }),
+  });
+
+  const kpis: ProdutividadeData["kpis"] = data?.kpis ?? {
+    leads: 0,
+    won: 0,
+    convRate: 0,
+    revenue: 0,
+    avgCycleMs: 0,
+  };
+  const lossReasons: ProdutividadeData["motivosPerda"] = data?.motivosPerda ?? [];
+  const funnelBySeller: ProdutividadeData["funilPorVendedor"] = data?.funilPorVendedor ?? [];
+  const salesByVendor: ProdutividadeData["vendasPorVendedor"] = data?.vendasPorVendedor ?? [];
+  const teamProductivity: ProdutividadeData["produtividadeTime"] = data?.produtividadeTime ?? [];
+  const followupRows: ProdutividadeData["followupRows"] = data?.followupRows ?? [];
+  const latestActivityPeriod = data?.activityPeriodo ?? null;
+  const latestFollowupPeriod = data?.followupPeriodo ?? null;
+
+  // O servidor devolve a data ISO; o rótulo dd/MM é formatação de exibição.
+  const lostByDay = useMemo(
+    () =>
+      ((data?.perdasPorDia ?? []) as ProdutividadeData["perdasPorDia"]).map((r) => ({
+        day: formatDate(new Date(r.day), "dd/MM"),
+        count: r.count,
+      })),
+    [data],
   );
-
-  function inPeriod(iso: string | null) {
-    if (!iso) return false;
-    const d = new Date(iso);
-    if (start && d < start) return false;
-    if (end && d > end) return false;
-    return true;
-  }
-
-  const kpis = useMemo(() => {
-    const leads = dealsInArea.filter((d) => inPeriod(d.created_at));
-    const won = dealsInArea.filter((d) => d.status === "WON" && inPeriod(d.won_at));
-    const lost = dealsInArea.filter((d) => d.status === "LOST" && inPeriod(d.lost_at));
-    // Esta tela já datava ganhos e perdidos pelo fechamento — estava certa
-    // antes da consolidação. Passa a usar a função canônica para não voltar a
-    // divergir quando alguém mexer numa das telas e esquecer das outras.
-    const conv = conversionRate(dealsInArea, start, end);
-    const revenue = won.reduce((s, d) => s + (d.value ?? 0), 0);
-    const cycles = won
-      .filter((d) => d.created_at && d.won_at)
-      .map((d) => new Date(d.won_at!).getTime() - new Date(d.created_at!).getTime())
-      .filter((ms) => ms > 0);
-    const avgCycleMs = cycles.length > 0 ? cycles.reduce((a, b) => a + b, 0) / cycles.length : 0;
-    return { leads: leads.length, won: won.length, convRate: conv.rate, revenue, avgCycleMs };
-  }, [dealsInArea, start, end]);
-
-  const lossReasons = useMemo(() => {
-    const lost = dealsInArea.filter((d) => d.status === "LOST" && inPeriod(d.lost_at));
-    const map = new Map<string, number>();
-    for (const d of lost) {
-      const label = d.lost_status_id ? (lostLabel.get(d.lost_status_id) ?? "Outro") : "Sem motivo";
-      map.set(label, (map.get(label) ?? 0) + 1);
-    }
-    const total = lost.length;
-    return Array.from(map.entries())
-      .map(([label, count]) => ({ label, count, pct: total > 0 ? count / total : 0 }))
-      .sort((a, b) => b.count - a.count);
-  }, [dealsInArea, start, end, lostLabel]);
-
-  const lostByDay = useMemo(() => {
-    const lost = dealsInArea.filter((d) => d.status === "LOST" && inPeriod(d.lost_at));
-    const map = new Map<string, number>();
-    for (const d of lost) {
-      const key = new Date(d.lost_at!).toISOString().slice(0, 10);
-      map.set(key, (map.get(key) ?? 0) + 1);
-    }
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, count]) => ({ day: formatDate(new Date(key), "dd/MM"), count }));
-  }, [dealsInArea, start, end]);
-
-  const funnelBySeller = useMemo(() => {
-    // Snapshot atual de cada negócio (não filtra por período nem status) —
-    // mesma definição do export "Detalhamento do funil por vendedor" da Clint:
-    // conta em qual etapa cada negócio está agora, incluindo ganhos/perdidos.
-    const sellers = new Map<string, Map<string, number>>();
-    for (const d of dealsInArea) {
-      const user = d.user_name ?? d.user_email ?? "—";
-      const stage = d.stage_id ? (stageLabel.get(d.stage_id) ?? d.stage ?? "—") : (d.stage ?? "—");
-      if (!sellers.has(user)) sellers.set(user, new Map());
-      const m = sellers.get(user)!;
-      m.set(stage, (m.get(stage) ?? 0) + 1);
-    }
-    const groups: { user: string; total: number; stages: { stage: string; count: number }[] }[] =
-      [];
-    for (const [user, stageMap] of sellers) {
-      const stages = Array.from(stageMap.entries())
-        .map(([stage, count]) => ({ stage, count }))
-        .sort((a, b) => b.count - a.count);
-      const total = stages.reduce((sum, s) => sum + s.count, 0);
-      groups.push({ user, total, stages });
-    }
-    return groups.sort((a, b) => b.total - a.total);
-  }, [dealsInArea, stageLabel]);
-
-  const salesDetail = useMemo(() => {
-    return dealsInArea
-      .filter((d) => d.status === "WON" && inPeriod(d.won_at))
-      .map((d) => ({
-        id: d.id,
-        contato: d.contact_name ?? "—",
-        email: d.contact_email ?? "—",
-        origem: d.origin_name ?? "—",
-        vendedor: d.user_name ?? d.user_email ?? "—",
-        valor: d.value ?? 0,
-        data: d.won_at,
-      }))
-      .sort((a, b) => new Date(b.data ?? 0).getTime() - new Date(a.data ?? 0).getTime());
-  }, [dealsInArea, start, end]);
-
-  const salesByVendor = useMemo(() => {
-    const groups = new Map<
-      string,
-      { vendedor: string; total: number; items: typeof salesDetail }
-    >();
-    for (const s of salesDetail) {
-      const g = groups.get(s.vendedor) ?? { vendedor: s.vendedor, total: 0, items: [] };
-      g.total += s.valor;
-      g.items.push(s);
-      groups.set(s.vendedor, g);
-    }
-    return Array.from(groups.values()).sort((a, b) => b.total - a.total);
-  }, [salesDetail]);
-
-  // Produtividade do time: importada via CSV (sem API na Clint para isso) —
-  // usa sempre o período mais recente importado, cruzado com negócios
-  // recebidos por vendedor no mesmo intervalo de datas.
-  const latestActivityPeriod = useMemo(() => {
-    if (teamActivity.length === 0) return null;
-    return teamActivity.reduce(
-      (latest, r) => (r.periodo_fim > latest.periodo_fim ? r : latest),
-      teamActivity[0],
-    );
-  }, [teamActivity]);
-
-  const teamProductivity = useMemo(() => {
-    if (!latestActivityPeriod) return [];
-    const rangeStart = new Date(latestActivityPeriod.periodo_inicio);
-    const rangeEnd = new Date(`${latestActivityPeriod.periodo_fim}T23:59:59`);
-    const leadsByUser = new Map<string, number>();
-    for (const d of dealsInArea) {
-      if (!d.created_at) continue;
-      const dt = new Date(d.created_at);
-      if (dt < rangeStart || dt > rangeEnd) continue;
-      const user = cleanSellerName(d.user_name ?? d.user_email ?? "—");
-      leadsByUser.set(user, (leadsByUser.get(user) ?? 0) + 1);
-    }
-    return teamActivity
-      .filter(
-        (r) =>
-          r.periodo_inicio === latestActivityPeriod.periodo_inicio &&
-          r.periodo_fim === latestActivityPeriod.periodo_fim,
-      )
-      .map((r) => {
-        const recebidos = leadsByUser.get(cleanSellerName(r.user_name)) ?? 0;
-        return {
-          ...r,
-          negociosRecebidos: recebidos,
-          pctTrabalhados: recebidos > 0 ? r.negocios_trabalhados / recebidos : null,
-        };
-      })
-      .sort((a, b) => b.negocios_trabalhados - a.negocios_trabalhados);
-  }, [teamActivity, latestActivityPeriod, dealsInArea]);
-
-  const latestFollowupPeriod = useMemo(() => {
-    if (followupActivities.length === 0) return null;
-    return followupActivities.reduce(
-      (latest, r) => (r.periodo_fim > latest.periodo_fim ? r : latest),
-      followupActivities[0],
-    );
-  }, [followupActivities]);
-
-  const followupRows = useMemo(() => {
-    if (!latestFollowupPeriod) return [];
-    return followupActivities
-      .filter(
-        (r) =>
-          r.periodo_inicio === latestFollowupPeriod.periodo_inicio &&
-          r.periodo_fim === latestFollowupPeriod.periodo_fim,
-      )
-      .sort((a, b) => b.quantidade - a.quantidade);
-  }, [followupActivities, latestFollowupPeriod]);
 
   return (
     <div className="space-y-6">
