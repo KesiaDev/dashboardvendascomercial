@@ -68,7 +68,7 @@ export function isAdminUser(user: MaybeUser): boolean {
 export const ALLOWED_NON_ADMIN_ROUTES = [
   "/fechamento",
   "/fechamento-semanal",
-  "/ferias",
+  
   "/indicacoes",
   "/coach",
   "/arena",
