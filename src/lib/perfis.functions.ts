@@ -858,7 +858,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
           agg.set(h, a);
         }
         a.total++;
-        if (vendeu) a.vendas++;
+        // vendas vêm da reconciliação com o fechamento (abaixo), não daqui
         if (st === "ganho") a.ganhos++;
         else if (st === "perdido") a.perdidos++;
         else a.abertos++;
