@@ -8,6 +8,8 @@ import {
   Trophy,
   DollarSign,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Sparkles,
   Share2,
   LogOut,
@@ -129,6 +131,16 @@ export type { AppAuth, AppUser } from "@/lib/app-auth";
 
 function AppLayout() {
   const [open, setOpen] = useState(false);
+  const [navHidden, setNavHidden] = useState(false);
+  useEffect(() => {
+    setNavHidden(localStorage.getItem("nav-hidden") === "1");
+  }, []);
+  function toggleNav() {
+    setNavHidden((v) => {
+      localStorage.setItem("nav-hidden", v ? "0" : "1");
+      return !v;
+    });
+  }
   const [status, setStatus] = useState<"loading" | "auth" | "ready">("loading");
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<AppUser>(null);
@@ -198,11 +210,15 @@ function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[260px_1fr]">
+    <div
+      className={`min-h-screen bg-background text-foreground ${navHidden ? "" : "lg:grid lg:grid-cols-[260px_1fr]"}`}
+    >
       {/* Sidebar fixa no desktop. Antes a navegação era um Sheet em TODOS os
           breakpoints: num monitor de 27" o gestor gastava dois cliques para trocar
           de página e não tinha nenhuma noção de onde estava. */}
-      <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-r lg:border-border lg:bg-card/40 lg:backdrop-blur">
+      <aside
+        className={`${navHidden ? "hidden" : "hidden lg:sticky"} lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-r lg:border-border lg:bg-card/40 lg:backdrop-blur`}
+      >
         <div className="flex items-center gap-3 border-b border-border px-5 py-4">
           <img
             src={logoIcon}
@@ -246,6 +262,19 @@ function AppLayout() {
                   </div>
                 </SheetContent>
               </Sheet>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={navHidden ? "Mostrar menu" : "Esconder menu"}
+                className="hidden lg:inline-flex"
+                onClick={toggleNav}
+              >
+                {navHidden ? (
+                  <PanelLeftOpen className="h-5 w-5" />
+                ) : (
+                  <PanelLeftClose className="h-5 w-5" />
+                )}
+              </Button>
               <img
                 src={logoIcon}
                 alt="Dashcomercial LLMídia"
