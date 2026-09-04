@@ -27,7 +27,10 @@ async function assertAdmin(context: any) {
     _user_id: context.userId,
     _role: "admin",
   });
-  if (!data) throw new Error("Acesso restrito a administradores");
+  if (data) return;
+  // Fallback: whitelist de administradores por e-mail (mesma regra do resto do app)
+  const { assertAdmin: assertAdminByClaims } = await import("@/lib/authz.server");
+  assertAdminByClaims(context.claims);
 }
 
 export const listCommissionAlertsFn = createServerFn({ method: "GET" })
