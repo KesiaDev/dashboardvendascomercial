@@ -10,12 +10,20 @@ export type DowStat = {
   media: number;
   share: number;
   porBucket: Record<string, number>;
+  /** leads que responderam/foram trabalhados pelo vendedor */
+  atendidos: number;
+  /** atendidos / leads */
+  taxaAtendimento: number;
 };
 
 export type LeadsDiaSemanaResult = {
   from: string;
   to: string;
   total: number;
+  /** total de leads que levantaram a mão (viraram responsabilidade do vendedor) */
+  totalAtendidos: number;
+  /** distribuição dos leads por estágio da Clint */
+  porEstagio: { estagio: string; leads: number; atendido: boolean }[];
   dows: DowStat[];
   melhor: { label: string; media: number } | null;
   pior: { label: string; media: number } | null;
@@ -30,12 +38,26 @@ export type LeadsDiaSemanaResult = {
 
 const DOW_LABELS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 
-/** Converte para data/hora de São Paulo (UTC-3). */
-function spParts(iso: string) {
-  const d = new Date(new Date(iso).getTime() - 3 * 3600_000);
-  const dow = ((d.getUTCDay() + 6) % 7) + 1; // 1=Seg
-  const date = d.toISOString().slice(0, 10);
-  return { dow, date, hour: d.getUTCHours() };
+/** Data/hora em Lisboa (Europe/Lisbon, com horário de verão). */
+const LISBON_FMT = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Lisbon",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  hour12: false,
+  weekday: "short",
+});
+const DOW_MAP: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
+
+function lisbonParts(iso: string) {
+  const p = LISBON_FMT.formatToParts(new Date(iso));
+  const g = (t: string) => p.find((x) => x.type === t)?.value ?? "";
+  return {
+    dow: DOW_MAP[g("weekday")] ?? 1,
+    date: `${g("year")}-${g("month")}-${g("day")}`,
+    hour: Number(g("hour")) % 24,
+  };
 }
 
 /** Segunda-feira da semana daquela data (yyyy-mm-dd). */
@@ -45,6 +67,7 @@ function mondayOf(dateStr: string) {
   d.setUTCDate(d.getUTCDate() - dow);
   return d.toISOString().slice(0, 10);
 }
+
 
 export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
