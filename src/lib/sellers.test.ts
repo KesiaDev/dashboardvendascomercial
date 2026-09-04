@@ -80,17 +80,19 @@ describe("isMetricSeller — o quadro muda com o tempo", () => {
     expect(isMetricSeller("Fabio Nadal", new Date("2026-10-01T12:00:00Z"))).toBe(false);
   });
 
-  it("quem saiu antes desta consolidação nunca conta", () => {
-    expect(isMetricSeller("Luana Guimarães", "2026-01-10")).toBe(false);
+  it("equipe interna nunca conta, em data nenhuma", () => {
     expect(isMetricSeller("Camila Faria", "2026-09-15")).toBe(false);
+    expect(isMetricSeller("Aline Gonçalves", "2025-01-10")).toBe(false);
   });
 
   it("o quadro de setembro tem exatamente as cinco pessoas confirmadas", () => {
     expect(activeSellers("2026-09-15").map((s) => s.id).sort()).toEqual([...time].sort());
   });
 
-  it("o quadro de agosto ainda tem seis", () => {
+  it("o quadro muda ao longo de agosto: Luana sai no dia 7, Nadal no fim do mês", () => {
+    expect(activeSellers("2026-08-05")).toHaveLength(7);
     expect(activeSellers("2026-08-15")).toHaveLength(6);
+    expect(activeSellers("2026-09-01")).toHaveLength(5);
   });
 });
 
@@ -110,5 +112,24 @@ describe("canonicalSellerName", () => {
 
   it("devolve o texto limpo para quem não é vendedor", () => {
     expect(canonicalSellerName("  Outra   Pessoa ")).toBe("Outra Pessoa");
+  });
+});
+
+describe("Luana — saiu no começo de agosto/2026", () => {
+  // Antes desta consolidação ela estava excluída de TODAS as métricas, inclusive
+  // dos meses em que ainda vendia: o faturamento do período anterior ficava
+  // subestimado.
+  it("conta nos meses em que ainda vendia", () => {
+    expect(isMetricSeller("Luana Guimarães", "2026-07-20")).toBe(true);
+    expect(isMetricSeller("luana", "2026-05-02")).toBe(true);
+  });
+
+  it("não conta depois da saída", () => {
+    expect(isMetricSeller("Luana Guimarães", "2026-08-20")).toBe(false);
+    expect(isMetricSeller("Luana Guimarães", "2026-09-15")).toBe(false);
+  });
+
+  it("continua fora do quadro atual", () => {
+    expect(activeSellers("2026-09-15").map((s) => s.id)).not.toContain("luana");
   });
 });

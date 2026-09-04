@@ -6,6 +6,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAdmin } from "@/lib/authz.server";
+import { fetchAllRows } from "@/lib/supabase-paging";
 import { z } from "zod";
 
 async function admin() {
@@ -215,27 +216,35 @@ export const fetchPipelineMetricsFn = createServerFn({ method: "GET" })
       "dfbc12ac-9f79-404a-82d5-83cd579e683b", // Sessão Estratégica
     ];
 
-    // Leads recebidos no mês nesses funis
-    const { data: recebidos, error: e1 } = await supabase
-      .from("clint_deals")
-      .select("id,status,created_at,won_at")
-      .in("origin_id", PIPELINE_ORIGINS)
-      .gte("created_at", monthStart)
-      .lt("created_at", monthEnd);
-    if (e1) throw new Error(e1.message);
+    // Um mês movimentado passa de 1000 leads, e o PostgREST truncava sem erro:
+    // o ciclo médio e a taxa saíam calculados só sobre as primeiras mil linhas.
+    const recebidosFilter = <Q,>(q: Q) =>
+      (q as any)
+        .in("origin_id", PIPELINE_ORIGINS)
+        .gte("created_at", monthStart)
+        .lt("created_at", monthEnd);
+    const fechadosFilter = <Q,>(q: Q) =>
+      (q as any)
+        .in("origin_id", PIPELINE_ORIGINS)
+        .eq("status", "WON")
+        .gte("won_at", monthStart)
+        .lt("won_at", monthEnd);
 
-    // Deals fechados (won_at) no mês nesses funis (independente de quando entraram)
-    const { data: fechados, error: e2 } = await supabase
-      .from("clint_deals")
-      .select("id,created_at,won_at")
-      .in("origin_id", PIPELINE_ORIGINS)
-      .eq("status", "WON")
-      .gte("won_at", monthStart)
-      .lt("won_at", monthEnd);
-    if (e2) throw new Error(e2.message);
-
-    const allRecebidos = recebidos ?? [];
-    const allFechados = fechados ?? [];
+    const [allRecebidos, allFechados] = await Promise.all([
+      fetchAllRows<{ id: string; status: string; created_at: string | null; won_at: string | null }>(
+        ({ from, to }) =>
+          recebidosFilter(supabase.from("clint_deals").select("id,status,created_at,won_at")).range(
+            from,
+            to,
+          ),
+        () => recebidosFilter(supabase.from("clint_deals").select("*", { count: "exact", head: true })),
+      ),
+      fetchAllRows<{ id: string; created_at: string | null; won_at: string | null }>(
+        ({ from, to }) =>
+          fechadosFilter(supabase.from("clint_deals").select("id,created_at,won_at")).range(from, to),
+        () => fechadosFilter(supabase.from("clint_deals").select("*", { count: "exact", head: true })),
+      ),
+    ]);
 
     const cicloMedioDias =
       allFechados.length > 0
@@ -353,12 +362,20 @@ export const fetchGroupCountsFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const supabase = await admin();
-    const { data, error } = await supabase.from("sales").select("produto_grupo");
-    if (error) throw new Error(error.message);
+    // Contagem por grupo de produto. Sem paginação isto lia só as primeiras
+    // 1000 vendas — as contagens estavam ERRADAS desde que a tabela passou
+    // desse tamanho.
+    //
+    // O ideal seria um GROUP BY no banco (uma linha por grupo em vez de uma por
+    // venda); enquanto essa RPC não existe, ao menos lê tudo. O select traz uma
+    // coluna só, então o payload é pequeno.
+    const rows = await fetchAllRows<{ produto_grupo: string }>(
+      ({ from, to }) => supabase.from("sales").select("produto_grupo").range(from, to),
+      () => supabase.from("sales").select("*", { count: "exact", head: true }),
+    );
     const counts: Record<string, number> = {};
-    for (const row of data ?? []) {
-      const g = (row as { produto_grupo: string }).produto_grupo;
-      counts[g] = (counts[g] ?? 0) + 1;
+    for (const row of rows) {
+      counts[row.produto_grupo] = (counts[row.produto_grupo] ?? 0) + 1;
     }
     return counts;
   });
@@ -377,14 +394,20 @@ export const importSalesFn = createServerFn({ method: "POST" })
     const supabase = await admin();
     const rows = data.rows as any[];
     const txs = rows.map((r) => r.transacao).filter(Boolean);
+    // Uma transação existe no máximo uma vez, então cada bloco devolve no
+    // máximo `batchSize` linhas — não há risco de truncamento. O que havia era
+    // um `await` dentro do for: N round-trips em série onde cabiam N em
+    // paralelo.
     const existing = new Set<string>();
     const batchSize = 500;
-    for (let i = 0; i < txs.length; i += batchSize) {
-      const chunk = txs.slice(i, i + batchSize);
-      const { data: ex, error } = await supabase
-        .from("sales")
-        .select("transacao")
-        .in("transacao", chunk);
+    const chunks: string[][] = [];
+    for (let i = 0; i < txs.length; i += batchSize) chunks.push(txs.slice(i, i + batchSize));
+    const found = await Promise.all(
+      chunks.map((chunk) =>
+        supabase.from("sales").select("transacao").in("transacao", chunk).limit(batchSize),
+      ),
+    );
+    for (const { data: ex, error } of found) {
       if (error) throw new Error(error.message);
       for (const r of ex ?? []) existing.add((r as { transacao: string }).transacao);
     }

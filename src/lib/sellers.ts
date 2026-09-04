@@ -27,7 +27,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-export type SellerId = "kesia" | "gisele" | "joao" | "rita" | "pamela" | "nadal";
+export type SellerId = "kesia" | "gisele" | "joao" | "rita" | "pamela" | "nadal" | "luana";
 
 type SellerEntry = {
   id: SellerId;
@@ -70,18 +70,27 @@ const SELLERS: SellerEntry[] = [
     // continuam contando com ele — não reescrevemos história.
     metricsUntil: "2026-08-31",
   },
+  {
+    id: "luana",
+    name: "Luana Guimarães",
+    match: [["luana"], ["luanaguimaraes"]],
+    // Saiu no começo de agosto/2026. Antes desta consolidação ela estava
+    // excluída de TODAS as métricas, inclusive dos meses em que ainda vendia —
+    // o que subestimava o faturamento de todo o período anterior.
+    // Se a data exata de saída for outra, é esta linha que muda.
+    metricsUntil: "2026-08-07",
+  },
 ];
 
 /**
  * Pessoas que aparecem como responsável em negócios mas nunca contam como
  * vendedor: equipe interna, suporte, e quem saiu antes desta consolidação.
  *
- * Luana Guimarães saiu da empresa e já estava excluída de todas as métricas
- * antes deste módulo existir; mantemos assim para não alterar retroativamente
- * meses já fechados. Se a data de saída dela for confirmada, vale movê-la para
- * SELLERS com `metricsUntil`.
+ * A Luana NÃO está aqui: ela era vendedora de verdade e saiu no começo de
+ * agosto/2026, então entrou em SELLERS com `metricsUntil`. Excluí-la por
+ * completo, como era antes, apagava as vendas dela de todos os meses anteriores.
  */
-const NEVER_METRIC_TOKENS = ["camila", "aline", "luana"];
+const NEVER_METRIC_TOKENS = ["camila", "aline"];
 
 /** Sem acento, minúsculo, espaços colapsados. Resiste a variação de grafia. */
 export function normalizeSellerText(value: string | null | undefined): string {

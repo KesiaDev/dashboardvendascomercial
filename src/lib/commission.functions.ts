@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAdmin } from "@/lib/authz.server";
+import { fetchAllRows } from "@/lib/supabase-paging";
+import type { ManualSaleRow } from "@/lib/commission";
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -51,14 +53,19 @@ export const fetchWisePaymentsFn = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     assertAdmin(context.claims);
     const db = await admin();
-    const { data, error } = await db
-      .from("bi_wise_payments")
-      .select(
-        "id,data_pagamento,cliente,valor_eur,cotacao_eur,valor_brl,descricao,seller_name,produto_grupo,period_id,email_cliente,situacao,inadimplente,sheet_tab,source,synced_at",
-      )
-      .order("data_pagamento", { ascending: false });
-    if (error) throw new Error(error.message);
-    return data ?? [];
+    // Sem filtro e sem limite: o PostgREST truncava em 1000 linhas sem erro, e
+    // os pagamentos mais antigos simplesmente sumiam do cálculo.
+    return await fetchAllRows(
+      ({ from, to }) =>
+        db
+          .from("bi_wise_payments")
+          .select(
+            "id,data_pagamento,cliente,valor_eur,cotacao_eur,valor_brl,descricao,seller_name,produto_grupo,period_id,email_cliente,situacao,inadimplente,sheet_tab,source,synced_at",
+          )
+          .order("data_pagamento", { ascending: false })
+          .range(from, to),
+      () => db.from("bi_wise_payments").select("*", { count: "exact", head: true }),
+    );
   });
 
 export const fetchCommissionBonusesFn = createServerFn({ method: "GET" })
@@ -179,17 +186,32 @@ export const fetchManualSalesForCommissionFn = createServerFn({ method: "GET" })
   })
   .handler(async ({ data, context }) => {
     const db = await admin();
-    const { data: rows, error } = await db
-      .from("manual_sales")
-      .select(
-        "id,seller_name,product,funnel,value_eur,sale_date,confirmation_status,confirmed_hotmart_valor_brl,client_email,client_name,installment_number,installment_total,installment_paid",
-      )
-      .eq("installment_paid", true)
-      .gte("sale_date", data.from)
-      .lte("sale_date", data.to)
-      .order("sale_date", { ascending: false });
-    if (error) throw new Error(error.message);
-    return rows ?? [];
+    // Alimenta /fechamento-semanal e o cálculo de comissão. Sem paginação,
+    // um período com mais de 1000 lançamentos era truncado em silêncio e a
+    // comissão saía menor do que o devido.
+    const inPeriod = <Q extends { eq: any }>(q: Q) =>
+      (q as any)
+        .eq("installment_paid", true)
+        .gte("sale_date", data.from)
+        .lte("sale_date", data.to);
+    // Espelha exatamente as colunas do select abaixo.
+    type Row = ManualSaleRow & {
+      funnel: string;
+      installment_number: number | null;
+      installment_total: number | null;
+      installment_paid: boolean | null;
+    };
+    return await fetchAllRows<Row>(
+      ({ from, to }) =>
+        inPeriod(
+          db.from("manual_sales").select(
+            "id,seller_name,product,funnel,value_eur,sale_date,confirmation_status,confirmed_hotmart_valor_brl,client_email,client_name,installment_number,installment_total,installment_paid",
+          ),
+        )
+          .order("sale_date", { ascending: false })
+          .range(from, to),
+      () => inPeriod(db.from("manual_sales").select("*", { count: "exact", head: true })),
+    );
   });
 
 // ── Vendas Hotmart do período (para cálculo e conferência) ───────────────────
@@ -227,11 +249,17 @@ export const fetchSaleOverridesFn = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     assertAdmin(context.claims);
     const db = await admin();
-    const { data, error } = await db
-      .from("bi_sale_overrides")
-      .select("transacao,seller_name,produto_grupo,excluir,observacao");
-    if (error) throw new Error(error.message);
-    return data ?? [];
+    // Cada override é uma exceção manual aplicada a uma venda. Perder um por
+    // truncamento significa recolocar no cálculo uma venda que foi
+    // deliberadamente excluída.
+    return await fetchAllRows(
+      ({ from, to }) =>
+        db
+          .from("bi_sale_overrides")
+          .select("transacao,seller_name,produto_grupo,excluir,observacao")
+          .range(from, to),
+      () => db.from("bi_sale_overrides").select("*", { count: "exact", head: true }),
+    );
   });
 
 type OverrideInput = {
@@ -383,18 +411,35 @@ export const generateRoletaSpinsFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     assertAdmin(context.claims);
     const db = await admin();
-    const { data: sales, error } = await db
-      .from("manual_sales")
-      .select(
-        "id,seller_name,product,client_name,sale_date,roleta_type,installment_number,categoria_produto",
-      )
-      .not("roleta_type", "is", null)
-      .eq("installment_number", 1)
-      .gte("sale_date", data.from)
-      .lte("sale_date", data.to);
-    if (error) throw new Error(error.message);
+    const roletaFilter = <Q,>(q: Q) =>
+      (q as any)
+        .not("roleta_type", "is", null)
+        .eq("installment_number", 1)
+        .gte("sale_date", data.from)
+        .lte("sale_date", data.to);
+    type RoletaSale = {
+      id: string;
+      seller_name: string;
+      product: string;
+      client_name: string | null;
+      sale_date: string;
+      roleta_type: string | null;
+      installment_number: number | null;
+      categoria_produto: string | null;
+    };
+    const sales = await fetchAllRows<RoletaSale>(
+      ({ from, to }) =>
+        roletaFilter(
+          db
+            .from("manual_sales")
+            .select(
+              "id,seller_name,product,client_name,sale_date,roleta_type,installment_number,categoria_produto",
+            ),
+        ).range(from, to),
+      () => roletaFilter(db.from("manual_sales").select("*", { count: "exact", head: true })),
+    );
 
-    const elegiveis = (sales ?? []).filter((s) => s.categoria_produto !== "RENOVACAO");
+    const elegiveis = sales.filter((s) => s.categoria_produto !== "RENOVACAO");
     if (elegiveis.length === 0) return { created: 0 };
 
     const { data: existing, error: e2 } = await db
