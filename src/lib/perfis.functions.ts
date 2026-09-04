@@ -973,7 +973,9 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         descricao:
           perfil === NAO_IDENTIFICADO
             ? "Lead conversou, mas não revelou nada sobre a vida/profissão dele — precisa de pergunta de qualificação"
-            : (PERFIS.find((p) => p.nome === perfil)?.descricao ?? ""),
+            : perfil === SEM_CONVERSA
+              ? "Cliente do fechamento sem conversa registrada na Clint (venda por call/LDP) — entra aqui para o total bater"
+              : (PERFIS.find((p) => p.nome === perfil)?.descricao ?? ""),
 
         total: a.total,
         pct: comTexto ? (a.total / comTexto) * 100 : 0,
@@ -997,12 +999,16 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         conversas: a.conversas.sort((x, y) =>
           (y.last_message_at ?? "").localeCompare(x.last_message_at ?? ""),
         ),
+        vendas_clientes: a.vendasClientes,
       }))
       .sort((a, b) => {
+        if (a.perfil === SEM_CONVERSA) return 1;
+        if (b.perfil === SEM_CONVERSA) return -1;
         if (a.perfil === NAO_IDENTIFICADO) return 1;
         if (b.perfil === NAO_IDENTIFICADO) return -1;
         return b.vendas - a.vendas || b.total - a.total;
       });
+
 
     return {
       from,
