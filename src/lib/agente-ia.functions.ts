@@ -633,6 +633,15 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
         vendasIaIniciou,
         lista: vendasLista.sort((a, b) => b.data.localeCompare(a.data)),
       },
+      clint: {
+        reunioesAgendadas: reunioesClint,
+        noShows: noShowsClint,
+        realizadas: Math.max(reunioesClint - noShowsClint, 0),
+        propostas: propostasClint,
+        ganhos: ganhosClintStage,
+      },
+      ponte,
+
     };
   });
 
