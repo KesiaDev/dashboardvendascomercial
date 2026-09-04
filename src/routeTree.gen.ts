@@ -14,23 +14,16 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as ApiConversaProvaRouteImport } from './routes/api/conversa-prova'
-import { Route as AppVendedorProdutoRouteImport } from './routes/_app.vendedor-produto'
 import { Route as AppVendasReaisRouteImport } from './routes/_app.vendas-reais'
 import { Route as AppUsuariosRouteImport } from './routes/_app.usuarios'
-import { Route as AppResultadosRouteImport } from './routes/_app.resultados'
 import { Route as AppRankingRouteImport } from './routes/_app.ranking'
-import { Route as AppProdutividadeRouteImport } from './routes/_app.produtividade'
-import { Route as AppMetasComercialRouteImport } from './routes/_app.metas-comercial'
 import { Route as AppLeadsDiaRouteImport } from './routes/_app.leads-dia'
 import { Route as AppIndicacoesRouteImport } from './routes/_app.indicacoes'
 import { Route as AppImportRouteImport } from './routes/_app.import'
-import { Route as AppFunisRouteImport } from './routes/_app.funis'
 import { Route as AppFeriasRouteImport } from './routes/_app.ferias'
 import { Route as AppFechamentoSemanalRouteImport } from './routes/_app.fechamento-semanal'
 import { Route as AppFechamentoRouteImport } from './routes/_app.fechamento'
-import { Route as AppExecutivoRouteImport } from './routes/_app.executivo'
 import { Route as AppComissionamentoRouteImport } from './routes/_app.comissionamento'
-import { Route as AppComercialRouteImport } from './routes/_app.comercial'
 import { Route as AppCoachRouteImport } from './routes/_app.coach'
 import { Route as AppCampanhaRouteImport } from './routes/_app.campanha'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
@@ -82,11 +75,6 @@ const ApiConversaProvaRoute = ApiConversaProvaRouteImport.update({
   path: '/api/conversa-prova',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppVendedorProdutoRoute = AppVendedorProdutoRouteImport.update({
-  id: '/vendedor-produto',
-  path: '/vendedor-produto',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppVendasReaisRoute = AppVendasReaisRouteImport.update({
   id: '/vendas-reais',
   path: '/vendas-reais',
@@ -97,24 +85,9 @@ const AppUsuariosRoute = AppUsuariosRouteImport.update({
   path: '/usuarios',
   getParentRoute: () => AppRoute,
 } as any)
-const AppResultadosRoute = AppResultadosRouteImport.update({
-  id: '/resultados',
-  path: '/resultados',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppRankingRoute = AppRankingRouteImport.update({
   id: '/ranking',
   path: '/ranking',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppProdutividadeRoute = AppProdutividadeRouteImport.update({
-  id: '/produtividade',
-  path: '/produtividade',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMetasComercialRoute = AppMetasComercialRouteImport.update({
-  id: '/metas-comercial',
-  path: '/metas-comercial',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLeadsDiaRoute = AppLeadsDiaRouteImport.update({
@@ -132,11 +105,6 @@ const AppImportRoute = AppImportRouteImport.update({
   path: '/import',
   getParentRoute: () => AppRoute,
 } as any)
-const AppFunisRoute = AppFunisRouteImport.update({
-  id: '/funis',
-  path: '/funis',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppFeriasRoute = AppFeriasRouteImport.update({
   id: '/ferias',
   path: '/ferias',
@@ -152,19 +120,9 @@ const AppFechamentoRoute = AppFechamentoRouteImport.update({
   path: '/fechamento',
   getParentRoute: () => AppRoute,
 } as any)
-const AppExecutivoRoute = AppExecutivoRouteImport.update({
-  id: '/executivo',
-  path: '/executivo',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppComissionamentoRoute = AppComissionamentoRouteImport.update({
   id: '/comissionamento',
   path: '/comissionamento',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppComercialRoute = AppComercialRouteImport.update({
-  id: '/comercial',
-  path: '/comercial',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCoachRoute = AppCoachRouteImport.update({
@@ -312,23 +270,16 @@ export interface FileRoutesByFullPath {
   '/areas': typeof AppAreasRoute
   '/campanha': typeof AppCampanhaRoute
   '/coach': typeof AppCoachRouteWithChildren
-  '/comercial': typeof AppComercialRoute
   '/comissionamento': typeof AppComissionamentoRoute
-  '/executivo': typeof AppExecutivoRoute
   '/fechamento': typeof AppFechamentoRoute
   '/fechamento-semanal': typeof AppFechamentoSemanalRoute
   '/ferias': typeof AppFeriasRoute
-  '/funis': typeof AppFunisRoute
   '/import': typeof AppImportRoute
   '/indicacoes': typeof AppIndicacoesRoute
   '/leads-dia': typeof AppLeadsDiaRoute
-  '/metas-comercial': typeof AppMetasComercialRoute
-  '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
-  '/resultados': typeof AppResultadosRoute
   '/usuarios': typeof AppUsuariosRoute
   '/vendas-reais': typeof AppVendasReaisRoute
-  '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/api/conversa-prova': typeof ApiConversaProvaRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/coach/$id': typeof AppCoachIdRoute
@@ -360,23 +311,16 @@ export interface FileRoutesByTo {
   '/areas': typeof AppAreasRoute
   '/campanha': typeof AppCampanhaRoute
   '/coach': typeof AppCoachRouteWithChildren
-  '/comercial': typeof AppComercialRoute
   '/comissionamento': typeof AppComissionamentoRoute
-  '/executivo': typeof AppExecutivoRoute
   '/fechamento': typeof AppFechamentoRoute
   '/fechamento-semanal': typeof AppFechamentoSemanalRoute
   '/ferias': typeof AppFeriasRoute
-  '/funis': typeof AppFunisRoute
   '/import': typeof AppImportRoute
   '/indicacoes': typeof AppIndicacoesRoute
   '/leads-dia': typeof AppLeadsDiaRoute
-  '/metas-comercial': typeof AppMetasComercialRoute
-  '/produtividade': typeof AppProdutividadeRoute
   '/ranking': typeof AppRankingRoute
-  '/resultados': typeof AppResultadosRoute
   '/usuarios': typeof AppUsuariosRoute
   '/vendas-reais': typeof AppVendasReaisRoute
-  '/vendedor-produto': typeof AppVendedorProdutoRoute
   '/api/conversa-prova': typeof ApiConversaProvaRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/': typeof AppIndexRoute
@@ -411,23 +355,16 @@ export interface FileRoutesById {
   '/_app/areas': typeof AppAreasRoute
   '/_app/campanha': typeof AppCampanhaRoute
   '/_app/coach': typeof AppCoachRouteWithChildren
-  '/_app/comercial': typeof AppComercialRoute
   '/_app/comissionamento': typeof AppComissionamentoRoute
-  '/_app/executivo': typeof AppExecutivoRoute
   '/_app/fechamento': typeof AppFechamentoRoute
   '/_app/fechamento-semanal': typeof AppFechamentoSemanalRoute
   '/_app/ferias': typeof AppFeriasRoute
-  '/_app/funis': typeof AppFunisRoute
   '/_app/import': typeof AppImportRoute
   '/_app/indicacoes': typeof AppIndicacoesRoute
   '/_app/leads-dia': typeof AppLeadsDiaRoute
-  '/_app/metas-comercial': typeof AppMetasComercialRoute
-  '/_app/produtividade': typeof AppProdutividadeRoute
   '/_app/ranking': typeof AppRankingRoute
-  '/_app/resultados': typeof AppResultadosRoute
   '/_app/usuarios': typeof AppUsuariosRoute
   '/_app/vendas-reais': typeof AppVendasReaisRoute
-  '/_app/vendedor-produto': typeof AppVendedorProdutoRoute
   '/api/conversa-prova': typeof ApiConversaProvaRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_app/': typeof AppIndexRoute
@@ -463,23 +400,16 @@ export interface FileRouteTypes {
     | '/areas'
     | '/campanha'
     | '/coach'
-    | '/comercial'
     | '/comissionamento'
-    | '/executivo'
     | '/fechamento'
     | '/fechamento-semanal'
     | '/ferias'
-    | '/funis'
     | '/import'
     | '/indicacoes'
     | '/leads-dia'
-    | '/metas-comercial'
-    | '/produtividade'
     | '/ranking'
-    | '/resultados'
     | '/usuarios'
     | '/vendas-reais'
-    | '/vendedor-produto'
     | '/api/conversa-prova'
     | '/auth/callback'
     | '/coach/$id'
@@ -511,23 +441,16 @@ export interface FileRouteTypes {
     | '/areas'
     | '/campanha'
     | '/coach'
-    | '/comercial'
     | '/comissionamento'
-    | '/executivo'
     | '/fechamento'
     | '/fechamento-semanal'
     | '/ferias'
-    | '/funis'
     | '/import'
     | '/indicacoes'
     | '/leads-dia'
-    | '/metas-comercial'
-    | '/produtividade'
     | '/ranking'
-    | '/resultados'
     | '/usuarios'
     | '/vendas-reais'
-    | '/vendedor-produto'
     | '/api/conversa-prova'
     | '/auth/callback'
     | '/'
@@ -561,23 +484,16 @@ export interface FileRouteTypes {
     | '/_app/areas'
     | '/_app/campanha'
     | '/_app/coach'
-    | '/_app/comercial'
     | '/_app/comissionamento'
-    | '/_app/executivo'
     | '/_app/fechamento'
     | '/_app/fechamento-semanal'
     | '/_app/ferias'
-    | '/_app/funis'
     | '/_app/import'
     | '/_app/indicacoes'
     | '/_app/leads-dia'
-    | '/_app/metas-comercial'
-    | '/_app/produtividade'
     | '/_app/ranking'
-    | '/_app/resultados'
     | '/_app/usuarios'
     | '/_app/vendas-reais'
-    | '/_app/vendedor-produto'
     | '/api/conversa-prova'
     | '/auth/callback'
     | '/_app/'
@@ -665,13 +581,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiConversaProvaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/vendedor-produto': {
-      id: '/_app/vendedor-produto'
-      path: '/vendedor-produto'
-      fullPath: '/vendedor-produto'
-      preLoaderRoute: typeof AppVendedorProdutoRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/vendas-reais': {
       id: '/_app/vendas-reais'
       path: '/vendas-reais'
@@ -686,32 +595,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppUsuariosRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/resultados': {
-      id: '/_app/resultados'
-      path: '/resultados'
-      fullPath: '/resultados'
-      preLoaderRoute: typeof AppResultadosRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/ranking': {
       id: '/_app/ranking'
       path: '/ranking'
       fullPath: '/ranking'
       preLoaderRoute: typeof AppRankingRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/produtividade': {
-      id: '/_app/produtividade'
-      path: '/produtividade'
-      fullPath: '/produtividade'
-      preLoaderRoute: typeof AppProdutividadeRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/metas-comercial': {
-      id: '/_app/metas-comercial'
-      path: '/metas-comercial'
-      fullPath: '/metas-comercial'
-      preLoaderRoute: typeof AppMetasComercialRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/leads-dia': {
@@ -735,13 +623,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppImportRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/funis': {
-      id: '/_app/funis'
-      path: '/funis'
-      fullPath: '/funis'
-      preLoaderRoute: typeof AppFunisRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/ferias': {
       id: '/_app/ferias'
       path: '/ferias'
@@ -763,25 +644,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFechamentoRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/executivo': {
-      id: '/_app/executivo'
-      path: '/executivo'
-      fullPath: '/executivo'
-      preLoaderRoute: typeof AppExecutivoRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/comissionamento': {
       id: '/_app/comissionamento'
       path: '/comissionamento'
       fullPath: '/comissionamento'
       preLoaderRoute: typeof AppComissionamentoRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/comercial': {
-      id: '/_app/comercial'
-      path: '/comercial'
-      fullPath: '/comercial'
-      preLoaderRoute: typeof AppComercialRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/coach': {
@@ -987,23 +854,16 @@ interface AppRouteChildren {
   AppAreasRoute: typeof AppAreasRoute
   AppCampanhaRoute: typeof AppCampanhaRoute
   AppCoachRoute: typeof AppCoachRouteWithChildren
-  AppComercialRoute: typeof AppComercialRoute
   AppComissionamentoRoute: typeof AppComissionamentoRoute
-  AppExecutivoRoute: typeof AppExecutivoRoute
   AppFechamentoRoute: typeof AppFechamentoRoute
   AppFechamentoSemanalRoute: typeof AppFechamentoSemanalRoute
   AppFeriasRoute: typeof AppFeriasRoute
-  AppFunisRoute: typeof AppFunisRoute
   AppImportRoute: typeof AppImportRoute
   AppIndicacoesRoute: typeof AppIndicacoesRoute
   AppLeadsDiaRoute: typeof AppLeadsDiaRoute
-  AppMetasComercialRoute: typeof AppMetasComercialRoute
-  AppProdutividadeRoute: typeof AppProdutividadeRoute
   AppRankingRoute: typeof AppRankingRoute
-  AppResultadosRoute: typeof AppResultadosRoute
   AppUsuariosRoute: typeof AppUsuariosRoute
   AppVendasReaisRoute: typeof AppVendasReaisRoute
-  AppVendedorProdutoRoute: typeof AppVendedorProdutoRoute
   AppIndexRoute: typeof AppIndexRoute
   AppArenaIndexRoute: typeof AppArenaIndexRoute
   AppArenaSimIdRoute: typeof AppArenaSimIdRoute
@@ -1015,23 +875,16 @@ const AppRouteChildren: AppRouteChildren = {
   AppAreasRoute: AppAreasRoute,
   AppCampanhaRoute: AppCampanhaRoute,
   AppCoachRoute: AppCoachRouteWithChildren,
-  AppComercialRoute: AppComercialRoute,
   AppComissionamentoRoute: AppComissionamentoRoute,
-  AppExecutivoRoute: AppExecutivoRoute,
   AppFechamentoRoute: AppFechamentoRoute,
   AppFechamentoSemanalRoute: AppFechamentoSemanalRoute,
   AppFeriasRoute: AppFeriasRoute,
-  AppFunisRoute: AppFunisRoute,
   AppImportRoute: AppImportRoute,
   AppIndicacoesRoute: AppIndicacoesRoute,
   AppLeadsDiaRoute: AppLeadsDiaRoute,
-  AppMetasComercialRoute: AppMetasComercialRoute,
-  AppProdutividadeRoute: AppProdutividadeRoute,
   AppRankingRoute: AppRankingRoute,
-  AppResultadosRoute: AppResultadosRoute,
   AppUsuariosRoute: AppUsuariosRoute,
   AppVendasReaisRoute: AppVendasReaisRoute,
-  AppVendedorProdutoRoute: AppVendedorProdutoRoute,
   AppIndexRoute: AppIndexRoute,
   AppArenaIndexRoute: AppArenaIndexRoute,
   AppArenaSimIdRoute: AppArenaSimIdRoute,
