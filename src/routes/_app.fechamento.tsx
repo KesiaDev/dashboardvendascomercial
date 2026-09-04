@@ -1102,7 +1102,9 @@ function EditDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {PRODUCTS.map((p) => (
+                  {Array.from(
+                    new Set([...(form.product ? [form.product] : []), ...PRODUCTS]),
+                  ).map((p) => (
                     <SelectItem key={p} value={p}>
                       {p}
                     </SelectItem>
@@ -1117,7 +1119,9 @@ function EditDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {FUNNELS.map((f) => (
+                  {Array.from(
+                    new Set([...(form.funnel ? [form.funnel] : []), ...FUNNELS]),
+                  ).map((f) => (
                     <SelectItem key={f} value={f}>
                       {f}
                     </SelectItem>

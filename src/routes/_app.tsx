@@ -217,7 +217,11 @@ function AppLayout() {
           breakpoints: num monitor de 27" o gestor gastava dois cliques para trocar
           de página e não tinha nenhuma noção de onde estava. */}
       <aside
-        className={`${navHidden ? "hidden" : "hidden lg:sticky"} lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-r lg:border-border lg:bg-card/40 lg:backdrop-blur`}
+        className={
+          navHidden
+            ? "hidden"
+            : "hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-r lg:border-border lg:bg-card/40 lg:backdrop-blur"
+        }
       >
         <div className="flex items-center gap-3 border-b border-border px-5 py-4">
           <img
