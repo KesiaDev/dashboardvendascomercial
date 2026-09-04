@@ -40,7 +40,9 @@ function iso(d: Date) {
 function LeadsDiaPage() {
   const today = new Date();
   const [to, setTo] = useState(iso(today));
-  const [from, setFrom] = useState(iso(new Date(today.getTime() - 89 * 86_400_000)));
+  const [from, setFrom] = useState(
+    iso(new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1))),
+  );
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["leads-dia-semana", from, to],
