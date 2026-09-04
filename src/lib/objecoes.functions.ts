@@ -386,7 +386,8 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
         .from("coach_analyses")
         .select("conversation_id, score_geral")
         .in("conversation_id", ids.slice(i, i + 200))
-        .eq("status", "ok");
+        .eq("status", "ok")
+        .limit(400);
       for (const a of (an ?? []) as any[]) {
         if (typeof a.score_geral === "number")
           scoreById.set(String(a.conversation_id), Number(a.score_geral));

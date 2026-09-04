@@ -96,7 +96,9 @@ export const fetchOrigemV3ResumoFn = createServerFn({ method: "GET" })
         .from("clint_deals")
         .select("contact_email,contact_tags,created_at")
         .eq("origin_name", "PIPELINE_COMERCIAL-V3")
-        .in("contact_email", part);
+        .in("contact_email", part)
+        // Um contato pode ter vários negócios no mesmo funil.
+        .limit(part.length * 20);
       for (const d of (c ?? []) as any[]) {
         const hit = tagBucket(d.contact_tags);
         const e = normEmail(d.contact_email);

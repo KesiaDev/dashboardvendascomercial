@@ -9,9 +9,13 @@ async function handle(request: Request) {
   if (!token) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { createClient } = await import("@supabase/supabase-js");
-  const auth = createClient(process.env["SUPABASE_URL"]!, process.env["SUPABASE_PUBLISHABLE_KEY"]!, {
-    auth: { persistSession: false },
-  });
+  const auth = createClient(
+    process.env["SUPABASE_URL"]!,
+    process.env["SUPABASE_PUBLISHABLE_KEY"]!,
+    {
+      auth: { persistSession: false },
+    },
+  );
   const { data: userData } = await auth.auth.getUser(token);
   if (!userData?.user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 

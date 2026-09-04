@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { APPROVED_STATUS_DB_VALUES } from "@/lib/sales-status";
 import { activeSellers } from "@/lib/sellers";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 async function adminDb() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -370,32 +371,42 @@ export const listManualSales = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { from?: string; to?: string }) => d ?? {})
   .handler(async ({ data, context }) => {
-    let q = context.supabase
-      .from("manual_sales")
-      .select(SALE_COLS)
-      .order("sale_date", { ascending: false })
-      .order("created_at", { ascending: false });
-    if (data.from) q = q.gte("sale_date", data.from);
-    if (data.to) q = q.lte("sale_date", data.to);
-    const { data: rows, error } = await q;
-    if (error) throw new Error(error.message);
-    return (rows ?? []) as (ManualSale & { created_by: string })[];
+    // Listagem principal do fechamento. Sem paginação, um período com mais de
+    // 1000 lançamentos exibia só os mais recentes e o resto sumia da tela.
+    const f = <Q>(q: Q) => {
+      let out = q as any;
+      if (data.from) out = out.gte("sale_date", data.from);
+      if (data.to) out = out.lte("sale_date", data.to);
+      return out;
+    };
+    return (await fetchAllRows(
+      ({ from, to }) =>
+        f(context.supabase.from("manual_sales").select(SALE_COLS))
+          .order("sale_date", { ascending: false })
+          .order("created_at", { ascending: false })
+          .range(from, to),
+      () => f(context.supabase.from("manual_sales").select("*", { count: "exact", head: true })),
+    )) as (ManualSale & { created_by: string })[];
   });
 
 export const listManualSalesAdmin = createServerFn({ method: "GET" })
   .inputValidator((d: { from?: string; to?: string }) => d ?? {})
   .handler(async ({ data }) => {
     const db = await adminDb();
-    let q = db
-      .from("manual_sales")
-      .select(SALE_COLS_ADMIN)
-      .order("sale_date", { ascending: false })
-      .order("created_at", { ascending: false });
-    if (data.from) q = q.gte("sale_date", data.from);
-    if (data.to) q = q.lte("sale_date", data.to);
-    const { data: rows, error } = await q;
-    if (error) throw new Error(error.message);
-    return (rows ?? []) as ManualSale[];
+    const f = <Q>(q: Q) => {
+      let out = q as any;
+      if (data.from) out = out.gte("sale_date", data.from);
+      if (data.to) out = out.lte("sale_date", data.to);
+      return out;
+    };
+    return (await fetchAllRows(
+      ({ from, to }) =>
+        f(db.from("manual_sales").select(SALE_COLS_ADMIN))
+          .order("sale_date", { ascending: false })
+          .order("created_at", { ascending: false })
+          .range(from, to),
+      () => f(db.from("manual_sales").select("*", { count: "exact", head: true })),
+    )) as ManualSale[];
   });
 
 // ── Atualizar venda ───────────────────────────────────────────────────────────

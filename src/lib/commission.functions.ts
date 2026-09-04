@@ -190,10 +190,7 @@ export const fetchManualSalesForCommissionFn = createServerFn({ method: "GET" })
     // um período com mais de 1000 lançamentos era truncado em silêncio e a
     // comissão saía menor do que o devido.
     const inPeriod = <Q extends { eq: any }>(q: Q) =>
-      (q as any)
-        .eq("installment_paid", true)
-        .gte("sale_date", data.from)
-        .lte("sale_date", data.to);
+      (q as any).eq("installment_paid", true).gte("sale_date", data.from).lte("sale_date", data.to);
     // Espelha exatamente as colunas do select abaixo.
     type Row = ManualSaleRow & {
       funnel: string;
@@ -204,9 +201,11 @@ export const fetchManualSalesForCommissionFn = createServerFn({ method: "GET" })
     return await fetchAllRows<Row>(
       ({ from, to }) =>
         inPeriod(
-          db.from("manual_sales").select(
-            "id,seller_name,product,funnel,value_eur,sale_date,confirmation_status,confirmed_hotmart_valor_brl,client_email,client_name,installment_number,installment_total,installment_paid",
-          ),
+          db
+            .from("manual_sales")
+            .select(
+              "id,seller_name,product,funnel,value_eur,sale_date,confirmation_status,confirmed_hotmart_valor_brl,client_email,client_name,installment_number,installment_total,installment_paid",
+            ),
         )
           .order("sale_date", { ascending: false })
           .range(from, to),
@@ -411,7 +410,7 @@ export const generateRoletaSpinsFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     assertAdmin(context.claims);
     const db = await admin();
-    const roletaFilter = <Q,>(q: Q) =>
+    const roletaFilter = <Q>(q: Q) =>
       (q as any)
         .not("roleta_type", "is", null)
         .eq("installment_number", 1)

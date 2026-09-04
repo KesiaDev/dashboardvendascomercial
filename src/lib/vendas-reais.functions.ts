@@ -62,7 +62,7 @@ export const getFaturamentoPorProdutoFn = createServerFn({ method: "GET" })
 
     // Um mês cheio passa de 1000 vendas e o PostgREST truncava sem erro:
     // o total do mês saía menor do que a realidade, em silêncio.
-    const f = <Q,>(q: Q) =>
+    const f = <Q>(q: Q) =>
       (q as any).gte("data_venda", start).lt("data_venda", end).in("status", APROVADOS);
     const rows = await fetchAllRows<{
       categoria_produto: string | null;
@@ -118,7 +118,7 @@ export const getRenovacoesFn = createServerFn({ method: "GET" })
 
     // Um mês cheio passa de 1000 vendas e o PostgREST truncava sem erro:
     // o total do mês saía menor do que a realidade, em silêncio.
-    const f = <Q,>(q: Q) =>
+    const f = <Q>(q: Q) =>
       (q as any)
         .eq("categoria_produto", "RENOVACAO")
         .gte("data_venda", start)
@@ -154,7 +154,7 @@ export const getCancelamentosFn = createServerFn({ method: "GET" })
 
     // Um mês cheio passa de 1000 vendas e o PostgREST truncava sem erro:
     // o total do mês saía menor do que a realidade, em silêncio.
-    const f = <Q,>(q: Q) =>
+    const f = <Q>(q: Q) =>
       (q as any)
         .in("status", [...CANCEL_EFETIVADO, ...CANCEL_PENDENTE])
         .gte("data_venda", start)
@@ -204,7 +204,7 @@ export const getVendasPorVendedorFn = createServerFn({ method: "GET" })
 
     // Um mês cheio passa de 1000 vendas e o PostgREST truncava sem erro:
     // o total do mês saía menor do que a realidade, em silêncio.
-    const f = <Q,>(q: Q) => (q as any).gte("sale_date", startDate).lt("sale_date", endDate);
+    const f = <Q>(q: Q) => (q as any).gte("sale_date", startDate).lt("sale_date", endDate);
     const rows = await fetchAllRows<Record<string, any>>(
       ({ from, to }) =>
         f(

@@ -85,7 +85,11 @@ describe("conversionRate — coorte de fechamento (definição oficial)", () => 
   });
 
   it("aceita status em minúsculas", () => {
-    const r = conversionRate([deal({ status: "won", won_at: "2026-09-10T10:00:00Z" })], SET_START, SET_END);
+    const r = conversionRate(
+      [deal({ status: "won", won_at: "2026-09-10T10:00:00Z" })],
+      SET_START,
+      SET_END,
+    );
     expect(r.won).toBe(1);
   });
 

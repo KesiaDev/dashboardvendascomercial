@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 async function adminDb() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -41,12 +42,12 @@ export const listReferralsFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const db = await adminDb();
-    const { data, error } = await db
-      .from("referrals")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (data ?? []) as Referral[];
+    // Lista completa e sem filtro: passa de 1000 e as indicações antigas somem.
+    return (await fetchAllRows(
+      ({ from, to }) =>
+        db.from("referrals").select("*").order("created_at", { ascending: false }).range(from, to),
+      () => db.from("referrals").select("*", { count: "exact", head: true }),
+    )) as Referral[];
   });
 
 export const createReferralFn = createServerFn({ method: "POST" })

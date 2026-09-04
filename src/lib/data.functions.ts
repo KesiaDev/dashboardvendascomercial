@@ -218,12 +218,12 @@ export const fetchPipelineMetricsFn = createServerFn({ method: "GET" })
 
     // Um mês movimentado passa de 1000 leads, e o PostgREST truncava sem erro:
     // o ciclo médio e a taxa saíam calculados só sobre as primeiras mil linhas.
-    const recebidosFilter = <Q,>(q: Q) =>
+    const recebidosFilter = <Q>(q: Q) =>
       (q as any)
         .in("origin_id", PIPELINE_ORIGINS)
         .gte("created_at", monthStart)
         .lt("created_at", monthEnd);
-    const fechadosFilter = <Q,>(q: Q) =>
+    const fechadosFilter = <Q>(q: Q) =>
       (q as any)
         .in("origin_id", PIPELINE_ORIGINS)
         .eq("status", "WON")
@@ -231,18 +231,28 @@ export const fetchPipelineMetricsFn = createServerFn({ method: "GET" })
         .lt("won_at", monthEnd);
 
     const [allRecebidos, allFechados] = await Promise.all([
-      fetchAllRows<{ id: string; status: string; created_at: string | null; won_at: string | null }>(
+      fetchAllRows<{
+        id: string;
+        status: string;
+        created_at: string | null;
+        won_at: string | null;
+      }>(
         ({ from, to }) =>
           recebidosFilter(supabase.from("clint_deals").select("id,status,created_at,won_at")).range(
             from,
             to,
           ),
-        () => recebidosFilter(supabase.from("clint_deals").select("*", { count: "exact", head: true })),
+        () =>
+          recebidosFilter(supabase.from("clint_deals").select("*", { count: "exact", head: true })),
       ),
       fetchAllRows<{ id: string; created_at: string | null; won_at: string | null }>(
         ({ from, to }) =>
-          fechadosFilter(supabase.from("clint_deals").select("id,created_at,won_at")).range(from, to),
-        () => fechadosFilter(supabase.from("clint_deals").select("*", { count: "exact", head: true })),
+          fechadosFilter(supabase.from("clint_deals").select("id,created_at,won_at")).range(
+            from,
+            to,
+          ),
+        () =>
+          fechadosFilter(supabase.from("clint_deals").select("*", { count: "exact", head: true })),
       ),
     ]);
 

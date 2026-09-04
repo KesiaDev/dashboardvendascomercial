@@ -54,7 +54,8 @@ async function runAutoPipeline(sinceDays: number, maxAnalyses: number) {
             .from("coach_analyses")
             .select("conversation_id,analyzed_at")
             .in("conversation_id", ids.slice(i, i + 100))
-            .eq("status", "ok");
+            .eq("status", "ok")
+            .limit(300);
           for (const a of (an ?? []) as any[]) {
             const prev = analysedMap.get(a.conversation_id);
             if (!prev || new Date(a.analyzed_at) > new Date(prev)) {

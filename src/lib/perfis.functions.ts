@@ -598,7 +598,8 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         const { data: ds } = await db
           .from("clint_deals")
           .select("id, status")
-          .in("id", dealIds.slice(i, i + 200));
+          .in("id", dealIds.slice(i, i + 200))
+          .limit(200);
         for (const d of (ds ?? []) as any[])
           dealStatus.set(String(d.id), String(d.status ?? "").toUpperCase());
       }
@@ -665,7 +666,8 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         .from("coach_analyses")
         .select("conversation_id, score_geral")
         .in("conversation_id", chunk)
-        .eq("status", "ok");
+        .eq("status", "ok")
+        .limit(chunk.length * 2);
       for (const a of (an ?? []) as any[]) {
         if (typeof a.score_geral === "number")
           scoreById.set(a.conversation_id, Number(a.score_geral));

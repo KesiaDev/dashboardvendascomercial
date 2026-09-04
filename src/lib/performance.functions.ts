@@ -249,7 +249,8 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
           .from("coach_analyses")
           .select("conversation_id,score_geral")
           .in("conversation_id", chunk)
-          .eq("status", "ok"),
+          .eq("status", "ok")
+          .limit(chunk.length * 2),
       ),
     );
     const analyses: any[] = [];
@@ -434,7 +435,9 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         const { data: convRows } = await supabaseAdmin
           .from("coach_conversations")
           .select("id,clint_contact_id")
-          .in("clint_contact_id", chunk);
+          .in("clint_contact_id", chunk)
+          // Um contato pode ter mais de uma conversa.
+          .limit(chunk.length * 10);
         const convIdList = (convRows ?? []).map((r: any) => r.id);
         if (!convIdList.length) continue;
         const convToContact = new Map<string, string>();

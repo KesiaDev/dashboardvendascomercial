@@ -1,11 +1,5 @@
 export type BusinessArea =
-  | "COMERCIAL"
-  | "IMPLANTACAO"
-  | "POS_VENDA"
-  | "FINANCEIRO"
-  | "MKT"
-  | "TESTES"
-  | "OUTROS";
+  "COMERCIAL" | "IMPLANTACAO" | "POS_VENDA" | "FINANCEIRO" | "MKT" | "TESTES" | "OUTROS";
 
 export const AREA_LABELS: Record<BusinessArea, string> = {
   COMERCIAL: "Comercial",

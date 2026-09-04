@@ -232,7 +232,8 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
           .select(
             "id,stage,updated_stage_at,status,value,currency,won_at,won_by_name,user_name,contact_email,contact_phone,contact_name",
           )
-          .in("id", chunk),
+          .in("id", chunk)
+          .limit(chunk.length),
       ),
     );
     const dealById = new Map<string, any>();

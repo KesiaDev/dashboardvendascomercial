@@ -64,7 +64,7 @@ const COL = {
   nome_afiliado: 3,
   transacao: 4,
   meio_pagamento: 5,
-  moeda_original: 7,      // moeda da venda (EUR, BRL, USD...)
+  moeda_original: 7, // moeda da venda (EUR, BRL, USD...)
   preco_oferta: 10,
   numero_parcela: 14,
   data_venda: 16,
@@ -80,7 +80,7 @@ const COL = {
   preco_total: 41,
   taxa_cambio_real: 43,
   cupom: 47,
-  valor_recebido: 49,     // já convertido p/ moeda de recebimento (BRL)
+  valor_recebido: 49, // já convertido p/ moeda de recebimento (BRL)
   moeda_recebimento: 54,
   faturamento_liquido: 55, // em moeda original (≈ preço da oferta no export atual)
 } as const;

@@ -59,7 +59,13 @@ describe("isMetricSeller — o quadro muda com o tempo", () => {
   const time = ["kesia", "gisele", "joao", "rita", "pamela"] as const;
 
   it("o time atual conta em setembro/2026", () => {
-    for (const nome of ["Kesia Nandi", "Gisele Pimentel", "João Pessoa", "Rita Bandeira", "Pamela"]) {
+    for (const nome of [
+      "Kesia Nandi",
+      "Gisele Pimentel",
+      "João Pessoa",
+      "Rita Bandeira",
+      "Pamela",
+    ]) {
       expect(isMetricSeller(nome, "2026-09-15"), nome).toBe(true);
     }
   });
@@ -86,7 +92,11 @@ describe("isMetricSeller — o quadro muda com o tempo", () => {
   });
 
   it("o quadro de setembro tem exatamente as cinco pessoas confirmadas", () => {
-    expect(activeSellers("2026-09-15").map((s) => s.id).sort()).toEqual([...time].sort());
+    expect(
+      activeSellers("2026-09-15")
+        .map((s) => s.id)
+        .sort(),
+    ).toEqual([...time].sort());
   });
 
   it("o quadro muda ao longo de agosto: Luana sai no dia 7, Nadal no fim do mês", () => {

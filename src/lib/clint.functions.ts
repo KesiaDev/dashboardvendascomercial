@@ -636,7 +636,10 @@ async function buildManualRanking(
     .from("manual_sales")
     .select("seller_name,value_eur,sale_date")
     .gte("sale_date", monthStart)
-    .lt("sale_date", nextMonth);
+    .lt("sale_date", nextMonth)
+    // Um mês inteiro de lançamentos manuais não chega perto de 1000, mas o teto
+    // explícito é a regra do projeto (ver src/lib/supabase-paging.ts).
+    .limit(5000);
   if (error) throw new Error(error.message);
 
   const aggregate = (filter: (saleDate: string) => boolean) => {

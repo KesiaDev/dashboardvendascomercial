@@ -39,7 +39,6 @@ export function funnelVisibleInPeriod(funnel: string, refDate: string): boolean 
   return true;
 }
 
-
 /**
  * Funis que os vendedores realmente trabalham — mesma lista do formulário de
  * fechamento manual (FUNNELS em manual-sales.functions.ts), já canonicalizada.
@@ -124,19 +123,32 @@ const normStage = (s: string | null | undefined) =>
  * O negócio deve entrar nas métricas do comercial?
  * No WGT (webinar perpétuo) todos os leads entram, inclusive os inscritos.
  */
-export function isComercialDeal(_originName: string | null | undefined, _stage: string | null | undefined): boolean {
+export function isComercialDeal(
+  _originName: string | null | undefined,
+  _stage: string | null | undefined,
+): boolean {
   return true;
 }
-
 
 /** Agregação de leads/perdidos direto no banco (evita paginar 100k linhas). */
 export async function fetchDealsAgg(db: any, from: string, to: string) {
   const { data, error } = await db.rpc("conversao_deals_agg", { _from: from, _to: to });
   if (error) throw new Error(error.message);
-  return (data ?? []) as { origin_name: string | null; user_name: string | null; leads: number; lost: number }[];
+  return (data ?? []) as {
+    origin_name: string | null;
+    user_name: string | null;
+    leads: number;
+    lost: number;
+  }[];
 }
 
-export async function pagedDeals(db: any, column: string, from: string, to: string, tagFilter = "") {
+export async function pagedDeals(
+  db: any,
+  column: string,
+  from: string,
+  to: string,
+  tagFilter = "",
+) {
   const selectCols = tagFilter
     ? "origin_name,user_name,status,stage,contact_tags"
     : "origin_name,user_name,status,stage";

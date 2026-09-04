@@ -1,4 +1,5 @@
 import { APPROVED_STATUS_DB_VALUES } from "@/lib/sales-status";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 // Auditoria automática do fechamento manual.
 // 1) Reconfere vendas pendentes contra a Hotmart (mesma lógica do botão manual).
@@ -60,7 +61,10 @@ export async function reconfirmPending() {
     .from("manual_sales")
     .select("id,client_email,sale_date,seller_name")
     .eq("confirmation_status", "pendente")
-    .not("client_email", "is", null);
+    .not("client_email", "is", null)
+    // A fila de pendentes não tem filtro de período: cresce enquanto ninguém
+    // confirma. Passando de 1000, as mais antigas nunca mais eram auditadas.
+    .limit(5000);
   if (error) throw new Error(error.message);
 
   let confirmed = 0;
@@ -114,7 +118,10 @@ export async function refreshCommissionAlerts() {
       "id,seller_name,client_name,client_email,sale_date,value_eur,created_at,confirmation_status,affiliate_mismatch,hotmart_nome_afiliado",
     )
     .lte("sale_date", today)
-    .or("confirmation_status.eq.pendente,affiliate_mismatch.eq.true");
+    .or("confirmation_status.eq.pendente,affiliate_mismatch.eq.true")
+    // Mesma situação: sem teto explícito, os alertas mais antigos deixavam de
+    // ser gerados em silêncio.
+    .limit(5000);
   if (error) throw new Error(error.message);
 
   const alerts: AlertRow[] = [];

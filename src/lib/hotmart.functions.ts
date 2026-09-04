@@ -229,7 +229,12 @@ export async function runHotmartSync(opts?: {
   const batchSize = 500;
   for (let i = 0; i < txs.length; i += batchSize) {
     const chunk = txs.slice(i, i + batchSize);
-    const { data, error } = await db.from("sales").select("transacao").in("transacao", chunk);
+    // Uma transação existe no máximo uma vez.
+    const { data, error } = await db
+      .from("sales")
+      .select("transacao")
+      .in("transacao", chunk)
+      .limit(chunk.length);
     if (error) throw new Error(error.message);
     for (const r of data ?? []) existing.add((r as { transacao: string }).transacao);
   }

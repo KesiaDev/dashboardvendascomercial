@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 export type OrigemRow = {
   origem: string;
@@ -174,14 +175,17 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       const { data: c } = await supabaseAdmin
         .from("clint_deals")
         .select(dealCols)
-        .in("contact_email", part);
+        .in("contact_email", part)
+        // Um contato pode ter vários negócios; o teto cobre o pior caso do bloco.
+        .limit(part.length * 20);
       ingest(c ?? []);
     }
     for (const part of chunk(saleNames, 100)) {
       const { data: c } = await supabaseAdmin
         .from("clint_deals")
         .select(dealCols)
-        .in("contact_name", part);
+        .in("contact_name", part)
+        .limit(part.length * 20);
       ingest(c ?? []);
     }
 
@@ -195,7 +199,10 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         .from("sales")
         .select("email_cliente,origem_checkout,nome_afiliado,data_venda")
         .in("email_cliente", part)
-        .order("data_venda", { ascending: false });
+        .order("data_venda", { ascending: false })
+        // Só a venda mais recente de cada e-mail é usada, mas o teto precisa
+        // caber em várias vendas por cliente.
+        .limit(part.length * 20);
       for (const r of h ?? []) {
         const k = normEmail((r as any).email_cliente);
         if (!k || hotByEmail.has(k)) continue;
@@ -468,7 +475,8 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       .eq("installment_number", 1)
       .ilike("funnel", "%WGT%")
       .gte("sale_date", data.from)
-      .lte("sale_date", data.to);
+      .lte("sale_date", data.to)
+      .limit(5000);
     for (const s of wgtSales ?? []) {
       wgtGanhos++;
       wgtValor += Number((s as any).value_eur ?? 0);

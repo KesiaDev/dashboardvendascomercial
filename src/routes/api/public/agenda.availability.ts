@@ -26,11 +26,22 @@ function lisbonToUTC(year: number, month: number, day: number, hour: number, min
   return new Date(Date.UTC(year, month, day, hour - offset, minute));
 }
 
-function utcToLisbon(date: Date): { year: number; month: number; day: number; hour: number; minute: number; dow: number } {
+function utcToLisbon(date: Date): {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  dow: number;
+} {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Europe/Lisbon",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
     weekday: "short",
   }).formatToParts(date);
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "0";
@@ -45,11 +56,20 @@ function utcToLisbon(date: Date): { year: number; month: number; day: number; ho
   };
 }
 
-interface Slot { date: string; time: string; iso: string }
+interface Slot {
+  date: string;
+  time: string;
+  iso: string;
+}
 
 function generateDaySlots(
-  year: number, month: number, day: number,
-  bookings: Date[], slotMin = 30, startH = 9, endH = 18,
+  year: number,
+  month: number,
+  day: number,
+  bookings: Date[],
+  slotMin = 30,
+  startH = 9,
+  endH = 18,
 ): Slot[] {
   const slots: Slot[] = [];
   for (let h = startH; h < endH; h++) {
@@ -101,7 +121,9 @@ async function handleAvailability(request: Request) {
     .in("seller_email", sellerEmailVariants(sellerEmail))
     .neq("status", "cancelado")
     .gte("scheduled_at", startUTC.toISOString())
-    .lte("scheduled_at", endUTC.toISOString());
+    .lte("scheduled_at", endUTC.toISOString())
+    // Janela de poucos dias de agenda de um vendedor — teto folgado.
+    .limit(2000);
 
   if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
 
@@ -112,8 +134,17 @@ async function handleAvailability(request: Request) {
   const cursor = new Date(startUTC);
   while (cursor < endUTC && allSlots.length < maxSlots * 3) {
     const loc = utcToLisbon(cursor);
-    if (loc.dow !== 0 && loc.dow !== 6) { // skip weekends
-      const daySlots = generateDaySlots(loc.year, loc.month, loc.day, bookedTimes, 30, hours.startH, hours.endH);
+    if (loc.dow !== 0 && loc.dow !== 6) {
+      // skip weekends
+      const daySlots = generateDaySlots(
+        loc.year,
+        loc.month,
+        loc.day,
+        bookedTimes,
+        30,
+        hours.startH,
+        hours.endH,
+      );
       // Only future slots
       allSlots.push(...daySlots.filter((s) => new Date(s.iso) > now));
     }
@@ -123,7 +154,12 @@ async function handleAvailability(request: Request) {
   return Response.json({
     ok: true,
     seller_email: sellerEmail,
-    working_hours: { start: `${String(hours.startH).padStart(2, "0")}:00`, end: `${String(hours.endH).padStart(2, "0")}:00`, timezone: "Europe/Lisbon", note: hours.label },
+    working_hours: {
+      start: `${String(hours.startH).padStart(2, "0")}:00`,
+      end: `${String(hours.endH).padStart(2, "0")}:00`,
+      timezone: "Europe/Lisbon",
+      note: hours.label,
+    },
     slots: allSlots.slice(0, maxSlots),
     generated_at: now.toISOString(),
   });

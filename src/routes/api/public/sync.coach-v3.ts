@@ -32,10 +32,8 @@ function extractText(msg: any): string {
       if (c?.text) return c.text;
     }
   }
-  if (msg.content_object?.template_name)
-    return `[template: ${msg.content_object.template_name}]`;
-  if (msg.content_type && msg.content_type !== "TEXT")
-    return `[${msg.content_type}]`;
+  if (msg.content_object?.template_name) return `[template: ${msg.content_object.template_name}]`;
+  if (msg.content_type && msg.content_type !== "TEXT") return `[${msg.content_type}]`;
   return "[sem texto]";
 }
 
@@ -86,8 +84,8 @@ export async function runCoachV3Sync(sinceDays: number) {
         order: "desc",
       });
       const resp = await clintGet(`/v1/deals?${q}`, token);
-      const items: any[] = (resp.data ?? []).filter(
-        (d: any) => PIPELINE_V3_ORIGIN_IDS.includes(d.origin_id),
+      const items: any[] = (resp.data ?? []).filter((d: any) =>
+        PIPELINE_V3_ORIGIN_IDS.includes(d.origin_id),
       );
       deals.push(...items);
       if (!resp.hasNext) break;
@@ -156,7 +154,10 @@ export async function runCoachV3Sync(sinceDays: number) {
               .from("coach_messages")
               .select("clint_message_id")
               .eq("conversation_id", existing.id)
-              .not("clint_message_id", "is", null);
+              .not("clint_message_id", "is", null)
+              // Dedupe: truncar aqui faz o sync reinserir as mensagens antigas
+              // a cada execução, inflando a tabela.
+              .limit(20000);
             const known = new Set((knownMsgs ?? []).map((m: any) => m.clint_message_id));
             const newMsgs = realMsgs2.filter((m: any) => !known.has(m.id));
 
@@ -175,14 +176,16 @@ export async function runCoachV3Sync(sinceDays: number) {
                     direction === "outbound" && m.source === "AI_CONVERSATION"
                       ? "SDR COMERCIAL IA"
                       : direction === "outbound"
-                      ? (msgSeller?.name ?? sellerName2)
-                      : (deal.contact_name ?? null),
+                        ? (msgSeller?.name ?? sellerName2)
+                        : (deal.contact_name ?? null),
                   body: extractText(m),
                   clint_source: m.source ?? null,
                 };
               });
               for (let i = 0; i < rows.length; i += 200) {
-                const { error: mErr } = await db.from("coach_messages").insert(rows.slice(i, i + 200));
+                const { error: mErr } = await db
+                  .from("coach_messages")
+                  .insert(rows.slice(i, i + 200));
                 if (mErr && mErr.code !== "23505") throw new Error(`insert msgs: ${mErr.message}`);
               }
             }
@@ -207,7 +210,6 @@ export async function runCoachV3Sync(sinceDays: number) {
           updated++;
           continue;
         }
-
 
         // Fetch messages for this chat
         const msgResp = await clintGet(`/v2/messages/chat/${chat.id}?limit=500`, token!);
@@ -254,7 +256,10 @@ export async function runCoachV3Sync(sinceDays: number) {
 
         if (cErr) {
           // Unique constraint violation = race condition, treat as update
-          if (cErr.code === "23505") { updated++; continue; }
+          if (cErr.code === "23505") {
+            updated++;
+            continue;
+          }
           throw new Error(`insert conv: ${cErr.message}`);
         }
         const conversationId = convRow.id as string;
@@ -268,8 +273,8 @@ export async function runCoachV3Sync(sinceDays: number) {
             direction === "outbound" && m.source === "AI_CONVERSATION"
               ? "SDR COMERCIAL IA"
               : direction === "outbound"
-              ? (msgSeller?.name ?? sellerName)
-              : (deal.contact_name ?? null);
+                ? (msgSeller?.name ?? sellerName)
+                : (deal.contact_name ?? null);
           return {
             conversation_id: conversationId,
             clint_message_id: m.id,
@@ -290,9 +295,7 @@ export async function runCoachV3Sync(sinceDays: number) {
         }
 
         for (let i = 0; i < msgRows.length; i += 200) {
-          const { error: mErr } = await db
-            .from("coach_messages")
-            .insert(msgRows.slice(i, i + 200));
+          const { error: mErr } = await db.from("coach_messages").insert(msgRows.slice(i, i + 200));
           if (mErr && mErr.code !== "23505") throw new Error(`insert msgs: ${mErr.message}`);
         }
 

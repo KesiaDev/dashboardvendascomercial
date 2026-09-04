@@ -22,18 +22,31 @@ async function handle(request: Request) {
     return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { seller_name, funnel, value_eur, client_name, sale_date, product, client_email, installment_number } = body;
+  const {
+    seller_name,
+    funnel,
+    value_eur,
+    client_name,
+    sale_date,
+    product,
+    client_email,
+    installment_number,
+  } = body;
   if (!seller_name || !funnel || value_eur == null || !sale_date) {
-    return Response.json({ ok: false, error: "Campos obrigatórios: seller_name, funnel, value_eur, sale_date" }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "Campos obrigatórios: seller_name, funnel, value_eur, sale_date" },
+      { status: 400 },
+    );
   }
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   // Busca o UUID do admin para preencher created_by
   const { data: users } = await (supabaseAdmin as any).auth.admin.listUsers({ perPage: 100 });
-  const adminUser = (users?.users ?? []).find(
-    (u: any) => u.email === "b.lindanoite@gmail.com" || u.role === "service_role"
-  ) ?? (users?.users ?? [])[0];
+  const adminUser =
+    (users?.users ?? []).find(
+      (u: any) => u.email === "b.lindanoite@gmail.com" || u.role === "service_role",
+    ) ?? (users?.users ?? [])[0];
   const created_by = body.created_by ?? adminUser?.id ?? null;
 
   const { data, error } = await (supabaseAdmin as any)

@@ -118,7 +118,10 @@ export const listCaseCandidatesFn = createServerFn({ method: "POST" })
       .select("conversation_id, score_geral, resumo, pontos_melhoria, analyzed_at")
       .in("conversation_id", eligible)
       .eq("status", "ok")
-      .order("analyzed_at", { ascending: false });
+      .order("analyzed_at", { ascending: false })
+      // Só a análise mais recente de cada conversa é usada; o teto cobre o caso
+      // de haver várias por conversa.
+      .limit(eligible.length * 5);
     const byConv = new Map<string, any>();
     for (const a of (analyses ?? []) as any[])
       if (!byConv.has(a.conversation_id)) byConv.set(a.conversation_id, a);

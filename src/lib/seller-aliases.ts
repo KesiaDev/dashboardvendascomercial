@@ -44,9 +44,7 @@ export function canonicalSellerEmail(email?: string | null): string {
 export function sellerEmailVariants(email?: string | null): string[] {
   const e = lower(email);
   if (!e) return [];
-  const g = SELLER_ALIASES.find(
-    (x) => e === x.canonical || x.aliases.some((a) => lower(a) === e),
-  );
+  const g = SELLER_ALIASES.find((x) => e === x.canonical || x.aliases.some((a) => lower(a) === e));
   return g ? [g.canonical, ...g.aliases.map(lower)] : [e];
 }
 

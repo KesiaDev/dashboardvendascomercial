@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -186,12 +187,18 @@ export const syncClintMessagesFn = createServerFn({ method: "POST" })
     }
 
     // dedupe
-    const { data: existing } = await db
-      .from("coach_messages")
-      .select("clint_message_id")
-      .eq("conversation_id", conv.id)
-      .not("clint_message_id", "is", null);
-    const seen = new Set((existing ?? []).map((r: any) => r.clint_message_id));
+    // Uma conversa longa passa de 1000 mensagens. Truncar AQUI é pior que
+    // lento: o dedupe deixa de enxergar as mensagens antigas e o sync as
+    // insere de novo, inflando coach_messages a cada execução.
+    const existing = await fetchAllRows<{ clint_message_id: string }>(({ from, to }) =>
+      db
+        .from("coach_messages")
+        .select("clint_message_id")
+        .eq("conversation_id", conv.id)
+        .not("clint_message_id", "is", null)
+        .range(from, to),
+    );
+    const seen = new Set(existing.map((r) => r.clint_message_id));
 
     const rows = rawMessages
       .map(normalizeMessage)
@@ -212,14 +219,32 @@ export const syncClintMessagesFn = createServerFn({ method: "POST" })
     }
 
     // Update aggregate on conversation
-    const { data: agg } = await db
-      .from("coach_messages")
-      .select("sent_at")
-      .eq("conversation_id", conv.id)
-      .order("sent_at", { ascending: false });
-    const count = agg?.length ?? 0;
-    const lastAt = agg?.[0]?.sent_at ?? null;
-    const firstAt = agg?.[agg.length - 1]?.sent_at ?? null;
+    // Antes isto baixava TODAS as mensagens da conversa só para contar e pegar
+    // a primeira e a última — e o count parava em 1000, então message_count
+    // ficava travado nesse número em conversas longas. Agora são três consultas
+    // que o banco resolve sozinho, em paralelo, sem trazer linha nenhuma além
+    // das duas que interessam.
+    const [{ count: total }, { data: newest }, { data: oldest }] = await Promise.all([
+      db
+        .from("coach_messages")
+        .select("*", { count: "exact", head: true })
+        .eq("conversation_id", conv.id),
+      db
+        .from("coach_messages")
+        .select("sent_at")
+        .eq("conversation_id", conv.id)
+        .order("sent_at", { ascending: false })
+        .limit(1),
+      db
+        .from("coach_messages")
+        .select("sent_at")
+        .eq("conversation_id", conv.id)
+        .order("sent_at", { ascending: true })
+        .limit(1),
+    ]);
+    const count = total ?? 0;
+    const lastAt = newest?.[0]?.sent_at ?? null;
+    const firstAt = oldest?.[0]?.sent_at ?? null;
     await db
       .from("coach_conversations")
       .update({ message_count: count, last_message_at: lastAt, first_message_at: firstAt })
@@ -474,13 +499,22 @@ export async function analyzeConversationCore(
     .single();
   if (ce || !conv) throw new Error(ce?.message ?? "Conversa não encontrada");
 
-  const { data: msgs, error: me } = await db
-    .from("coach_messages")
-    .select("sent_at,direction,author,sender_name,body")
-    .eq("conversation_id", conversationId)
-    .order("sent_at", { ascending: true });
-  if (me) throw new Error(me.message);
-  const messages = msgs ?? [];
+  // Transcrição completa que vai para o modelo. Truncada em 1000, a análise
+  // era feita sobre um pedaço da conversa sem ninguém perceber.
+  const messages = await fetchAllRows<{
+    sent_at: string;
+    direction: string;
+    author: string | null;
+    sender_name: string | null;
+    body: string | null;
+  }>(({ from, to }) =>
+    db
+      .from("coach_messages")
+      .select("sent_at,direction,author,sender_name,body")
+      .eq("conversation_id", conversationId)
+      .order("sent_at", { ascending: true })
+      .range(from, to),
+  );
 
   if (!force) {
     const { data: prev } = await db
@@ -499,19 +533,17 @@ export async function analyzeConversationCore(
   }
 
   if (messages.length < 3) {
-    await db
-      .from("coach_analyses")
-      .upsert(
-        {
-          conversation_id: conversationId,
-          status: "insufficient_data",
-          prompt_version: PROMPT_VERSION,
-          triggered_by: triggeredBy,
-          model: null,
-          resumo: "Conversa muito curta para análise significativa (< 3 mensagens).",
-        },
-        { onConflict: "conversation_id" },
-      );
+    await db.from("coach_analyses").upsert(
+      {
+        conversation_id: conversationId,
+        status: "insufficient_data",
+        prompt_version: PROMPT_VERSION,
+        triggered_by: triggeredBy,
+        model: null,
+        resumo: "Conversa muito curta para análise significativa (< 3 mensagens).",
+      },
+      { onConflict: "conversation_id" },
+    );
     return { status: "insufficient_data" };
   }
 
@@ -695,11 +727,14 @@ export const runAutoAnalysisFn = createServerFn({ method: "POST" }).handler(asyn
   if (!convs?.length) return { analyzed: 0 };
 
   const ids = convs.map((c: any) => c.id);
+  // `ids` vem de um .limit(10) logo acima e a relação é ~1:1, então o teto
+  // explícito documenta que não há truncamento possível aqui.
   const { data: analyses } = await db
     .from("coach_analyses")
     .select("conversation_id, analyzed_at, prompt_version")
     .in("conversation_id", ids)
-    .eq("status", "ok");
+    .eq("status", "ok")
+    .limit(ids.length * 2);
 
   const analysedMap = new Map(
     (analyses ?? []).map((a: any) => [
@@ -798,10 +833,22 @@ export const listCoachConversationsFn = createServerFn({ method: "GET" }).handle
 
   const ids = (convs ?? []).map((c: any) => c.id);
   // PostgREST .in() estoura o limite de URL com centenas de UUIDs → particiona
+  // Os blocos rodavam com await dentro do for — N round-trips em série onde
+  // cabiam N em paralelo. Cada bloco tem no máximo 200 ids e a relação é 1:1,
+  // então o teto explícito garante que nada é truncado.
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200));
+  const analysisPages = await Promise.all(
+    chunks.map((chunk) =>
+      db
+        .from("coach_analyses")
+        .select("*")
+        .in("conversation_id", chunk)
+        .limit(chunk.length * 2),
+    ),
+  );
   const analyses: CoachAnalysis[] = [];
-  for (let i = 0; i < ids.length; i += 200) {
-    const chunk = ids.slice(i, i + 200);
-    const { data } = await db.from("coach_analyses").select("*").in("conversation_id", chunk);
+  for (const { data } of analysisPages) {
     if (data?.length) analyses.push(...(data as CoachAnalysis[]));
   }
   const byConv = new Map<string, CoachAnalysis>();
@@ -809,12 +856,16 @@ export const listCoachConversationsFn = createServerFn({ method: "GET" }).handle
 
   // Quem enviou as mensagens: vendedor (CHAT) vs IA/automação (AUTOMATION/CAMPAIGN/AI)
   const srcMap = new Map<string, { bot: number; human: number; unknown: number }>();
-  for (let i = 0; i < ids.length; i += 200) {
-    const chunk = ids.slice(i, i + 200);
-    const { data } = await db
-      .from("coach_conv_outbound_sources")
-      .select("conversation_id,bot_out,human_out,unknown_out")
-      .in("conversation_id", chunk);
+  const srcPages = await Promise.all(
+    chunks.map((chunk) =>
+      db
+        .from("coach_conv_outbound_sources")
+        .select("conversation_id,bot_out,human_out,unknown_out")
+        .in("conversation_id", chunk)
+        .limit(chunk.length * 2),
+    ),
+  );
+  for (const { data } of srcPages) {
     for (const r of (data ?? []) as any[]) {
       srcMap.set(r.conversation_id, {
         bot: Number(r.bot_out ?? 0),
@@ -1057,10 +1108,12 @@ export const generateTeamInsightsFn = createServerFn({ method: "POST" })
     }
 
     const ids = rows.map((r: any) => r.conversation_id);
+    // Relação 1:1 com `ids`; o teto explícito documenta que não trunca.
     const { data: convs } = await db
       .from("coach_conversations")
       .select("id, seller_name, seller_email")
-      .in("id", ids);
+      .in("id", ids)
+      .limit(ids.length);
     const byId = new Map<string, any>();
     for (const c of convs ?? []) byId.set((c as any).id, c);
 

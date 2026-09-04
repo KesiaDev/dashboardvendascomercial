@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAdmin } from "@/lib/authz.server";
 import { parseWiseTab, type WiseSheetRow } from "@/lib/wise-sheet";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 // Planilha "Wise recebimentos" (Google Sheets) — fonte oficial dos recebimentos em EUR.
 const SPREADSHEET_ID = "1tpjc0UiXhmQKzZPP58hep9EqLCKfDXIl4gjRkB7qI5E";
@@ -84,11 +85,25 @@ export const syncWiseSheetFn = createServerFn({ method: "POST" })
     if (parsed.length === 0) return { imported: 0, tabs: tabs!.length, inadimplentes: 0 };
 
     // Preserva atribuições manuais (vendedor / período) já feitas no dashboard.
-    const { data: existing } = await db
-      .from("bi_wise_payments")
-      .select("data_pagamento,cliente,valor_eur,seller_name,period_id");
+    // Truncar AQUI é destrutivo: o que não vier nesta leitura é tratado como
+    // "não existia", e a atribuição manual de vendedor/período feita no
+    // dashboard é sobrescrita na reimportação.
+    const existing = await fetchAllRows<{
+      data_pagamento: string;
+      cliente: string;
+      valor_eur: number;
+      seller_name: string | null;
+      period_id: number | null;
+    }>(
+      ({ from, to }) =>
+        db
+          .from("bi_wise_payments")
+          .select("data_pagamento,cliente,valor_eur,seller_name,period_id")
+          .range(from, to),
+      () => db.from("bi_wise_payments").select("*", { count: "exact", head: true }),
+    );
     const keep = new Map<string, { seller_name: string | null; period_id: number | null }>();
-    for (const e of existing ?? []) {
+    for (const e of existing) {
       keep.set(`${e.data_pagamento}|${e.cliente}|${e.valor_eur}`, {
         seller_name: e.seller_name ?? null,
         period_id: e.period_id ?? null,

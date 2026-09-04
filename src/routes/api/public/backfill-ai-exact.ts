@@ -70,10 +70,8 @@ function extractText(msg: any): string {
       if (c?.text) return c.text;
     }
   }
-  if (msg.content_object?.template_name)
-    return `[template: ${msg.content_object.template_name}]`;
-  if (msg.content_type && msg.content_type !== "TEXT")
-    return `[${msg.content_type}]`;
+  if (msg.content_object?.template_name) return `[template: ${msg.content_object.template_name}]`;
+  if (msg.content_type && msg.content_type !== "TEXT") return `[${msg.content_type}]`;
   return "[sem texto]";
 }
 
@@ -85,7 +83,9 @@ async function runBackfillAiExact() {
   const db = supabaseAdmin as any;
 
   // Build user map for seller names
-  const { data: usersData } = await db.from("clint_users").select("id, email, first_name, last_name");
+  const { data: usersData } = await db
+    .from("clint_users")
+    .select("id, email, first_name, last_name");
   const userMap = new Map<string, { email: string | null; name: string | null }>();
   for (const u of (usersData ?? []) as any[]) {
     userMap.set(u.id, {
@@ -177,8 +177,8 @@ async function runBackfillAiExact() {
           direction === "outbound" && m.source === "AI_CONVERSATION"
             ? "SDR COMERCIAL IA"
             : direction === "outbound"
-            ? (msgSeller?.name ?? null)
-            : null;
+              ? (msgSeller?.name ?? null)
+              : null;
         return {
           conversation_id: convId,
           clint_message_id: m.id,

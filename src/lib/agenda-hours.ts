@@ -11,9 +11,18 @@ export type WorkingHours = {
   label: string;
 };
 
-const PT_HOURS: WorkingHours = { startH: 7, endH: 22, tz: "Europe/Lisbon", label: "07:00–22:00 (Lisboa)" };
-const BR_HOURS: WorkingHours = { startH: 10, endH: 22, tz: "America/Sao_Paulo", label: "10:00–22:00 Lisboa = 06:00–18:00 Brasil" };
-
+const PT_HOURS: WorkingHours = {
+  startH: 7,
+  endH: 22,
+  tz: "Europe/Lisbon",
+  label: "07:00–22:00 (Lisboa)",
+};
+const BR_HOURS: WorkingHours = {
+  startH: 10,
+  endH: 22,
+  tz: "America/Sao_Paulo",
+  label: "10:00–22:00 Lisboa = 06:00–18:00 Brasil",
+};
 
 /** Vendedores baseados no Brasil (chave = e-mail ou pedaço do nome). */
 const BR_SELLERS = [
@@ -25,7 +34,11 @@ const BR_SELLERS = [
 ];
 
 function norm(v: string | null | undefined) {
-  return (v ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return (v ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 export function isBrazilSeller(sellerEmail?: string | null, sellerName?: string | null): boolean {
@@ -34,6 +47,9 @@ export function isBrazilSeller(sellerEmail?: string | null, sellerName?: string 
   return BR_SELLERS.some((k) => (e && e.includes(k)) || (n && n.includes(k)));
 }
 
-export function getWorkingHours(sellerEmail?: string | null, sellerName?: string | null): WorkingHours {
+export function getWorkingHours(
+  sellerEmail?: string | null,
+  sellerName?: string | null,
+): WorkingHours {
   return isBrazilSeller(sellerEmail, sellerName) ? BR_HOURS : PT_HOURS;
 }
