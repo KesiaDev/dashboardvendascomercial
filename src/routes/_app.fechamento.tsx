@@ -20,6 +20,7 @@ import {
   type ManualSale,
 } from "@/lib/manual-sales.functions";
 import { isRenewalProduct } from "@/lib/product-groups";
+import { detectPaymentPlan } from "@/lib/payment-plans";
 import { useAppAuth } from "@/lib/app-auth";
 import { canonicalSellerName } from "@/lib/sellers";
 import { isAdminEmail } from "@/lib/auth";
