@@ -61,8 +61,8 @@ type ProductId = "fgrs" | "igt" | "mse" | "wgt" | "wfgrs" | "ldp" | "accelerator
 const PRODUCTS: { id: ProductId; label: string; sublabel: string; accent: string; headerBg: string; rowBg: string; text: string }[] = [
   { id: "fgrs", label: "Formação (FGRS)", sublabel: "Formação Gestor Redes Sociais", accent: "bg-blue-500", headerBg: "bg-blue-50/80 dark:bg-blue-900/25", rowBg: "bg-blue-50/50 dark:bg-blue-900/12", text: "text-blue-600" },
   { id: "igt", label: "Mentoria via Imersão (IGT)", sublabel: "MGT via IGT — SCK: igt*", accent: "bg-violet-500", headerBg: "bg-violet-50/80 dark:bg-violet-900/25", rowBg: "bg-violet-50/50 dark:bg-violet-900/12", text: "text-violet-600" },
-  { id: "mse", label: "Mentoria via Perpétuos (MSE)", sublabel: "E-book, Mini-curso, Sessão", accent: "bg-emerald-500", headerBg: "bg-emerald-50/80 dark:bg-emerald-900/25", rowBg: "bg-emerald-50/50 dark:bg-emerald-900/12", text: "text-emerald-600" },
-  { id: "wgt", label: "Mentoria via Webinar (WGT)", sublabel: "MGT residual", accent: "bg-amber-500", headerBg: "bg-amber-50/80 dark:bg-amber-900/25", rowBg: "bg-amber-50/50 dark:bg-amber-900/12", text: "text-amber-600" },
+  { id: "mse", label: "Mentoria via Perpétuos (MSE)", sublabel: "E-book, Mini-curso, Sessão", accent: "bg-success", headerBg: "bg-emerald-50/80", rowBg: "bg-emerald-50/50", text: "text-success-fg" },
+  { id: "wgt", label: "Mentoria via Webinar (WGT)", sublabel: "MGT residual", accent: "bg-warning", headerBg: "bg-amber-50/80", rowBg: "bg-amber-50/50", text: "text-warning-fg" },
   { id: "wfgrs", label: "Formação via Webinar (WFGRS)", sublabel: "Manual", accent: "bg-pink-500", headerBg: "bg-pink-50/80 dark:bg-pink-900/25", rowBg: "bg-pink-50/50 dark:bg-pink-900/12", text: "text-pink-600" },
   { id: "ldp", label: "Accelerator via Live (LDP)", sublabel: "Programa Accelerator", accent: "bg-cyan-500", headerBg: "bg-cyan-50/80 dark:bg-cyan-900/25", rowBg: "bg-cyan-50/50 dark:bg-cyan-900/12", text: "text-cyan-600" },
   { id: "accelerator", label: "Master and Scale", sublabel: "Bilhetes M&S", accent: "bg-orange-500", headerBg: "bg-orange-50/80 dark:bg-orange-900/25", rowBg: "bg-orange-50/50 dark:bg-orange-900/12", text: "text-orange-600" },
@@ -124,9 +124,9 @@ function pct(real: number, meta: number): number {
 }
 
 function pctBadgeClass(p: number): string {
-  if (p >= 100) return "bg-emerald-600 text-white";
-  if (p >= 70) return "bg-yellow-500 text-white";
-  return "bg-red-600 text-white";
+  if (p >= 100) return "bg-success text-white";
+  if (p >= 70) return "bg-warning text-white";
+  return "bg-destructive text-white";
 }
 
 // Segunda-feira ISO da data
@@ -213,7 +213,7 @@ function EditableCell({
           disabled={saving}
           className="h-7 w-24 text-xs px-2"
         />
-        <button onClick={commit} disabled={saving} className="text-emerald-600 hover:text-emerald-700">
+        <button onClick={commit} disabled={saving} className="text-success-fg hover:text-success-fg">
           <Check className="h-3.5 w-3.5" />
         </button>
         <button onClick={() => setEditing(false)} disabled={saving} className="text-muted-foreground hover:text-foreground">
@@ -472,7 +472,7 @@ function MonthlyBlock({
                           value={realizedVendas(m)}
                           onSave={(v) => onSaveOverride("vendas", m, v)}
                           format={(v) => v.toLocaleString("pt-BR")}
-                          className={isOverriddenV(m) ? "text-amber-600 font-semibold" : ""}
+                          className={isOverriddenV(m) ? "text-warning-fg font-semibold" : ""}
                         />
                       )}
                     </td>
@@ -527,7 +527,7 @@ function MonthlyBlock({
                           value={realizedFat(m)}
                           onSave={(v) => onSaveOverride("faturamento", m, v)}
                           format={format}
-                          className={isOverriddenF(m) ? "text-amber-600 font-semibold" : ""}
+                          className={isOverriddenF(m) ? "text-warning-fg font-semibold" : ""}
                         />
                       )}
                     </td>
@@ -1131,7 +1131,7 @@ function ConversionArrow({ label, from, to, metaPct, onEditMeta }: { label: stri
     <div className="flex items-center gap-3 pl-6 text-xs text-muted-foreground">
       <div className="min-w-[200px]">↓ {label}</div>
       <div className="flex items-center gap-1.5 flex-wrap">
-        <span className={meetsMeta ? "text-emerald-600 font-semibold" : "text-amber-600 font-semibold"}>
+        <span className={meetsMeta ? "text-success-fg font-semibold" : "text-warning-fg font-semibold"}>
           {realPct.toFixed(2)}%
         </span>{" "}
         realizado · meta{" "}

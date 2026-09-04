@@ -86,10 +86,10 @@ function CustoIaCard({ vendas, receitaEur }: { vendas: number; receitaEur: numbe
   const roi = custoTotal > 0 ? ((receitaEur - custoTotal) / custoTotal) * 100 : 0;
 
   return (
-    <Card className="border-amber-500/30">
+    <Card className="border-warning/30">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
-          <TrendingUp className="h-4 w-4 text-amber-500" /> Custo × retorno do Agente IA
+          <TrendingUp className="h-4 w-4 text-warning-fg" /> Custo × retorno do Agente IA
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -136,8 +136,8 @@ function Kpi({ icon: Icon, label, value, hint, tone = "default" }: {
   icon: any; label: string; value: string; hint?: string; tone?: "default" | "good" | "warn";
 }) {
   const toneCls =
-    tone === "good" ? "text-emerald-600 dark:text-emerald-400"
-    : tone === "warn" ? "text-amber-600 dark:text-amber-400"
+    tone === "good" ? "text-success-fg"
+    : tone === "warn" ? "text-warning-fg"
     : "text-foreground";
   return (
     <Card>
@@ -244,10 +244,10 @@ function AgenteIaPage() {
               hint={k.msgsAteReuniao ? `${k.msgsAteReuniao} msgs até a reunião` : undefined} />
           </div>
 
-          <Card className="border-emerald-500/30">
+          <Card className="border-success/30">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-sm">
-                <Trophy className="h-4 w-4 text-emerald-500" /> Vendas atribuídas ao Agente IA
+                <Trophy className="h-4 w-4 text-success-fg" /> Vendas atribuídas ao Agente IA
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -367,12 +367,12 @@ function AgenteIaPage() {
 }
 
 const STATUS_TONE: Record<string, string> = {
-  "Venda ganha": "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+  "Venda ganha": "bg-success/15 text-success-fg border-success/30",
   "Reunião agendada": "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30",
   "Escalada para humano": "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30",
-  "Aguardando resposta do lead": "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30",
+  "Aguardando resposta do lead": "bg-warning/15 text-warning-fg border-warning/30",
   "Em conversa": "bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/30",
-  "Lead descartado": "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30",
+  "Lead descartado": "bg-destructive/15 text-destructive-fg border-destructive/30",
   "Sem resposta": "bg-muted text-muted-foreground border-border",
 };
 

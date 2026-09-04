@@ -15,12 +15,12 @@ export const Route = createFileRoute("/_app/arena/sim/$id")({
 });
 
 const EMOTION_META: Record<string, { emoji: string; color: string }> = {
-  animado: { emoji: "😊", color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" },
+  animado: { emoji: "😊", color: "bg-success/15 text-success-fg" },
   neutro: { emoji: "😐", color: "bg-slate-500/15 text-slate-700 dark:text-slate-300" },
-  desconfiado: { emoji: "🤔", color: "bg-amber-500/15 text-amber-700 dark:text-amber-400" },
-  irritado: { emoji: "😡", color: "bg-rose-500/15 text-rose-700 dark:text-rose-400" },
+  desconfiado: { emoji: "🤔", color: "bg-warning/15 text-warning-fg" },
+  irritado: { emoji: "😡", color: "bg-destructive/15 text-destructive-fg" },
   ocupado: { emoji: "😴", color: "bg-slate-500/15 text-slate-700 dark:text-slate-300" },
-  frustrado: { emoji: "😢", color: "bg-rose-500/15 text-rose-700 dark:text-rose-400" },
+  frustrado: { emoji: "😢", color: "bg-destructive/15 text-destructive-fg" },
   interessado: { emoji: "😍", color: "bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-400" },
   seguro: { emoji: "😎", color: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400" },
 };
@@ -122,7 +122,7 @@ function SimPage() {
             return (
               <div key={m.id} className={"flex " + (isSeller ? "justify-end" : "justify-start")}>
                 <div className={"max-w-[75%] " + (isSeller ? "items-end" : "items-start") + " flex flex-col gap-1"}>
-                  <div className={"rounded-2xl px-3 py-2 shadow-sm text-sm whitespace-pre-wrap " + (isSeller ? "bg-emerald-500 text-white rounded-br-sm" : "bg-card border rounded-bl-sm")}>
+                  <div className={"rounded-2xl px-3 py-2 shadow-sm text-sm whitespace-pre-wrap " + (isSeller ? "bg-success text-white rounded-br-sm" : "bg-card border rounded-bl-sm")}>
                     {m.body}
                     <div className={"text-[10px] mt-1 " + (isSeller ? "text-emerald-50/80 text-right" : "text-muted-foreground")}>
                       {new Date(m.sent_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
@@ -130,9 +130,9 @@ function SimPage() {
                   </div>
                   {finished && isSeller && comment && (
                     <div className={"text-xs flex items-start gap-1 px-2 " + (
-                      comment.tag === "positivo" ? "text-emerald-600 dark:text-emerald-400" :
-                      comment.tag === "alerta" ? "text-amber-600 dark:text-amber-400" :
-                      "text-rose-600 dark:text-rose-400"
+                      comment.tag === "positivo" ? "text-success-fg" :
+                      comment.tag === "alerta" ? "text-warning-fg" :
+                      "text-destructive-fg"
                     )}>
                       {comment.tag === "positivo" ? <CheckCircle2 className="h-3 w-3 mt-0.5 shrink-0" /> :
                        comment.tag === "alerta" ? <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> :
@@ -210,11 +210,11 @@ function SimPage() {
               <CardHeader className="pb-2"><CardTitle className="text-base">Feedback</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div>
-                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-1">Pontos fortes</p>
+                  <p className="text-xs font-semibold text-success-fg mb-1">Pontos fortes</p>
                   <ul className="list-disc pl-4 space-y-0.5">{(evaluation.pontos_fortes ?? []).map((s: string, i: number) => <li key={i}>{s}</li>)}</ul>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 mb-1">A melhorar</p>
+                  <p className="text-xs font-semibold text-destructive-fg mb-1">A melhorar</p>
                   <ul className="list-disc pl-4 space-y-0.5">{(evaluation.melhorias ?? []).map((s: string, i: number) => <li key={i}>{s}</li>)}</ul>
                 </div>
               </CardContent>

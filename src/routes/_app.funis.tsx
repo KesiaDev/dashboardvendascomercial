@@ -353,18 +353,18 @@ function FunnelPanel({
         </CardContent></Card>
 
         <Card><CardContent className="pt-4 pb-3">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1"><CheckCircle className="h-3.5 w-3.5 text-emerald-400"/>Ganhos</div>
-          <p className="text-2xl font-bold text-emerald-400">{m.won}</p>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1"><CheckCircle className="h-3.5 w-3.5 text-success-fg"/>Ganhos</div>
+          <p className="text-2xl font-bold text-success-fg">{m.won}</p>
           <p className="text-xs text-muted-foreground">{fmtEur(m.totalRevenue)}</p>
         </CardContent></Card>
 
         <Card><CardContent className="pt-4 pb-3">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1"><XCircle className="h-3.5 w-3.5 text-red-400"/>Perdidos</div>
-          <p className="text-2xl font-bold text-red-400">{m.lost}</p>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1"><XCircle className="h-3.5 w-3.5 text-destructive-fg"/>Perdidos</div>
+          <p className="text-2xl font-bold text-destructive-fg">{m.lost}</p>
         </CardContent></Card>
 
         <Card><CardContent className="pt-4 pb-3">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1"><TrendingUp className="h-3.5 w-3.5 text-yellow-400"/>Conversão</div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1"><TrendingUp className="h-3.5 w-3.5 text-warning-fg"/>Conversão</div>
           <p className="text-2xl font-bold" style={{ color: cfg.color }}>{fmtPct(m.won, m.won + m.lost)}</p>
           <p className="text-xs text-muted-foreground">ticket: {fmtEur(m.avgTicket)}</p>
         </CardContent></Card>
@@ -492,7 +492,7 @@ function FunnelPanel({
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-            <Trophy className="h-4 w-4 text-yellow-400"/> Performance por Vendedor
+            <Trophy className="h-4 w-4 text-warning-fg"/> Performance por Vendedor
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -524,8 +524,8 @@ function FunnelPanel({
                         </span>
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums">{s.won + s.lost + s.open}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-emerald-400 font-medium">{s.won}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-red-400">{s.lost}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-success-fg font-medium">{s.won}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-destructive-fg">{s.lost}</td>
                       <td className="px-3 py-2 text-right tabular-nums text-indigo-400">{s.open}</td>
                       <td className="px-3 py-2 text-right tabular-nums">
                         <Badge variant="secondary" className="text-xs">{Math.round(s.conv * 100)}%</Badge>
@@ -545,7 +545,7 @@ function FunnelPanel({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-              <XCircle className="h-4 w-4 text-red-400"/> Motivos de Perda
+              <XCircle className="h-4 w-4 text-destructive-fg"/> Motivos de Perda
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -647,8 +647,8 @@ function FunisPage() {
       </div>
       {syncMsg && (
         <div className={`text-xs px-3 py-2 rounded-lg border ${
-          syncState === "error" ? "bg-red-500/10 border-red-500/30 text-red-500" :
-          syncState === "done"  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400" :
+          syncState === "error" ? "bg-destructive/10 border-destructive/30 text-destructive-fg" :
+          syncState === "done"  ? "bg-success/10 border-success/30 text-success-fg" :
           "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400"
         }`}>{syncMsg}</div>
       )}

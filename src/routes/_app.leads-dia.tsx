@@ -109,9 +109,9 @@ function LeadsDiaPage() {
             <Card>
               <CardContent className="pt-5">
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <TrendingUp className="h-4 w-4 text-emerald-500" /> Dia que mais chega
+                  <TrendingUp className="h-4 w-4 text-success-fg" /> Dia que mais chega
                 </p>
-                <p className="text-3xl font-black text-emerald-500">{data.melhor?.label ?? "—"}</p>
+                <p className="text-3xl font-black text-success-fg">{data.melhor?.label ?? "—"}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   média de {data.melhor?.media.toFixed(1) ?? 0} leads/dia
                 </p>
@@ -120,9 +120,9 @@ function LeadsDiaPage() {
             <Card>
               <CardContent className="pt-5">
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <TrendingDown className="h-4 w-4 text-rose-500" /> Dia que menos chega
+                  <TrendingDown className="h-4 w-4 text-destructive-fg" /> Dia que menos chega
                 </p>
-                <p className="text-3xl font-black text-rose-500">{data.pior?.label ?? "—"}</p>
+                <p className="text-3xl font-black text-destructive-fg">{data.pior?.label ?? "—"}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   média de {data.pior?.media.toFixed(1) ?? 0} leads/dia
                 </p>
@@ -259,7 +259,7 @@ function LeadsDiaPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" /> Dias fora do padrão (±2 desvios)
+                <AlertTriangle className="h-4 w-4 text-warning-fg" /> Dias fora do padrão (±2 desvios)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -291,7 +291,7 @@ function LeadsDiaPage() {
                         </td>
                         <td
                           className={`py-2 text-right tabular-nums font-semibold ${
-                            o.desvio > 0 ? "text-emerald-500" : "text-rose-500"
+                            o.desvio > 0 ? "text-success-fg" : "text-destructive-fg"
                           }`}
                         >
                           {o.desvio > 0 ? "+" : ""}

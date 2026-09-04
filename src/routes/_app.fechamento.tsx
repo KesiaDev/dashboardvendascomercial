@@ -94,7 +94,7 @@ function moneyBrl(v: number) {
 function ConfirmBadge({ status }: { status: string }) {
   if (status === "confirmado_hotmart")
     return (
-      <Badge className="bg-emerald-600/20 text-emerald-400 border-emerald-600/30 text-xs gap-1">
+      <Badge className="bg-success/20 text-success-fg border-success/30 text-xs gap-1">
         <CheckCircle2 className="h-3 w-3" />
         Hotmart ✓
       </Badge>
@@ -108,13 +108,13 @@ function ConfirmBadge({ status }: { status: string }) {
     );
   if (status === "nao_encontrado")
     return (
-      <Badge className="bg-red-600/20 text-red-400 border-red-600/30 text-xs gap-1">
+      <Badge className="bg-destructive/20 text-destructive-fg border-destructive/30 text-xs gap-1">
         <AlertCircle className="h-3 w-3" />
         Não encontrado
       </Badge>
     );
   return (
-    <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-600/30 text-xs gap-1">
+    <Badge className="bg-warning/20 text-warning-fg border-warning/30 text-xs gap-1">
       <Search className="h-3 w-3" />
       Pendente
     </Badge>
@@ -137,7 +137,7 @@ function EmailLookup({ email, saleDate }: { email: string; saleDate: string }) {
 
   if (!matches || matches.length === 0)
     return (
-      <div className="mt-1 flex items-center gap-1.5 text-xs text-yellow-500">
+      <div className="mt-1 flex items-center gap-1.5 text-xs text-warning-fg">
         <AlertCircle className="h-3.5 w-3.5" />
         Não encontrado no Hotmart — verifique o email ou confirme pelo Wise
       </div>
@@ -148,10 +148,10 @@ function EmailLookup({ email, saleDate }: { email: string; saleDate: string }) {
       {matches.map((m) => (
         <div
           key={m.id}
-          className="flex items-center gap-2 rounded-md bg-emerald-950/30 border border-emerald-800/40 px-2.5 py-1.5 text-xs"
+          className="flex items-center gap-2 rounded-md bg-success/30 border border-success/40 px-2.5 py-1.5 text-xs"
         >
-          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-          <span className="text-emerald-300 font-medium">{m.produto_original}</span>
+          <CheckCircle2 className="h-3.5 w-3.5 text-success-fg shrink-0" />
+          <span className="text-success-fg font-medium">{m.produto_original}</span>
           <span className="text-muted-foreground">·</span>
           <span className="tabular-nums">{moneyBrl(m.faturamento_liquido_brl ?? 0)}</span>
           <span className="text-muted-foreground">·</span>
@@ -594,7 +594,7 @@ function FechamentoForm({ session }: { session: any }) {
                           </SelectContent>
                         </Select>
                         {is166(it.value) ? (
-                          <p className="text-xs text-amber-600 dark:text-amber-400">
+                          <p className="text-xs text-warning-fg">
                             Regra fixa: parcela de 166 € é sempre <b>3x</b> — as 2 parcelas
                             seguintes entram automaticamente nos 2 meses seguintes (mesmo dia da
                             venda).
@@ -720,12 +720,12 @@ function FechamentoForm({ session }: { session: any }) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg bg-emerald-950/30 p-2">
-                  <p className="text-lg font-bold text-emerald-400">{confirmedCount}</p>
+                <div className="rounded-lg bg-success/30 p-2">
+                  <p className="text-lg font-bold text-success-fg">{confirmedCount}</p>
                   <p className="text-xs text-muted-foreground">Confirmadas</p>
                 </div>
-                <div className="rounded-lg bg-yellow-950/30 p-2">
-                  <p className="text-lg font-bold text-yellow-400">{pendingCount}</p>
+                <div className="rounded-lg bg-warning/30 p-2">
+                  <p className="text-lg font-bold text-warning-fg">{pendingCount}</p>
                   <p className="text-xs text-muted-foreground">Pendentes</p>
                 </div>
                 <div className="rounded-lg bg-secondary/50 p-2">
@@ -799,10 +799,10 @@ function FechamentoForm({ session }: { session: any }) {
 
           {/* Parcelas pendentes do mês */}
           {pendingInstallments.length > 0 && (
-            <Card className="border-yellow-800/40 bg-yellow-950/10">
+            <Card className="border-warning/40 bg-warning/10">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-yellow-400" />
+                  <Clock className="h-4 w-4 text-warning-fg" />
                   Parcelas pendentes ({pendingInstallments.length})
                 </CardTitle>
                 <CardDescription>
@@ -944,7 +944,7 @@ function SaleCard({
     <div
       className={cn(
         "rounded-lg border p-3 text-sm space-y-2",
-        isPendingInst ? "border-yellow-800/50 bg-yellow-950/20" : "border-border/50 bg-card/50",
+        isPendingInst ? "border-warning/50 bg-warning/20" : "border-border/50 bg-card/50",
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -957,8 +957,8 @@ function SaleCard({
                 className={cn(
                   "text-xs gap-1",
                   isPendingInst
-                    ? "bg-yellow-600/20 text-yellow-300 border-yellow-600/40"
-                    : "bg-emerald-600/20 text-emerald-300 border-emerald-600/40",
+                    ? "bg-warning/20 text-warning-fg border-warning/40"
+                    : "bg-success/20 text-success-fg border-success/40",
                 )}
               >
                 {isPendingInst ? (
@@ -1004,7 +1004,7 @@ function SaleCard({
           {/* Mostra o valor BRL confirmado no Hotmart */}
           {sale.confirmation_status === "confirmado_hotmart" &&
             sale.confirmed_hotmart_valor_brl && (
-              <div className="mt-1 flex items-center gap-1 text-xs text-emerald-400">
+              <div className="mt-1 flex items-center gap-1 text-xs text-success-fg">
                 <CheckCheck className="h-3 w-3" />
                 Hotmart: {moneyBrl(sale.confirmed_hotmart_valor_brl)}
               </div>
@@ -1028,7 +1028,7 @@ function SaleCard({
             size="sm"
             className={cn(
               "h-7 px-2",
-              isPendingInst && "bg-emerald-600 hover:bg-emerald-700 text-white",
+              isPendingInst && "bg-success hover:bg-success text-white",
             )}
             onClick={() => onMarkPaid(!sale.installment_paid)}
           >

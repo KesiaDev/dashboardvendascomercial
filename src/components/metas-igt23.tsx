@@ -173,9 +173,9 @@ export function MetasIgt23Card({ title }: { title?: string }) {
     () =>
       (
         [
-          { key: "minimo", nome: "Mínimo", alvo: cfg.minimo, tone: "bg-amber-500", chip: "bg-amber-500/15 text-amber-600 dark:text-amber-300" },
+          { key: "minimo", nome: "Mínimo", alvo: cfg.minimo, tone: "bg-warning", chip: "bg-warning/15 text-warning-fg" },
           { key: "boa", nome: "Boa", alvo: cfg.boa, tone: "bg-sky-500", chip: "bg-sky-500/15 text-sky-600 dark:text-sky-300" },
-          { key: "excelente", nome: "Excelente", alvo: cfg.excelente, tone: "bg-emerald-500", chip: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" },
+          { key: "excelente", nome: "Excelente", alvo: cfg.excelente, tone: "bg-success", chip: "bg-success/15 text-success-fg" },
         ] as const
       ).map((c) => {
         const metaComercial = (c.alvo * cfg.sharePct) / 100;
@@ -307,7 +307,7 @@ export function MetasIgt23Card({ title }: { title?: string }) {
           <div className="rounded-lg border p-3">
             <p className="text-[11px] text-muted-foreground">Share do Comercial</p>
             <p
-              className={`text-2xl font-semibold tabular-nums ${shareReal >= cfg.sharePct ? "text-emerald-500" : "text-amber-500"}`}
+              className={`text-2xl font-semibold tabular-nums ${shareReal >= cfg.sharePct ? "text-success-fg" : "text-warning-fg"}`}
             >
               {shareReal.toFixed(1)}%
             </p>
@@ -343,14 +343,14 @@ export function MetasIgt23Card({ title }: { title?: string }) {
                     {cfg.vendasComercial}/{c.metaComercial.toFixed(0)} · {c.atingCom.toFixed(0)}%
                   </span>
                 </div>
-                <Bar pct={c.atingCom} tone={c.atingCom >= 100 ? "bg-emerald-500" : c.tone} />
+                <Bar pct={c.atingCom} tone={c.atingCom >= 100 ? "bg-success" : c.tone} />
                 <p className="text-[11px]">
                   {c.faltaCom > 0 ? (
-                    <span className="text-amber-600 dark:text-amber-400">
+                    <span className="text-warning-fg">
                       faltam {Math.ceil(c.faltaCom)} vendas
                     </span>
                   ) : (
-                    <span className="text-emerald-600 dark:text-emerald-400">
+                    <span className="text-success-fg">
                       meta batida (+{Math.abs(Math.floor(c.faltaCom))})
                     </span>
                   )}

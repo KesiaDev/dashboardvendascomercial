@@ -386,7 +386,7 @@ function KpiCard({
   tone?: "destructive" | "warning";
 }) {
   const toneClass =
-    tone === "destructive" ? "text-destructive" : tone === "warning" ? "text-amber-500" : "";
+    tone === "destructive" ? "text-destructive" : tone === "warning" ? "text-warning-fg" : "";
   return (
     <Card>
       <CardContent className="pt-6">

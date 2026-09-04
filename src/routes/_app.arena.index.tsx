@@ -45,9 +45,9 @@ function ArenaPage() {
 
 const DIFFICULTIES = ["Bronze", "Prata", "Ouro", "Diamante", "Elite", "Lenda"] as const;
 const LEAGUE_COLOR: Record<string, string> = {
-  Bronze: "bg-amber-700/20 text-amber-700 dark:text-amber-400 border-amber-700/40",
+  Bronze: "bg-warning/20 text-warning-fg border-warning/40",
   Prata: "bg-slate-400/20 text-slate-600 dark:text-slate-300 border-slate-400/40",
-  Ouro: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/40",
+  Ouro: "bg-warning/20 text-warning-fg border-warning/40",
   Diamante: "bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border-cyan-500/40",
   Elite: "bg-fuchsia-500/20 text-fuchsia-700 dark:text-fuchsia-300 border-fuchsia-500/40",
   Lenda: "bg-gradient-to-r from-amber-500/30 to-fuchsia-500/30 text-foreground border-fuchsia-500/50",
@@ -190,20 +190,20 @@ function ArenaDashboard() {
       {/* Competências */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-4 w-4 text-emerald-500" />Habilidades mais fortes</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-4 w-4 text-success-fg" />Habilidades mais fortes</CardTitle></CardHeader>
           <CardContent className="space-y-1.5">
             {data.strongest.length === 0 ? <p className="text-xs text-muted-foreground">Sem dados ainda.</p> :
               data.strongest.map((c: any) => (
-                <div key={c.k} className="flex justify-between text-sm"><span className="capitalize">{c.k.replace(/_/g," ")}</span><span className="font-semibold text-emerald-600 dark:text-emerald-400">{c.avg.toFixed(1)}</span></div>
+                <div key={c.k} className="flex justify-between text-sm"><span className="capitalize">{c.k.replace(/_/g," ")}</span><span className="font-semibold text-success-fg">{c.avg.toFixed(1)}</span></div>
               ))}
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><TrendingDown className="h-4 w-4 text-rose-500" />A melhorar</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><TrendingDown className="h-4 w-4 text-destructive-fg" />A melhorar</CardTitle></CardHeader>
           <CardContent className="space-y-1.5">
             {data.weakest.length === 0 ? <p className="text-xs text-muted-foreground">Sem dados ainda.</p> :
               data.weakest.map((c: any) => (
-                <div key={c.k} className="flex justify-between text-sm"><span className="capitalize">{c.k.replace(/_/g," ")}</span><span className="font-semibold text-rose-600 dark:text-rose-400">{c.avg.toFixed(1)}</span></div>
+                <div key={c.k} className="flex justify-between text-sm"><span className="capitalize">{c.k.replace(/_/g," ")}</span><span className="font-semibold text-destructive-fg">{c.avg.toFixed(1)}</span></div>
               ))}
           </CardContent>
         </Card>

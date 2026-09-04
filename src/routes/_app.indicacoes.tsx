@@ -40,10 +40,10 @@ const STATUS_LABEL: Record<ReferralStatus, string> = {
 
 const STATUS_COLOR: Record<ReferralStatus, string> = {
   novo: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
-  contactado: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  contactado: "bg-warning/15 text-warning-fg",
   em_negociacao: "bg-violet-500/15 text-violet-700 dark:text-violet-400",
-  convertido: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-  perdido: "bg-rose-500/15 text-rose-700 dark:text-rose-400",
+  convertido: "bg-success/15 text-success-fg",
+  perdido: "bg-destructive/15 text-destructive-fg",
 };
 
 function fmtEur(n: number | null | undefined) {
@@ -622,14 +622,14 @@ function MensagemPadraoCard() {
         <MensagemBlock
           title="Cliente que fechou"
           badge={locale === "pt-PT" ? "Comprou · PT-PT" : "Comprou · PT-BR"}
-          badgeClass="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+          badgeClass="bg-success/15 text-success-fg"
           description="Envie logo após o fechamento, quando a energia do cliente está no pico."
           message={msgComprou}
         />
         <MensagemBlock
           title="Cliente que não fechou"
           badge={locale === "pt-PT" ? "Não comprou · PT-PT" : "Não comprou · PT-BR"}
-          badgeClass="bg-amber-500/15 text-amber-700 dark:text-amber-400"
+          badgeClass="bg-warning/15 text-warning-fg"
           description="Envie 24–48h após o 'não', agradecendo a conversa e pedindo indicações."
           message={msgNaoFechou}
         />

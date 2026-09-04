@@ -55,15 +55,15 @@ export function CommissionAlertsCard() {
   if (isLoading) return null;
 
   return (
-    <Card className={cn(alerts.length > 0 ? "border-amber-500/50 bg-amber-500/5" : "border-border")}>
+    <Card className={cn(alerts.length > 0 ? "border-warning/50 bg-warning/5" : "border-border")}>
       <CardHeader className="pb-3">
         <CardTitle className="flex flex-wrap items-center gap-2 text-base">
           <AlertTriangle
-            className={cn("h-4 w-4", alerts.length > 0 ? "text-amber-500" : "text-muted-foreground")}
+            className={cn("h-4 w-4", alerts.length > 0 ? "text-warning-fg" : "text-muted-foreground")}
           />
           Auditoria do fechamento manual
           {pendentes.length > 0 && (
-            <Badge variant="outline" className="border-amber-500/60 text-amber-600 dark:text-amber-400">
+            <Badge variant="outline" className="border-warning/60 text-warning-fg">
               {pendentes.length} venda{pendentes.length > 1 ? "s" : ""} pendente
               {pendentes.length > 1 ? "s" : ""} há +24h
             </Badge>
@@ -75,7 +75,7 @@ export function CommissionAlertsCard() {
             </Badge>
           )}
           {alerts.length === 0 && (
-            <Badge variant="outline" className="border-emerald-500/60 text-emerald-600 dark:text-emerald-400">
+            <Badge variant="outline" className="border-success/60 text-success-fg">
               Tudo conferido
             </Badge>
           )}
@@ -112,7 +112,7 @@ export function CommissionAlertsCard() {
               {a.type === "afiliado_divergente" ? (
                 <UserX className="h-4 w-4 shrink-0 text-destructive" />
               ) : (
-                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+                <AlertTriangle className="h-4 w-4 shrink-0 text-warning-fg" />
               )}
               <span className="font-medium">{a.seller_name ?? "—"}</span>
               <span className="text-muted-foreground">

@@ -249,11 +249,11 @@ export function PerfisTab() {
                   </td>
                   <td className="p-3 text-center font-semibold border-r border-border/60">{r.total}</td>
                   <td className="p-3 text-center border-r border-border/60">{r.pct.toFixed(1)}%</td>
-                  <td className="p-3 text-center font-semibold text-emerald-600 dark:text-emerald-400 border-r border-border/60">{r.vendas}</td>
+                  <td className="p-3 text-center font-semibold text-success-fg border-r border-border/60">{r.vendas}</td>
                   <td className="p-3 text-center border-r border-border/60">{r.conv.toFixed(1)}%</td>
-                  <td className="p-3 text-center text-emerald-600 dark:text-emerald-400 border-r border-border/60">{r.ganhos}</td>
-                  <td className="p-3 text-center text-rose-600 dark:text-rose-400 border-r border-border/60">{r.perdidos}</td>
-                  <td className="p-3 text-center text-amber-600 dark:text-amber-400 border-r border-border/60">{r.abertos}</td>
+                  <td className="p-3 text-center text-success-fg border-r border-border/60">{r.ganhos}</td>
+                  <td className="p-3 text-center text-destructive-fg border-r border-border/60">{r.perdidos}</td>
+                  <td className="p-3 text-center text-warning-fg border-r border-border/60">{r.abertos}</td>
                   <td className="p-3 text-center border-r border-border/60">{r.humano}</td>
                   <td className="p-3 text-center border-r border-border/60">{r.ia}</td>
                   <td className="p-3 text-center border-r border-border/60">{r.avg_score != null ? r.avg_score.toFixed(2) : "—"}</td>
@@ -262,7 +262,7 @@ export function PerfisTab() {
                       <p key={i} className="text-[11px] text-muted-foreground italic mb-1">{e}</p>
                     ))}
                     {r.sem_pergunta > 0 && (
-                      <p className="text-[11px] text-amber-600 dark:text-amber-400 mb-1">
+                      <p className="text-[11px] text-warning-fg mb-1">
                         {r.sem_pergunta} de {r.total} sem pergunta de profissão pelo vendedor
                       </p>
                     )}
@@ -360,9 +360,9 @@ export function PerfisTab() {
 }
 
 const STATUS_STYLE: Record<string, string> = {
-  ganho: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
-  perdido: "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30",
-  aberto: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30",
+  ganho: "bg-success/15 text-success-fg border-success/30",
+  perdido: "bg-destructive/15 text-destructive-fg border-destructive/30",
+  aberto: "bg-warning/15 text-warning-fg border-warning/30",
 };
 
 function PerfilConversasDialog({
@@ -398,7 +398,7 @@ function PerfilConversasDialog({
                   <Badge variant="outline" className="text-[10px]">{c.is_ai ? "Agente IA" : c.seller}</Badge>
                   {c.profissao && <Badge variant="secondary" className="text-[10px] capitalize">{c.profissao}</Badge>}
                   {!c.perguntou_profissao && (
-                    <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-600 dark:text-amber-400">
+                    <Badge variant="outline" className="text-[10px] border-warning/40 text-warning-fg">
                       vendedor não perguntou a profissão
                     </Badge>
                   )}

@@ -329,7 +329,7 @@ const PODIUM_STYLES = [
     size: "h-9 w-9",
   }, // silver (left)
   {
-    card: "bg-yellow-400/15 border border-yellow-400/40",
+    card: "bg-warning/15 border border-warning/40",
     ring: "ring-2 ring-yellow-400/70",
     size: "h-11 w-11",
   }, // gold (center)
@@ -571,15 +571,15 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
               {pctVsPrev !== null ? (
                 <div className="flex items-center gap-2 mt-1">
                   <p
-                    className={`text-2xl font-bold ${pctVsPrev >= 0 ? "text-emerald-500" : "text-red-500"}`}
+                    className={`text-2xl font-bold ${pctVsPrev >= 0 ? "text-success-fg" : "text-destructive-fg"}`}
                   >
                     {pctVsPrev >= 0 ? "+" : ""}
                     {pctVsPrev}%
                   </p>
                   {pctVsPrev >= 0 ? (
-                    <TrendingUp className="h-5 w-5 text-emerald-500" />
+                    <TrendingUp className="h-5 w-5 text-success-fg" />
                   ) : (
-                    <TrendingDown className="h-5 w-5 text-red-500" />
+                    <TrendingDown className="h-5 w-5 text-destructive-fg" />
                   )}
                 </div>
               ) : (
@@ -590,13 +590,13 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-emerald-500 h-full">
+        <Card className="border-l-4 border-success h-full">
           <CardContent className="p-4 flex flex-col h-full">
             <p className="text-xs text-muted-foreground">Melhor dia</p>
             <div className="flex-1 flex flex-col justify-center">
               {bestDay && bestDay.total > 0 ? (
                 <>
-                  <p className="text-xl font-bold mt-1 text-emerald-500">{bestDay.label}</p>
+                  <p className="text-xl font-bold mt-1 text-success-fg">{bestDay.label}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {fmtEur(bestDay.total)} · {bestDay.count} vendas
                   </p>
@@ -608,7 +608,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-amber-500 h-full">
+        <Card className="border-l-4 border-warning h-full">
           <CardContent className="p-4 flex flex-col h-full">
             <p className="text-xs text-muted-foreground">Produto top</p>
             <div className="flex-1 flex flex-col justify-center">
@@ -618,7 +618,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
                     {topProduct.name}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    <span className="text-amber-500 font-semibold">{topProduct.count}x</span> ·{" "}
+                    <span className="text-warning-fg font-semibold">{topProduct.count}x</span> ·{" "}
                     {fmtEur(topProduct.total)}
                   </p>
                 </>
@@ -679,7 +679,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
             </ResponsiveContainer>
             <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mt-2">
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-sm bg-emerald-500" />
+                <span className="h-2 w-2 rounded-sm bg-success" />
                 Melhor dia
               </span>
               <span className="flex items-center gap-1.5">
@@ -697,7 +697,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
         <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-              <Trophy className="h-4 w-4 text-yellow-400" />
+              <Trophy className="h-4 w-4 text-warning-fg" />
               Ranking da Semana
             </CardTitle>
           </CardHeader>
@@ -850,7 +850,7 @@ function WeekView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number }) 
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                <Star className="h-4 w-4 text-yellow-400" />
+                <Star className="h-4 w-4 text-warning-fg" />
                 Semanas no topo
               </CardTitle>
             </CardHeader>
@@ -1097,7 +1097,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-amber-500 h-full">
+        <Card className="border-l-4 border-warning h-full">
           <CardContent className="p-4 flex flex-col h-full">
             <p className="text-xs text-muted-foreground">Produto top</p>
             <div className="flex-1 flex flex-col justify-center">
@@ -1107,7 +1107,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
                     {topProduct.name}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    <span className="text-amber-500 font-semibold">{topProduct.count}x</span> ·{" "}
+                    <span className="text-warning-fg font-semibold">{topProduct.count}x</span> ·{" "}
                     {fmtEur(topProduct.total)}
                   </p>
                 </>
@@ -1165,7 +1165,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
             )}
             <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mt-2">
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-sm bg-emerald-500" />
+                <span className="h-2 w-2 rounded-sm bg-success" />
                 Melhor semana
               </span>
               <span className="flex items-center gap-1.5">
@@ -1179,7 +1179,7 @@ function MonthView({ allSales, maxWeek }: { allSales: Sale[]; maxWeek: number })
         <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-              <Trophy className="h-4 w-4 text-yellow-400" />
+              <Trophy className="h-4 w-4 text-warning-fg" />
               Ranking do Mês
             </CardTitle>
           </CardHeader>

@@ -227,19 +227,19 @@ function Podium({
       {SPARK_POSITIONS.map((leftClass, i) => (
         <span
           key={i}
-          className={`pointer-events-none absolute top-4 select-none text-amber-300/30 ${leftClass} ${SPARK_CLASSES[i]}`}
+          className={`pointer-events-none absolute top-4 select-none text-warning-fg/30 ${leftClass} ${SPARK_CLASSES[i]}`}
         >
           ✨
         </span>
       ))}
 
       <div className="mb-8 text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-5 py-2">
-          <Trophy className="rk-crown-pulse rk-d0 h-5 w-5 text-amber-400" />
-          <span className="text-sm font-bold tracking-wide text-amber-300 uppercase">
+        <div className="inline-flex items-center gap-2 rounded-full border border-warning/30 bg-warning/10 px-5 py-2">
+          <Trophy className="rk-crown-pulse rk-d0 h-5 w-5 text-warning-fg" />
+          <span className="text-sm font-bold tracking-wide text-warning-fg uppercase">
             Pódio do Mês
           </span>
-          <Trophy className="rk-crown-pulse rk-d1 h-5 w-5 text-amber-400" />
+          <Trophy className="rk-crown-pulse rk-d1 h-5 w-5 text-warning-fg" />
         </div>
       </div>
 
@@ -274,7 +274,7 @@ function Podium({
                   <p className="text-sm font-bold text-white">{seller.name.split(" ")[0]}</p>
                   {!hideRevenue && (
                     <p
-                      className={`text-xs font-semibold tabular-nums ${displayRank === 0 ? "text-amber-300" : displayRank === 1 ? "text-slate-300" : "text-orange-400"}`}
+                      className={`text-xs font-semibold tabular-nums ${displayRank === 0 ? "text-warning-fg" : displayRank === 1 ? "text-slate-300" : "text-orange-400"}`}
                     >
                       {formatCurrency(seller.revenue, currency)}
                     </p>
@@ -340,11 +340,11 @@ function DestaqueCard({
     >
       {isTop && (
         <>
-          <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-amber-400/15 blur-2xl" />
+          <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-warning/15 blur-2xl" />
           {DESTAQUE_SPARKS.map((leftClass, i) => (
             <span
               key={i}
-              className={`pointer-events-none absolute top-3 select-none text-sm text-amber-300/50 ${leftClass} ${SPARK_CLASSES[i]}`}
+              className={`pointer-events-none absolute top-3 select-none text-sm text-warning-fg/50 ${leftClass} ${SPARK_CLASSES[i]}`}
             >
               ✨
             </span>
@@ -362,7 +362,7 @@ function DestaqueCard({
         <div className="min-w-0 flex-1">
           <div className="mb-0.5 flex items-center gap-1.5">
             <p className="truncate text-base font-bold">{seller.name.split(" ")[0]}</p>
-            {isTop && <Crown className="rk-crown-pulse h-4 w-4 flex-shrink-0 text-amber-400" />}
+            {isTop && <Crown className="rk-crown-pulse h-4 w-4 flex-shrink-0 text-warning-fg" />}
           </div>
           {!hideRevenue && (
             <p className="tabular-nums text-2xl font-black text-foreground">
@@ -407,7 +407,7 @@ function RankRow({
     <div
       className={`${rowAnim} flex items-center justify-between rounded-xl border px-4 py-3 transition-all ${
         displayRank === 0
-          ? "border-amber-400/25 bg-gradient-to-r from-amber-400/10 to-transparent"
+          ? "border-warning/25 bg-gradient-to-r from-amber-400/10 to-transparent"
           : displayRank === 1
             ? "border-slate-400/20 bg-gradient-to-r from-slate-400/5 to-transparent"
             : "border-border/50 bg-card/50"
@@ -504,7 +504,7 @@ function RankingPage() {
 
         <section>
           <div className="rk-fadein-2 mb-4 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-amber-400" />
+            <Sparkles className="h-5 w-5 text-warning-fg" />
             <h2 className="text-base font-semibold">Destaques do período</h2>
           </div>
           {isCurrentMonth ? (
@@ -531,7 +531,7 @@ function RankingPage() {
                 label="Campeão do mês"
                 icon={Crown}
                 seller={destaques.mes}
-                accentClass="text-amber-400"
+                accentClass="text-warning-fg"
                 currency={currency}
                 fadeClass="rk-fadein-4"
                 isTop
@@ -544,7 +544,7 @@ function RankingPage() {
                 label={`Campeão — ${selected.label}`}
                 icon={Crown}
                 seller={destaques.mes}
-                accentClass="text-amber-400"
+                accentClass="text-warning-fg"
                 currency={currency}
                 fadeClass="rk-fadein-2"
                 isTop
@@ -557,7 +557,7 @@ function RankingPage() {
         <Card className="rk-fadein-4">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-amber-400" />
+              <Star className="h-5 w-5 text-warning-fg" />
               <CardTitle className="text-base">Ranking completo</CardTitle>
             </div>
           </CardHeader>

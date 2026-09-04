@@ -83,7 +83,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                           </span>
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">{r.leads}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-emerald-500 font-medium">{r.ganhos}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-success-fg font-medium">{r.ganhos}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{pct(r.ganhos, r.leads)}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{eur(r.valor)}</td>
                       </tr>
@@ -92,7 +92,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                           <tr key={`${r.origem}-${c.campanha}`} className="border-t border-border/30 hover:bg-muted/10">
                             <td className="px-4 py-1.5 pl-10 text-muted-foreground truncate max-w-[320px]">{c.campanha}</td>
                             <td className="px-3 py-1.5 text-right tabular-nums">{c.leads}</td>
-                            <td className="px-3 py-1.5 text-right tabular-nums text-emerald-500">{c.ganhos}</td>
+                            <td className="px-3 py-1.5 text-right tabular-nums text-success-fg">{c.ganhos}</td>
                             <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{pct(c.ganhos, c.leads)}</td>
                           </tr>
                         ))}
@@ -157,7 +157,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                               {a.funilConversao}
                               <span className="text-muted-foreground"> · {a.metodo}</span>
                               {a.funilDeclarado && a.funilDeclarado !== a.funilConversao && (
-                                <span className="text-amber-500"> (declarado: {a.funilDeclarado})</span>
+                                <span className="text-warning-fg"> (declarado: {a.funilDeclarado})</span>
                               )}
                             </td>
                             <td
@@ -174,7 +174,7 @@ export function OrigemV3Card({ from, to, title }: { from: string; to: string; ti
                             </td>
                             <td
                               className={`px-3 py-1.5 whitespace-nowrap ${
-                                a.match === "sem-match" ? "text-red-500" : a.match === "email" ? "text-emerald-500" : "text-amber-500"
+                                a.match === "sem-match" ? "text-destructive-fg" : a.match === "email" ? "text-success-fg" : "text-warning-fg"
                               }`}
                             >
                               {a.match}

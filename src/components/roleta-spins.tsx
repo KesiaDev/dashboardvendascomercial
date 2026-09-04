@@ -244,7 +244,7 @@ export function RoletaSpinsCard({
             Accelerator: {totals.porRoleta.accelerator ?? 0}
           </Badge>
           {totals.pendentes > 0 && (
-            <Badge className="text-xs bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30">
+            <Badge className="text-xs bg-warning/15 text-warning-fg border-warning/30">
               {totals.pendentes} sem prêmio lançado
             </Badge>
           )}
@@ -447,7 +447,7 @@ export function RoletaSpinsCard({
                     {s.status === "girada" ? (
                       (s.prize_label ?? "—")
                     ) : (
-                      <span className="text-xs text-amber-600 dark:text-amber-400">pendente</span>
+                      <span className="text-xs text-warning-fg">pendente</span>
                     )}
                   </td>
                   <td className="py-1.5 px-3 text-right tabular-nums">

@@ -125,8 +125,8 @@ function fmtEur(n: number | null | undefined) {
   return "€" + n.toLocaleString("pt-PT", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 function sentimentColor(s: string | null | undefined) {
-  if (s === "positivo") return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
-  if (s === "negativo") return "bg-rose-500/15 text-rose-700 dark:text-rose-400";
+  if (s === "positivo") return "bg-success/15 text-success-fg";
+  if (s === "negativo") return "bg-destructive/15 text-destructive-fg";
   return "bg-slate-500/15 text-slate-700 dark:text-slate-300";
 }
 const SELLER_NAME_MAP: { match: string[]; name: string }[] = [
@@ -164,9 +164,9 @@ function isMetricSeller(nameOrEmail: string | null | undefined): boolean {
 }
 function scoreColor(n: number | null | undefined) {
   if (n == null) return "text-muted-foreground";
-  if (n >= 8) return "text-emerald-600 dark:text-emerald-400";
-  if (n >= 6) return "text-amber-600 dark:text-amber-400";
-  return "text-rose-600 dark:text-rose-400";
+  if (n >= 8) return "text-success-fg";
+  if (n >= 6) return "text-warning-fg";
+  return "text-destructive-fg";
 }
 
 function CoachPage() {
@@ -255,7 +255,7 @@ function CoachPage() {
           {isAdmin && autoEnabled && (
             <Badge
               variant="outline"
-              className="ml-auto text-[10px] text-emerald-600 border-emerald-500/40"
+              className="ml-auto text-[10px] text-success-fg border-success/40"
             >
               ● auto-análise ativa
             </Badge>
@@ -570,7 +570,7 @@ function VisaoGeral() {
           icon={<AlertTriangle className="h-4 w-4" />}
           label="Alertas abertos"
           value={String(openAlerts)}
-          valueClass={openAlerts > 0 ? "text-rose-600 dark:text-rose-400" : ""}
+          valueClass={openAlerts > 0 ? "text-destructive-fg" : ""}
         />
       </div>
 
@@ -1010,7 +1010,7 @@ function Conversas() {
                   {c.analysis?.tentou_fechar === true && (
                     <Badge
                       variant="outline"
-                      className="text-[10px] text-emerald-600 border-emerald-500/40"
+                      className="text-[10px] text-success-fg border-success/40"
                     >
                       tentou fechar
                     </Badge>
@@ -1064,7 +1064,7 @@ function Conversas() {
                     if (confirm("Apagar conversa?")) del.mutate(c.id);
                   }}
                 >
-                  <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                  <Trash2 className="h-3.5 w-3.5 text-destructive-fg" />
                 </Button>
               </div>
             </CardContent>
@@ -1089,10 +1089,10 @@ function TeamInsightsPanel() {
 
   const prioColor = (p: string) =>
     p === "alta"
-      ? "bg-red-500/15 text-red-600 dark:text-red-400"
+      ? "bg-destructive/15 text-destructive-fg"
       : p === "media"
-        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-        : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
+        ? "bg-warning/15 text-warning-fg"
+        : "bg-success/15 text-success-fg";
 
   return (
     <Card className="border-primary/20">
@@ -1156,7 +1156,7 @@ function TeamInsightsPanel() {
 
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-md border p-3">
-              <div className="text-xs font-semibold text-red-600 dark:text-red-400 mb-2 flex items-center gap-1">
+              <div className="text-xs font-semibold text-destructive-fg mb-2 flex items-center gap-1">
                 <AlertTriangle className="h-3.5 w-3.5" /> Pontos a melhorar (padrões do time)
               </div>
               {data.top_weaknesses.length === 0 && (
@@ -1185,7 +1185,7 @@ function TeamInsightsPanel() {
             </div>
 
             <div className="rounded-md border p-3">
-              <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2 flex items-center gap-1">
+              <div className="text-xs font-semibold text-success-fg mb-2 flex items-center gap-1">
                 <CheckCircle2 className="h-3.5 w-3.5" /> Boas práticas para compartilhar
               </div>
               {data.top_strengths.length === 0 && data.shareable_best_practices.length === 0 && (
@@ -1326,14 +1326,14 @@ function Alertas() {
     nota_baixa: "Nota baixa",
   };
   const sevColor: Record<string, string> = {
-    high: "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30",
-    medium: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    high: "bg-destructive/15 text-destructive-fg border-destructive/30",
+    medium: "bg-warning/15 text-warning-fg border-warning/30",
     low: "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30",
   };
   const stateBadge: Record<string, string> = {
     aberto: "border-slate-300 text-slate-500",
-    visto: "border-amber-400 text-amber-600",
-    resolvido: "border-emerald-400 text-emerald-600",
+    visto: "border-warning text-warning-fg",
+    resolvido: "border-success text-success-fg",
   };
 
   const openCount = alerts.filter(
@@ -1684,7 +1684,7 @@ function ConfigTab() {
                   setForm({ ...current, seller_phones: phones.filter((_, i) => i !== idx) })
                 }
               >
-                <X className="h-3.5 w-3.5 text-rose-500" />
+                <X className="h-3.5 w-3.5 text-destructive-fg" />
               </Button>
             </div>
           ))}
@@ -1747,7 +1747,7 @@ function IntegracaoClint() {
   });
 
   const statusColor = stats?.is_connected
-    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+    ? "bg-success/15 text-success-fg"
     : "bg-slate-500/15 text-slate-600 dark:text-slate-400";
 
   return (
@@ -1845,7 +1845,7 @@ function IntegracaoClint() {
           </Button>
           {migrationSql && (
             <div className="space-y-2">
-              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+              <p className="text-sm text-warning-fg font-medium">
                 {migrationSql}
               </p>
             </div>
@@ -1879,9 +1879,9 @@ function IntegracaoClint() {
                   className={
                     "shrink-0 px-1.5 py-0.5 rounded font-medium " +
                     (log.status === "processed"
-                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                      ? "bg-success/15 text-success-fg"
                       : log.status === "error"
-                        ? "bg-rose-500/15 text-rose-700 dark:text-rose-400"
+                        ? "bg-destructive/15 text-destructive-fg"
                         : "bg-slate-500/15 text-slate-600 dark:text-slate-400")
                   }
                 >
@@ -1890,14 +1890,14 @@ function IntegracaoClint() {
                 <span className="text-muted-foreground shrink-0">{fmtDate(log.created_at)}</span>
                 <span
                   className={
-                    log.event_type === "unknown" ? "font-mono text-amber-500" : "font-mono"
+                    log.event_type === "unknown" ? "font-mono text-warning-fg" : "font-mono"
                   }
                 >
                   {log.event_type === "unknown"
                     ? "⚠ unknown (evento não reconhecido)"
                     : (log.event_type ?? "—")}
                 </span>
-                {log.error_msg && <span className="text-rose-500 truncate">{log.error_msg}</span>}
+                {log.error_msg && <span className="text-destructive-fg truncate">{log.error_msg}</span>}
               </div>
             ))}
           </div>
@@ -2262,7 +2262,7 @@ function PerformanceTab() {
                   icon={<Target className="h-3 w-3" />}
                   label="Conv. lead→venda"
                   value={fmtPct(view.conversaoLead)}
-                  valueClass="text-emerald-600"
+                  valueClass="text-success-fg"
                 />
                 <KpiCard
                   icon={<Sparkles className="h-3 w-3" />}
@@ -2553,7 +2553,7 @@ function DailyBars({ daily }: { daily: PerfResult["daily"] }) {
       </div>
       <div className="flex flex-col gap-1 text-[10px]">
         <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-sm bg-amber-500/80" /> Leads
+          <span className="h-2 w-2 rounded-sm bg-warning/80" /> Leads
         </span>
         <span className="flex items-center gap-1">
           <span className="h-2 w-2 rounded-sm bg-indigo-500/70" /> Atend.
@@ -2702,12 +2702,12 @@ function LigacoesTab() {
           value={String(list.length)}
         />
         <KpiCard
-          icon={<Clock className="h-4 w-4 text-amber-600" />}
+          icon={<Clock className="h-4 w-4 text-warning-fg" />}
           label="Tempo total"
           value={fmtDur(totalDur)}
         />
         <KpiCard
-          icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+          icon={<CheckCircle2 className="h-4 w-4 text-success-fg" />}
           label="Analisadas"
           value={String(analyzed)}
         />
@@ -2949,7 +2949,7 @@ function LigacoesTab() {
 
                   {list(a.pontos_fortes).length > 0 && (
                     <div>
-                      <p className="text-xs font-semibold text-emerald-600 mb-1">Pontos fortes</p>
+                      <p className="text-xs font-semibold text-success-fg mb-1">Pontos fortes</p>
                       <ul className="list-disc pl-5 space-y-0.5">
                         {list(a.pontos_fortes).map((s, i) => (
                           <li key={i}>{s}</li>
@@ -2960,7 +2960,7 @@ function LigacoesTab() {
 
                   {list(a.pontos_melhoria).length > 0 && (
                     <div>
-                      <p className="text-xs font-semibold text-amber-600 mb-1">Pontos a melhorar</p>
+                      <p className="text-xs font-semibold text-warning-fg mb-1">Pontos a melhorar</p>
                       <ul className="list-disc pl-5 space-y-0.5">
                         {list(a.pontos_melhoria).map((s, i) => (
                           <li key={i}>{s}</li>
@@ -2971,7 +2971,7 @@ function LigacoesTab() {
 
                   {list(a.objecoes).length > 0 && (
                     <div>
-                      <p className="text-xs font-semibold text-rose-600 mb-1">Objeções</p>
+                      <p className="text-xs font-semibold text-destructive-fg mb-1">Objeções</p>
                       <ul className="list-disc pl-5 space-y-0.5">
                         {list(a.objecoes).map((s, i) => (
                           <li key={i}>{s}</li>

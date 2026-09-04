@@ -19,13 +19,13 @@ function fmtDate(iso: string | null | undefined) {
 }
 function scoreColor(n: number | null | undefined) {
   if (n == null) return "text-muted-foreground";
-  if (n >= 8) return "text-emerald-600 dark:text-emerald-400";
-  if (n >= 6) return "text-amber-600 dark:text-amber-400";
-  return "text-rose-600 dark:text-rose-400";
+  if (n >= 8) return "text-success-fg";
+  if (n >= 6) return "text-warning-fg";
+  return "text-destructive-fg";
 }
 function sentimentColor(s: string | null | undefined) {
-  if (s === "positivo") return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
-  if (s === "negativo") return "bg-rose-500/15 text-rose-700 dark:text-rose-400";
+  if (s === "positivo") return "bg-success/15 text-success-fg";
+  if (s === "negativo") return "bg-destructive/15 text-destructive-fg";
   return "bg-slate-500/15 text-slate-700 dark:text-slate-300";
 }
 

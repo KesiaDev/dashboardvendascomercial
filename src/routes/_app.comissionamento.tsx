@@ -448,10 +448,10 @@ function Dashboard() {
                     <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
                       {s.comissao_hotmart_direto ? `− ${mm(s.comissao_hotmart_direto)}` : "—"}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                    <td className="px-3 py-2 text-right tabular-nums text-success-fg">
                       {s.bonus_metas_brl ? mm(s.bonus_metas_brl) : "—"}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-amber-600 dark:text-amber-400">
+                    <td className="px-3 py-2 text-right tabular-nums text-warning-fg">
                       {s.roleta_ganho_brl ? mm(s.roleta_ganho_brl) : "—"}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
@@ -710,7 +710,7 @@ function SellerDetail({
               )}
 
               {/* Roleta / Bônus / Descontos — como na planilha */}
-              <tr className="border-b border-border/40 bg-amber-500/5">
+              <tr className="border-b border-border/40 bg-warning/5">
                 <td className="px-3 py-1.5 font-medium">Roleta</td>
                 <td colSpan={4} />
                 <td className="px-3 py-1.5 text-right tabular-nums">{m(roletaBrl)}</td>
@@ -762,7 +762,7 @@ function SellerDetail({
                 key={w.week}
                 className={`rounded-md border px-3 py-2 text-xs ${
                   w.bateu_super
-                    ? "border-emerald-500/50 bg-emerald-500/10"
+                    ? "border-success/50 bg-success/10"
                     : w.bateu_meta
                       ? "border-sky-500/50 bg-sky-500/10"
                       : "border-border/60 bg-muted/20"
