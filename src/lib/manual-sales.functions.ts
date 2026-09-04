@@ -261,9 +261,12 @@ export const createManualSale = createServerFn({ method: "POST" })
       if (d.bonus_semanal_eur != null && d.bonus_semanal_eur !== 30 && d.bonus_semanal_eur !== 60)
         throw new Error("bonus_semanal_eur deve ser 30 ou 60");
       let inst = d.installment_total ?? 1;
-      if (![1, 2, 3].includes(inst)) throw new Error("Parcelas deve ser 1, 2 ou 3");
-      // Regra fixa: venda parcelada de 166 € por parcela = 3x (mês da venda + 2 meses seguintes)
-      if (isParcela166(d.value_eur)) inst = 3;
+      if (!Number.isInteger(inst) || inst < 1 || inst > 6)
+        throw new Error("Parcelas deve ser entre 1 e 6");
+      // Planos fixos (Mentoria 3x166, Accelerator 3x1160 / 6x677 / 3x993 / 6x593):
+      // o valor da parcela já define quantas parcelas são.
+      const plan = detectPaymentPlan(d.value_eur);
+      if (plan) inst = plan.installments;
       return { ...d, installment_total: inst, client_email: normEmail(d.client_email) };
     },
   )
