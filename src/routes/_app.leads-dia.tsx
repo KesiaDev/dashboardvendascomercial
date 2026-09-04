@@ -85,18 +85,37 @@ function LeadsDiaPage() {
             Sessão Estratégica · Minicurso V3 · Ebook V3 — horário de Lisboa
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={selectedMonth}
+            onChange={(e) => applyMonth(e.target.value)}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            aria-label="Escolher mês"
+          >
+            {MONTH_OPTIONS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+            <option value="custom">Período personalizado</option>
+          </select>
           <Input
             type="date"
             value={from}
-            onChange={(e) => setFrom(e.target.value)}
+            onChange={(e) => {
+              setFrom(e.target.value);
+              setSelectedMonth("custom");
+            }}
             className="w-[150px]"
           />
           <span className="text-muted-foreground text-sm">até</span>
           <Input
             type="date"
             value={to}
-            onChange={(e) => setTo(e.target.value)}
+            onChange={(e) => {
+              setTo(e.target.value);
+              setSelectedMonth("custom");
+            }}
             className="w-[150px]"
           />
         </div>
