@@ -428,35 +428,57 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     let leadsSemAtendimento = 0;
     const computeSemAtendimento = startDate >= "2026-08-01";
     if (computeSemAtendimento && leadContactIds.length) {
+      // Este trecho era um N+1 ANINHADO: um for com await por bloco de
+      // contatos e, dentro dele, outro for com await por bloco de conversas —
+      // até 40 iterações externas x N internas, todas em série, sobre colunas
+      // que não tinham índice (clint_contact_id e direction; ambos criados na
+      // migration 20260903120000). Era o candidato mais provável ao timeout de
+      // /coach.
+      //
+      // Agora os dois níveis vão em paralelo: um Promise.all para descobrir as
+      // conversas de todos os blocos de contato, e outro para as mensagens
+      // outbound de todos os blocos de conversa.
       const uniqueContacts = Array.from(new Set(leadContactIds));
       const attendedContacts = new Set<string>();
-      for (let i = 0; i < uniqueContacts.length; i += 500) {
-        const chunk = uniqueContacts.slice(i, i + 500);
-        const { data: convRows } = await supabaseAdmin
-          .from("coach_conversations")
-          .select("id,clint_contact_id")
-          .in("clint_contact_id", chunk)
-          // Um contato pode ter mais de uma conversa.
-          .limit(chunk.length * 10);
-        const convIdList = (convRows ?? []).map((r: any) => r.id);
-        if (!convIdList.length) continue;
-        const convToContact = new Map<string, string>();
+      const contactChunks: string[][] = [];
+      for (let i = 0; i < uniqueContacts.length; i += 500)
+        contactChunks.push(uniqueContacts.slice(i, i + 500));
+
+      const convPages = await Promise.all(
+        contactChunks.map((c) =>
+          supabaseAdmin
+            .from("coach_conversations")
+            .select("id,clint_contact_id")
+            .in("clint_contact_id", c)
+            // Um contato pode ter mais de uma conversa.
+            .limit(c.length * 10),
+        ),
+      );
+
+      const convToContact = new Map<string, string>();
+      for (const { data: convRows } of convPages)
         for (const r of convRows ?? [])
           convToContact.set((r as any).id, (r as any).clint_contact_id);
-        for (let j = 0; j < convIdList.length; j += 500) {
-          const cchunk = convIdList.slice(j, j + 500);
-          const { data: msgs } = await supabaseAdmin
+
+      const convIds = Array.from(convToContact.keys());
+      const convChunks: string[][] = [];
+      for (let j = 0; j < convIds.length; j += 500) convChunks.push(convIds.slice(j, j + 500));
+
+      const msgPages = await Promise.all(
+        convChunks.map((c) =>
+          supabaseAdmin
             .from("coach_messages")
             .select("conversation_id")
             .eq("direction", "outbound")
-            .in("conversation_id", cchunk)
-            .limit(50000);
-          for (const m of msgs ?? []) {
-            const cid = convToContact.get((m as any).conversation_id);
-            if (cid) attendedContacts.add(cid);
-          }
+            .in("conversation_id", c)
+            .limit(50000),
+        ),
+      );
+      for (const { data: msgs } of msgPages)
+        for (const m of msgs ?? []) {
+          const cid = convToContact.get((m as any).conversation_id);
+          if (cid) attendedContacts.add(cid);
         }
-      }
       const semContato = uniqueContacts.filter((c) => !attendedContacts.has(c)).length;
       const semContactId = leadsNovos - leadContactIds.length;
       leadsSemAtendimento = semContato + Math.max(0, semContactId);

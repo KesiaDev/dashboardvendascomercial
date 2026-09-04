@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 /**
  * Versão LEVE do detalhamento V3, usada pelos cards de meta (mensal/trimestral).
@@ -37,20 +38,18 @@ export const fetchOrigemV3ResumoFn = createServerFn({ method: "GET" })
     const pageSize = 1000;
 
     // --- Leads V3 do período (só as colunas necessárias) ---
-    const deals: any[] = [];
-    for (let page = 0; page < 20; page++) {
-      const { data: c, error } = await supabaseAdmin
-        .from("clint_deals")
-        .select("created_at,contact_tags,contact_email")
+    const f = <Q>(q: Q) =>
+      (q as any)
         .eq("origin_name", "PIPELINE_COMERCIAL-V3")
         .gte("created_at", data.from)
-        .lte("created_at", `${data.to}T23:59:59`)
-        .order("created_at", { ascending: false })
-        .range(page * pageSize, page * pageSize + pageSize - 1);
-      if (error) throw new Error(error.message);
-      deals.push(...(c ?? []));
-      if ((c ?? []).length < pageSize) break;
-    }
+        .lte("created_at", `${data.to}T23:59:59`);
+    const deals = await fetchAllRows<any>(
+      ({ from, to }) =>
+        f(supabaseAdmin.from("clint_deals").select("created_at,contact_tags,contact_email"))
+          .order("created_at", { ascending: false })
+          .range(from, to),
+      () => f(supabaseAdmin.from("clint_deals").select("*", { count: "exact", head: true })),
+    );
 
     const acc = new Map<string, OrigemV3ResumoRow>();
     const ensure = (mes: string, origem: string) => {

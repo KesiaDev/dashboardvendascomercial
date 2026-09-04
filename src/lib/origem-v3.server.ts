@@ -95,7 +95,6 @@ export function mainTag(contactTags?: string[] | null): string {
  */
 export function classifyOrigemV3(
   originName: string | null,
-  _raw?: any,
   contactTags?: string[] | null,
 ): { origem: string; campanha: string } {
   const origem = FUNIL_LABEL[originName ?? ""] ?? originName ?? "Sem funil (entrada manual)";

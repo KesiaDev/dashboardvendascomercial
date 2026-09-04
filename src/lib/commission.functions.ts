@@ -225,21 +225,17 @@ export const fetchSalesForCommissionFn = createServerFn({ method: "GET" })
     const db = await admin();
     const cols =
       "transacao,produto_grupo,produto_original,status,data_venda,nome_cliente,email_cliente,nome_afiliado,origem_checkout,faturamento_liquido_brl,preco_total,moeda_original,numero_parcela";
-    const rows: any[] = [];
-    const pageSize = 1000;
-    for (let page = 0; page < 40; page++) {
-      const { data: chunk, error } = await db
-        .from("sales")
-        .select(cols)
+    // Eram até 40 páginas em série, ~40 x latência, no caminho crítico de
+    // /comissionamento. O padrão paralelo já existia em data.functions.ts.
+    const f = <Q>(q: Q) =>
+      (q as any)
         .gte("data_venda", `${data.from}T00:00:00Z`)
-        .lte("data_venda", `${data.to}T23:59:59Z`)
-        .order("data_venda", { ascending: false })
-        .range(page * pageSize, page * pageSize + pageSize - 1);
-      if (error) throw new Error(error.message);
-      rows.push(...(chunk ?? []));
-      if (!chunk || chunk.length < pageSize) break;
-    }
-    return rows;
+        .lte("data_venda", `${data.to}T23:59:59Z`);
+    return await fetchAllRows<Record<string, any>>(
+      ({ from, to }) =>
+        f(db.from("sales").select(cols)).order("data_venda", { ascending: false }).range(from, to),
+      () => f(db.from("sales").select("*", { count: "exact", head: true })),
+    );
   });
 
 // ── Ajustes manuais em vendas (observação / trocar vendedor / excluir) ───────

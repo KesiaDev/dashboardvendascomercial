@@ -1,4 +1,5 @@
 import { canonicalSeller } from "@/lib/commission";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 export const PAGE = 1000;
 
@@ -152,23 +153,17 @@ export async function pagedDeals(
   const selectCols = tagFilter
     ? "origin_name,user_name,status,stage,contact_tags"
     : "origin_name,user_name,status,stage";
-  const rows: any[] = [];
-  for (let page = 0; page < 30; page++) {
-    let q = db
-      .from("clint_deals")
-      .select(selectCols)
-      .gte(column, `${from}T00:00:00Z`)
-      .lte(column, `${to}T23:59:59Z`)
-      .order(column, { ascending: true })
-      .range(page * PAGE, (page + 1) * PAGE - 1);
-    if (column === "lost_at") q = q.eq("status", "LOST");
-    const { data, error } = await q;
-    if (error) throw new Error(error.message);
-    const batch = data ?? [];
-    rows.push(...batch);
-    if (batch.length < PAGE) break;
-  }
-  return rows;
+  // Eram 30 páginas com await dentro do for. Agora vão em paralelo.
+  const f = <Q>(q: Q) => {
+    let out = (q as any).gte(column, `${from}T00:00:00Z`).lte(column, `${to}T23:59:59Z`);
+    if (column === "lost_at") out = out.eq("status", "LOST");
+    return out;
+  };
+  return await fetchAllRows<any>(
+    ({ from: a, to: b }: { from: number; to: number }) =>
+      f(db.from("clint_deals").select(selectCols)).order(column, { ascending: true }).range(a, b),
+    () => f(db.from("clint_deals").select("*", { count: "exact", head: true })),
+  );
 }
 
 export async function fetchManualSales(db: any, from: string, to: string) {

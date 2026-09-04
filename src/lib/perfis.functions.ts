@@ -594,15 +594,15 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     const dealStatus = new Map<string, string>();
     {
       const dealIds = Array.from(new Set(list.map((c) => c.deal_id).filter(Boolean))) as string[];
-      for (let i = 0; i < dealIds.length; i += 200) {
-        const { data: ds } = await db
-          .from("clint_deals")
-          .select("id, status")
-          .in("id", dealIds.slice(i, i + 200))
-          .limit(200);
+      // Blocos em paralelo — antes era await dentro do for.
+      const dealChunks: string[][] = [];
+      for (let i = 0; i < dealIds.length; i += 200) dealChunks.push(dealIds.slice(i, i + 200));
+      const dealPages = await Promise.all(
+        dealChunks.map((c) => db.from("clint_deals").select("id, status").in("id", c).limit(200)),
+      );
+      for (const { data: ds } of dealPages)
         for (const d of (ds ?? []) as any[])
           dealStatus.set(String(d.id), String(d.status ?? "").toUpperCase());
-      }
     }
     const statusOf = (c: any, vendeu: boolean): "ganho" | "perdido" | "aberto" => {
       if (vendeu) return "ganho";
