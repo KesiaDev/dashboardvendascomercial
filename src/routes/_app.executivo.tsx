@@ -1,22 +1,8 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  fetchAllDeals,
-  fetchAllSales,
-  fetchPipelineAreas,
-  fetchOrigins,
-  fetchChannels,
-  fetchTargets,
-  buildAreaMap,
-  filterDealsByArea,
-  rankSellers,
-  computeAreaKpis,
-  findPhantomWonDeals,
-  compareMetaRealizado,
-  periodRange,
-  type Period,
-} from "@/lib/bi";
+import { periodRange, type Period } from "@/lib/bi";
+import { fetchExecutivoDashboardFn } from "@/lib/executivo.functions";
 import { AREA_LABELS, AREA_ORDER, type BusinessArea } from "@/lib/pipeline-areas";
 import { useCurrency } from "@/lib/currency-context";
 import { formatInt, formatPct } from "@/lib/format";
@@ -56,51 +42,37 @@ const COLORS = [
 function Executivo() {
   const [period, setPeriod] = useState<Period>("month");
   const [area, setArea] = useState<BusinessArea>("COMERCIAL");
-  const { format: money, currency, brlPerEur: rate } = useCurrency();
+  // `brlPerEur` não é mais lido aqui: o servidor devolve BRL e `money()` faz a
+  // conversão na exibição. `currency` continua só para rotular o ranking.
+  const { format: money, currency } = useCurrency();
 
-  const { data: deals = [], isLoading } = useQuery({
-    queryKey: ["bi_deals"],
-    queryFn: fetchAllDeals,
-  });
-  const { data: sales = [] } = useQuery({ queryKey: ["bi_sales"], queryFn: fetchAllSales });
-  const { data: pipelineAreas = [] } = useQuery({
-    queryKey: ["bi_pipeline_areas"],
-    queryFn: fetchPipelineAreas,
-  });
-  const { data: origins = [] } = useQuery({ queryKey: ["clint_origins"], queryFn: fetchOrigins });
-  const { data: channels = [] } = useQuery({ queryKey: ["bi_channels"], queryFn: fetchChannels });
-  const { data: targets = [] } = useQuery({ queryKey: ["bi_targets"], queryFn: fetchTargets });
-
-  const areaMap = useMemo(() => buildAreaMap(pipelineAreas), [pipelineAreas]);
-  const dealsInArea = useMemo(
-    () => filterDealsByArea(deals, areaMap, area),
-    [deals, areaMap, area],
-  );
-  const phantomWonIds = useMemo(() => findPhantomWonDeals(deals, sales), [deals, sales]);
   const { start, end } = periodRange(period);
 
-  const metaComparison = useMemo(
-    () => compareMetaRealizado(deals, origins, channels, targets, start, end),
-    [deals, origins, channels, targets, start, end],
-  );
+  // Toda a agregação acontece no servidor (src/lib/executivo.functions.ts).
+  // Esta tela baixava clint_deals e sales INTEIRAS — cerca de 43 MB — e varria
+  // os mesmos arrays ~18 vezes na main thread. Agora chegam ~15 linhas de
+  // resultado.
+  //
+  // A moeda NÃO entra na queryKey de propósito: o servidor devolve tudo em BRL
+  // e o `money()` do currency-context converte na exibição. Trocar BRL/EUR no
+  // toggle deixou de disparar refetch e recálculo.
+  const { data, isLoading } = useQuery({
+    queryKey: ["executivo", period, area],
+    queryFn: () =>
+      fetchExecutivoDashboardFn({
+        data: {
+          from: start ? start.toISOString() : null,
+          to: end ? end.toISOString() : null,
+          area,
+        },
+      }),
+  });
 
-  const kpis = useMemo(
-    () => computeAreaKpis(dealsInArea, start, end, currency, rate, phantomWonIds),
-    [dealsInArea, start, end, currency, rate, phantomWonIds],
-  );
-  const sellers = useMemo(
-    () => rankSellers(dealsInArea, start, end, currency, rate, phantomWonIds),
-    [dealsInArea, start, end, currency, rate, phantomWonIds],
-  );
-
-  // Visão geral por área (para o card "Todas as áreas")
-  const byArea = useMemo(() => {
-    return AREA_ORDER.filter((a) => a !== "TESTES" && a !== "OUTROS").map((a) => {
-      const d = filterDealsByArea(deals, areaMap, a);
-      const k = computeAreaKpis(d, start, end, currency, rate, phantomWonIds);
-      return { area: a, ...k };
-    });
-  }, [deals, areaMap, start, end, currency, rate, phantomWonIds]);
+  const kpis = data?.kpis ?? { leads: 0, won: 0, lost: 0, open: 0, revenue: 0, convRate: 0 };
+  const sellers = data?.sellers ?? [];
+  const byArea = data?.byArea ?? [];
+  const metaComparison = data?.metaComparison ?? [];
+  const phantomWonCount = data?.phantomWonCount ?? 0;
 
   return (
     <div className="space-y-6">
@@ -110,10 +82,10 @@ function Executivo() {
           <p className="text-sm text-muted-foreground">
             Visão consolidada por área de negócio — sem precisar escolher pipeline.
           </p>
-          {phantomWonIds.size > 0 && (
+          {phantomWonCount > 0 && (
             <p className="text-xs text-muted-foreground mt-1">
-              {phantomWonIds.size} ganho{phantomWonIds.size > 1 ? "s" : ""} descontado
-              {phantomWonIds.size > 1 ? "s" : ""} do faturamento: venda cancelada/reembolsada na
+              {phantomWonCount} ganho{phantomWonCount > 1 ? "s" : ""} descontado
+              {phantomWonCount > 1 ? "s" : ""} do faturamento: venda cancelada/reembolsada na
               Hotmart depois de marcada como ganha na Clint.
             </p>
           )}
