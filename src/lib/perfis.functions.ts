@@ -571,24 +571,31 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     );
     const ids = list.map((c) => c.id);
 
-    // Clientes que compraram (fechamento manual) — para conversão por perfil
+    // Vendas registradas no fechamento DENTRO do período (1ª parcela = 1 venda)
+    const vendasPeriodo = (
+      (
+        await db
+          .from("manual_sales")
+          .select("id, client_name, client_email, seller_name, product, funnel, sale_date")
+          .gte("sale_date", from)
+          .lte("sale_date", to)
+          .eq("installment_number", 1)
+          .limit(3000)
+      ).data ?? []
+    ) as any[];
+
     const soldEmails = new Set<string>();
     const soldNames = new Set<string>();
-    {
-      const { data: vendas } = await db
-        .from("manual_sales")
-        .select("client_name, client_email")
-        .limit(5000);
-      for (const v of (vendas ?? []) as any[]) {
-        if (v.client_email) soldEmails.add(String(v.client_email).trim().toLowerCase());
-        if (v.client_name) soldNames.add(normalize(String(v.client_name).trim()));
-      }
+    for (const v of vendasPeriodo) {
+      if (v.client_email) soldEmails.add(String(v.client_email).trim().toLowerCase());
+      if (v.client_name) soldNames.add(normalize(String(v.client_name).trim()));
     }
     const isSold = (c: any) => {
       const em = c.contact_email ? String(c.contact_email).trim().toLowerCase() : "";
       const nm = c.contact_name ? normalize(String(c.contact_name).trim()) : "";
       return (em !== "" && soldEmails.has(em)) || (nm !== "" && soldNames.has(nm));
     };
+
 
     // Status do negócio na Clint (ganho / perdido / aberto)
     const dealStatus = new Map<string, string>();
