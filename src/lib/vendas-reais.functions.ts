@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAdmin } from "@/lib/authz.server";
-import { eurBrlRate } from "./eur-rate";
+import { requireEurBrlRate } from "./eur-rate";
 import { fetchAllRows } from "@/lib/supabase-paging";
 import { APPROVED_STATUS_DB_VALUES } from "./sales-status";
 
@@ -228,7 +228,9 @@ export const getVendasPorVendedorFn = createServerFn({ method: "GET" })
       .order("data_inicio", { ascending: false })
       .limit(1)
       .maybeSingle();
-    const cotacao = eurBrlRate(periodRow);
+    // Falha alta em vez de converter com número inventado: esta função alimenta
+    // o faturamento por vendedor. Ver a nota em src/lib/eur-rate.ts.
+    const cotacao = requireEurBrlRate(periodRow);
 
     type Bucket = {
       seller: string;

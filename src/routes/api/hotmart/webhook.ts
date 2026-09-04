@@ -146,6 +146,25 @@ async function handle(request: Request) {
       });
     }
 
+    // Giro de roleta da venda recém-gravada. Roda DEPOIS do upsert e num
+    // try/catch próprio: uma falha aqui não pode fazer a Hotmart reenviar (e
+    // reduplicar) uma venda que já foi gravada com sucesso.
+    try {
+      const { syncRoletaSpinsFromSales } = await import("@/lib/roleta-auto.server");
+      const dia = String(row.data_venda ?? "").slice(0, 10);
+      if (dia) {
+        const r = await syncRoletaSpinsFromSales(supabaseAdmin, dia, dia);
+        if (r.criados > 0) console.log("[Hotmart webhook] giros criados:", r.criados);
+        if (r.semCotacao > 0)
+          console.warn(
+            "[Hotmart webhook] venda elegível sem cotação no período — giro não gerado:",
+            transacao,
+          );
+      }
+    } catch (e) {
+      console.error("[Hotmart webhook] falha ao gerar giro de roleta:", e);
+    }
+
     console.log("[Hotmart webhook]", event, transacao);
     return new Response(JSON.stringify({ ok: true, transacao }), {
       status: 200,

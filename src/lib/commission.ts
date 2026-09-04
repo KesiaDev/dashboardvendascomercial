@@ -1,4 +1,13 @@
-import { eurBrlRate } from "./eur-rate";
+import { requireEurBrlRate } from "./eur-rate";
+import {
+  bonusMensalEur,
+  bonusSemanalEur,
+  isBonusProduct,
+  isPrimeiraVenda,
+  valorCheioEur,
+  weeksOfPeriod,
+  type WeekSlot,
+} from "./commission-rules";
 import { isApproved } from "./sales-status";
 import { PRODUCT_GROUPS, mapProductToGroup } from "./product-groups";
 import { resolveSaleSeller, sellerFromAffiliate } from "./sck-attribution";
@@ -131,46 +140,10 @@ export function hotmartBaseBrl(sale: SaleRow, cotacao: number): number {
   return moeda === "BRL" ? total : total * cotacao;
 }
 
-// ── Metas de faturamento (EUR) por nível ─────────────────────────────────────
-// N1: Luana · N3: Gisele, Rita, João, Nadal (padrão para novos vendedores)
-// Bônus é cumulativo: bater a super meta paga meta + super meta.
-export type MetaLevelConfig = {
-  level: "N1" | "N3";
-  meta_semanal_eur: number;
-  super_semanal_eur: number;
-  bonus_semanal_eur: number;
-  meta_mensal_eur: number;
-  super_mensal_eur: number;
-  bonus_mensal_eur: number;
-};
-
-export const META_LEVELS: Record<"N1" | "N3", MetaLevelConfig> = {
-  N1: {
-    level: "N1",
-    meta_semanal_eur: 900,
-    super_semanal_eur: 1600,
-    bonus_semanal_eur: 25,
-    meta_mensal_eur: 3600,
-    super_mensal_eur: 6400,
-    bonus_mensal_eur: 25,
-  },
-  N3: {
-    level: "N3",
-    meta_semanal_eur: 1200,
-    super_semanal_eur: 2100,
-    bonus_semanal_eur: 30,
-    meta_mensal_eur: 4800,
-    super_mensal_eur: 8400,
-    bonus_mensal_eur: 30,
-  },
-};
-
-const META_N1_SELLERS = ["luana"];
-
-export function metaLevelFor(sellerName: string): MetaLevelConfig {
-  const n = (sellerName ?? "").trim().toLowerCase();
-  return META_N1_SELLERS.some((s) => n.includes(s)) ? META_LEVELS.N1 : META_LEVELS.N3;
-}
+// ── Metas de faturamento (EUR) ───────────────────────────────────────────────
+// As faixas vivem em src/lib/commission-rules.ts e são IGUAIS para todos os
+// vendedores. Substituíram o modelo N1/N3, que tinha metas diferentes por
+// pessoa e pagava de forma cumulativa (meta + super).
 
 export type MetaWeekResult = {
   week: number;
@@ -183,8 +156,6 @@ export type MetaWeekResult = {
 };
 
 export type MetaResult = {
-  level: "N1" | "N3";
-  config: MetaLevelConfig;
   semanas: MetaWeekResult[];
   bonus_semanal_total_eur: number;
   faturamento_mensal_eur: number;
@@ -269,6 +240,10 @@ export type AttributedSaleRow = SaleRow & {
   conflito_afiliado: string | null;
   base_brl: number;
   override: SaleOverride | null;
+  /** Venda nova (não é renovação). Ver isPrimeiraVenda em commission-rules.ts. */
+  primeira_venda: boolean;
+  /** Valor cheio do produto em EUR — base dos cortes da roleta. */
+  valor_cheio_eur: number | null;
 };
 
 export type SellerCommission = {
@@ -329,7 +304,9 @@ export function calculateCommissions(
 ): CommissionSummary {
   const start = new Date(`${period.data_inicio}T00:00:00`);
   const end = new Date(`${period.data_fim}T23:59:59`);
-  const cotacao = eurBrlRate(period);
+  // Sem cotação cadastrada no período, o cálculo NÃO prossegue com um valor
+  // inventado: a tela mostra o aviso. Ver a nota em src/lib/eur-rate.ts.
+  const cotacao = requireEurBrlRate(period);
   const activeSellers = sellers.filter((s) => s.is_active);
   const sellerNames = new Set(activeSellers.map((s) => s.seller_name));
 
@@ -380,6 +357,8 @@ export function calculateCommissions(
       source: ov?.excluir ? null : source,
       conflito_afiliado: auto.conflito_afiliado,
       base_brl: hotmartBaseBrl(s, cotacao),
+      primeira_venda: isPrimeiraVenda(produto_grupo, s.produto_original),
+      valor_cheio_eur: valorCheioEur(s.preco_total, s.moeda_original, cotacao),
       override: ov,
     };
   });
@@ -480,7 +459,6 @@ export function calculateCommissions(
     const wise_eur = myWise.reduce((s, w) => s + w.valor_eur, 0);
 
     // ── Metas (EUR): faturamento Hotmart atribuído + Wise ────────────────────
-    const metaCfg = metaLevelFor(sc.seller_name);
     const eurByWeek = new Map<number, number>();
     const wiseEurByWeek = new Map<number, number>();
     const addEur = (dateStr: string | null | undefined, eur: number, isWise = false) => {
@@ -491,42 +469,45 @@ export function calculateCommissions(
       eurByWeek.set(w.week, (eurByWeek.get(w.week) ?? 0) + eur);
       if (isWise) wiseEurByWeek.set(w.week, (wiseEurByWeek.get(w.week) ?? 0) + eur);
     };
-    for (const s of myVendas) addEur(s.data_venda, s.base_brl / cotacao);
+    // Só produtos ELEGÍVEIS contam para a meta: os principais mais a ACC Taxa
+    // Inicial. Renovação e parcela recorrente não entram. Antes, o faturamento
+    // da meta somava TODAS as vendas atribuídas ao vendedor.
+    for (const s of myVendas) {
+      if (!isBonusProduct(s.produto_grupo, s.produto_original)) continue;
+      if (!s.primeira_venda) continue;
+      addEur(s.data_venda, s.base_brl / cotacao);
+    }
     for (const w of myWise) addEur(w.data_pagamento, w.valor_eur, true);
 
     const metaSemanas: MetaWeekResult[] = weeks.map((w) => {
       const fat = eurByWeek.get(w.week) ?? 0;
-      const bateu = fat >= metaCfg.meta_semanal_eur;
-      const super_ = fat >= metaCfg.super_semanal_eur;
+      const bonus = bonusSemanalEur(fat);
       return {
         week: w.week,
         label: w.label,
         faturamento_eur: fat,
         wise_eur: wiseEurByWeek.get(w.week) ?? 0,
-        bateu_meta: bateu,
-        bateu_super: super_,
-        bonus_eur:
-          (bateu ? metaCfg.bonus_semanal_eur : 0) + (super_ ? metaCfg.bonus_semanal_eur : 0),
+        // Mantidos para a interface: "bateu_meta" é a faixa de €30 e
+        // "bateu_super" a de €60. O bônus NÃO é mais cumulativo.
+        bateu_meta: bonus >= 30,
+        bateu_super: bonus >= 60,
+        bonus_eur: bonus,
       };
     });
     const faturamento_mensal_eur = metaSemanas.reduce((s, w) => s + w.faturamento_eur, 0);
-    const bateuMensal = faturamento_mensal_eur >= metaCfg.meta_mensal_eur;
-    const bateuSuperMensal = faturamento_mensal_eur >= metaCfg.super_mensal_eur;
-    const bonusMensalEur =
-      (bateuMensal ? metaCfg.bonus_mensal_eur : 0) +
-      (bateuSuperMensal ? metaCfg.bonus_mensal_eur : 0);
+    const bonusMensal = bonusMensalEur(faturamento_mensal_eur);
+    const bateuMensal = bonusMensal >= 30;
+    const bateuSuperMensal = bonusMensal >= 60;
     const bonusSemanalTotalEur = metaSemanas.reduce((s, w) => s + w.bonus_eur, 0);
 
     const metas: MetaResult = {
-      level: metaCfg.level,
-      config: metaCfg,
       semanas: metaSemanas,
       bonus_semanal_total_eur: bonusSemanalTotalEur,
       faturamento_mensal_eur,
       bateu_meta_mensal: bateuMensal,
       bateu_super_mensal: bateuSuperMensal,
-      bonus_mensal_eur: bonusMensalEur,
-      bonus_total_eur: bonusSemanalTotalEur + bonusMensalEur,
+      bonus_mensal_eur: bonusMensal,
+      bonus_total_eur: bonusSemanalTotalEur + bonusMensal,
     };
 
     const allProductIds = new Set([
@@ -661,22 +642,12 @@ export function calculateCommissions(
 
 // ── Semanas do período ────────────────────────────────────────────────────────
 
-export type WeekSlot = { week: number; label: string; start: Date; end: Date };
-
 export function periodWeeks(period: CommissionPeriod): WeekSlot[] {
-  const weeks: WeekSlot[] = [];
-  const periodEnd = new Date(`${period.data_fim}T23:59:59`);
-  const cursor = new Date(`${period.data_inicio}T00:00:00`);
-  for (let w = 1; w <= 5; w++) {
-    const start = new Date(cursor);
-    if (start > periodEnd) break;
-    const end = new Date(cursor);
-    end.setDate(end.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
-    weeks.push({ week: w, label: `S${w}`, start, end: end > periodEnd ? periodEnd : end });
-    cursor.setDate(cursor.getDate() + 7);
-  }
-  return weeks;
+  // A regra vive em commission-rules.ts: a semana vai sempre de quarta a terça.
+  // A implementação anterior fatiava em blocos fixos de 7 dias a partir do
+  // início do período — o que só coincidia com a semana comercial quando o
+  // período começava numa quarta.
+  return weeksOfPeriod(period.data_inicio, period.data_fim);
 }
 
 export function countSalesBySellerWeek(

@@ -1,37 +1,54 @@
 import { describe, expect, it } from "vitest";
-import { FALLBACK_EUR_BRL, brlToEur, eurBrlRate, eurToBrl } from "./eur-rate";
+import { brlToEur, eurBrlRate, eurToBrl, requireEurBrlRate } from "./eur-rate";
 
-describe("eurBrlRate", () => {
+describe("eurBrlRate — sem fallback, por decisão", () => {
   it("usa a cotação do período quando existe", () => {
-    expect(eurBrlRate({ cotacao_eur: 6.12 })).toBe(6.12);
+    expect(eurBrlRate({ cotacao_eur: 6.01 })).toBe(6.01);
   });
 
-  it("cai no fallback único quando não há período ativo", () => {
-    expect(eurBrlRate(undefined)).toBe(FALLBACK_EUR_BRL);
-    expect(eurBrlRate(null)).toBe(FALLBACK_EUR_BRL);
-    expect(eurBrlRate({})).toBe(FALLBACK_EUR_BRL);
-    expect(eurBrlRate({ cotacao_eur: null })).toBe(FALLBACK_EUR_BRL);
+  // A regra definida em 04/09/2026: sem cotação cadastrada, a tela avisa em vez
+  // de calcular. Um número de pagamento errado é pior que um número ausente —
+  // com fallback ninguém percebe que a cotação do mês não foi cadastrada.
+  it("devolve null quando o período não tem cotação", () => {
+    expect(eurBrlRate(undefined)).toBeNull();
+    expect(eurBrlRate(null)).toBeNull();
+    expect(eurBrlRate({})).toBeNull();
+    expect(eurBrlRate({ cotacao_eur: null })).toBeNull();
   });
 
-  it("ignora cotação inválida em vez de dividir por zero", () => {
-    expect(eurBrlRate({ cotacao_eur: 0 })).toBe(FALLBACK_EUR_BRL);
-    expect(eurBrlRate({ cotacao_eur: -1 })).toBe(FALLBACK_EUR_BRL);
-    expect(eurBrlRate({ cotacao_eur: Number.NaN })).toBe(FALLBACK_EUR_BRL);
+  it("cotação inválida é tratada como ausente, nunca como zero", () => {
+    expect(eurBrlRate({ cotacao_eur: 0 })).toBeNull();
+    expect(eurBrlRate({ cotacao_eur: -1 })).toBeNull();
+    expect(eurBrlRate({ cotacao_eur: Number.NaN })).toBeNull();
   });
 
-  // A regressão que motivou o módulo: /comissionamento exibia o card de cotação
-  // com ?? 5.85 e calculava a tabela de pagamento com ?? 5.86 — mostrava um
-  // número e pagava outro. E /vendas-reais convertia a 6.00.
-  it("exibição e cálculo usam exatamente a mesma cotação", () => {
-    const semPeriodo = undefined;
-    const exibido = eurBrlRate(semPeriodo);
-    const usadoNoCalculo = eurBrlRate(semPeriodo);
-    expect(exibido).toBe(usadoNoCalculo);
+  // A regressão original: /comissionamento exibia o card com ?? 5.85 e calculava
+  // a tabela de pagamento com ?? 5.86 — mostrava um número e pagava outro.
+  it("exibição e cálculo leem exatamente a mesma cotação", () => {
+    const p = { cotacao_eur: 6.01 };
+    expect(eurBrlRate(p)).toBe(eurBrlRate(p));
+  });
+});
+
+describe("requireEurBrlRate — falha alta no servidor", () => {
+  it("devolve a cotação quando existe", () => {
+    expect(requireEurBrlRate({ cotacao_eur: 5.5 })).toBe(5.5);
   });
 
-  it("converte nos dois sentidos de forma consistente", () => {
+  it("lança com mensagem acionável quando não existe", () => {
+    expect(() => requireEurBrlRate(null)).toThrow(/não cadastrada/i);
+  });
+});
+
+describe("conversões", () => {
+  it("convertem nos dois sentidos de forma consistente", () => {
     const p = { cotacao_eur: 5.5 };
     expect(eurToBrl(100, p)).toBe(550);
     expect(brlToEur(550, p)).toBe(100);
+  });
+
+  it("devolvem null sem cotação, em vez de NaN ou zero", () => {
+    expect(eurToBrl(100, null)).toBeNull();
+    expect(brlToEur(550, null)).toBeNull();
   });
 });
