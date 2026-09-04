@@ -29,9 +29,11 @@ export const fetchSellerConfigFn = createServerFn({ method: "GET" })
     const db = await admin();
     const { data, error } = await db
       .from("bi_seller_config")
-      .select(
-        "seller_name,hotmart_affiliate_name,clint_user_name,moeda_padrao,is_active,is_manager",
-      )
+      // Estrela de propósito: `is_manager` é coluna nova e o código pode ir ao
+      // ar antes de a migration rodar. Pedir a coluna pelo nome faria a query
+      // falhar e derrubaria /comissionamento inteira até a migration passar.
+      // A tabela é de configuração, com uma linha por vendedor.
+      .select("*")
       .order("seller_name");
     if (error) throw new Error(error.message);
     return data ?? [];
