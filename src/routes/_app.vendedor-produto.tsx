@@ -1,7 +1,13 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { fetchAllDeals, fetchAllSales, matchSellerProduct, periodRange, type Period } from "@/lib/bi";
+import {
+  fetchAllDeals,
+  fetchAllSales,
+  matchSellerProduct,
+  periodRange,
+  type Period,
+} from "@/lib/bi";
 import { fetchProductConfig } from "@/lib/product-config.functions";
 import { formatInt } from "@/lib/format";
 import { useCurrency } from "@/lib/currency-context";
@@ -17,8 +23,14 @@ export const Route = createFileRoute("/_app/vendedor-produto")({
 function VendedorProduto() {
   const { format: formatBRL } = useCurrency();
   const [period, setPeriod] = useState<Period>("month");
-  const { data: deals = [], isLoading: l1 } = useQuery({ queryKey: ["bi_deals"], queryFn: fetchAllDeals });
-  const { data: sales = [], isLoading: l2 } = useQuery({ queryKey: ["bi_sales"], queryFn: fetchAllSales });
+  const { data: deals = [], isLoading: l1 } = useQuery({
+    queryKey: ["bi_deals"],
+    queryFn: fetchAllDeals,
+  });
+  const { data: sales = [], isLoading: l2 } = useQuery({
+    queryKey: ["bi_sales"],
+    queryFn: fetchAllSales,
+  });
   // Falha silenciosa se a tabela ainda não existir (migration bi_product_config
   // pendente) — nesse caso nenhum produto é filtrado, comportamento de hoje.
   const { data: productConfig = [] } = useQuery({
@@ -33,7 +45,10 @@ function VendedorProduto() {
     [productConfig],
   );
   const activeSales = useMemo(
-    () => (inactiveProductIds.size === 0 ? sales : sales.filter((s) => !inactiveProductIds.has(s.produto_grupo))),
+    () =>
+      inactiveProductIds.size === 0
+        ? sales
+        : sales.filter((s) => !inactiveProductIds.has(s.produto_grupo)),
     [sales, inactiveProductIds],
   );
 
@@ -67,14 +82,17 @@ function VendedorProduto() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Vendedor × Produto</h2>
           <p className="text-sm text-muted-foreground">
-            Cruza vendas aprovadas da Hotmart com negócios ganhos da Clint pelo e-mail do
-            cliente — mostra qual produto cada vendedor mais vende.
+            Cruza vendas aprovadas da Hotmart com negócios ganhos da Clint pelo e-mail do cliente —
+            mostra qual produto cada vendedor mais vende.
           </p>
           {inactiveProductIds.size > 0 && (
             <p className="text-xs text-muted-foreground mt-1">
               {inactiveProductIds.size} produto{inactiveProductIds.size > 1 ? "s" : ""} marcado
               {inactiveProductIds.size > 1 ? "s" : ""} como inativo em{" "}
-              <a href="/areas" className="underline">/areas</a> não entram nesta contagem.
+              <a href="/areas" className="underline">
+                /areas
+              </a>{" "}
+              não entram nesta contagem.
             </p>
           )}
         </div>
@@ -97,14 +115,17 @@ function VendedorProduto() {
         <>
           <Card>
             <CardContent className="flex flex-wrap items-center gap-6 py-4 text-sm">
-            <div>
+              <div>
                 <span className="text-muted-foreground">Vendas com vendedor identificado: </span>
                 <span className="font-semibold">{formatInt(result.matched)}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Sem correspondência na Clint: </span>
                 <span className="font-semibold">{formatInt(result.unmatched)}</span>
-                <span className="text-muted-foreground"> ({formatBRL(result.unmatchedRevenue)})</span>
+                <span className="text-muted-foreground">
+                  {" "}
+                  ({formatBRL(result.unmatchedRevenue)})
+                </span>
               </div>
               <div>
                 <span className="text-muted-foreground">Taxa de identificação: </span>
@@ -125,7 +146,9 @@ function VendedorProduto() {
                     <Badge variant="secondary">#{i + 1}</Badge>
                   </div>
                   <p className="text-xl font-semibold mt-1">{formatBRL(s.revenue)}</p>
-                  <p className="text-xs text-muted-foreground">{formatInt(s.total)} vendas identificadas</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatInt(s.total)} vendas identificadas
+                  </p>
                 </CardHeader>
                 <CardContent className="space-y-1.5">
                   {s.produtos
@@ -149,8 +172,8 @@ function VendedorProduto() {
           {bySeller.length === 0 && (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
-                Nenhuma venda com vendedor identificado ainda. Verifique se há vendas
-                importadas em /import e negócios ganhos sincronizados em /comercial.
+                Nenhuma venda com vendedor identificado ainda. Verifique se há vendas importadas em
+                /import e negócios ganhos sincronizados em /comercial.
               </CardContent>
             </Card>
           )}

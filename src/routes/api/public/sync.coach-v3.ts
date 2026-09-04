@@ -1,12 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { PIPELINE_V3_ORIGIN_IDS, PIPELINE_V3_ORIGIN_NAME } from "@/lib/pipeline-origins";
+
 const CLINT_BASE = "https://api.clint.digital";
-// Both origin IDs named "PIPELINE_COMERCIAL-V3" in Clint (verified via API)
-const PIPELINE_V3_ORIGIN_IDS = [
-  "07fc7c4b-82d2-427d-b09e-04a7f90f16f1",
-  "8c159581-ba93-4fad-a909-f4e204d6faaf",
-];
-const PIPELINE_V3_ORIGIN_NAME = "PIPELINE_COMERCIAL-V3";
 const BATCH_SIZE = 8; // parallel Clint API calls per batch
 
 function checkApiKey(request: Request): boolean {

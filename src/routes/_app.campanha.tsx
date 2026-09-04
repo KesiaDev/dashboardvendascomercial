@@ -44,11 +44,21 @@ function shortName(full: string | null | undefined): string {
   return full.split(" ")[0];
 }
 
-const VENDOR_COLORS = ["#6366f1","#f59e0b","#10b981","#f97316","#8b5cf6"];
+const VENDOR_COLORS = ["#6366f1", "#f59e0b", "#10b981", "#f97316", "#8b5cf6"];
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
-function StatCard({ icon: Icon, label, value, sub }: { icon: React.ElementType; label: string; value: number | string; sub?: string }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: number | string;
+  sub?: string;
+}) {
   return (
     <Card>
       <CardContent className="pt-5 flex items-start gap-4">
@@ -69,7 +79,8 @@ function StatCard({ icon: Icon, label, value, sub }: { icon: React.ElementType; 
 
 function LeadsNovosTab({ leadsNovos }: { leadsNovos: any[] }) {
   const byFunnel = useMemo(() => {
-    const map: Record<string, { name: string; total: number; byVendor: Record<string, number> }> = {};
+    const map: Record<string, { name: string; total: number; byVendor: Record<string, number> }> =
+      {};
     for (const d of leadsNovos) {
       const name = d.origin_name || d.origin_id || "Desconhecido";
       if (!map[name]) map[name] = { name, total: 0, byVendor: {} };
@@ -81,7 +92,8 @@ function LeadsNovosTab({ leadsNovos }: { leadsNovos: any[] }) {
   }, [leadsNovos]);
 
   const byVendor = useMemo(() => {
-    const map: Record<string, { name: string; total: number; funnels: Record<string, number> }> = {};
+    const map: Record<string, { name: string; total: number; funnels: Record<string, number> }> =
+      {};
     for (const d of leadsNovos) {
       const v = shortName(d.user_name) || "(sem dono)";
       if (!map[v]) map[v] = { name: v, total: 0, funnels: {} };
@@ -92,7 +104,12 @@ function LeadsNovosTab({ leadsNovos }: { leadsNovos: any[] }) {
     return Object.values(map).sort((a, b) => b.total - a.total);
   }, [leadsNovos]);
 
-  const chartData = byFunnel.slice(0, 8).map((f) => ({ name: f.name.length > 22 ? f.name.slice(0, 20) + "…" : f.name, total: f.total }));
+  const chartData = byFunnel
+    .slice(0, 8)
+    .map((f) => ({
+      name: f.name.length > 22 ? f.name.slice(0, 20) + "…" : f.name,
+      total: f.total,
+    }));
 
   const semDono = leadsNovos.filter((d) => !d.user_id).length;
   const palestras = leadsNovos.filter((d) => d.origin_id === PALESTRAS_ID).length;
@@ -101,9 +118,14 @@ function LeadsNovosTab({ leadsNovos }: { leadsNovos: any[] }) {
     <div className="space-y-6">
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard icon={Inbox}   label="Total de leads esta semana"         value={leadsNovos.length} />
-        <StatCard icon={Zap}     label="Funis Perpétuos"                    value={leadsNovos.length - palestras} />
-        <StatCard icon={AlertCircle} label="Sem responsável"               value={semDono} sub={semDono > 0 ? "leads sem dono atribuído" : "todos atribuídos ✅"} />
+        <StatCard icon={Inbox} label="Total de leads esta semana" value={leadsNovos.length} />
+        <StatCard icon={Zap} label="Funis Perpétuos" value={leadsNovos.length - palestras} />
+        <StatCard
+          icon={AlertCircle}
+          label="Sem responsável"
+          value={semDono}
+          sub={semDono > 0 ? "leads sem dono atribuído" : "todos atribuídos ✅"}
+        />
       </div>
 
       {/* Chart + vendor table side by side */}
@@ -115,7 +137,9 @@ function LeadsNovosTab({ leadsNovos }: { leadsNovos: any[] }) {
           </CardHeader>
           <CardContent>
             {chartData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">Nenhum lead novo esta semana.</p>
+              <p className="text-sm text-muted-foreground py-6 text-center">
+                Nenhum lead novo esta semana.
+              </p>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 16 }}>
@@ -140,7 +164,9 @@ function LeadsNovosTab({ leadsNovos }: { leadsNovos: any[] }) {
           </CardHeader>
           <CardContent>
             {byVendor.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">Nenhum lead esta semana.</p>
+              <p className="text-sm text-muted-foreground py-6 text-center">
+                Nenhum lead esta semana.
+              </p>
             ) : (
               <div className="space-y-3">
                 {byVendor.map((v, i) => (
@@ -191,8 +217,13 @@ function LeadsNovosTab({ leadsNovos }: { leadsNovos: any[] }) {
               </thead>
               <tbody>
                 {byFunnel.map((f) => (
-                  <tr key={f.name} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                    <td className="py-2.5 pr-4 font-medium max-w-[220px] truncate" title={f.name}>{f.name}</td>
+                  <tr
+                    key={f.name}
+                    className="border-b border-border/50 hover:bg-secondary/30 transition-colors"
+                  >
+                    <td className="py-2.5 pr-4 font-medium max-w-[220px] truncate" title={f.name}>
+                      {f.name}
+                    </td>
                     <td className="py-2.5 pr-4 text-right tabular-nums font-bold">{f.total}</td>
                     <td className="py-2.5">
                       <div className="flex flex-wrap gap-1">
@@ -245,7 +276,16 @@ function RetomadaTab({ retomadaDeals }: { retomadaDeals: any[] }) {
         {CADENCE_WINDOWS.map((w) => (
           <Card key={w.label}>
             <CardContent className="pt-5">
-              <p className="text-sm text-muted-foreground">{w.emoji} {w.label} — {w.label === "D+3" ? "Follow-up Suave" : w.label === "D+7" ? "Prova Social" : w.label === "D+10" ? "Escassez" : "Encerramento"}</p>
+              <p className="text-sm text-muted-foreground">
+                {w.emoji} {w.label} —{" "}
+                {w.label === "D+3"
+                  ? "Follow-up Suave"
+                  : w.label === "D+7"
+                    ? "Prova Social"
+                    : w.label === "D+10"
+                      ? "Escassez"
+                      : "Encerramento"}
+              </p>
               <p className="text-3xl font-black tabular-nums mt-1" style={{ color: w.color }}>
                 {windowTotals[w.label] ?? 0}
               </p>
@@ -258,7 +298,11 @@ function RetomadaTab({ retomadaDeals }: { retomadaDeals: any[] }) {
       {total === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground text-sm">Nenhum lead nos janelas de cadência atualmente.<br/>Os leads aparecem aqui quando o updated_stage_at coincide com D+3/7/10/14.</p>
+            <p className="text-muted-foreground text-sm">
+              Nenhum lead nos janelas de cadência atualmente.
+              <br />
+              Os leads aparecem aqui quando o updated_stage_at coincide com D+3/7/10/14.
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -284,7 +328,10 @@ function RetomadaTab({ retomadaDeals }: { retomadaDeals: any[] }) {
                 <tbody>
                   {allVendors.map((v) => {
                     const row = cadenceByVendor[v];
-                    const rowTotal = CADENCE_WINDOWS.reduce((s, w) => s + (row[w.label]?.length ?? 0), 0);
+                    const rowTotal = CADENCE_WINDOWS.reduce(
+                      (s, w) => s + (row[w.label]?.length ?? 0),
+                      0,
+                    );
                     return (
                       <tr key={v} className="border-b border-border/50 hover:bg-secondary/30">
                         <td className="py-3 pr-6 font-medium flex items-center gap-2">
@@ -321,8 +368,7 @@ function RetomadaTab({ retomadaDeals }: { retomadaDeals: any[] }) {
 
           {/* Per-window detail: list of leads */}
           {CADENCE_WINDOWS.map((w) => {
-            const allInWindow = Object.values(cadenceByVendor)
-              .flatMap((row) => row[w.label] ?? []);
+            const allInWindow = Object.values(cadenceByVendor).flatMap((row) => row[w.label] ?? []);
             if (allInWindow.length === 0) return null;
             return (
               <Card key={w.label}>
@@ -346,14 +392,23 @@ function RetomadaTab({ retomadaDeals }: { retomadaDeals: any[] }) {
                       {allInWindow.map((d: any) => (
                         <tr key={d.id} className="border-b border-border/50 hover:bg-secondary/30">
                           <td className="py-2 pr-4 font-medium">{d.contact_name ?? "—"}</td>
-                          <td className="py-2 pr-4 tabular-nums text-muted-foreground">{d.contact_phone ?? "—"}</td>
-                          <td className="py-2 pr-4">
-                            <Badge variant="outline" className="text-xs">{d.stage ?? "—"}</Badge>
+                          <td className="py-2 pr-4 tabular-nums text-muted-foreground">
+                            {d.contact_phone ?? "—"}
                           </td>
-                          <td className="py-2 pr-4 text-muted-foreground">{shortName(d.user_name)}</td>
+                          <td className="py-2 pr-4">
+                            <Badge variant="outline" className="text-xs">
+                              {d.stage ?? "—"}
+                            </Badge>
+                          </td>
+                          <td className="py-2 pr-4 text-muted-foreground">
+                            {shortName(d.user_name)}
+                          </td>
                           <td className="py-2 text-muted-foreground text-xs">
                             {d.updated_stage_at
-                              ? new Date(d.updated_stage_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+                              ? new Date(d.updated_stage_at).toLocaleDateString("pt-BR", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                })
                               : "—"}
                           </td>
                         </tr>
@@ -420,23 +475,31 @@ function CampanhaPage() {
       <Tabs defaultValue="leads-novos">
         <TabsList>
           <TabsTrigger value="leads-novos">
-            Leads Novos <Badge variant="secondary" className="ml-2">{data?.leadsNovos.length ?? 0}</Badge>
+            Leads Novos{" "}
+            <Badge variant="secondary" className="ml-2">
+              {data?.leadsNovos.length ?? 0}
+            </Badge>
           </TabsTrigger>
           <TabsTrigger value="retomada">
-            Campanha Retomada <Badge variant="secondary" className="ml-2">{data?.retomadaDeals.length ?? 0}</Badge>
+            Campanha Retomada{" "}
+            <Badge variant="secondary" className="ml-2">
+              {data?.retomadaDeals.length ?? 0}
+            </Badge>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="leads-novos" className="mt-6">
           <div className="mb-3 text-xs text-muted-foreground">
-            Semana {weekLabel} · Funis Perpétuos + Palestras (Quem pediu ajuda / Abandono de carrinho)
+            Semana {weekLabel} · Funis Perpétuos + Palestras (Quem pediu ajuda / Abandono de
+            carrinho)
           </div>
           <LeadsNovosTab leadsNovos={data?.leadsNovos ?? []} />
         </TabsContent>
 
         <TabsContent value="retomada" className="mt-6">
           <div className="mb-3 text-xs text-muted-foreground">
-            Leads na Retomada em etapa Base ou Mensagem 1 · grade de follow-up D+3 / D+7 / D+10 / D+14
+            Leads na Retomada em etapa Base ou Mensagem 1 · grade de follow-up D+3 / D+7 / D+10 /
+            D+14
           </div>
           <RetomadaTab retomadaDeals={data?.retomadaDeals ?? []} />
         </TabsContent>

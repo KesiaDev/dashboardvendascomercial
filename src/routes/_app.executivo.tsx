@@ -41,8 +41,16 @@ export const Route = createFileRoute("/_app/executivo")({
 });
 
 const COLORS = [
-  "#8b5cf6", "#6366f1", "#3b82f6", "#06b6d4", "#10b981",
-  "#84cc16", "#f59e0b", "#ef4444", "#ec4899", "#a855f7",
+  "#8b5cf6",
+  "#6366f1",
+  "#3b82f6",
+  "#06b6d4",
+  "#10b981",
+  "#84cc16",
+  "#f59e0b",
+  "#ef4444",
+  "#ec4899",
+  "#a855f7",
 ];
 
 function Executivo() {
@@ -50,7 +58,10 @@ function Executivo() {
   const [area, setArea] = useState<BusinessArea>("COMERCIAL");
   const { format: money, currency, brlPerEur: rate } = useCurrency();
 
-  const { data: deals = [], isLoading } = useQuery({ queryKey: ["bi_deals"], queryFn: fetchAllDeals });
+  const { data: deals = [], isLoading } = useQuery({
+    queryKey: ["bi_deals"],
+    queryFn: fetchAllDeals,
+  });
   const { data: sales = [] } = useQuery({ queryKey: ["bi_sales"], queryFn: fetchAllSales });
   const { data: pipelineAreas = [] } = useQuery({
     queryKey: ["bi_pipeline_areas"],
@@ -61,7 +72,10 @@ function Executivo() {
   const { data: targets = [] } = useQuery({ queryKey: ["bi_targets"], queryFn: fetchTargets });
 
   const areaMap = useMemo(() => buildAreaMap(pipelineAreas), [pipelineAreas]);
-  const dealsInArea = useMemo(() => filterDealsByArea(deals, areaMap, area), [deals, areaMap, area]);
+  const dealsInArea = useMemo(
+    () => filterDealsByArea(deals, areaMap, area),
+    [deals, areaMap, area],
+  );
   const phantomWonIds = useMemo(() => findPhantomWonDeals(deals, sales), [deals, sales]);
   const { start, end } = periodRange(period);
 
@@ -141,20 +155,33 @@ function Executivo() {
         <>
           {/* KPIs da área selecionada */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-            <Kpi title="Leads recebidos" value={formatInt(kpis.leads)} icon={<Users className="h-4 w-4 text-primary" />} />
+            <Kpi
+              title="Leads recebidos"
+              value={formatInt(kpis.leads)}
+              icon={<Users className="h-4 w-4 text-primary" />}
+            />
             <Kpi
               title="Taxa de conversão"
               value={formatPct(kpis.convRate)}
               icon={<Target className="h-4 w-4 text-primary" />}
             />
-            <Kpi title="Vendas (won_at)" value={formatInt(kpis.won)} icon={<Trophy className="h-4 w-4 text-success" />} accent="success" />
+            <Kpi
+              title="Vendas (won_at)"
+              value={formatInt(kpis.won)}
+              icon={<Trophy className="h-4 w-4 text-success" />}
+              accent="success"
+            />
             <Kpi
               title="Faturamento"
               value={money(kpis.revenue)}
               icon={<CircleDollarSign className="h-4 w-4 text-success" />}
               accent="success"
             />
-            <Kpi title="Em aberto" value={formatInt(kpis.open)} icon={<TrendingUp className="h-4 w-4 text-primary" />} />
+            <Kpi
+              title="Em aberto"
+              value={formatInt(kpis.open)}
+              icon={<TrendingUp className="h-4 w-4 text-primary" />}
+            />
           </div>
 
           {/* Ranking de vendedores na área */}
@@ -176,14 +203,33 @@ function Executivo() {
                     margin={{ left: 4, right: 8, top: 8, bottom: 40 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} angle={-20} textAnchor="end" interval={0} height={50} />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                      angle={-20}
+                      textAnchor="end"
+                      interval={0}
+                      height={50}
+                    />
                     <YAxis
                       tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                      tickFormatter={(v) => `${currency === "EUR" ? "€" : "R$"}${Math.round(v / 1000)}k`}
+                      tickFormatter={(v) =>
+                        `${currency === "EUR" ? "€" : "R$"}${Math.round(v / 1000)}k`
+                      }
                     />
                     <Tooltip
-                      contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)" }}
-                      formatter={(v: number) => new Intl.NumberFormat(currency === "EUR" ? "de-DE" : "pt-BR", { style: "currency", currency }).format(v)}
+                      contentStyle={{
+                        background: "var(--popover)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 8,
+                        color: "var(--foreground)",
+                      }}
+                      formatter={(v: number) =>
+                        new Intl.NumberFormat(currency === "EUR" ? "de-DE" : "pt-BR", {
+                          style: "currency",
+                          currency,
+                        }).format(v)
+                      }
                     />
                     <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                       {sellers.map((_, i) => (
@@ -199,7 +245,9 @@ function Executivo() {
           {/* Tabela detalhada por vendedor */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Detalhe por vendedor — {AREA_LABELS[area]}</CardTitle>
+              <CardTitle className="text-base">
+                Detalhe por vendedor — {AREA_LABELS[area]}
+              </CardTitle>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -222,15 +270,21 @@ function Executivo() {
                     return (
                       <tr key={s.user_id} className="border-b border-border/50">
                         <td className="py-2 pr-4">
-                          <Badge variant="secondary" className="text-xs">#{i + 1}</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            #{i + 1}
+                          </Badge>
                         </td>
                         <td className="py-2 pr-4 font-medium">{s.name}</td>
                         <td className="py-2 pr-4 text-right tabular-nums">{formatInt(s.leads)}</td>
-                        <td className="py-2 pr-4 text-right tabular-nums text-success">{formatInt(s.won)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums text-success">
+                          {formatInt(s.won)}
+                        </td>
                         <td className="py-2 pr-4 text-right tabular-nums">{formatInt(s.lost)}</td>
                         <td className="py-2 pr-4 text-right tabular-nums">{formatInt(s.open)}</td>
                         <td className="py-2 pr-4 text-right tabular-nums">{formatPct(conv)}</td>
-                        <td className="py-2 text-right tabular-nums font-semibold">{money(s.revenue)}</td>
+                        <td className="py-2 text-right tabular-nums font-semibold">
+                          {money(s.revenue)}
+                        </td>
                       </tr>
                     );
                   })}
@@ -244,8 +298,8 @@ function Executivo() {
             <CardHeader>
               <CardTitle className="text-base">Meta vs Realizado — Canais de aquisição</CardTitle>
               <p className="text-xs text-muted-foreground">
-                Meta vem da planilha de planejamento 2026. Investimento aparece só como meta —
-                ainda não importamos gasto real de mídia.
+                Meta vem da planilha de planejamento 2026. Investimento aparece só como meta — ainda
+                não importamos gasto real de mídia.
               </p>
             </CardHeader>
             <CardContent>
@@ -256,17 +310,25 @@ function Executivo() {
               ) : (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {metaComparison.map((c) => {
-                    const pct = c.faturamentoMeta > 0 ? c.faturamentoRealizado / c.faturamentoMeta : null;
+                    const pct =
+                      c.faturamentoMeta > 0 ? c.faturamentoRealizado / c.faturamentoMeta : null;
                     const onTrack = pct !== null && pct >= 1;
                     return (
-                      <div key={c.channelId} className="rounded-lg border border-border p-4 space-y-3">
+                      <div
+                        key={c.channelId}
+                        className="rounded-lg border border-border p-4 space-y-3"
+                      >
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-semibold">{c.label}</p>
                           {pct !== null && (
                             <Badge
                               variant={onTrack ? "default" : "secondary"}
                               className="text-xs"
-                              style={onTrack ? { backgroundColor: "var(--success)", color: "white" } : undefined}
+                              style={
+                                onTrack
+                                  ? { backgroundColor: "var(--success)", color: "white" }
+                                  : undefined
+                              }
                             >
                               {formatPct(pct)}
                             </Badge>
@@ -275,10 +337,17 @@ function Executivo() {
 
                         <div>
                           <div className="flex items-baseline justify-between">
-                            <span className="text-lg font-semibold tabular-nums">{money(c.faturamentoRealizado)}</span>
-                            <span className="text-xs text-muted-foreground">meta {money(c.faturamentoMeta)}</span>
+                            <span className="text-lg font-semibold tabular-nums">
+                              {money(c.faturamentoRealizado)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              meta {money(c.faturamentoMeta)}
+                            </span>
                           </div>
-                          <Progress value={Math.min((pct ?? 0) * 100, 100)} className="mt-2 h-1.5" />
+                          <Progress
+                            value={Math.min((pct ?? 0) * 100, 100)}
+                            className="mt-2 h-1.5"
+                          />
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 border-t border-border/50 pt-3">
@@ -288,7 +357,10 @@ function Executivo() {
                             </p>
                             <p className="text-sm font-medium tabular-nums">
                               {formatInt(c.leadsRealizado)}
-                              <span className="text-muted-foreground font-normal"> / {formatInt(Math.round(c.leadsMeta))}</span>
+                              <span className="text-muted-foreground font-normal">
+                                {" "}
+                                / {formatInt(Math.round(c.leadsMeta))}
+                              </span>
                             </p>
                           </div>
                           <div>
@@ -297,14 +369,18 @@ function Executivo() {
                             </p>
                             <p className="text-sm font-medium tabular-nums">
                               {formatInt(c.vendasRealizado)}
-                              <span className="text-muted-foreground font-normal"> / {formatInt(Math.round(c.vendasMeta))}</span>
+                              <span className="text-muted-foreground font-normal">
+                                {" "}
+                                / {formatInt(Math.round(c.vendasMeta))}
+                              </span>
                             </p>
                           </div>
                         </div>
 
                         {c.investimentoMeta > 0 && (
                           <p className="text-xs text-muted-foreground">
-                            Investimento planejado: <span className="font-medium">{money(c.investimentoMeta)}</span>
+                            Investimento planejado:{" "}
+                            <span className="font-medium">{money(c.investimentoMeta)}</span>
                           </p>
                         )}
                       </div>
@@ -318,7 +394,9 @@ function Executivo() {
           {/* Visão consolidada de todas as áreas */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Todas as áreas — {period === "month" ? "este mês" : "período"}</CardTitle>
+              <CardTitle className="text-base">
+                Todas as áreas — {period === "month" ? "este mês" : "período"}
+              </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
               {byArea.map((a) => (
@@ -332,7 +410,8 @@ function Executivo() {
                   <p className="text-sm font-medium text-muted-foreground">{AREA_LABELS[a.area]}</p>
                   <p className="text-xl font-semibold mt-1">{money(a.revenue)}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {formatInt(a.won)} ganhos · {formatInt(a.leads)} leads · {formatPct(a.convRate)} conversão
+                    {formatInt(a.won)} ganhos · {formatInt(a.leads)} leads · {formatPct(a.convRate)}{" "}
+                    conversão
                   </p>
                 </button>
               ))}
@@ -362,7 +441,10 @@ function Kpi({
         {icon}
       </CardHeader>
       <CardContent>
-        <p className="text-2xl font-semibold tracking-tight" style={accent === "success" ? { color: "var(--success)" } : undefined}>
+        <p
+          className="text-2xl font-semibold tracking-tight"
+          style={accent === "success" ? { color: "var(--success)" } : undefined}
+        >
           {value}
         </p>
       </CardContent>

@@ -22,6 +22,7 @@ import {
 import { isRenewalProduct } from "@/lib/product-groups";
 import { useAppAuth } from "@/routes/_app";
 import { canonicalSellerName } from "@/lib/sellers";
+import { isAdminEmail } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -218,10 +219,9 @@ function LoginCard() {
 
 type SaleRow = ManualSale;
 
-const ADMIN_EMAILS = ["kesia@llmidia.com", "kesiawnandi@gmail.com", "kesia@llmidiaco.com"];
-function isAdminEmail(e: string) {
-  return ADMIN_EMAILS.includes((e ?? "").trim().toLowerCase());
-}
+// A lista que ficava aqui era a terceira cópia — e continha
+// "kesia@llmidia.com", sem o "co": um e-mail que não existe. isAdminEmail vem
+// de src/lib/auth.ts.
 
 // O mapa de e-mail → nome que ficava aqui era a quinta cópia da mesma lista.
 // Agora usa src/lib/sellers.ts.

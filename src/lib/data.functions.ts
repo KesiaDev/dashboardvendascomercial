@@ -7,6 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAdmin } from "@/lib/authz.server";
 import { fetchAllRows } from "@/lib/supabase-paging";
+import { PIPELINE_COMERCIAL_ORIGIN_IDS } from "@/lib/pipeline-origins";
 import { z } from "zod";
 
 async function admin() {
@@ -209,12 +210,7 @@ export const fetchPipelineMetricsFn = createServerFn({ method: "GET" })
     nextM.setUTCMonth(nextM.getUTCMonth() + 1);
     const monthEnd = nextM.toISOString().slice(0, 10);
 
-    const PIPELINE_ORIGINS = [
-      "8c159581-ba93-4fad-a909-f4e204d6faaf", // PIPELINE_COMERCIAL-V3
-      "07fc7c4b-82d2-427d-b09e-04a7f90f16f1", // PIPELINE_COMERCIAL-V3 (v2)
-      "f8b0fa1a-5f7b-4402-bb47-b0c4cbdf9090", // Sessão Estratégica (Funil)
-      "dfbc12ac-9f79-404a-82d5-83cd579e683b", // Sessão Estratégica
-    ];
+    const PIPELINE_ORIGINS = PIPELINE_COMERCIAL_ORIGIN_IDS;
 
     // Um mês movimentado passa de 1000 leads, e o PostgREST truncava sem erro:
     // o ciclo médio e a taxa saíam calculados só sobre as primeiras mil linhas.

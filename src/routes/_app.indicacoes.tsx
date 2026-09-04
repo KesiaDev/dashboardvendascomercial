@@ -2,7 +2,17 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { UserPlus, Copy, MessageSquare, Trash2, Pencil, TrendingUp, Users, CheckCircle2, Clock } from "lucide-react";
+import {
+  UserPlus,
+  Copy,
+  MessageSquare,
+  Trash2,
+  Pencil,
+  TrendingUp,
+  Users,
+  CheckCircle2,
+  Clock,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -11,18 +21,38 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  listReferralsFn, createReferralFn, updateReferralStatusFn, updateReferralFn,
-  deleteReferralFn, buildReferralMessage, buildReferralMessageNaoFechou,
-  REFERRAL_STATUSES, type ReferralStatus,
+  listReferralsFn,
+  createReferralFn,
+  updateReferralStatusFn,
+  updateReferralFn,
+  deleteReferralFn,
+  buildReferralMessage,
+  buildReferralMessageNaoFechou,
+  REFERRAL_STATUSES,
+  type ReferralStatus,
 } from "@/lib/referrals.functions";
 import { SELLERS, PRODUCTS } from "@/lib/manual-sales.functions";
 
@@ -105,7 +135,11 @@ function ReferralsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <KpiCard icon={Users} label="Indicações totais" value={String(kpis.total)} />
         <KpiCard icon={Clock} label="Em andamento" value={String(kpis.emAndamento)} />
-        <KpiCard icon={CheckCircle2} label="Convertidas" value={`${kpis.convertidos} (${kpis.taxaConversao.toFixed(0)}%)`} />
+        <KpiCard
+          icon={CheckCircle2}
+          label="Convertidas"
+          value={`${kpis.convertidos} (${kpis.taxaConversao.toFixed(0)}%)`}
+        />
         <KpiCard icon={TrendingUp} label="Receita gerada" value={fmtEur(kpis.receita)} />
       </div>
 
@@ -125,7 +159,9 @@ function ReferralsPage() {
 
         <TabsContent value="ranking" className="mt-6">
           <Card>
-            <CardHeader><CardTitle>Ranking</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Ranking</CardTitle>
+            </CardHeader>
             <CardContent>
               {kpis.ranking.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Sem indicações ainda.</p>
@@ -168,7 +204,9 @@ function KpiCard({ icon: Icon, label, value }: { icon: any; label: string; value
     <Card>
       <CardContent className="pt-6">
         <div className="flex items-center gap-3">
-          <div className="rounded-md bg-primary/10 p-2 text-primary"><Icon className="h-5 w-5" /></div>
+          <div className="rounded-md bg-primary/10 p-2 text-primary">
+            <Icon className="h-5 w-5" />
+          </div>
           <div>
             <p className="text-xs text-muted-foreground">{label}</p>
             <p className="text-2xl font-bold">{value}</p>
@@ -223,58 +261,103 @@ function NovaIndicacaoDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><UserPlus className="mr-2 h-4 w-4" />Nova indicação</Button>
+        <Button>
+          <UserPlus className="mr-2 h-4 w-4" />
+          Nova indicação
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>Registrar indicação</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Registrar indicação</DialogTitle>
+        </DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5">
             <Label>Vendedor *</Label>
-            <Select value={form.seller_name} onValueChange={(v) => setForm({ ...form, seller_name: v })}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <Select
+              value={form.seller_name}
+              onValueChange={(v) => setForm({ ...form, seller_name: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
               <SelectContent>
-                {SELLERS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {SELLERS.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="grid gap-1.5">
             <Label>Cliente que indicou *</Label>
-            <Input value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
+            <Input
+              value={form.client_name}
+              onChange={(e) => setForm({ ...form, client_name: e.target.value })}
+            />
           </div>
           <div className="grid gap-1.5">
             <Label>E-mail do cliente</Label>
-            <Input value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
+            <Input
+              value={form.client_email}
+              onChange={(e) => setForm({ ...form, client_email: e.target.value })}
+            />
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="grid gap-1.5">
               <Label>Nome do indicado *</Label>
-              <Input value={form.referred_name} onChange={(e) => setForm({ ...form, referred_name: e.target.value })} />
+              <Input
+                value={form.referred_name}
+                onChange={(e) => setForm({ ...form, referred_name: e.target.value })}
+              />
             </div>
             <div className="grid gap-1.5">
               <Label>WhatsApp</Label>
-              <Input value={form.referred_phone} onChange={(e) => setForm({ ...form, referred_phone: e.target.value })} />
+              <Input
+                value={form.referred_phone}
+                onChange={(e) => setForm({ ...form, referred_phone: e.target.value })}
+              />
             </div>
           </div>
           <div className="grid gap-1.5">
             <Label>E-mail do indicado</Label>
-            <Input value={form.referred_email} onChange={(e) => setForm({ ...form, referred_email: e.target.value })} />
+            <Input
+              value={form.referred_email}
+              onChange={(e) => setForm({ ...form, referred_email: e.target.value })}
+            />
           </div>
           <div className="grid gap-1.5">
             <Label>Produto de interesse</Label>
-            <Select value={form.product_interest} onValueChange={(v) => setForm({ ...form, product_interest: v })}>
-              <SelectTrigger><SelectValue placeholder="Selecione (opcional)" /></SelectTrigger>
+            <Select
+              value={form.product_interest}
+              onValueChange={(v) => setForm({ ...form, product_interest: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione (opcional)" />
+              </SelectTrigger>
               <SelectContent>
-                {PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                {PRODUCTS.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="grid gap-1.5">
             <Label>Contexto / notas</Label>
-            <Textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Ex.: sócio do cliente, já viu conteúdo nosso, etc." />
+            <Textarea
+              rows={3}
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="Ex.: sócio do cliente, já viu conteúdo nosso, etc."
+            />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Cancelar
+          </Button>
           <Button onClick={submit} disabled={create.isPending}>
             {create.isPending ? "Salvando..." : "Salvar"}
           </Button>
@@ -284,9 +367,7 @@ function NovaIndicacaoDialog({ onCreated }: { onCreated: () => void }) {
   );
 }
 
-function ReferralsTable({
-  referrals, onChange,
-}: { referrals: any[]; onChange: () => void }) {
+function ReferralsTable({ referrals, onChange }: { referrals: any[]; onChange: () => void }) {
   const [statusFilter, setStatusFilter] = useState<string>("todos");
 
   const filtered = referrals.filter((r) =>
@@ -296,12 +377,18 @@ function ReferralsTable({
   const updateStatus = useMutation({
     mutationFn: (v: { id: string; status: ReferralStatus; converted_value_eur?: number }) =>
       updateReferralStatusFn({ data: v }),
-    onSuccess: () => { toast.success("Status atualizado"); onChange(); },
+    onSuccess: () => {
+      toast.success("Status atualizado");
+      onChange();
+    },
     onError: (e: any) => toast.error(e?.message ?? "Erro"),
   });
   const del = useMutation({
     mutationFn: (id: string) => deleteReferralFn({ data: { id } }),
-    onSuccess: () => { toast.success("Removido"); onChange(); },
+    onSuccess: () => {
+      toast.success("Removido");
+      onChange();
+    },
     onError: (e: any) => toast.error(e?.message ?? "Erro"),
   });
 
@@ -310,11 +397,15 @@ function ReferralsTable({
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Indicações</CardTitle>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-52">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos os status</SelectItem>
             {REFERRAL_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+              <SelectItem key={s} value={s}>
+                {STATUS_LABEL[s]}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -342,11 +433,15 @@ function ReferralsTable({
             <TableBody>
               {filtered.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="whitespace-nowrap text-xs">{fmtDate(r.created_at)}</TableCell>
+                  <TableCell className="whitespace-nowrap text-xs">
+                    {fmtDate(r.created_at)}
+                  </TableCell>
                   <TableCell className="font-medium">{r.referred_name}</TableCell>
                   <TableCell className="text-xs">
                     {r.referred_phone && <div>{r.referred_phone}</div>}
-                    {r.referred_email && <div className="text-muted-foreground">{r.referred_email}</div>}
+                    {r.referred_email && (
+                      <div className="text-muted-foreground">{r.referred_email}</div>
+                    )}
                   </TableCell>
                   <TableCell className="text-xs">{r.client_name}</TableCell>
                   <TableCell className="text-xs">{r.seller_name}</TableCell>
@@ -358,37 +453,50 @@ function ReferralsTable({
                         if (v === "convertido") {
                           const raw = window.prompt("Valor convertido em € (opcional):", "");
                           const val = raw ? Number(raw.replace(",", ".")) : undefined;
-                          updateStatus.mutate({ id: r.id, status: v as ReferralStatus, converted_value_eur: val });
+                          updateStatus.mutate({
+                            id: r.id,
+                            status: v as ReferralStatus,
+                            converted_value_eur: val,
+                          });
                         } else {
                           updateStatus.mutate({ id: r.id, status: v as ReferralStatus });
                         }
                       }}
                     >
                       <SelectTrigger className="h-8 w-36">
-                        <Badge variant="secondary" className={STATUS_COLOR[r.status as ReferralStatus]}>
+                        <Badge
+                          variant="secondary"
+                          className={STATUS_COLOR[r.status as ReferralStatus]}
+                        >
                           {STATUS_LABEL[r.status as ReferralStatus]}
                         </Badge>
                       </SelectTrigger>
                       <SelectContent>
                         {REFERRAL_STATUSES.map((s) => (
-                          <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+                          <SelectItem key={s} value={s}>
+                            {STATUS_LABEL[s]}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell className="text-right text-xs">{fmtEur(r.converted_value_eur)}</TableCell>
+                  <TableCell className="text-right text-xs">
+                    {fmtEur(r.converted_value_eur)}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       <EditarIndicacaoDialog referral={r} onSaved={onChange} />
                       <Button
-                        variant="ghost" size="icon"
-                        onClick={() => { if (confirm("Remover indicação?")) del.mutate(r.id); }}
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (confirm("Remover indicação?")) del.mutate(r.id);
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
-
                 </TableRow>
               ))}
             </TableBody>
@@ -470,58 +578,100 @@ function EditarIndicacaoDialog({ referral, onSaved }: { referral: any; onSaved: 
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>Editar indicação</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Editar indicação</DialogTitle>
+        </DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5">
             <Label>Vendedor</Label>
-            <Select value={form.seller_name} onValueChange={(v) => setForm({ ...form, seller_name: v })}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <Select
+              value={form.seller_name}
+              onValueChange={(v) => setForm({ ...form, seller_name: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
               <SelectContent>
-                {SELLERS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {SELLERS.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="grid gap-1.5">
               <Label>Cliente que indicou</Label>
-              <Input value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
+              <Input
+                value={form.client_name}
+                onChange={(e) => setForm({ ...form, client_name: e.target.value })}
+              />
             </div>
             <div className="grid gap-1.5">
               <Label>E-mail do cliente</Label>
-              <Input value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
+              <Input
+                value={form.client_email}
+                onChange={(e) => setForm({ ...form, client_email: e.target.value })}
+              />
             </div>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="grid gap-1.5">
               <Label>Nome do indicado</Label>
-              <Input value={form.referred_name} onChange={(e) => setForm({ ...form, referred_name: e.target.value })} />
+              <Input
+                value={form.referred_name}
+                onChange={(e) => setForm({ ...form, referred_name: e.target.value })}
+              />
             </div>
             <div className="grid gap-1.5">
               <Label>WhatsApp</Label>
-              <Input value={form.referred_phone} onChange={(e) => setForm({ ...form, referred_phone: e.target.value })} />
+              <Input
+                value={form.referred_phone}
+                onChange={(e) => setForm({ ...form, referred_phone: e.target.value })}
+              />
             </div>
           </div>
           <div className="grid gap-1.5">
             <Label>E-mail do indicado</Label>
-            <Input value={form.referred_email} onChange={(e) => setForm({ ...form, referred_email: e.target.value })} />
+            <Input
+              value={form.referred_email}
+              onChange={(e) => setForm({ ...form, referred_email: e.target.value })}
+            />
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="grid gap-1.5">
               <Label>Produto de interesse</Label>
-              <Select value={form.product_interest} onValueChange={(v) => setForm({ ...form, product_interest: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <Select
+                value={form.product_interest}
+                onValueChange={(v) => setForm({ ...form, product_interest: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
                 <SelectContent>
-                  {PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  {PRODUCTS.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-1.5">
               <Label>Status</Label>
-              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as ReferralStatus })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={form.status}
+                onValueChange={(v) => setForm({ ...form, status: v as ReferralStatus })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {REFERRAL_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+                    <SelectItem key={s} value={s}>
+                      {STATUS_LABEL[s]}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -537,11 +687,17 @@ function EditarIndicacaoDialog({ referral, onSaved }: { referral: any; onSaved: 
           </div>
           <div className="grid gap-1.5">
             <Label>Contexto / notas</Label>
-            <Textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <Textarea
+              rows={3}
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Cancelar
+          </Button>
           <Button
             onClick={() => {
               if (!form.seller_name || !form.client_name || !form.referred_name) {
@@ -600,20 +756,30 @@ function MensagemPadraoCard() {
         <CardContent className="grid gap-3 md:grid-cols-2">
           <div className="grid gap-1.5">
             <Label>Nome do cliente</Label>
-            <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Ex.: Marina" />
+            <Input
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              placeholder="Ex.: Marina"
+            />
           </div>
           <div className="grid gap-1.5">
             <Label>Seu nome (vendedor)</Label>
             <Select value={sellerName} onValueChange={setSellerName}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
               <SelectContent>
-                {SELLERS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {SELLERS.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <p className="md:col-span-2 text-xs text-muted-foreground">
-            Enviar nas primeiras 24–48h após o fechamento (ou após o "não") — quando a conversa ainda está fresca.
-            Use PT-PT para clientes de Portugal.
+            Enviar nas primeiras 24–48h após o fechamento (ou após o "não") — quando a conversa
+            ainda está fresca. Use PT-PT para clientes de Portugal.
           </p>
         </CardContent>
       </Card>
@@ -638,10 +804,19 @@ function MensagemPadraoCard() {
   );
 }
 
-
 function MensagemBlock({
-  title, badge, badgeClass, description, message,
-}: { title: string; badge: string; badgeClass: string; description: string; message: string }) {
+  title,
+  badge,
+  badgeClass,
+  description,
+  message,
+}: {
+  title: string;
+  badge: string;
+  badgeClass: string;
+  description: string;
+  message: string;
+}) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-2">
@@ -649,11 +824,17 @@ function MensagemBlock({
           <CardTitle className="text-base flex items-center gap-2">
             <MessageSquare className="h-4 w-4" /> {title}
           </CardTitle>
-          <Badge variant="secondary" className={badgeClass}>{badge}</Badge>
+          <Badge variant="secondary" className={badgeClass}>
+            {badge}
+          </Badge>
         </div>
         <Button
-          variant="outline" size="sm"
-          onClick={() => { navigator.clipboard.writeText(message); toast.success("Copiado"); }}
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            navigator.clipboard.writeText(message);
+            toast.success("Copiado");
+          }}
         >
           <Copy className="mr-2 h-3 w-3" /> Copiar
         </Button>
@@ -665,4 +846,3 @@ function MensagemBlock({
     </Card>
   );
 }
-
