@@ -16,6 +16,7 @@ export const PRODUCTS = [
   "Renovação Accelerator",
   "Master and Scale",
   "Programa Accelerator",
+  "Programa Accelerator - LDP_10 - 01/09",
   "Estrategista de Infoprodutos",
   "Tráfego Master",
   "Outros",
