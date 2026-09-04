@@ -17,7 +17,6 @@ import {
   Swords,
   Bot,
   Megaphone,
-  Network,
 } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -85,7 +84,6 @@ const NAV_SECTIONS = [
       { to: "/agente-ia", label: "Agente IA", icon: Bot, adminOnly: true },
       { to: "/agente", label: "Agente (chat)", icon: Bot, adminOnly: true },
       { to: "/campanha", label: "Campanhas", icon: Megaphone, adminOnly: true },
-      { to: "/areas", label: "Áreas do Pipeline", icon: Network, adminOnly: true },
     ],
   },
 ] as const;
