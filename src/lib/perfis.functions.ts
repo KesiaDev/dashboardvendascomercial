@@ -1017,7 +1017,11 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       total_conversas: comTexto,
       classificadas,
       nao_identificados: Math.max(0, comTexto - classificadas),
+      total_vendas: vendasDetalhe.length,
+      vendas_sem_conversa: vendasDetalhe.filter((v) => v.vinculo === "sem_conversa").length,
+      vendas: vendasDetalhe,
       ranking,
+
     };
   });
 
