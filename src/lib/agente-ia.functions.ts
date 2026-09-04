@@ -176,8 +176,9 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
         .from("coach_conversations")
         .select("id", { count: "exact", head: true })
         .eq("origin_name", V3)
-        .gte("last_message_at", startTS)
-        .lte("last_message_at", endTS),
+        // A conversa conta no período em que COMEÇOU, não na última mensagem.
+        .gte("first_message_at", startTS)
+        .lte("first_message_at", endTS),
       db
         .from("coach_conversations")
         .select(
@@ -185,9 +186,10 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
         )
         .eq("origin_name", V3)
         .eq("is_ai_conversation", true)
-        .gte("last_message_at", startTS)
-        .lte("last_message_at", endTS)
+        .gte("first_message_at", startTS)
+        .lte("first_message_at", endTS)
         .limit(5000),
+
       db
         .from("seller_agenda")
         .select("id,source,scheduled_at,created_at")
@@ -384,6 +386,8 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
         return isAiMessage(m.body, null);
       });
       if (!aiMsgs.length) continue;
+      // Só conta a conversa se a IA iniciou o atendimento dentro do período.
+      if (aiMsgs[0].sent_at < startTS || aiMsgs[0].sent_at > endTS) continue;
 
       conversasIa += 1;
       mensagensIa += aiMsgs.length;
