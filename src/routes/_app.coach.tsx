@@ -79,7 +79,8 @@ import {
   type CallRow,
 } from "@/lib/ccpbx.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { isAdminUser, isAllowedSellerEmail, isCaseOwnerEmail } from "@/lib/auth";
+import { isAllowedSellerEmail, isCaseOwnerEmail } from "@/lib/auth";
+import { useAppAuth } from "@/routes/_app";
 import { CasesTab } from "@/components/coach-cases";
 import { ObjecoesTab } from "@/components/coach-objecoes";
 import { PerfisTab } from "@/components/coach-perfis";
@@ -169,17 +170,10 @@ function scoreColor(n: number | null | undefined) {
 }
 
 function CoachPage() {
-  const [user, setUser] = useState<{ email: string | null; user_metadata?: any } | null>(null);
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(
-        data.user
-          ? { email: data.user.email ?? null, user_metadata: data.user.user_metadata }
-          : null,
-      );
-    });
-  }, []);
-  const isAdmin = isAdminUser(user);
+  // supabase.auth.getUser() é uma requisição de REDE ao GoTrue, e rodava aqui como
+  // terceira verificação de identidade em série (layout → esta → queries) antes de
+  // qualquer dado da página começar a carregar. O layout já resolveu isto.
+  const { user, admin: isAdmin } = useAppAuth();
   const sellerNameGuess = user?.email ? displaySellerName(user.email) : null;
   const isAllowedSeller = isAllowedSellerEmail(user?.email);
   const isCaseOwner = isCaseOwnerEmail(user?.email);

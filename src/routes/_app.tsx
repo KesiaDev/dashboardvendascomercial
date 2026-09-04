@@ -1,5 +1,6 @@
 import { Link, Outlet, createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import {
   ClipboardCheck,
   CalendarDays,
@@ -45,32 +46,60 @@ const ALL_NAV_ITEMS = [
   { to: "/usuarios", label: "Usuários", icon: Users, adminOnly: true },
 ] as const;
 
+export type AppUser = { email: string | null; user_metadata?: any } | null;
+
+export type AppAuth = {
+  session: Session | null;
+  user: AppUser;
+  admin: boolean;
+  /** true enquanto a sessão ainda não foi resolvida. */
+  loading: boolean;
+};
+
+const AppAuthCtx = createContext<AppAuth>({
+  session: null,
+  user: null,
+  admin: false,
+  loading: true,
+});
+
+/**
+ * Sessão já resolvida pelo layout /_app.
+ *
+ * As rotas filhas NÃO devem chamar getSessionFast() nem supabase.auth.getUser()
+ * de novo: /fechamento repetia o mesmo getSessionFast e /coach fazia um
+ * supabase.auth.getUser(), que é uma requisição de rede ao GoTrue, como terceira
+ * verificação em série antes de qualquer dado carregar.
+ */
+export function useAppAuth(): AppAuth {
+  return useContext(AppAuthCtx);
+}
+
 function AppLayout() {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<"loading" | "auth" | "ready">("loading");
-  const [user, setUser] = useState<{ email: string | null; user_metadata?: any } | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AppUser>(null);
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
     let cancelled = false;
-    getSessionFast().then((session) => {
+    getSessionFast().then((s) => {
       if (cancelled) return;
+      setSession(s ?? null);
       setUser(
-        session?.user
-          ? { email: session.user.email ?? null, user_metadata: session.user.user_metadata }
-          : null,
+        s?.user ? { email: s.user.email ?? null, user_metadata: s.user.user_metadata } : null,
       );
-      setStatus(session ? "ready" : "auth");
+      setStatus(s ? "ready" : "auth");
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      setSession(s ?? null);
       setUser(
-        session?.user
-          ? { email: session.user.email ?? null, user_metadata: session.user.user_metadata }
-          : null,
+        s?.user ? { email: s.user.email ?? null, user_metadata: s.user.user_metadata } : null,
       );
-      setStatus(session ? "ready" : "auth");
+      setStatus(s ? "ready" : "auth");
     });
     return () => {
       cancelled = true;
@@ -95,14 +124,17 @@ function AppLayout() {
     }
   }, [status, admin, pathname, navigate]);
 
-  if (status !== "ready") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        Carregando…
-      </div>
-    );
-  }
+  const ready = status === "ready";
 
+  const auth = useMemo<AppAuth>(
+    () => ({ session, user, admin, loading: !ready }),
+    [session, user, admin, ready],
+  );
+
+  // Antes, o layout inteiro era substituído por um <div>Carregando…</div> enquanto
+  // a sessão resolvia — inclusive no SSR, onde useEffect nem roda, então o servidor
+  // renderizava essa string para as 26 rotas. Agora o cabeçalho e a navegação
+  // pintam imediatamente e só o conteúdo da rota espera.
   const navItems = ALL_NAV_ITEMS.filter((item) => admin || !item.adminOnly);
 
   async function handleSignOut() {
@@ -169,7 +201,22 @@ function AppLayout() {
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <Outlet />
+        <AppAuthCtx.Provider value={auth}>
+          {ready ? (
+            <Outlet />
+          ) : (
+            <div className="space-y-4" aria-busy="true" aria-live="polite">
+              <div className="h-8 w-64 animate-pulse rounded-md bg-muted" />
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-[104px] animate-pulse rounded-xl bg-muted" />
+                ))}
+              </div>
+              <div className="h-[280px] animate-pulse rounded-xl bg-muted" />
+              <span className="sr-only">Carregando…</span>
+            </div>
+          )}
+        </AppAuthCtx.Provider>
       </main>
     </div>
   );

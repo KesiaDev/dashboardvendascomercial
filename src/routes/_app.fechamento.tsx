@@ -20,28 +20,55 @@ import {
   type ManualSale,
 } from "@/lib/manual-sales.functions";
 import { isRenewalProduct } from "@/lib/product-groups";
-import { getSessionFast } from "@/lib/auth";
+import { useAppAuth } from "@/routes/_app";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  CheckCircle2, LogIn, LogOut, Pencil, Plus, Trash2, X,
-  Search, AlertCircle, RefreshCw, CheckCheck, AlertTriangle, Clock,
+  CheckCircle2,
+  LogIn,
+  LogOut,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+  Search,
+  AlertCircle,
+  RefreshCw,
+  CheckCheck,
+  AlertTriangle,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
 
 export const Route = createFileRoute("/_app/fechamento")({ component: FechamentoPage });
 
@@ -66,12 +93,32 @@ function moneyBrl(v: number) {
 
 function ConfirmBadge({ status }: { status: string }) {
   if (status === "confirmado_hotmart")
-    return <Badge className="bg-emerald-600/20 text-emerald-400 border-emerald-600/30 text-xs gap-1"><CheckCircle2 className="h-3 w-3" />Hotmart ✓</Badge>;
+    return (
+      <Badge className="bg-emerald-600/20 text-emerald-400 border-emerald-600/30 text-xs gap-1">
+        <CheckCircle2 className="h-3 w-3" />
+        Hotmart ✓
+      </Badge>
+    );
   if (status === "confirmado_wise")
-    return <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-xs gap-1"><CheckCircle2 className="h-3 w-3" />Wise ✓</Badge>;
+    return (
+      <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-xs gap-1">
+        <CheckCircle2 className="h-3 w-3" />
+        Wise ✓
+      </Badge>
+    );
   if (status === "nao_encontrado")
-    return <Badge className="bg-red-600/20 text-red-400 border-red-600/30 text-xs gap-1"><AlertCircle className="h-3 w-3" />Não encontrado</Badge>;
-  return <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-600/30 text-xs gap-1"><Search className="h-3 w-3" />Pendente</Badge>;
+    return (
+      <Badge className="bg-red-600/20 text-red-400 border-red-600/30 text-xs gap-1">
+        <AlertCircle className="h-3 w-3" />
+        Não encontrado
+      </Badge>
+    );
+  return (
+    <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-600/30 text-xs gap-1">
+      <Search className="h-3 w-3" />
+      Pendente
+    </Badge>
+  );
 }
 
 // ── Componente de lookup inline ──────────────────────────────────────────────
@@ -85,7 +132,8 @@ function EmailLookup({ email, saleDate }: { email: string; saleDate: string }) {
   });
 
   if (!email || !email.includes("@")) return null;
-  if (isFetching) return <p className="text-xs text-muted-foreground mt-1">Buscando no Hotmart...</p>;
+  if (isFetching)
+    return <p className="text-xs text-muted-foreground mt-1">Buscando no Hotmart...</p>;
 
   if (!matches || matches.length === 0)
     return (
@@ -98,7 +146,10 @@ function EmailLookup({ email, saleDate }: { email: string; saleDate: string }) {
   return (
     <div className="mt-1 space-y-1">
       {matches.map((m) => (
-        <div key={m.id} className="flex items-center gap-2 rounded-md bg-emerald-950/30 border border-emerald-800/40 px-2.5 py-1.5 text-xs">
+        <div
+          key={m.id}
+          className="flex items-center gap-2 rounded-md bg-emerald-950/30 border border-emerald-800/40 px-2.5 py-1.5 text-xs"
+        >
           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
           <span className="text-emerald-300 font-medium">{m.produto_original}</span>
           <span className="text-muted-foreground">·</span>
@@ -115,14 +166,11 @@ function EmailLookup({ email, saleDate }: { email: string; saleDate: string }) {
 // ── Página principal ─────────────────────────────────────────────────────────
 
 function FechamentoPage() {
-  const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getSessionFast().then((s) => { setSession(s); setLoading(false); });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => sub.subscription.unsubscribe();
-  }, []);
+  // A sessão já foi resolvida pelo layout /_app. Antes, esta página chamava
+  // getSessionFast() de novo e assinava onAuthStateChange pela segunda vez,
+  // adicionando um round-trip em série depois do portão que já tinha esperado
+  // exatamente a mesma coisa.
+  const { session, loading } = useAppAuth();
 
   if (loading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
   if (!session) return <LoginCard />;
@@ -139,16 +187,26 @@ function LoginCard() {
           <CardDescription>Entre com seu Gmail para registrar suas vendas do dia.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button className="w-full" disabled={busy} onClick={async () => {
-            setBusy(true);
-            window.sessionStorage.setItem("dashcomercial_google_next", "/fechamento");
-            const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/auth/callback` });
-            if ((res as any)?.error) {
-              const message = String((res as any).error?.message ?? (res as any).error);
-              toast.error(message === "Sign in was cancelled" ? "Login cancelado ou interrompido. Toque em Entrar com Google novamente." : `Falha no login: ${message}`);
-              setBusy(false);
-            }
-          }}>
+          <Button
+            className="w-full"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              window.sessionStorage.setItem("dashcomercial_google_next", "/fechamento");
+              const res = await lovable.auth.signInWithOAuth("google", {
+                redirect_uri: `${window.location.origin}/auth/callback`,
+              });
+              if ((res as any)?.error) {
+                const message = String((res as any).error?.message ?? (res as any).error);
+                toast.error(
+                  message === "Sign in was cancelled"
+                    ? "Login cancelado ou interrompido. Toque em Entrar com Google novamente."
+                    : `Falha no login: ${message}`,
+                );
+                setBusy(false);
+              }
+            }}
+          >
             <LogIn className="mr-2 h-4 w-4" /> Entrar com Google
           </Button>
         </CardContent>
@@ -160,7 +218,9 @@ function LoginCard() {
 type SaleRow = ManualSale;
 
 const ADMIN_EMAILS = ["kesia@llmidia.com", "kesiawnandi@gmail.com", "kesia@llmidiaco.com"];
-function isAdminEmail(e: string) { return ADMIN_EMAILS.includes((e ?? "").trim().toLowerCase()); }
+function isAdminEmail(e: string) {
+  return ADMIN_EMAILS.includes((e ?? "").trim().toLowerCase());
+}
 
 // Normaliza vendedor: mapeia e-mails corporativos para o nome canônico
 const SELLER_CANONICAL: Record<string, string> = {
@@ -205,7 +265,15 @@ function FechamentoForm({ session }: { session: any }) {
     bonus: "" | "30" | "60";
     installments: "1" | "2" | "3";
   };
-  const emptyItem = (): Item => ({ product: "", value: "", clientName: "", clientEmail: "", roleta: "", bonus: "", installments: "1" });
+  const emptyItem = (): Item => ({
+    product: "",
+    value: "",
+    clientName: "",
+    clientEmail: "",
+    roleta: "",
+    bonus: "",
+    installments: "1",
+  });
   /** Parcela padrão de 166 € (499 € em 3x) — sempre 3 parcelas mensais. */
   const is166 = (v: string) => {
     const n = Number(String(v).replace(",", "."));
@@ -216,8 +284,8 @@ function FechamentoForm({ session }: { session: any }) {
   const updateItem = (i: number, patch: Partial<Item>) =>
     setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   const addItem = () => setItems((arr) => [...arr, emptyItem()]);
-  const removeItem = (i: number) => setItems((arr) => arr.length === 1 ? arr : arr.filter((_, idx) => idx !== i));
-
+  const removeItem = (i: number) =>
+    setItems((arr) => (arr.length === 1 ? arr : arr.filter((_, idx) => idx !== i)));
 
   const [editing, setEditing] = useState<SaleRow | null>(null);
   const [deleting, setDeleting] = useState<SaleRow | null>(null);
@@ -228,9 +296,10 @@ function FechamentoForm({ session }: { session: any }) {
 
   const { data: sales = [] } = useQuery({
     queryKey: ["manual-sales", monthFrom, isAdmin],
-    queryFn: () => isAdmin
-      ? listManualSalesAdmin({ data: { from: monthFrom } })
-      : listManualSales({ data: { from: monthFrom } }),
+    queryFn: () =>
+      isAdmin
+        ? listManualSalesAdmin({ data: { from: monthFrom } })
+        : listManualSales({ data: { from: monthFrom } }),
   });
 
   const mutation = useMutation({
@@ -251,25 +320,26 @@ function FechamentoForm({ session }: { session: any }) {
               bonus_semanal_eur: it.bonus ? (Number(it.bonus) as 30 | 60) : null,
               installment_total: is166(it.value) ? 3 : Number(it.installments),
             },
-          })
-        )
+          }),
+        ),
       );
       const failed = results.filter((r) => r.status === "rejected");
       if (failed.length) throw new Error(`${failed.length} venda(s) falharam`);
 
       // Conta quantas foram confirmadas automaticamente
       const confirmed = results.filter(
-        (r) => r.status === "fulfilled" && (r.value as any)?.confirmation === "confirmado_hotmart"
+        (r) => r.status === "fulfilled" && (r.value as any)?.confirmation === "confirmado_hotmart",
       ).length;
       return { count: results.length, confirmed };
-
     },
     onSuccess: ({ count, confirmed }) => {
       if (confirmed > 0)
-        toast.success(`${count} venda(s) registrada(s)! ${confirmed} confirmada(s) automaticamente no Hotmart ✅`);
-      else
-        toast.success(`${count} venda(s) registrada(s)! Aguardando confirmação no Hotmart ⏳`);
-      setItems([emptyItem()]); setNotes("");
+        toast.success(
+          `${count} venda(s) registrada(s)! ${confirmed} confirmada(s) automaticamente no Hotmart ✅`,
+        );
+      else toast.success(`${count} venda(s) registrada(s)! Aguardando confirmação no Hotmart ⏳`);
+      setItems([emptyItem()]);
+      setNotes("");
       qc.invalidateQueries();
     },
     onError: (e: any) => toast.error(String(e?.message ?? e)),
@@ -341,9 +411,11 @@ function FechamentoForm({ session }: { session: any }) {
   const monthRenovTotal = monthRenov.reduce((a, s) => a + Number(s.value_eur), 0);
 
   const pendingCount = salesFiltered.filter((s) => s.confirmation_status === "pendente").length;
-  const confirmedCount = salesFiltered.filter((s) => s.confirmation_status === "confirmado_hotmart" || s.confirmation_status === "confirmado_wise").length;
+  const confirmedCount = salesFiltered.filter(
+    (s) =>
+      s.confirmation_status === "confirmado_hotmart" || s.confirmation_status === "confirmado_wise",
+  ).length;
   const mismatchCount = salesFiltered.filter((s) => s.affiliate_mismatch).length;
-
 
   return (
     <>
@@ -363,49 +435,85 @@ function FechamentoForm({ session }: { session: any }) {
               className="grid gap-4 sm:grid-cols-2"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (!seller || !funnel) { toast.error("Selecione vendedor e funil"); return; }
+                if (!seller || !funnel) {
+                  toast.error("Selecione vendedor e funil");
+                  return;
+                }
                 const invalid = items.some((it) => !it.product || !it.value || !it.clientEmail);
-                if (invalid) { toast.error("Produto, valor e e-mail do cliente são obrigatórios"); return; }
+                if (invalid) {
+                  toast.error("Produto, valor e e-mail do cliente são obrigatórios");
+                  return;
+                }
                 mutation.mutate();
               }}
             >
               <div className="space-y-1.5">
                 <Label>Vendedor *</Label>
                 <Select value={seller} onValueChange={setSeller}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
                   <SelectContent>
-                    {SELLERS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    {SELLERS.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
                 <Label>Data da venda *</Label>
-                <Input type="date" value={saleDate} max={today} onChange={(e) => setSaleDate(e.target.value)} />
+                <Input
+                  type="date"
+                  value={saleDate}
+                  max={today}
+                  onChange={(e) => setSaleDate(e.target.value)}
+                />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <Label>Funil onde deu ganho *</Label>
                 <Select value={funnel} onValueChange={setFunnel}>
-                  <SelectTrigger><SelectValue placeholder="Selecione o funil" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o funil" />
+                  </SelectTrigger>
                   <SelectContent className="max-h-72">
-                    {FUNNELS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                    {FUNNELS.map((f) => (
+                      <SelectItem key={f} value={f}>
+                        {f}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="sm:col-span-2 space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold">Produtos vendidos ({items.length})</Label>
+                  <Label className="text-sm font-semibold">
+                    Produtos vendidos ({items.length})
+                  </Label>
                   <Button type="button" variant="outline" size="sm" onClick={addItem}>
                     <Plus className="mr-1 h-3 w-3" /> Adicionar produto
                   </Button>
                 </div>
 
                 {items.map((it, i) => (
-                  <div key={i} className="rounded-lg border border-border/60 bg-card/40 p-3 space-y-3">
+                  <div
+                    key={i}
+                    className="rounded-lg border border-border/60 bg-card/40 p-3 space-y-3"
+                  >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-muted-foreground">Venda #{i + 1}</span>
+                      <span className="text-xs font-semibold text-muted-foreground">
+                        Venda #{i + 1}
+                      </span>
                       {items.length > 1 && (
-                        <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-destructive hover:text-destructive" onClick={() => removeItem(i)}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-destructive hover:text-destructive"
+                          onClick={() => removeItem(i)}
+                        >
                           <X className="h-3 w-3" />
                         </Button>
                       )}
@@ -414,25 +522,45 @@ function FechamentoForm({ session }: { session: any }) {
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label className="text-xs">Produto *</Label>
-                        <Select value={it.product} onValueChange={(v) => updateItem(i, { product: v })}>
-                          <SelectTrigger><SelectValue placeholder="Selecione o produto" /></SelectTrigger>
+                        <Select
+                          value={it.product}
+                          onValueChange={(v) => updateItem(i, { product: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o produto" />
+                          </SelectTrigger>
                           <SelectContent>
-                            {PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                            {PRODUCTS.map((p) => (
+                              <SelectItem key={p} value={p}>
+                                {p}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Valor (EUR) *</Label>
-                        <Input type="text" inputMode="decimal" placeholder="ex: 1497.00" value={it.value} onChange={(e) => updateItem(i, { value: e.target.value })} />
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="ex: 1497.00"
+                          value={it.value}
+                          onChange={(e) => updateItem(i, { value: e.target.value })}
+                        />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Nome do cliente</Label>
-                        <Input value={it.clientName} onChange={(e) => updateItem(i, { clientName: e.target.value })} />
+                        <Input
+                          value={it.clientName}
+                          onChange={(e) => updateItem(i, { clientName: e.target.value })}
+                        />
                       </div>
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label className="text-xs flex items-center gap-1">
                           E-mail do cliente *
-                          <span className="text-muted-foreground font-normal">(usado para confirmar no Hotmart)</span>
+                          <span className="text-muted-foreground font-normal">
+                            (usado para confirmar no Hotmart)
+                          </span>
                         </Label>
                         <Input
                           type="email"
@@ -445,44 +573,59 @@ function FechamentoForm({ session }: { session: any }) {
                         <EmailLookup email={it.clientEmail} saleDate={saleDate} />
                       </div>
 
-
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label className="text-xs">Parcelamento</Label>
                         <Select
                           value={is166(it.value) ? "3" : it.installments}
                           disabled={is166(it.value)}
-                          onValueChange={(v) => updateItem(i, { installments: v as "1" | "2" | "3" })}
+                          onValueChange={(v) =>
+                            updateItem(i, { installments: v as "1" | "2" | "3" })
+                          }
                         >
-                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="1">À vista (1x)</SelectItem>
                             <SelectItem value="2">2x — agenda +1 parcela no próximo mês</SelectItem>
-                            <SelectItem value="3">3x — agenda +2 parcelas nos próximos meses</SelectItem>
+                            <SelectItem value="3">
+                              3x — agenda +2 parcelas nos próximos meses
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                         {is166(it.value) ? (
                           <p className="text-xs text-amber-600 dark:text-amber-400">
-                            Regra fixa: parcela de 166 € é sempre <b>3x</b> — as 2 parcelas seguintes entram
-                            automaticamente nos 2 meses seguintes (mesmo dia da venda).
+                            Regra fixa: parcela de 166 € é sempre <b>3x</b> — as 2 parcelas
+                            seguintes entram automaticamente nos 2 meses seguintes (mesmo dia da
+                            venda).
                           </p>
                         ) : it.installments !== "1" && it.value ? (
                           <p className="text-xs text-muted-foreground">
-                            Serão criadas <b>{Number(it.installments) - 1}</b> parcela(s) futura(s) de {moneyEur(Number(it.value.replace(",", ".")) || 0)} pendentes de pagamento.
+                            Serão criadas <b>{Number(it.installments) - 1}</b> parcela(s) futura(s)
+                            de {moneyEur(Number(it.value.replace(",", ".")) || 0)} pendentes de
+                            pagamento.
                           </p>
                         ) : null}
                       </div>
-
 
                       {/* Roleta e bônus semanal — visíveis só para admin (cálculo definido depois) */}
                       {isAdmin && (
                         <>
                           <div className="space-y-1.5">
-                            <Label className="text-xs">Giro de roleta? <span className="text-muted-foreground">(admin)</span></Label>
+                            <Label className="text-xs">
+                              Giro de roleta? <span className="text-muted-foreground">(admin)</span>
+                            </Label>
                             <Select
                               value={it.roleta || "none"}
-                              onValueChange={(v) => updateItem(i, { roleta: v === "none" ? "" : (v as "mentoria" | "accelerator") })}
+                              onValueChange={(v) =>
+                                updateItem(i, {
+                                  roleta: v === "none" ? "" : (v as "mentoria" | "accelerator"),
+                                })
+                              }
                             >
-                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="none">Não dá roleta</SelectItem>
                                 <SelectItem value="mentoria">Roleta Mentoria</SelectItem>
@@ -491,12 +634,19 @@ function FechamentoForm({ session }: { session: any }) {
                             </Select>
                           </div>
                           <div className="space-y-1.5">
-                            <Label className="text-xs">Conta p/ bônus semanal? <span className="text-muted-foreground">(admin)</span></Label>
+                            <Label className="text-xs">
+                              Conta p/ bônus semanal?{" "}
+                              <span className="text-muted-foreground">(admin)</span>
+                            </Label>
                             <Select
                               value={it.bonus || "none"}
-                              onValueChange={(v) => updateItem(i, { bonus: v === "none" ? "" : (v as "30" | "60") })}
+                              onValueChange={(v) =>
+                                updateItem(i, { bonus: v === "none" ? "" : (v as "30" | "60") })
+                              }
                             >
-                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="none">Não conta</SelectItem>
                                 <SelectItem value="30">Sim · €30</SelectItem>
@@ -510,10 +660,11 @@ function FechamentoForm({ session }: { session: any }) {
                   </div>
                 ))}
 
-
                 <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm">
                   <span className="text-muted-foreground">Total deste fechamento</span>
-                  <span className="font-bold tabular-nums">{items.length} venda(s) · {moneyEur(formTotal)}</span>
+                  <span className="font-bold tabular-nums">
+                    {items.length} venda(s) · {moneyEur(formTotal)}
+                  </span>
                 </div>
               </div>
 
@@ -528,7 +679,8 @@ function FechamentoForm({ session }: { session: any }) {
                   {mutation.isPending ? "Salvando..." : `Registrar ${items.length} venda(s)`}
                 </Button>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  O e-mail do cliente é cruzado automaticamente com o Hotmart para confirmar a venda.
+                  O e-mail do cliente é cruzado automaticamente com o Hotmart para confirmar a
+                  venda.
                 </p>
               </div>
             </form>
@@ -551,7 +703,9 @@ function FechamentoForm({ session }: { session: any }) {
                   <SelectContent>
                     <SelectItem value="todos">Todos os vendedores</SelectItem>
                     {SELLERS.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -587,7 +741,9 @@ function FechamentoForm({ session }: { session: any }) {
                   onClick={() => reconfirmMut.mutate()}
                   disabled={reconfirmMut.isPending}
                 >
-                  <RefreshCw className={cn("mr-2 h-3.5 w-3.5", reconfirmMut.isPending && "animate-spin")} />
+                  <RefreshCw
+                    className={cn("mr-2 h-3.5 w-3.5", reconfirmMut.isPending && "animate-spin")}
+                  />
                   Re-verificar {pendingCount} pendente(s) no Hotmart
                 </Button>
               )}
@@ -595,13 +751,13 @@ function FechamentoForm({ session }: { session: any }) {
                 <div className="mt-3 flex items-start gap-2 rounded-md border border-orange-800/40 bg-orange-950/30 px-3 py-2 text-xs text-orange-300">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>
-                    <b>{mismatchCount}</b> venda(s) com afiliado Hotmart diferente do vendedor lançado — revise abaixo (venda por link SCK ou lançamento no vendedor errado).
+                    <b>{mismatchCount}</b> venda(s) com afiliado Hotmart diferente do vendedor
+                    lançado — revise abaixo (venda por link SCK ou lançamento no vendedor errado).
                   </span>
                 </div>
               )}
             </CardContent>
           </Card>
-
 
           {/* Vendas de hoje */}
           <Card>
@@ -623,10 +779,20 @@ function FechamentoForm({ session }: { session: any }) {
             </CardHeader>
             <CardContent className="space-y-2">
               {todaySales.length === 0 && (
-                <p className="text-sm text-muted-foreground">Nenhuma venda registrada hoje ainda.</p>
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma venda registrada hoje ainda.
+                </p>
               )}
               {todaySales.map((s) => (
-                <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })} />
+                <SaleCard
+                  key={s.id}
+                  sale={s}
+                  isAdmin={isAdmin}
+                  onEdit={() => setEditing(s)}
+                  onDelete={() => setDeleting(s)}
+                  onConfirm={() => setConfirmingId(s.id)}
+                  onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })}
+                />
               ))}
             </CardContent>
           </Card>
@@ -640,12 +806,21 @@ function FechamentoForm({ session }: { session: any }) {
                   Parcelas pendentes ({pendingInstallments.length})
                 </CardTitle>
                 <CardDescription>
-                  Parcelas agendadas cujo pagamento ainda não foi confirmado. Marque como paga assim que o cliente pagar.
+                  Parcelas agendadas cujo pagamento ainda não foi confirmado. Marque como paga assim
+                  que o cliente pagar.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
                 {pendingInstallments.map((s) => (
-                  <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })} />
+                  <SaleCard
+                    key={s.id}
+                    sale={s}
+                    isAdmin={isAdmin}
+                    onEdit={() => setEditing(s)}
+                    onDelete={() => setDeleting(s)}
+                    onConfirm={() => setConfirmingId(s.id)}
+                    onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })}
+                  />
                 ))}
               </CardContent>
             </Card>
@@ -674,7 +849,15 @@ function FechamentoForm({ session }: { session: any }) {
                 <p className="text-sm text-muted-foreground">Nenhuma venda registrada neste mês.</p>
               )}
               {salesFiltered.map((s) => (
-                <SaleCard key={s.id} sale={s} isAdmin={isAdmin} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} onConfirm={() => setConfirmingId(s.id)} onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })} />
+                <SaleCard
+                  key={s.id}
+                  sale={s}
+                  isAdmin={isAdmin}
+                  onEdit={() => setEditing(s)}
+                  onDelete={() => setDeleting(s)}
+                  onConfirm={() => setConfirmingId(s.id)}
+                  onMarkPaid={(paid) => markPaidMut.mutate({ id: s.id, paid })}
+                />
               ))}
             </CardContent>
           </Card>
@@ -691,17 +874,21 @@ function FechamentoForm({ session }: { session: any }) {
             <DialogDescription>Escolha o status desta venda manualmente.</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2">
-            {(["confirmado_hotmart", "confirmado_wise", "nao_encontrado", "pendente"] as const).map((st) => (
-              <Button
-                key={st}
-                variant="outline"
-                className="justify-start"
-                onClick={() => confirmingId && confirmMut.mutate({ id: confirmingId, status: st })}
-              >
-                <ConfirmBadge status={st} />
-                <span className="ml-2 capitalize">{st.replace(/_/g, " ")}</span>
-              </Button>
-            ))}
+            {(["confirmado_hotmart", "confirmado_wise", "nao_encontrado", "pendente"] as const).map(
+              (st) => (
+                <Button
+                  key={st}
+                  variant="outline"
+                  className="justify-start"
+                  onClick={() =>
+                    confirmingId && confirmMut.mutate({ id: confirmingId, status: st })
+                  }
+                >
+                  <ConfirmBadge status={st} />
+                  <span className="ml-2 capitalize">{st.replace(/_/g, " ")}</span>
+                </Button>
+              ),
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -712,7 +899,10 @@ function FechamentoForm({ session }: { session: any }) {
             <AlertDialogTitle>Apagar venda?</AlertDialogTitle>
             <AlertDialogDescription>
               {deleting && (
-                <>Esta ação não pode ser desfeita. Venda de <b>{deleting.seller_name}</b> de {moneyEur(Number(deleting.value_eur))} em {fmtDate(deleting.sale_date)}.</>
+                <>
+                  Esta ação não pode ser desfeita. Venda de <b>{deleting.seller_name}</b> de{" "}
+                  {moneyEur(Number(deleting.value_eur))} em {fmtDate(deleting.sale_date)}.
+                </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -733,7 +923,14 @@ function FechamentoForm({ session }: { session: any }) {
 
 // ── Card de venda individual ─────────────────────────────────────────────────
 
-function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm, onMarkPaid }: {
+function SaleCard({
+  sale,
+  isAdmin,
+  onEdit,
+  onDelete,
+  onConfirm,
+  onMarkPaid,
+}: {
   sale: SaleRow;
   isAdmin: boolean;
   onEdit: () => void;
@@ -744,22 +941,40 @@ function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm, onMarkPaid }: {
   const isInstallment = sale.installment_total > 1;
   const isPendingInst = isInstallment && !sale.installment_paid;
   return (
-    <div className={cn("rounded-lg border p-3 text-sm space-y-2", isPendingInst ? "border-yellow-800/50 bg-yellow-950/20" : "border-border/50 bg-card/50")}>
+    <div
+      className={cn(
+        "rounded-lg border p-3 text-sm space-y-2",
+        isPendingInst ? "border-yellow-800/50 bg-yellow-950/20" : "border-border/50 bg-card/50",
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold">{normalizeSeller(sale.seller_name).split(" ")[0]}</span>
             <span className="tabular-nums font-bold">{moneyEur(Number(sale.value_eur))}</span>
             {isInstallment && (
-              <Badge className={cn("text-xs gap-1", isPendingInst ? "bg-yellow-600/20 text-yellow-300 border-yellow-600/40" : "bg-emerald-600/20 text-emerald-300 border-emerald-600/40")}>
-                {isPendingInst ? <Clock className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
-                Parcela {sale.installment_number}/{sale.installment_total}{isPendingInst ? " · pendente" : " · paga"}
+              <Badge
+                className={cn(
+                  "text-xs gap-1",
+                  isPendingInst
+                    ? "bg-yellow-600/20 text-yellow-300 border-yellow-600/40"
+                    : "bg-emerald-600/20 text-emerald-300 border-emerald-600/40",
+                )}
+              >
+                {isPendingInst ? (
+                  <Clock className="h-3 w-3" />
+                ) : (
+                  <CheckCircle2 className="h-3 w-3" />
+                )}
+                Parcela {sale.installment_number}/{sale.installment_total}
+                {isPendingInst ? " · pendente" : " · paga"}
               </Badge>
             )}
             {!isPendingInst && <ConfirmBadge status={sale.confirmation_status} />}
             {sale.affiliate_mismatch && (
               <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30 text-xs gap-1">
-                <AlertTriangle className="h-3 w-3" />Afiliado ≠
+                <AlertTriangle className="h-3 w-3" />
+                Afiliado ≠
               </Badge>
             )}
             {isAdmin && sale.roleta_type && (
@@ -773,30 +988,37 @@ function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm, onMarkPaid }: {
               </Badge>
             )}
           </div>
-          <div className="text-xs text-muted-foreground truncate mt-0.5">{fmtDate(sale.sale_date)} · {sale.product}</div>
+          <div className="text-xs text-muted-foreground truncate mt-0.5">
+            {fmtDate(sale.sale_date)} · {sale.product}
+          </div>
           <div className="text-xs text-muted-foreground truncate">{sale.funnel}</div>
           {(sale.client_name || sale.client_email) && (
             <div className="mt-1 text-xs">
               <span className="text-muted-foreground">Cliente: </span>
               <span className="font-medium">{sale.client_name || "—"}</span>
-              {sale.client_email && <span className="text-muted-foreground"> · {sale.client_email}</span>}
+              {sale.client_email && (
+                <span className="text-muted-foreground"> · {sale.client_email}</span>
+              )}
             </div>
           )}
           {/* Mostra o valor BRL confirmado no Hotmart */}
-          {sale.confirmation_status === "confirmado_hotmart" && sale.confirmed_hotmart_valor_brl && (
-            <div className="mt-1 flex items-center gap-1 text-xs text-emerald-400">
-              <CheckCheck className="h-3 w-3" />
-              Hotmart: {moneyBrl(sale.confirmed_hotmart_valor_brl)}
-            </div>
-          )}
+          {sale.confirmation_status === "confirmado_hotmart" &&
+            sale.confirmed_hotmart_valor_brl && (
+              <div className="mt-1 flex items-center gap-1 text-xs text-emerald-400">
+                <CheckCheck className="h-3 w-3" />
+                Hotmart: {moneyBrl(sale.confirmed_hotmart_valor_brl)}
+              </div>
+            )}
           {sale.affiliate_mismatch && sale.hotmart_nome_afiliado && (
             <div className="mt-1 flex items-center gap-1 text-xs text-orange-400">
               <AlertTriangle className="h-3 w-3" />
-              Afiliado Hotmart: <b>{sale.hotmart_nome_afiliado}</b> — vendedor lançado: <b>{sale.seller_name}</b>
+              Afiliado Hotmart: <b>{sale.hotmart_nome_afiliado}</b> — vendedor lançado:{" "}
+              <b>{sale.seller_name}</b>
             </div>
           )}
-          {sale.notes && <div className="mt-1 text-xs italic text-muted-foreground">"{sale.notes}"</div>}
-
+          {sale.notes && (
+            <div className="mt-1 text-xs italic text-muted-foreground">"{sale.notes}"</div>
+          )}
         </div>
       </div>
       <div className="flex gap-1 flex-wrap">
@@ -804,10 +1026,21 @@ function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm, onMarkPaid }: {
           <Button
             variant={isPendingInst ? "default" : "ghost"}
             size="sm"
-            className={cn("h-7 px-2", isPendingInst && "bg-emerald-600 hover:bg-emerald-700 text-white")}
+            className={cn(
+              "h-7 px-2",
+              isPendingInst && "bg-emerald-600 hover:bg-emerald-700 text-white",
+            )}
             onClick={() => onMarkPaid(!sale.installment_paid)}
           >
-            {isPendingInst ? <><CheckCircle2 className="mr-1 h-3 w-3" /> Marcar pago</> : <><Clock className="mr-1 h-3 w-3" /> Reabrir</>}
+            {isPendingInst ? (
+              <>
+                <CheckCircle2 className="mr-1 h-3 w-3" /> Marcar pago
+              </>
+            ) : (
+              <>
+                <Clock className="mr-1 h-3 w-3" /> Reabrir
+              </>
+            )}
           </Button>
         )}
         <Button variant="ghost" size="sm" className="h-7 px-2" onClick={onEdit}>
@@ -816,7 +1049,12 @@ function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm, onMarkPaid }: {
         <Button variant="ghost" size="sm" className="h-7 px-2" onClick={onConfirm}>
           <CheckCircle2 className="mr-1 h-3 w-3" /> Status
         </Button>
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-destructive hover:text-destructive" onClick={onDelete}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-destructive hover:text-destructive"
+          onClick={onDelete}
+        >
           <Trash2 className="mr-1 h-3 w-3" /> Apagar
         </Button>
       </div>
@@ -826,28 +1064,39 @@ function SaleCard({ sale, isAdmin, onEdit, onDelete, onConfirm, onMarkPaid }: {
 
 // ── Dialog de edição ─────────────────────────────────────────────────────────
 
-function EditDialog({ sale, isAdmin, onClose }: { sale: SaleRow | null; isAdmin: boolean; onClose: () => void }) {
+function EditDialog({
+  sale,
+  isAdmin,
+  onClose,
+}: {
+  sale: SaleRow | null;
+  isAdmin: boolean;
+  onClose: () => void;
+}) {
   const qc = useQueryClient();
   const [form, setForm] = useState<SaleRow | null>(sale);
 
-  useEffect(() => { setForm(sale); }, [sale]);
+  useEffect(() => {
+    setForm(sale);
+  }, [sale]);
 
   const mut = useMutation({
-    mutationFn: () => updateManualSale({
-      data: {
-        id: form!.id,
-        seller_name: form!.seller_name,
-        product: form!.product,
-        funnel: form!.funnel,
-        value_eur: Number(String(form!.value_eur).replace(",", ".")),
-        client_name: form!.client_name ?? undefined,
-        client_email: form!.client_email ?? "",
-        sale_date: form!.sale_date,
-        notes: form!.notes ?? undefined,
-        roleta_type: form!.roleta_type ?? null,
-        bonus_semanal_eur: form!.bonus_semanal_eur ?? null,
-      },
-    }),
+    mutationFn: () =>
+      updateManualSale({
+        data: {
+          id: form!.id,
+          seller_name: form!.seller_name,
+          product: form!.product,
+          funnel: form!.funnel,
+          value_eur: Number(String(form!.value_eur).replace(",", ".")),
+          client_name: form!.client_name ?? undefined,
+          client_email: form!.client_email ?? "",
+          sale_date: form!.sale_date,
+          notes: form!.notes ?? undefined,
+          roleta_type: form!.roleta_type ?? null,
+          bonus_semanal_eur: form!.bonus_semanal_eur ?? null,
+        },
+      }),
 
     onSuccess: () => {
       toast.success("Venda atualizada");
@@ -870,51 +1119,103 @@ function EditDialog({ sale, isAdmin, onClose }: { sale: SaleRow | null; isAdmin:
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Vendedor</Label>
-              <Select value={form.seller_name} onValueChange={(v) => setForm({ ...form, seller_name: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{SELLERS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              <Select
+                value={form.seller_name}
+                onValueChange={(v) => setForm({ ...form, seller_name: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SELLERS.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Data</Label>
-              <Input type="date" max={today} value={form.sale_date} onChange={(e) => setForm({ ...form, sale_date: e.target.value })} />
+              <Input
+                type="date"
+                max={today}
+                value={form.sale_date}
+                onChange={(e) => setForm({ ...form, sale_date: e.target.value })}
+              />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Produto</Label>
               <Select value={form.product} onValueChange={(v) => setForm({ ...form, product: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRODUCTS.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Funil</Label>
               <Select value={form.funnel} onValueChange={(v) => setForm({ ...form, funnel: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{FUNNELS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FUNNELS.map((f) => (
+                    <SelectItem key={f} value={f}>
+                      {f}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Valor (EUR)</Label>
-              <Input value={String(form.value_eur)} onChange={(e) => setForm({ ...form, value_eur: e.target.value as any })} />
+              <Input
+                value={String(form.value_eur)}
+                onChange={(e) => setForm({ ...form, value_eur: e.target.value as any })}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Cliente</Label>
-              <Input value={form.client_name ?? ""} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
+              <Input
+                value={form.client_name ?? ""}
+                onChange={(e) => setForm({ ...form, client_name: e.target.value })}
+              />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>E-mail do cliente *</Label>
-              <Input type="email" required value={form.client_email ?? ""} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
+              <Input
+                type="email"
+                required
+                value={form.client_email ?? ""}
+                onChange={(e) => setForm({ ...form, client_email: e.target.value })}
+              />
               <EmailLookup email={form.client_email ?? ""} saleDate={form.sale_date} />
             </div>
             {isAdmin && (
               <>
                 <div className="space-y-1.5">
-                  <Label>Giro de roleta? <span className="text-muted-foreground text-xs">(admin)</span></Label>
+                  <Label>
+                    Giro de roleta? <span className="text-muted-foreground text-xs">(admin)</span>
+                  </Label>
                   <Select
                     value={form.roleta_type ?? "none"}
-                    onValueChange={(v) => setForm({ ...form, roleta_type: v === "none" ? null : (v as "mentoria" | "accelerator") })}
+                    onValueChange={(v) =>
+                      setForm({
+                        ...form,
+                        roleta_type: v === "none" ? null : (v as "mentoria" | "accelerator"),
+                      })
+                    }
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Não dá roleta</SelectItem>
                       <SelectItem value="mentoria">Roleta Mentoria</SelectItem>
@@ -923,12 +1224,21 @@ function EditDialog({ sale, isAdmin, onClose }: { sale: SaleRow | null; isAdmin:
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Bônus semanal <span className="text-muted-foreground text-xs">(admin)</span></Label>
+                  <Label>
+                    Bônus semanal <span className="text-muted-foreground text-xs">(admin)</span>
+                  </Label>
                   <Select
                     value={form.bonus_semanal_eur ? String(form.bonus_semanal_eur) : "none"}
-                    onValueChange={(v) => setForm({ ...form, bonus_semanal_eur: v === "none" ? null : (Number(v) as 30 | 60) })}
+                    onValueChange={(v) =>
+                      setForm({
+                        ...form,
+                        bonus_semanal_eur: v === "none" ? null : (Number(v) as 30 | 60),
+                      })
+                    }
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Não conta</SelectItem>
                       <SelectItem value="30">Sim · €30</SelectItem>
@@ -940,13 +1250,19 @@ function EditDialog({ sale, isAdmin, onClose }: { sale: SaleRow | null; isAdmin:
             )}
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Observação</Label>
-              <Textarea rows={2} value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+              <Textarea
+                rows={2}
+                value={form.notes ?? ""}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              />
             </div>
           </div>
         )}
 
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
           <Button onClick={() => mut.mutate()} disabled={mut.isPending}>
             {mut.isPending ? "Salvando..." : "Salvar e re-verificar"}
           </Button>
