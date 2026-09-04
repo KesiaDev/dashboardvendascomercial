@@ -851,7 +851,9 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
             sellers: new Map(),
             profissoes: new Map(),
             conversas: [],
+            vendasClientes: [],
             semPergunta: 0,
+
           };
           agg.set(h, a);
         }
