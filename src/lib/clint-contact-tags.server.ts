@@ -25,7 +25,12 @@ export async function runContactTagsBackfill(maxContacts = 100_000) {
       .from("clint_deals")
       .select("id,contact_id,contact_tags,created_at")
       .not("contact_id", "is", null)
-      .is("contact_tags", null)
+      // clint_deals.contact_tags é NOT NULL DEFAULT '{}' (migration 20260803220000),
+      // então `.is("contact_tags", null)` NUNCA casava com nada: o sync rodava a
+      // cada 30 min e processava 0 linhas desde que foi escrito. O que se quer é
+      // "array vazio", que em PostgREST se escreve assim. O backfill manual em
+      // api/public/backfill-contact-tags.ts já filtrava certo, com `!r.contact_tags?.length`.
+      .eq("contact_tags", "{}")
       // só os funis que interessam ao comercial — evita varrer 80k linhas
       .in("origin_name", V3_ORIGIN_NAMES)
       .gte("created_at", since)

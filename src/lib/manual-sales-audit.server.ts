@@ -1,3 +1,5 @@
+import { APPROVED_STATUS_DB_VALUES } from "@/lib/sales-status";
+
 // Auditoria automática do fechamento manual.
 // 1) Reconfere vendas pendentes contra a Hotmart (mesma lógica do botão manual).
 // 2) Gera/atualiza alertas em `commission_alerts` para pendências > 24h e
@@ -13,12 +15,14 @@ function normEmail(e: string | null | undefined) {
 }
 
 function firstNameNorm(name: string | null | undefined) {
-  return (name ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)[0] ?? "";
+  return (
+    (name ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)[0] ?? ""
+  );
 }
 
 export function isAffiliateMismatch(sellerName: string, nomeAfiliado: string | null | undefined) {
@@ -31,13 +35,17 @@ export async function findHotmartMatch(email: string, saleDate: string) {
   const em = normEmail(email);
   if (!em) return null;
   const d = new Date(saleDate);
-  const from = new Date(d); from.setDate(d.getDate() - 7);
-  const to = new Date(d); to.setDate(d.getDate() + 7);
+  const from = new Date(d);
+  from.setDate(d.getDate() - 7);
+  const to = new Date(d);
+  to.setDate(d.getDate() + 7);
   const { data, error } = await supabaseAdmin
     .from("sales")
     .select("id,faturamento_liquido_brl,nome_afiliado")
     .eq("email_cliente", em)
-    .in("status", ["Aprovado", "Completo", "APPROVED"])
+    // Esta lista perdia "COMPLETE"/"COMPLETED": a venda aparecia em /vendas-reais e
+    // sumia da auditoria que confirma o pagamento da comissão.
+    .in("status", APPROVED_STATUS_DB_VALUES)
     .gte("data_venda", from.toISOString().slice(0, 10))
     .lte("data_venda", to.toISOString().slice(0, 10))
     .order("data_venda", { ascending: false })

@@ -58,14 +58,78 @@ const RENOVACAO_GROUPS = new Set(["renov_mentoria", "renov_acc", "renov_tm"]);
 
 type ProductId = "fgrs" | "igt" | "mse" | "wgt" | "wfgrs" | "ldp" | "accelerator";
 
-const PRODUCTS: { id: ProductId; label: string; sublabel: string; accent: string; headerBg: string; rowBg: string; text: string }[] = [
-  { id: "fgrs", label: "Formação (FGRS)", sublabel: "Formação Gestor Redes Sociais", accent: "bg-blue-500", headerBg: "bg-blue-50/80 dark:bg-blue-900/25", rowBg: "bg-blue-50/50 dark:bg-blue-900/12", text: "text-blue-600" },
-  { id: "igt", label: "Mentoria via Imersão (IGT)", sublabel: "MGT via IGT — SCK: igt*", accent: "bg-violet-500", headerBg: "bg-violet-50/80 dark:bg-violet-900/25", rowBg: "bg-violet-50/50 dark:bg-violet-900/12", text: "text-violet-600" },
-  { id: "mse", label: "Mentoria via Perpétuos (MSE)", sublabel: "E-book, Mini-curso, Sessão", accent: "bg-success", headerBg: "bg-emerald-50/80", rowBg: "bg-emerald-50/50", text: "text-success-fg" },
-  { id: "wgt", label: "Mentoria via Webinar (WGT)", sublabel: "MGT residual", accent: "bg-warning", headerBg: "bg-amber-50/80", rowBg: "bg-amber-50/50", text: "text-warning-fg" },
-  { id: "wfgrs", label: "Formação via Webinar (WFGRS)", sublabel: "Manual", accent: "bg-pink-500", headerBg: "bg-pink-50/80 dark:bg-pink-900/25", rowBg: "bg-pink-50/50 dark:bg-pink-900/12", text: "text-pink-600" },
-  { id: "ldp", label: "Accelerator via Live (LDP)", sublabel: "Programa Accelerator", accent: "bg-cyan-500", headerBg: "bg-cyan-50/80 dark:bg-cyan-900/25", rowBg: "bg-cyan-50/50 dark:bg-cyan-900/12", text: "text-cyan-600" },
-  { id: "accelerator", label: "Master and Scale", sublabel: "Bilhetes M&S", accent: "bg-orange-500", headerBg: "bg-orange-50/80 dark:bg-orange-900/25", rowBg: "bg-orange-50/50 dark:bg-orange-900/12", text: "text-orange-600" },
+const PRODUCTS: {
+  id: ProductId;
+  label: string;
+  sublabel: string;
+  accent: string;
+  headerBg: string;
+  rowBg: string;
+  text: string;
+}[] = [
+  {
+    id: "fgrs",
+    label: "Formação (FGRS)",
+    sublabel: "Formação Gestor Redes Sociais",
+    accent: "bg-blue-500",
+    headerBg: "bg-blue-50/80 dark:bg-blue-900/25",
+    rowBg: "bg-blue-50/50 dark:bg-blue-900/12",
+    text: "text-blue-600",
+  },
+  {
+    id: "igt",
+    label: "Mentoria via Imersão (IGT)",
+    sublabel: "MGT via IGT — SCK: igt*",
+    accent: "bg-violet-500",
+    headerBg: "bg-violet-50/80 dark:bg-violet-900/25",
+    rowBg: "bg-violet-50/50 dark:bg-violet-900/12",
+    text: "text-violet-600",
+  },
+  {
+    id: "mse",
+    label: "Mentoria via Perpétuos (MSE)",
+    sublabel: "E-book, Mini-curso, Sessão",
+    accent: "bg-success",
+    headerBg: "bg-emerald-50/80",
+    rowBg: "bg-emerald-50/50",
+    text: "text-success-fg",
+  },
+  {
+    id: "wgt",
+    label: "Mentoria via Webinar (WGT)",
+    sublabel: "MGT residual",
+    accent: "bg-warning",
+    headerBg: "bg-amber-50/80",
+    rowBg: "bg-amber-50/50",
+    text: "text-warning-fg",
+  },
+  {
+    id: "wfgrs",
+    label: "Formação via Webinar (WFGRS)",
+    sublabel: "Manual",
+    accent: "bg-pink-500",
+    headerBg: "bg-pink-50/80 dark:bg-pink-900/25",
+    rowBg: "bg-pink-50/50 dark:bg-pink-900/12",
+    text: "text-pink-600",
+  },
+  {
+    id: "ldp",
+    label: "Accelerator via Live (LDP)",
+    sublabel: "Programa Accelerator",
+    accent: "bg-cyan-500",
+    headerBg: "bg-cyan-50/80 dark:bg-cyan-900/25",
+    rowBg: "bg-cyan-50/50 dark:bg-cyan-900/12",
+    text: "text-cyan-600",
+  },
+  {
+    id: "accelerator",
+    label: "Master and Scale",
+    sublabel: "Bilhetes M&S",
+    accent: "bg-orange-500",
+    headerBg: "bg-orange-50/80 dark:bg-orange-900/25",
+    rowBg: "bg-orange-50/50 dark:bg-orange-900/12",
+    text: "text-orange-600",
+  },
 ];
 
 const PRODUCT_HEX: Record<ProductId, string> = {
@@ -78,14 +142,11 @@ const PRODUCT_HEX: Record<ProductId, string> = {
   accelerator: "#f97316",
 };
 
-function isApproved(status: string) {
-  const s = (status ?? "").toLowerCase();
-  return s === "aprovado" || s === "completo" || s === "approved" || s === "completed";
-}
+import { isApproved } from "@/lib/sales-status";
 
 const SELLER_CODES = ["gisele", "nadal", "joao", "rita", "luana"];
 function isCommercial(sale: SaleResultado) {
-  const af  = (sale.nome_afiliado  ?? "").toLowerCase();
+  const af = (sale.nome_afiliado ?? "").toLowerCase();
   const sck = (sale.origem_checkout ?? "").toLowerCase();
   return SELLER_CODES.some((c) => af.includes(c) || sck.includes(c));
 }
@@ -213,10 +274,18 @@ function EditableCell({
           disabled={saving}
           className="h-7 w-24 text-xs px-2"
         />
-        <button onClick={commit} disabled={saving} className="text-success-fg hover:text-success-fg">
+        <button
+          onClick={commit}
+          disabled={saving}
+          className="text-success-fg hover:text-success-fg"
+        >
           <Check className="h-3.5 w-3.5" />
         </button>
-        <button onClick={() => setEditing(false)} disabled={saving} className="text-muted-foreground hover:text-foreground">
+        <button
+          onClick={() => setEditing(false)}
+          disabled={saving}
+          className="text-muted-foreground hover:text-foreground"
+        >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -233,7 +302,8 @@ function EditableCell({
       className={`group inline-flex items-center gap-1 rounded px-1 -mx-1 border-b border-dashed border-muted-foreground/30 hover:border-primary hover:bg-primary/5 hover:text-primary transition-colors ${className ?? ""}`}
     >
       <span className={value > 0 ? "" : "text-muted-foreground/60 italic"}>
-        {value > 0 ? format(value) : "editar"}{value > 0 ? suffix : ""}
+        {value > 0 ? format(value) : "editar"}
+        {value > 0 ? suffix : ""}
       </span>
       <Pencil className="h-3 w-3 opacity-40 group-hover:opacity-90" />
     </button>
@@ -276,7 +346,11 @@ function YtdKpiCard({
       <CardContent>
         <div className="text-3xl font-bold tabular-nums">
           {onEditRealized ? (
-            <EditableCell value={realized} onSave={onEditRealized} format={(v) => (unitFormat ?? fmt)(v)} />
+            <EditableCell
+              value={realized}
+              onSave={onEditRealized}
+              format={(v) => (unitFormat ?? fmt)(v)}
+            />
           ) : (
             <span>{(unitFormat ?? fmt)(realized)}</span>
           )}
@@ -375,8 +449,14 @@ function MonthlyBlock({
 
   const currentMonth = new Date().getFullYear() === year ? new Date().getMonth() : 11;
 
-  const totalRealV = Array.from({ length: 12 }, (_, m) => realizedVendas(m)).reduce((s, v) => s + v, 0);
-  const totalRealF = Array.from({ length: 12 }, (_, m) => realizedFat(m)).reduce((s, v) => s + v, 0);
+  const totalRealV = Array.from({ length: 12 }, (_, m) => realizedVendas(m)).reduce(
+    (s, v) => s + v,
+    0,
+  );
+  const totalRealF = Array.from({ length: 12 }, (_, m) => realizedFat(m)).reduce(
+    (s, v) => s + v,
+    0,
+  );
 
   const chartData = MONTHS.map((label, m) => ({
     month: label,
@@ -389,7 +469,11 @@ function MonthlyBlock({
   const cumulativeData = MONTHS.map((label, m) => {
     acumProj += metaMensalV(m);
     if (m <= currentMonth) acumReal += realizedVendas(m);
-    return { month: label, "Acum. Projetado": acumProj, "Acum. Realizado": m <= currentMonth ? acumReal : null };
+    return {
+      month: label,
+      "Acum. Projetado": acumProj,
+      "Acum. Realizado": m <= currentMonth ? acumReal : null,
+    };
   });
 
   return (
@@ -401,15 +485,20 @@ function MonthlyBlock({
             <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
           </div>
           <div className="text-right text-sm">
-            <div className="font-semibold">{totalRealV} / {vendaMetaAnual} vendas ({pct(totalRealV, vendaMetaAnual)}%)</div>
-            <div className="text-muted-foreground text-xs">{format(totalRealF)} / {format(fatMetaAnual)}</div>
+            <div className="font-semibold">
+              {totalRealV} / {vendaMetaAnual} vendas ({pct(totalRealV, vendaMetaAnual)}%)
+            </div>
+            <div className="text-muted-foreground text-xs">
+              {format(totalRealF)} / {format(fatMetaAnual)}
+            </div>
           </div>
         </div>
       </CardHeader>
       <CardContent className="p-0">
         <div className="px-4 py-2 text-[11px] text-muted-foreground bg-muted/20 border-t border-border flex items-center gap-1.5">
           <Pencil className="h-3 w-3" />
-          Clique em qualquer valor (Distribuição %, Meta, Realizado) para editar. Os <strong className="text-foreground">% de atingimento</strong> recalculam automaticamente.
+          Clique em qualquer valor (Distribuição %, Meta, Realizado) para editar. Os{" "}
+          <strong className="text-foreground">% de atingimento</strong> recalculam automaticamente.
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -423,13 +512,17 @@ function MonthlyBlock({
                     {m}
                   </th>
                 ))}
-                <th className="px-3 py-2 text-right font-medium text-muted-foreground bg-muted/60">Total</th>
+                <th className="px-3 py-2 text-right font-medium text-muted-foreground bg-muted/60">
+                  Total
+                </th>
               </tr>
             </thead>
             <tbody>
               {/* Distribuição % */}
               <tr className="border-t border-border/50">
-                <td className="px-3 py-2 font-medium text-muted-foreground sticky left-0 bg-background">Distribuição %</td>
+                <td className="px-3 py-2 font-medium text-muted-foreground sticky left-0 bg-background">
+                  Distribuição %
+                </td>
                 {MONTHS.map((_, m) => (
                   <td key={m} className="px-2 py-1.5 text-right text-blue-600">
                     <EditableCell
@@ -443,7 +536,9 @@ function MonthlyBlock({
               </tr>
               {/* Meta Vendas por mês */}
               <tr className="border-t border-border/50 bg-blue-50/30 dark:bg-blue-950/20">
-                <td className="px-3 py-2 font-medium text-muted-foreground sticky left-0 bg-blue-50/30 dark:bg-blue-950/20">Meta Vendas</td>
+                <td className="px-3 py-2 font-medium text-muted-foreground sticky left-0 bg-blue-50/30 dark:bg-blue-950/20">
+                  Meta Vendas
+                </td>
                 {MONTHS.map((_, m) => {
                   const t = targets.find((t) => t.indicador === "vendas" && t.month === m);
                   return (
@@ -456,15 +551,22 @@ function MonthlyBlock({
                     </td>
                   );
                 })}
-                <td className="px-3 py-1.5 text-right font-semibold bg-muted/40 tabular-nums">{vendaMetaAnual}</td>
+                <td className="px-3 py-1.5 text-right font-semibold bg-muted/40 tabular-nums">
+                  {vendaMetaAnual}
+                </td>
               </tr>
               {/* Vendas Realizado */}
               <tr className="border-t border-border/50">
-                <td className="px-3 py-2 font-medium sticky left-0 bg-background">Vendas Realizado</td>
+                <td className="px-3 py-2 font-medium sticky left-0 bg-background">
+                  Vendas Realizado
+                </td>
                 {MONTHS.map((_, m) => {
                   const isFuture = m > currentMonth;
                   return (
-                    <td key={m} className={`px-2 py-1.5 text-right tabular-nums ${isFuture ? "opacity-30" : ""}`}>
+                    <td
+                      key={m}
+                      className={`px-2 py-1.5 text-right tabular-nums ${isFuture ? "opacity-30" : ""}`}
+                    >
                       {isFuture ? (
                         "—"
                       ) : (
@@ -478,27 +580,45 @@ function MonthlyBlock({
                     </td>
                   );
                 })}
-                <td className="px-3 py-1.5 text-right font-bold bg-muted/40 tabular-nums">{totalRealV}</td>
+                <td className="px-3 py-1.5 text-right font-bold bg-muted/40 tabular-nums">
+                  {totalRealV}
+                </td>
               </tr>
               {/* Atingimento Vendas mês */}
               <tr className="border-t border-border/50 text-xs">
-                <td className="px-3 py-1.5 text-muted-foreground sticky left-0 bg-background">% Atingimento mês</td>
+                <td className="px-3 py-1.5 text-muted-foreground sticky left-0 bg-background">
+                  % Atingimento mês
+                </td>
                 {MONTHS.map((_, m) => {
                   const isFuture = m > currentMonth;
                   const p = pct(realizedVendas(m), metaMensalV(m));
                   return (
                     <td key={m} className={`px-2 py-1 text-right ${isFuture ? "opacity-30" : ""}`}>
-                      {isFuture || metaMensalV(m) === 0 ? "—" : <Badge className={pctBadgeClass(p) + " text-[10px] px-1.5"}>{p}%</Badge>}
+                      {isFuture || metaMensalV(m) === 0 ? (
+                        "—"
+                      ) : (
+                        <Badge className={pctBadgeClass(p) + " text-[10px] px-1.5"}>{p}%</Badge>
+                      )}
                     </td>
                   );
                 })}
                 <td className="px-3 py-1 text-right bg-muted/40">
-                  {vendaMetaAnual > 0 && <Badge className={pctBadgeClass(pct(totalRealV, vendaMetaAnual)) + " text-[10px] px-1.5"}>{pct(totalRealV, vendaMetaAnual)}%</Badge>}
+                  {vendaMetaAnual > 0 && (
+                    <Badge
+                      className={
+                        pctBadgeClass(pct(totalRealV, vendaMetaAnual)) + " text-[10px] px-1.5"
+                      }
+                    >
+                      {pct(totalRealV, vendaMetaAnual)}%
+                    </Badge>
+                  )}
                 </td>
               </tr>
               {/* Meta Faturamento */}
               <tr className="border-t-2 border-border/70 bg-blue-50/30 dark:bg-blue-950/20">
-                <td className="px-3 py-2 font-medium text-muted-foreground sticky left-0 bg-blue-50/30 dark:bg-blue-950/20">Meta Faturamento</td>
+                <td className="px-3 py-2 font-medium text-muted-foreground sticky left-0 bg-blue-50/30 dark:bg-blue-950/20">
+                  Meta Faturamento
+                </td>
                 {MONTHS.map((_, m) => {
                   const t = targets.find((t) => t.indicador === "faturamento" && t.month === m);
                   return (
@@ -511,15 +631,22 @@ function MonthlyBlock({
                     </td>
                   );
                 })}
-                <td className="px-3 py-1.5 text-right font-semibold bg-muted/40 tabular-nums text-xs">{format(fatMetaAnual)}</td>
+                <td className="px-3 py-1.5 text-right font-semibold bg-muted/40 tabular-nums text-xs">
+                  {format(fatMetaAnual)}
+                </td>
               </tr>
               {/* Faturamento Realizado */}
               <tr className="border-t border-border/50">
-                <td className="px-3 py-2 font-medium sticky left-0 bg-background">Faturamento Realizado</td>
+                <td className="px-3 py-2 font-medium sticky left-0 bg-background">
+                  Faturamento Realizado
+                </td>
                 {MONTHS.map((_, m) => {
                   const isFuture = m > currentMonth;
                   return (
-                    <td key={m} className={`px-2 py-1.5 text-right tabular-nums text-xs ${isFuture ? "opacity-30" : ""}`}>
+                    <td
+                      key={m}
+                      className={`px-2 py-1.5 text-right tabular-nums text-xs ${isFuture ? "opacity-30" : ""}`}
+                    >
                       {isFuture ? (
                         "—"
                       ) : (
@@ -533,22 +660,38 @@ function MonthlyBlock({
                     </td>
                   );
                 })}
-                <td className="px-3 py-1.5 text-right font-bold bg-muted/40 tabular-nums text-xs">{format(totalRealF)}</td>
+                <td className="px-3 py-1.5 text-right font-bold bg-muted/40 tabular-nums text-xs">
+                  {format(totalRealF)}
+                </td>
               </tr>
               {/* Atingimento Faturamento */}
               <tr className="border-t border-border/50 text-xs">
-                <td className="px-3 py-1.5 text-muted-foreground sticky left-0 bg-background">% Atingimento Fat.</td>
+                <td className="px-3 py-1.5 text-muted-foreground sticky left-0 bg-background">
+                  % Atingimento Fat.
+                </td>
                 {MONTHS.map((_, m) => {
                   const isFuture = m > currentMonth;
                   const p = pct(realizedFat(m), metaMensalF(m));
                   return (
                     <td key={m} className={`px-2 py-1 text-right ${isFuture ? "opacity-30" : ""}`}>
-                      {isFuture || metaMensalF(m) === 0 ? "—" : <Badge className={pctBadgeClass(p) + " text-[10px] px-1.5"}>{p}%</Badge>}
+                      {isFuture || metaMensalF(m) === 0 ? (
+                        "—"
+                      ) : (
+                        <Badge className={pctBadgeClass(p) + " text-[10px] px-1.5"}>{p}%</Badge>
+                      )}
                     </td>
                   );
                 })}
                 <td className="px-3 py-1 text-right bg-muted/40">
-                  {fatMetaAnual > 0 && <Badge className={pctBadgeClass(pct(totalRealF, fatMetaAnual)) + " text-[10px] px-1.5"}>{pct(totalRealF, fatMetaAnual)}%</Badge>}
+                  {fatMetaAnual > 0 && (
+                    <Badge
+                      className={
+                        pctBadgeClass(pct(totalRealF, fatMetaAnual)) + " text-[10px] px-1.5"
+                      }
+                    >
+                      {pct(totalRealF, fatMetaAnual)}%
+                    </Badge>
+                  )}
                 </td>
               </tr>
             </tbody>
@@ -558,7 +701,9 @@ function MonthlyBlock({
         {/* Charts */}
         <div className="grid md:grid-cols-2 gap-4 p-4 border-t border-border bg-muted/10">
           <div>
-            <div className="text-xs font-medium text-muted-foreground mb-2">Mês a mês — Vendas (Projetado vs Realizado)</div>
+            <div className="text-xs font-medium text-muted-foreground mb-2">
+              Mês a mês — Vendas (Projetado vs Realizado)
+            </div>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
@@ -580,7 +725,13 @@ function MonthlyBlock({
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="Acum. Projetado" stroke="#94a3b8" strokeWidth={2} dot={false} />
+                <Line
+                  type="monotone"
+                  dataKey="Acum. Projetado"
+                  stroke="#94a3b8"
+                  strokeWidth={2}
+                  dot={false}
+                />
                 <Line type="monotone" dataKey="Acum. Realizado" stroke={color} strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
@@ -605,7 +756,12 @@ function WeeklyProductGrid({
   weeklyManual: Record<string, number>; // `${product}:${week}:${indicador}` → value
   weeks: string[];
   format: (v: number) => string;
-  onSaveWeekly: (product: ProductId, week: string, indicador: string, valor: number) => Promise<void>;
+  onSaveWeekly: (
+    product: ProductId,
+    week: string,
+    indicador: string,
+    valor: number,
+  ) => Promise<void>;
 }) {
   const today = new Date();
   const todayMonday = mondayOf(today);
@@ -613,8 +769,18 @@ function WeeklyProductGrid({
   const rowsForProduct = [
     { key: "faturamento_total", label: "Faturamento Total", manual: true, fmt: format },
     { key: "faturamento_comercial", label: "Faturamento Comercial", manual: false, fmt: format },
-    { key: "vendas_total", label: "Vendas Total", manual: true, fmt: (v: number) => v.toLocaleString("pt-BR") },
-    { key: "vendas_comercial", label: "Vendas Comercial", manual: false, fmt: (v: number) => v.toLocaleString("pt-BR") },
+    {
+      key: "vendas_total",
+      label: "Vendas Total",
+      manual: true,
+      fmt: (v: number) => v.toLocaleString("pt-BR"),
+    },
+    {
+      key: "vendas_comercial",
+      label: "Vendas Comercial",
+      manual: false,
+      fmt: (v: number) => v.toLocaleString("pt-BR"),
+    },
   ];
 
   return (
@@ -633,10 +799,16 @@ function WeeklyProductGrid({
       </div>
 
       {PRODUCTS.map((prod) => (
-        <Card key={prod.id} className="overflow-hidden shadow-sm" style={{ borderTop: `4px solid ${PRODUCT_HEX[prod.id]}` }}>
+        <Card
+          key={prod.id}
+          className="overflow-hidden shadow-sm"
+          style={{ borderTop: `4px solid ${PRODUCT_HEX[prod.id]}` }}
+        >
           <CardHeader className={`pb-3 ${prod.headerBg}`}>
             <div className="flex items-center gap-3">
-              <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm ${prod.accent}`}>
+              <div
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm ${prod.accent}`}
+              >
                 <Package className="h-5 w-5" />
               </div>
               <div className="min-w-0">
@@ -672,10 +844,15 @@ function WeeklyProductGrid({
                   {rowsForProduct.map((row) => {
                     let rowTotal = 0;
                     return (
-                      <tr key={row.key} className={`border-b border-border/40 last:border-b-0 ${row.manual ? prod.rowBg : "hover:bg-muted/20"}`}>
+                      <tr
+                        key={row.key}
+                        className={`border-b border-border/40 last:border-b-0 ${row.manual ? prod.rowBg : "hover:bg-muted/20"}`}
+                      >
                         <td
                           className={`px-4 py-2.5 sticky left-0 z-10 text-xs font-medium ${
-                            row.manual ? `text-foreground ${prod.rowBg}` : "text-muted-foreground bg-background"
+                            row.manual
+                              ? `text-foreground ${prod.rowBg}`
+                              : "text-muted-foreground bg-background"
                           }`}
                         >
                           {row.label}
@@ -790,7 +967,13 @@ function Resultados() {
   // ── Agregação por produto e semana (comercial)
   const salesByProductWeek = useMemo(() => {
     const result: Record<ProductId, Record<string, { vendas: number; faturamento: number }>> = {
-      fgrs: {}, igt: {}, mse: {}, wgt: {}, wfgrs: {}, ldp: {}, accelerator: {},
+      fgrs: {},
+      igt: {},
+      mse: {},
+      wgt: {},
+      wfgrs: {},
+      ldp: {},
+      accelerator: {},
     };
     for (const s of sales) {
       if (!isApproved(s.status)) continue;
@@ -810,15 +993,18 @@ function Resultados() {
   // ── Targets por bloco (canais_id = 'front_end' | 'high_ticket')
   const targetsByBloco = useMemo(() => {
     const result: Record<Bloco, { month: number; indicador: string; valor: number }[]> = {
-      front_end: [], high_ticket: [],
+      front_end: [],
+      high_ticket: [],
     };
     for (const t of targets) {
       if (!t.periodo) continue;
       const d = new Date(t.periodo + "T00:00:00Z");
       if (d.getUTCFullYear() !== year) continue;
       const m = d.getUTCMonth();
-      if (t.channel_id === "front_end") result.front_end.push({ month: m, indicador: t.indicador, valor: t.valor });
-      else if (t.channel_id === "high_ticket") result.high_ticket.push({ month: m, indicador: t.indicador, valor: t.valor });
+      if (t.channel_id === "front_end")
+        result.front_end.push({ month: m, indicador: t.indicador, valor: t.valor });
+      else if (t.channel_id === "high_ticket")
+        result.high_ticket.push({ month: m, indicador: t.indicador, valor: t.valor });
     }
     return result;
   }, [targets, year]);
@@ -854,15 +1040,25 @@ function Resultados() {
       { vendas: 0, faturamento: 0 },
     );
     // Apply overrides
-    let feVendas = 0, feFat = 0;
+    let feVendas = 0,
+      feFat = 0;
     for (let m = 0; m < 12; m++) {
-      feVendas += overridesByBloco.front_end[`vendas:${m}`] ?? blocoMonthData.front_end[m]?.vendas ?? 0;
-      feFat += overridesByBloco.front_end[`faturamento:${m}`] ?? blocoMonthData.front_end[m]?.faturamento ?? 0;
+      feVendas +=
+        overridesByBloco.front_end[`vendas:${m}`] ?? blocoMonthData.front_end[m]?.vendas ?? 0;
+      feFat +=
+        overridesByBloco.front_end[`faturamento:${m}`] ??
+        blocoMonthData.front_end[m]?.faturamento ??
+        0;
     }
-    let htVendas = 0, htFat = 0;
+    let htVendas = 0,
+      htFat = 0;
     for (let m = 0; m < 12; m++) {
-      htVendas += overridesByBloco.high_ticket[`vendas:${m}`] ?? blocoMonthData.high_ticket[m]?.vendas ?? 0;
-      htFat += overridesByBloco.high_ticket[`faturamento:${m}`] ?? blocoMonthData.high_ticket[m]?.faturamento ?? 0;
+      htVendas +=
+        overridesByBloco.high_ticket[`vendas:${m}`] ?? blocoMonthData.high_ticket[m]?.vendas ?? 0;
+      htFat +=
+        overridesByBloco.high_ticket[`faturamento:${m}`] ??
+        blocoMonthData.high_ticket[m]?.faturamento ??
+        0;
     }
     // Bilhetes M&S = product 'accelerator' (master_scale)
     let masVendas = 0;
@@ -872,8 +1068,12 @@ function Resultados() {
     let accVendas = 0;
     for (const w of Object.values(salesByProductWeek.ldp)) accVendas += w.vendas;
 
-    const feMetaVendas = targetsByBloco.front_end.filter((t) => t.indicador === "vendas").reduce((s, t) => s + t.valor, 0);
-    const htMetaVendas = targetsByBloco.high_ticket.filter((t) => t.indicador === "vendas").reduce((s, t) => s + t.valor, 0);
+    const feMetaVendas = targetsByBloco.front_end
+      .filter((t) => t.indicador === "vendas")
+      .reduce((s, t) => s + t.valor, 0);
+    const htMetaVendas = targetsByBloco.high_ticket
+      .filter((t) => t.indicador === "vendas")
+      .reduce((s, t) => s + t.valor, 0);
 
     // Leads meta from bi_targets (indicador='leads' or 'leads_organicas'+'leads_pagas')
     let leadsMeta = 0;
@@ -909,7 +1109,15 @@ function Resultados() {
       metaPctFeHt: funilOv.fe_ht_pct ?? 13.6,
       metaPctHtAcc: funilOv.ht_acc_pct ?? 60,
     };
-  }, [blocoMonthData, overridesByBloco, salesByProductWeek, targetsByBloco, targets, year, leadsData]);
+  }, [
+    blocoMonthData,
+    overridesByBloco,
+    salesByProductWeek,
+    targetsByBloco,
+    targets,
+    year,
+    leadsData,
+  ]);
 
   const weeks = useMemo(() => weeksOfYear(year), [year]);
   const years = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
@@ -928,8 +1136,15 @@ function Resultados() {
     toast.success("Realizado atualizado");
   }
 
-  async function handleSaveWeekly(product: ProductId, week: string, indicador: string, valor: number) {
-    await saveWeekly({ data: { product_id: product, week_start: week, indicador, valor_brl: valor } });
+  async function handleSaveWeekly(
+    product: ProductId,
+    week: string,
+    indicador: string,
+    valor: number,
+  ) {
+    await saveWeekly({
+      data: { product_id: product, week_start: week, indicador, valor_brl: valor },
+    });
     invalidate();
     toast.success("Salvo");
   }
@@ -942,7 +1157,8 @@ function Resultados() {
     toast.success("Atualizado");
   }
 
-  const isLoading = salesQ.isLoading || targetsQ.isLoading || weeklyQ.isLoading || overridesQ.isLoading;
+  const isLoading =
+    salesQ.isLoading || targetsQ.isLoading || weeklyQ.isLoading || overridesQ.isLoading;
 
   return (
     <div className="space-y-8">
@@ -960,17 +1176,20 @@ function Resultados() {
             className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
           >
             {years.map((y) => (
-              <option key={y} value={y}>{y}</option>
+              <option key={y} value={y}>
+                {y}
+              </option>
             ))}
           </select>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-20 text-muted-foreground">Carregando dados…</div>
+        <div className="flex items-center justify-center py-20 text-muted-foreground">
+          Carregando dados…
+        </div>
       ) : (
         <>
-
           {/* ── Bloco 1: Dashboard YTD ────────────────────────────── */}
           <div>
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
@@ -1030,7 +1249,11 @@ function Resultados() {
                     label="Front End (novas vendas)"
                     value={ytd.feVendas}
                     color="#10b981"
-                    widthPct={ytd.leadsReal > 0 ? Math.max(20, (ytd.feVendas / ytd.leadsReal) * 100 * 20) : 30}
+                    widthPct={
+                      ytd.leadsReal > 0
+                        ? Math.max(20, (ytd.feVendas / ytd.leadsReal) * 100 * 20)
+                        : 30
+                    }
                   />
                   <ConversionArrow
                     label={`Front End → High Ticket`}
@@ -1043,7 +1266,9 @@ function Resultados() {
                     label="High Ticket (novas + renovações)"
                     value={ytd.htVendas}
                     color="#a16207"
-                    widthPct={ytd.feVendas > 0 ? Math.max(15, (ytd.htVendas / ytd.feVendas) * 100 * 3) : 20}
+                    widthPct={
+                      ytd.feVendas > 0 ? Math.max(15, (ytd.htVendas / ytd.feVendas) * 100 * 3) : 20
+                    }
                   />
                   <ConversionArrow
                     label="High Ticket → ACC"
@@ -1056,7 +1281,9 @@ function Resultados() {
                     label="ACC (Accelerator)"
                     value={ytd.accVendas}
                     color="#06b6d4"
-                    widthPct={ytd.htVendas > 0 ? Math.max(10, (ytd.accVendas / ytd.htVendas) * 100) : 15}
+                    widthPct={
+                      ytd.htVendas > 0 ? Math.max(10, (ytd.accVendas / ytd.htVendas) * 100) : 15
+                    }
                   />
                 </div>
               </CardContent>
@@ -1108,7 +1335,17 @@ function Resultados() {
   );
 }
 
-function FunnelStep({ label, value, color, widthPct }: { label: string; value: number; color: string; widthPct: number }) {
+function FunnelStep({
+  label,
+  value,
+  color,
+  widthPct,
+}: {
+  label: string;
+  value: number;
+  color: string;
+  widthPct: number;
+}) {
   return (
     <div className="flex items-center gap-3">
       <div className="min-w-[220px] text-sm font-medium">{label}</div>
@@ -1124,14 +1361,28 @@ function FunnelStep({ label, value, color, widthPct }: { label: string; value: n
   );
 }
 
-function ConversionArrow({ label, from, to, metaPct, onEditMeta }: { label: string; from: number; to: number; metaPct: number; onEditMeta?: (v: number) => Promise<void> }) {
+function ConversionArrow({
+  label,
+  from,
+  to,
+  metaPct,
+  onEditMeta,
+}: {
+  label: string;
+  from: number;
+  to: number;
+  metaPct: number;
+  onEditMeta?: (v: number) => Promise<void>;
+}) {
   const realPct = from > 0 ? (to / from) * 100 : 0;
   const meetsMeta = realPct >= metaPct;
   return (
     <div className="flex items-center gap-3 pl-6 text-xs text-muted-foreground">
       <div className="min-w-[200px]">↓ {label}</div>
       <div className="flex items-center gap-1.5 flex-wrap">
-        <span className={meetsMeta ? "text-success-fg font-semibold" : "text-warning-fg font-semibold"}>
+        <span
+          className={meetsMeta ? "text-success-fg font-semibold" : "text-warning-fg font-semibold"}
+        >
           {realPct.toFixed(2)}%
         </span>{" "}
         realizado · meta{" "}

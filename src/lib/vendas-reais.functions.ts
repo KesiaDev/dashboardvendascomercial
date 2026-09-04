@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { eurBrlRate } from "./eur-rate";
+import { APPROVED_STATUS_DB_VALUES } from "./sales-status";
 
 async function adminDb() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -32,7 +33,9 @@ export const CATEGORIA_COLOR: Record<string, string> = {
 };
 
 // Status agrupados
-const APROVADOS = ["Aprovado", "Completo", "APPROVED", "COMPLETE"];
+// Antes esta lista era local e case-sensitive, e divergia da usada em
+// manual-sales/auditoria de comissão: uma venda "COMPLETE" contava aqui e sumia lá.
+const APROVADOS = APPROVED_STATUS_DB_VALUES;
 const CANCEL_EFETIVADO = ["Chargeback", "Reembolsado", "CHARGEBACK", "REFUNDED"];
 const CANCEL_PENDENTE = ["Dispute", "DISPUTE", "Em análise", "UNDER_ANALISYS"];
 
@@ -96,7 +99,9 @@ export const getRenovacoesFn = createServerFn({ method: "GET" })
 
     const { data: rows, error } = await db
       .from("sales")
-      .select("id,data_venda,produto_original,nome_cliente,email_cliente,nome_afiliado,faturamento_liquido_brl,status")
+      .select(
+        "id,data_venda,produto_original,nome_cliente,email_cliente,nome_afiliado,faturamento_liquido_brl,status",
+      )
       .eq("categoria_produto", "RENOVACAO")
       .gte("data_venda", start)
       .lt("data_venda", end)
@@ -118,7 +123,9 @@ export const getCancelamentosFn = createServerFn({ method: "GET" })
 
     const { data: rows, error } = await db
       .from("sales")
-      .select("id,data_venda,produto_original,categoria_produto,nome_cliente,email_cliente,nome_afiliado,faturamento_liquido_brl,status")
+      .select(
+        "id,data_venda,produto_original,categoria_produto,nome_cliente,email_cliente,nome_afiliado,faturamento_liquido_brl,status",
+      )
       .in("status", [...CANCEL_EFETIVADO, ...CANCEL_PENDENTE])
       .gte("data_venda", start)
       .lt("data_venda", end)
@@ -127,7 +134,10 @@ export const getCancelamentosFn = createServerFn({ method: "GET" })
 
     const efetivados = (rows ?? []).filter((r) => CANCEL_EFETIVADO.includes(r.status));
     const pendentes = (rows ?? []).filter((r) => CANCEL_PENDENTE.includes(r.status));
-    const totalEfetivado = efetivados.reduce((s, r) => s + Number(r.faturamento_liquido_brl ?? 0), 0);
+    const totalEfetivado = efetivados.reduce(
+      (s, r) => s + Number(r.faturamento_liquido_brl ?? 0),
+      0,
+    );
     const totalPendente = pendentes.reduce((s, r) => s + Number(r.faturamento_liquido_brl ?? 0), 0);
 
     return { month, totalEfetivado, totalPendente, efetivados, pendentes };
