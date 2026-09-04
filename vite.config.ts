@@ -17,6 +17,22 @@ export default defineConfig({
     router: { autoCodeSplitting: true },
   },
   vite: {
+    // Rede de segurança: o build de produção rodou sem as variáveis VITE_* (o .env
+    // é gitignored), e o bundle publicado subiu sem URL/chave publicável do backend
+    // — o app abria direto na tela de erro. Estes valores são publicáveis (anon),
+    // nunca segredos, e só entram quando a variável de ambiente não existe.
+    define: {
+      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(
+        process.env.VITE_SUPABASE_URL ?? "https://spnmnxbglztrtgtjyvyz.supabase.co",
+      ),
+      "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
+        process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwbm1ueGJnbHp0cnRndGp5dnl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NDMxMTksImV4cCI6MjA5ODAxOTExOX0.7a61ASPZBM096gAu_4h3jY-6E-XAJ__Plk7nQ8J8Q6Q",
+      ),
+      "import.meta.env.VITE_SUPABASE_PROJECT_ID": JSON.stringify(
+        process.env.VITE_SUPABASE_PROJECT_ID ?? "spnmnxbglztrtgtjyvyz",
+      ),
+    },
     build: {
       rollupOptions: {
         output: {
