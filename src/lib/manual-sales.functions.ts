@@ -29,6 +29,7 @@ export const FUNNELS = [
   "Renovação",
   "Master and Scale",
   "IGT 24",
+  "LDP_10 - 01/09",
 ] as const;
 
 /**
