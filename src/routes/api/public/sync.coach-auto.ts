@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runCoachV3Sync } from "./sync.coach-v3";
-import { syncCcpbxCallsFn, analyzeCallFn } from "@/lib/ccpbx.functions";
+import { syncCcpbxCallsCore, analyzeCallCore } from "@/lib/ccpbx.functions";
 import { analyzeConversationCore } from "@/lib/coach.functions";
 import { requireApiKey } from "@/lib/api-auth";
 
@@ -21,7 +21,7 @@ async function runAutoPipeline(sinceDays: number, maxAnalyses: number) {
 
   // 2) Sincroniza ligações
   try {
-    out.ligacoes = await syncCcpbxCallsFn({ data: { days: Math.min(sinceDays, 7) } });
+    out.ligacoes = await syncCcpbxCallsCore({ days: Math.min(sinceDays, 7) });
   } catch (e) {
     out.ligacoes = { error: e instanceof Error ? e.message : String(e) };
   }
@@ -97,7 +97,7 @@ async function runAutoPipeline(sinceDays: number, maxAnalyses: number) {
 
     for (const c of (calls ?? []) as any[]) {
       try {
-        await analyzeCallFn({ data: { callId: c.id } });
+        await analyzeCallCore({ callId: c.id });
         callsAnalisadas++;
       } catch {}
     }

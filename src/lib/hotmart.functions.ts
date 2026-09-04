@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { mapProductToGroup } from "@/lib/product-groups";
 
 // ─── Hotmart API ──────────────────────────────────────────────────────────────
@@ -276,6 +277,7 @@ export async function runHotmartSync(opts?: {
 
 // ─── ServerFn callable from UI ───────────────────────────────────────────────
 export const syncHotmartFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: { windowDays?: number; startDate?: string; endDate?: string } | undefined) => d ?? {},
   )

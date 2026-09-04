@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchAllRows } from "@/lib/supabase-paging";
 
 async function admin() {
@@ -92,6 +93,7 @@ function normalizeMessage(m: any) {
 }
 
 export const syncClintMessagesFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { conversationId: string }) => d)
   .handler(async ({ data }) => {
     const token = process.env.CLINT_API_TOKEN;
@@ -422,6 +424,7 @@ function avgResponseTimeMin(msgs: { sent_at: string; direction: string }[]): num
 }
 
 export const uploadConversationFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       dealId?: string;
@@ -649,6 +652,7 @@ export async function analyzeConversationCore(
 }
 
 export const analyzeConversationFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { conversationId: string; force?: boolean }) => d)
   .handler(async ({ data }) => {
     const db = await admin();
@@ -702,194 +706,201 @@ async function evaluateAlertsForConversation(db: any, conv: CoachConversation, a
   if (fresh.length) await db.from("coach_alerts").insert(fresh);
 }
 
-export const runAutoAnalysisFn = createServerFn({ method: "POST" }).handler(async () => {
-  const db = await admin();
-  const { data: cfg } = await db
-    .from("coach_config")
-    .select("auto_analysis, analysis_interval_hours")
-    .eq("id", 1)
-    .maybeSingle();
+export const runAutoAnalysisFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = await admin();
+    const { data: cfg } = await db
+      .from("coach_config")
+      .select("auto_analysis, analysis_interval_hours")
+      .eq("id", 1)
+      .maybeSingle();
 
-  if (cfg?.auto_analysis === false) return { skipped: true, reason: "disabled" };
+    if (cfg?.auto_analysis === false) return { skipped: true, reason: "disabled" };
 
-  const intervalHours = cfg?.analysis_interval_hours ?? 1;
-  const cutoff = new Date(Date.now() - intervalHours * 60 * 60 * 1000).toISOString();
+    const intervalHours = cfg?.analysis_interval_hours ?? 1;
+    const cutoff = new Date(Date.now() - intervalHours * 60 * 60 * 1000).toISOString();
 
-  const { data: convs } = await db
-    .from("coach_conversations")
-    .select("id, last_message_at")
-    .eq("source", "clint")
-    .not("last_message_at", "is", null)
-    .lt("last_message_at", cutoff)
-    .order("last_message_at", { ascending: false })
-    .limit(10);
+    const { data: convs } = await db
+      .from("coach_conversations")
+      .select("id, last_message_at")
+      .eq("source", "clint")
+      .not("last_message_at", "is", null)
+      .lt("last_message_at", cutoff)
+      .order("last_message_at", { ascending: false })
+      .limit(10);
 
-  if (!convs?.length) return { analyzed: 0 };
+    if (!convs?.length) return { analyzed: 0 };
 
-  const ids = convs.map((c: any) => c.id);
-  // `ids` vem de um .limit(10) logo acima e a relação é ~1:1, então o teto
-  // explícito documenta que não há truncamento possível aqui.
-  const { data: analyses } = await db
-    .from("coach_analyses")
-    .select("conversation_id, analyzed_at, prompt_version")
-    .in("conversation_id", ids)
-    .eq("status", "ok")
-    .limit(ids.length * 2);
+    const ids = convs.map((c: any) => c.id);
+    // `ids` vem de um .limit(10) logo acima e a relação é ~1:1, então o teto
+    // explícito documenta que não há truncamento possível aqui.
+    const { data: analyses } = await db
+      .from("coach_analyses")
+      .select("conversation_id, analyzed_at, prompt_version")
+      .in("conversation_id", ids)
+      .eq("status", "ok")
+      .limit(ids.length * 2);
 
-  const analysedMap = new Map(
-    (analyses ?? []).map((a: any) => [
-      a.conversation_id,
-      { analyzedAt: a.analyzed_at, version: a.prompt_version },
-    ]),
-  );
-
-  const needsAnalysis = convs.filter((c: any) => {
-    const entry = analysedMap.get(c.id);
-    if (!entry) return true;
-    return (
-      entry.version !== PROMPT_VERSION || new Date(entry.analyzedAt) < new Date(c.last_message_at)
+    const analysedMap = new Map(
+      (analyses ?? []).map((a: any) => [
+        a.conversation_id,
+        { analyzedAt: a.analyzed_at, version: a.prompt_version },
+      ]),
     );
+
+    const needsAnalysis = convs.filter((c: any) => {
+      const entry = analysedMap.get(c.id);
+      if (!entry) return true;
+      return (
+        entry.version !== PROMPT_VERSION || new Date(entry.analyzedAt) < new Date(c.last_message_at)
+      );
+    });
+
+    let analyzed = 0;
+    for (const c of needsAnalysis) {
+      try {
+        const result = await analyzeConversationCore(db, c.id, false, "auto_timer");
+        if (result && !(result as any).skipped) analyzed++;
+      } catch {}
+    }
+    return { analyzed };
   });
 
-  let analyzed = 0;
-  for (const c of needsAnalysis) {
-    try {
-      const result = await analyzeConversationCore(db, c.id, false, "auto_timer");
-      if (result && !(result as any).skipped) analyzed++;
-    } catch {}
-  }
-  return { analyzed };
-});
+export const runAlertsScanFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = await admin();
+    const { data: cfg } = await db.from("coach_config").select("*").eq("id", 1).maybeSingle();
+    const horasLead = cfg?.horas_lead_quente ?? 4;
+    const diasParado = cfg?.dias_sem_resposta ?? 3;
+    const now = Date.now();
 
-export const runAlertsScanFn = createServerFn({ method: "POST" }).handler(async () => {
-  const db = await admin();
-  const { data: cfg } = await db.from("coach_config").select("*").eq("id", 1).maybeSingle();
-  const horasLead = cfg?.horas_lead_quente ?? 4;
-  const diasParado = cfg?.dias_sem_resposta ?? 3;
-  const now = Date.now();
+    const { data: convs } = await db
+      .from("coach_conversations")
+      .select("id,deal_id,seller_email,seller_name,last_message_at")
+      .not("last_message_at", "is", null)
+      .limit(2000);
 
-  const { data: convs } = await db
-    .from("coach_conversations")
-    .select("id,deal_id,seller_email,seller_name,last_message_at")
-    .not("last_message_at", "is", null)
-    .limit(2000);
-
-  const alerts: any[] = [];
-  for (const c of convs ?? []) {
-    const lastMs = new Date(c.last_message_at!).getTime();
-    const hours = (now - lastMs) / (1000 * 60 * 60);
-    if (hours >= horasLead && hours < 24) {
-      alerts.push({
-        deal_id: c.deal_id,
-        conversation_id: c.id,
-        seller_email: c.seller_email,
-        seller_name: c.seller_name,
-        type: "lead_quente_sem_resposta",
-        severity: "high",
-        message: `Sem resposta há ${Math.round(hours)}h (mín. ${horasLead}h).`,
-        state: "aberto",
-      });
-    } else if (hours >= diasParado * 24) {
-      alerts.push({
-        deal_id: c.deal_id,
-        conversation_id: c.id,
-        seller_email: c.seller_email,
-        seller_name: c.seller_name,
-        type: "conversa_parada",
-        severity: "medium",
-        message: `Conversa parada há ${Math.round(hours / 24)} dias.`,
-        state: "aberto",
-      });
+    const alerts: any[] = [];
+    for (const c of convs ?? []) {
+      const lastMs = new Date(c.last_message_at!).getTime();
+      const hours = (now - lastMs) / (1000 * 60 * 60);
+      if (hours >= horasLead && hours < 24) {
+        alerts.push({
+          deal_id: c.deal_id,
+          conversation_id: c.id,
+          seller_email: c.seller_email,
+          seller_name: c.seller_name,
+          type: "lead_quente_sem_resposta",
+          severity: "high",
+          message: `Sem resposta há ${Math.round(hours)}h (mín. ${horasLead}h).`,
+          state: "aberto",
+        });
+      } else if (hours >= diasParado * 24) {
+        alerts.push({
+          deal_id: c.deal_id,
+          conversation_id: c.id,
+          seller_email: c.seller_email,
+          seller_name: c.seller_name,
+          type: "conversa_parada",
+          severity: "medium",
+          message: `Conversa parada há ${Math.round(hours / 24)} dias.`,
+          state: "aberto",
+        });
+      }
     }
-  }
 
-  if (alerts.length) {
-    const { data: existing } = await db
-      .from("coach_alerts")
-      .select("conversation_id,type")
-      .in(
-        "conversation_id",
-        alerts.map((a) => a.conversation_id),
-      )
-      .neq("state", "resolvido");
-    const seen = new Set((existing ?? []).map((e: any) => `${e.conversation_id}|${e.type}`));
-    const fresh = alerts.filter((a) => !seen.has(`${a.conversation_id}|${a.type}`));
-    if (fresh.length) await db.from("coach_alerts").insert(fresh);
-    return { created: fresh.length };
-  }
-  return { created: 0 };
-});
-
-export const listCoachConversationsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const db = await admin();
-  // Conversas do Agente IA ficam na aba "Agente IA" — aqui só vendedores reais
-  const { data: convs, error } = await db
-    .from("coach_conversations")
-    .select("*")
-    .eq("is_ai_conversation", false)
-    .order("last_message_at", { ascending: false, nullsFirst: false })
-    .limit(500);
-  if (error) throw new Error(error.message);
-
-  const ids = (convs ?? []).map((c: any) => c.id);
-  // PostgREST .in() estoura o limite de URL com centenas de UUIDs → particiona
-  // Os blocos rodavam com await dentro do for — N round-trips em série onde
-  // cabiam N em paralelo. Cada bloco tem no máximo 200 ids e a relação é 1:1,
-  // então o teto explícito garante que nada é truncado.
-  const chunks: string[][] = [];
-  for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200));
-  const analysisPages = await Promise.all(
-    chunks.map((chunk) =>
-      db
-        .from("coach_analyses")
-        .select("*")
-        .in("conversation_id", chunk)
-        .limit(chunk.length * 2),
-    ),
-  );
-  const analyses: CoachAnalysis[] = [];
-  for (const { data } of analysisPages) {
-    if (data?.length) analyses.push(...(data as CoachAnalysis[]));
-  }
-  const byConv = new Map<string, CoachAnalysis>();
-  for (const a of analyses) byConv.set(a.conversation_id, a);
-
-  // Quem enviou as mensagens: vendedor (CHAT) vs IA/automação (AUTOMATION/CAMPAIGN/AI)
-  const srcMap = new Map<string, { bot: number; human: number; unknown: number }>();
-  const srcPages = await Promise.all(
-    chunks.map((chunk) =>
-      db
-        .from("coach_conv_outbound_sources")
-        .select("conversation_id,bot_out,human_out,unknown_out")
-        .in("conversation_id", chunk)
-        .limit(chunk.length * 2),
-    ),
-  );
-  for (const { data } of srcPages) {
-    for (const r of (data ?? []) as any[]) {
-      srcMap.set(r.conversation_id, {
-        bot: Number(r.bot_out ?? 0),
-        human: Number(r.human_out ?? 0),
-        unknown: Number(r.unknown_out ?? 0),
-      });
+    if (alerts.length) {
+      const { data: existing } = await db
+        .from("coach_alerts")
+        .select("conversation_id,type")
+        .in(
+          "conversation_id",
+          alerts.map((a) => a.conversation_id),
+        )
+        .neq("state", "resolvido");
+      const seen = new Set((existing ?? []).map((e: any) => `${e.conversation_id}|${e.type}`));
+      const fresh = alerts.filter((a) => !seen.has(`${a.conversation_id}|${a.type}`));
+      if (fresh.length) await db.from("coach_alerts").insert(fresh);
+      return { created: fresh.length };
     }
-  }
-
-  return (convs ?? []).map((c: any) => {
-    const s = srcMap.get(c.id) ?? { bot: 0, human: 0, unknown: 0 };
-    const atendimento: "humano" | "misto" | "ia" =
-      s.bot > 0 && s.human === 0 && s.unknown === 0 ? "ia" : s.bot > 0 ? "misto" : "humano";
-    return {
-      ...c,
-      analysis: byConv.get(c.id) ?? null,
-      ia_msgs: s.bot,
-      vendedor_msgs: s.human + s.unknown,
-      atendimento,
-    };
+    return { created: 0 };
   });
-});
+
+export const listCoachConversationsFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = await admin();
+    // Conversas do Agente IA ficam na aba "Agente IA" — aqui só vendedores reais
+    const { data: convs, error } = await db
+      .from("coach_conversations")
+      .select("*")
+      .eq("is_ai_conversation", false)
+      .order("last_message_at", { ascending: false, nullsFirst: false })
+      .limit(500);
+    if (error) throw new Error(error.message);
+
+    const ids = (convs ?? []).map((c: any) => c.id);
+    // PostgREST .in() estoura o limite de URL com centenas de UUIDs → particiona
+    // Os blocos rodavam com await dentro do for — N round-trips em série onde
+    // cabiam N em paralelo. Cada bloco tem no máximo 200 ids e a relação é 1:1,
+    // então o teto explícito garante que nada é truncado.
+    const chunks: string[][] = [];
+    for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200));
+    const analysisPages = await Promise.all(
+      chunks.map((chunk) =>
+        db
+          .from("coach_analyses")
+          .select("*")
+          .in("conversation_id", chunk)
+          .limit(chunk.length * 2),
+      ),
+    );
+    const analyses: CoachAnalysis[] = [];
+    for (const { data } of analysisPages) {
+      if (data?.length) analyses.push(...(data as CoachAnalysis[]));
+    }
+    const byConv = new Map<string, CoachAnalysis>();
+    for (const a of analyses) byConv.set(a.conversation_id, a);
+
+    // Quem enviou as mensagens: vendedor (CHAT) vs IA/automação (AUTOMATION/CAMPAIGN/AI)
+    const srcMap = new Map<string, { bot: number; human: number; unknown: number }>();
+    const srcPages = await Promise.all(
+      chunks.map((chunk) =>
+        db
+          .from("coach_conv_outbound_sources")
+          .select("conversation_id,bot_out,human_out,unknown_out")
+          .in("conversation_id", chunk)
+          .limit(chunk.length * 2),
+      ),
+    );
+    for (const { data } of srcPages) {
+      for (const r of (data ?? []) as any[]) {
+        srcMap.set(r.conversation_id, {
+          bot: Number(r.bot_out ?? 0),
+          human: Number(r.human_out ?? 0),
+          unknown: Number(r.unknown_out ?? 0),
+        });
+      }
+    }
+
+    return (convs ?? []).map((c: any) => {
+      const s = srcMap.get(c.id) ?? { bot: 0, human: 0, unknown: 0 };
+      const atendimento: "humano" | "misto" | "ia" =
+        s.bot > 0 && s.human === 0 && s.unknown === 0 ? "ia" : s.bot > 0 ? "misto" : "humano";
+      return {
+        ...c,
+        analysis: byConv.get(c.id) ?? null,
+        ia_msgs: s.bot,
+        vendedor_msgs: s.human + s.unknown,
+        atendimento,
+      };
+    });
+  });
 
 export const getCoachConversationFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data }) => {
     const db = await admin();
@@ -906,6 +917,7 @@ export const getCoachConversationFn = createServerFn({ method: "GET" })
   });
 
 export const deleteCoachConversationFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data }) => {
     const db = await admin();
@@ -914,18 +926,21 @@ export const deleteCoachConversationFn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const listCoachAlertsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const db = await admin();
-  const { data, error } = await db
-    .from("coach_alerts")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(500);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as CoachAlert[];
-});
+export const listCoachAlertsFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = await admin();
+    const { data, error } = await db
+      .from("coach_alerts")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as CoachAlert[];
+  });
 
 export const resolveCoachAlertFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string; state: "aberto" | "visto" | "resolvido" }) => d)
   .handler(async ({ data }) => {
     const db = await admin();
@@ -942,21 +957,24 @@ export const resolveCoachAlertFn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const getCoachConfigFn = createServerFn({ method: "GET" }).handler(async () => {
-  const db = await admin();
-  const { data } = await db.from("coach_config").select("*").eq("id", 1).maybeSingle();
-  return (data ?? {
-    id: 1,
-    nota_minima: 6,
-    horas_lead_quente: 4,
-    dias_sem_resposta: 3,
-    auto_analysis: true,
-    analysis_interval_hours: 1,
-    seller_phones: [],
-  }) as CoachConfig;
-});
+export const getCoachConfigFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = await admin();
+    const { data } = await db.from("coach_config").select("*").eq("id", 1).maybeSingle();
+    return (data ?? {
+      id: 1,
+      nota_minima: 6,
+      horas_lead_quente: 4,
+      dias_sem_resposta: 3,
+      auto_analysis: true,
+      analysis_interval_hours: 1,
+      seller_phones: [],
+    }) as CoachConfig;
+  });
 
 export const saveCoachConfigFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       nota_minima: number;
@@ -983,12 +1001,14 @@ export const saveCoachConfigFn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const fetchWeeklyStatsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const db = await admin();
-  const { data, error } = await db.from("coach_weekly_summary").select("*").limit(120);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as WeeklyStats[];
-});
+export const fetchWeeklyStatsFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = await admin();
+    const { data, error } = await db.from("coach_weekly_summary").select("*").limit(120);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as WeeklyStats[];
+  });
 
 export type CoachIntegrationLog = {
   id: number;
@@ -998,48 +1018,54 @@ export type CoachIntegrationLog = {
   created_at: string;
 };
 
-export const fetchClintWebhookStatsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const db = await admin();
-  const [convRes, logRes] = await Promise.all([
-    (db as any)
-      .from("coach_conversations")
-      .select("id", { count: "exact", head: true })
-      .eq("source", "clint"),
-    (db as any)
+export const fetchClintWebhookStatsFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = await admin();
+    const [convRes, logRes] = await Promise.all([
+      (db as any)
+        .from("coach_conversations")
+        .select("id", { count: "exact", head: true })
+        .eq("source", "clint"),
+      (db as any)
+        .from("coach_integration_logs")
+        .select("created_at, status")
+        .order("created_at", { ascending: false })
+        .limit(1),
+    ]);
+    const lastEvent = logRes.data?.[0] ?? null;
+    return {
+      webhook_conversation_count: (convRes.count as number) ?? 0,
+      last_event_at: lastEvent?.created_at ?? null,
+      is_connected: lastEvent
+        ? Date.now() - new Date(lastEvent.created_at).getTime() < 7 * 24 * 60 * 60 * 1000
+        : false,
+    };
+  });
+
+export const fetchClintIntegrationLogsFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = await admin();
+    const { data: rows, error } = await (db as any)
       .from("coach_integration_logs")
-      .select("created_at, status")
+      .select("id, event_type, status, error_msg, created_at")
       .order("created_at", { ascending: false })
-      .limit(1),
-  ]);
-  const lastEvent = logRes.data?.[0] ?? null;
-  return {
-    webhook_conversation_count: (convRes.count as number) ?? 0,
-    last_event_at: lastEvent?.created_at ?? null,
-    is_connected: lastEvent
-      ? Date.now() - new Date(lastEvent.created_at).getTime() < 7 * 24 * 60 * 60 * 1000
-      : false,
-  };
-});
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as CoachIntegrationLog[];
+  });
 
-export const fetchClintIntegrationLogsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const db = await admin();
-  const { data: rows, error } = await (db as any)
-    .from("coach_integration_logs")
-    .select("id, event_type, status, error_msg, created_at")
-    .order("created_at", { ascending: false })
-    .limit(50);
-  if (error) throw new Error(error.message);
-  return (rows ?? []) as CoachIntegrationLog[];
-});
-
-export const runClintMigrationsFn = createServerFn({ method: "POST" }).handler(async () => {
-  const db = await admin();
-  const { error: tableErr } = await (db as any).from("clint_events_raw").select("id").limit(1);
-  if (!tableErr) return { ok: true, already_applied: true };
-  throw new Error(
-    "MIGRATION_NEEDED:Rode o arquivo supabase/migrations/20260713120000_coach_backend_v2.sql no Supabase SQL Editor",
-  );
-});
+export const runClintMigrationsFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = await admin();
+    const { error: tableErr } = await (db as any).from("clint_events_raw").select("id").limit(1);
+    if (!tableErr) return { ok: true, already_applied: true };
+    throw new Error(
+      "MIGRATION_NEEDED:Rode o arquivo supabase/migrations/20260713120000_coach_backend_v2.sql no Supabase SQL Editor",
+    );
+  });
 
 // ============ Team Insights (coordenador comercial) ============
 export type TeamInsights = {
@@ -1072,6 +1098,7 @@ function norm(s: string): string {
 }
 
 export const generateTeamInsightsFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { days?: number } = {}) => d)
   .handler(async ({ data }): Promise<TeamInsights> => {
     const key = process.env.LOVABLE_API_KEY;

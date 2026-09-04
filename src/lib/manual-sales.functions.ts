@@ -123,6 +123,7 @@ export type HotmartMatch = {
 };
 
 export const lookupByEmailFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { email: string; sale_date?: string }) => {
     if (!d.email || !d.email.includes("@")) throw new Error("Email inválido");
     return { email: normEmail(d.email), sale_date: d.sale_date };
@@ -182,6 +183,7 @@ async function findHotmartMatch(email: string, saleDate: string) {
 // ── Confirmar manualmente ─────────────────────────────────────────────────────
 
 export const confirmManualSaleFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       id: string;
@@ -390,6 +392,7 @@ export const listManualSales = createServerFn({ method: "GET" })
   });
 
 export const listManualSalesAdmin = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { from?: string; to?: string }) => d ?? {})
   .handler(async ({ data }) => {
     const db = await adminDb();
@@ -489,10 +492,12 @@ export const deleteManualSale = createServerFn({ method: "POST" })
 // Reaproveita o mesmo ciclo usado pela auditoria automática (pg_cron horário):
 // reconfere pendentes na Hotmart e atualiza os alertas de comissão.
 
-export const reconfirmAllPendingFn = createServerFn({ method: "POST" }).handler(async () => {
-  const { reconfirmPending, refreshCommissionAlerts } =
-    await import("@/lib/manual-sales-audit.server");
-  const result = await reconfirmPending();
-  await refreshCommissionAlerts();
-  return result;
-});
+export const reconfirmAllPendingFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { reconfirmPending, refreshCommissionAlerts } =
+      await import("@/lib/manual-sales-audit.server");
+    const result = await reconfirmPending();
+    await refreshCommissionAlerts();
+    return result;
+  });

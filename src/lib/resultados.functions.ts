@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 // requireSupabaseAuth not required — internal dashboard uses admin client
 
 async function admin() {
@@ -17,6 +18,7 @@ export type SaleResultado = {
 };
 
 export const fetchSalesResultadosFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { year: number }) => d)
   .handler(async ({ data }) => {
     const db = await admin();
@@ -55,6 +57,7 @@ export const fetchSalesResultadosFn = createServerFn({ method: "GET" })
 
 // ── Contagem de leads (clint_deals.created_at) por mês/ano ──────────────────
 export const fetchLeadsRealizadoFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { year: number }) => d)
   .handler(async ({ data }) => {
     const db = await admin();
@@ -103,6 +106,7 @@ export type WeeklyResult = {
 };
 
 export const fetchWeeklyResultsFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { year: number }) => d)
   .handler(async ({ data }) => {
     const db = await admin();
@@ -118,6 +122,7 @@ export const fetchWeeklyResultsFn = createServerFn({ method: "GET" })
   });
 
 export const saveWeeklyResultFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: { product_id: string; week_start: string; indicador: string; valor_brl: number }) => {
       if (!d.product_id || !d.week_start || !d.indicador) throw new Error("Campos obrigatórios");
@@ -150,6 +155,7 @@ export type MonthlyOverride = {
 };
 
 export const fetchMonthlyOverridesFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { year: number }) => d)
   .handler(async ({ data }) => {
     const db = await admin();
@@ -165,6 +171,7 @@ export const fetchMonthlyOverridesFn = createServerFn({ method: "GET" })
   });
 
 export const saveMonthlyOverrideFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { bloco: string; periodo: string; indicador: string; valor_brl: number }) => {
     if (!d.bloco || !d.periodo || !d.indicador) throw new Error("Campos obrigatórios");
     return d;
@@ -187,6 +194,7 @@ export const saveMonthlyOverrideFn = createServerFn({ method: "POST" })
 
 // ── Save target (meta or distribuicao_pct) ─────────────────────────────────
 export const saveTargetFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       periodo: string;
