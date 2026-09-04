@@ -296,7 +296,7 @@ function AgenteIaPage() {
             <Kpi
               icon={CalendarCheck}
               label="Reuniões agendadas"
-              value={String(Math.max(k.reunioes, DEMO_REUNIOES))}
+              value={String(Math.max(k.reunioes, d.clint.reunioesAgendadas))}
               hint={`${k.conversaoReuniaoPct}% de conversão · ${k.agendaClint} na Agenda`}
               tone="good"
             />
