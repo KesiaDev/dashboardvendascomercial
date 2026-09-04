@@ -212,6 +212,11 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
       from: data.from,
       to: data.to,
       total,
+      totalAtendidos,
+      porEstagio: Array.from(estagios.entries())
+        .map(([estagio, v]) => ({ estagio, leads: v.leads, atendido: v.atendido }))
+        .sort((a, b) => b.leads - a.leads),
+
       dows,
       melhor: melhor ? { label: melhor.label, media: melhor.media } : null,
       pior: pior ? { label: pior.label, media: pior.media } : null,
