@@ -20,7 +20,7 @@ import {
 } from "@/lib/commission.functions";
 import { RoletaSpinsCard } from "@/components/roleta-spins";
 import { useAppAuth } from "@/lib/app-auth";
-import { FALLBACK_EUR_BRL, eurBrlRate } from "@/lib/eur-rate";
+import { RATE_MISSING_MESSAGE, eurBrlRate } from "@/lib/eur-rate";
 import {
   calculateCommissions,
   periodWeeks,
@@ -171,6 +171,11 @@ function Dashboard() {
     return periods[0];
   }, [periods, periodId]);
 
+  // Cotação contratual do período. `null` quando não foi cadastrada — e nesse
+  // caso a tela AVISA em vez de converter com um valor inventado. Ver a nota em
+  // src/lib/eur-rate.ts.
+  const cotacaoPeriodo = eurBrlRate(activePeriod);
+
   const { data: sales = [] } = useQuery({
     queryKey: ["comm_sales", activePeriod?.id],
     enabled: !!activePeriod,
@@ -200,6 +205,9 @@ function Dashboard() {
 
   const summary = useMemo(() => {
     if (!activePeriod || sellers.length === 0) return null;
+    // Sem cotação cadastrada, calculateCommissions lança de propósito (ver
+    // src/lib/eur-rate.ts). Aqui isso vira o aviso abaixo, não uma tela branca.
+    if (cotacaoPeriodo === null) return null;
     return calculateCommissions(
       activePeriod,
       sellers,
@@ -213,6 +221,7 @@ function Dashboard() {
     );
   }, [
     activePeriod,
+    cotacaoPeriodo,
     sellers,
     rates,
     sales,
@@ -303,6 +312,30 @@ function Dashboard() {
       {/* ── Alertas de auditoria do fechamento manual ── */}
       <CommissionAlertsCard />
 
+      {/* ── Sem cotação do período não há como converter os valores em euro ── */}
+      {activePeriod && cotacaoPeriodo === null && (
+        <Card className="border-destructive bg-destructive/5">
+          <CardContent className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-destructive-fg">
+                {activePeriod.nome} está sem cotação EUR→BRL
+              </p>
+              <p className="max-w-2xl text-xs text-muted-foreground">{RATE_MISSING_MESSAGE}</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                const val = prompt("Cotação EUR→BRL deste período:", "");
+                if (val !== null && Number(val) > 0)
+                  upsertPeriodMut.mutate({ ...activePeriod, cotacao_eur: Number(val) });
+              }}
+            >
+              Definir cotação
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ── Resumo do mês ── */}
       {summary && activePeriod && (
         <Card className="border-primary/40 bg-primary/5">
@@ -329,9 +362,12 @@ function Dashboard() {
               />
               <Kpi
                 label="Cotação EUR do período"
-                value={`R$ ${eurBrlRate(activePeriod).toFixed(2)}`}
+                value={
+                  cotacaoPeriodo === null ? "não cadastrada" : `R$ ${cotacaoPeriodo.toFixed(2)}`
+                }
+                hint={cotacaoPeriodo === null ? "clique para definir" : undefined}
                 onClick={() => {
-                  const val = prompt("Cotação EUR→BRL:", String(eurBrlRate(activePeriod)));
+                  const val = prompt("Cotação EUR→BRL:", String(cotacaoPeriodo ?? ""));
                   if (val !== null && !isNaN(Number(val)))
                     upsertPeriodMut.mutate({ ...activePeriod, cotacao_eur: Number(val) });
                 }}
@@ -380,9 +416,11 @@ function Dashboard() {
               <tbody>
                 {summary.sellers.map((s) => {
                   // Cada vendedor é exibido na sua moeda (Rita/João em EUR, os demais em BRL)
-                  const cot = eurBrlRate(activePeriod);
                   const mo = (s.moeda ?? "BRL").toUpperCase() === "EUR" ? "EUR" : "BRL";
-                  const mm = (brl: number) => money(mo === "EUR" ? brl / cot : brl, mo);
+                  const mm = (brl: number) =>
+                    mo === "EUR" && cotacaoPeriodo === null
+                      ? "—"
+                      : money(mo === "EUR" ? brl / cotacaoPeriodo! : brl, mo);
                   return (
                     <tr
                       key={s.sellerName}
@@ -452,7 +490,7 @@ function Dashboard() {
             key={s.sellerName}
             s={s}
             rates={rates}
-            cotacao={eurBrlRate(activePeriod)}
+            cotacao={cotacaoPeriodo}
             weeks={weeks.map((w) => w.label)}
 
             onClose={() => setExpandedSeller(null)}
@@ -575,7 +613,7 @@ function SellerDetail({
   s: SellerCommission;
   weeks: string[];
   rates: { seller_name: string; produto_grupo: string; rate_pct: number }[];
-  cotacao: number;
+  cotacao: number | null;
   onClose: () => void;
   bonusForm: any;
   setBonusForm: (v: any) => void;
@@ -584,7 +622,9 @@ function SellerDetail({
 }) {
   // Planilha: valores na moeda do vendedor (Rita/João em EUR, os demais em BRL)
   const moeda = (s.moeda ?? "BRL").toUpperCase() === "EUR" ? "EUR" : "BRL";
-  const cv = (brl: number) => (moeda === "EUR" ? brl / (cotacao || FALLBACK_EUR_BRL) : brl);
+  // Sem cotação do período não há como converter para euro — a tela avisa em
+  // vez de exibir um número inventado.
+  const cv = (brl: number) => (moeda === "EUR" ? brl / (cotacao ?? Number.NaN) : brl);
   const m = (brl: number) => money(cv(brl), moeda);
 
   // Todas as linhas de produto do vendedor, mesmo com faturamento zero
@@ -626,7 +666,12 @@ function SellerDetail({
           {s.sellerName} — detalhe{" "}
           <span className="text-xs font-normal text-muted-foreground">
             (valores em {moeda}
-            {moeda === "EUR" ? ` · câmbio ${cotacao.toFixed(2)}` : ""})
+            {moeda === "EUR"
+              ? cotacao === null
+                ? " · sem câmbio cadastrado"
+                : ` · câmbio ${cotacao.toFixed(2)}`
+              : ""}
+            )
           </span>
         </CardTitle>
         <Button size="sm" variant="ghost" onClick={onClose}>
@@ -717,8 +762,8 @@ function SellerDetail({
         {/* Metas */}
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-            <Target className="h-3.5 w-3.5" /> Metas ({s.metas.level}) · meta semanal{" "}
-            {s.metas.config.meta_semanal_eur} EUR · super {s.metas.config.super_semanal_eur} EUR
+            <Target className="h-3.5 w-3.5" /> Metas · semanal €900 → €30 · €1.600 → €60 · mensal
+            €3.200 → €30 · €6.400 → €60
           </p>
           <div className="flex flex-wrap gap-2">
             {s.metas.semanas.map((w) => (
@@ -1163,7 +1208,7 @@ function NewPeriodForm({ onSave }: { onSave: (d: any) => void }) {
   const [nome, setNome] = useState("");
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState("");
-  const [cotacao, setCotacao] = useState(String(FALLBACK_EUR_BRL));
+  const [cotacao, setCotacao] = useState("");
 
   const handleCreate = () => {
     onSave({
@@ -1172,12 +1217,12 @@ function NewPeriodForm({ onSave }: { onSave: (d: any) => void }) {
       data_fim: fim,
       roleta_pool_brl: 0,
       roleta_pool_eur: 0,
-      cotacao_eur: Number(cotacao) || FALLBACK_EUR_BRL,
+      cotacao_eur: Number(cotacao) || 0,
     });
     setNome("");
     setInicio("");
     setFim("");
-    setCotacao(String(FALLBACK_EUR_BRL));
+    setCotacao("");
   };
 
   return (
@@ -1213,7 +1258,7 @@ function NewPeriodForm({ onSave }: { onSave: (d: any) => void }) {
         <p className="text-xs text-muted-foreground">Cotação EUR (R$)</p>
         <Input
           className="w-[90px]"
-          placeholder={String(FALLBACK_EUR_BRL)}
+          placeholder="ex.: 6.01"
           value={cotacao}
           onChange={(e) => setCotacao(e.target.value)}
         />

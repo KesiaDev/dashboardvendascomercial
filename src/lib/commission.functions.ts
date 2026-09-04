@@ -400,6 +400,23 @@ export const deleteRoletaSpinFn = createServerFn({ method: "POST" })
 
 // Gera os giros pendentes a partir das vendas do Fechamento marcadas com roleta
 // (1ª parcela apenas, sem renovações), sem duplicar o que já existe.
+/**
+ * Giros de roleta a partir das vendas da HOTMART — a fonte definida em
+ * 04/09/2026. A regra (produto principal, valor cheio ≥ €200, primeira venda,
+ * Y a partir de €1.000) vive em src/lib/commission-rules.ts e roda também na
+ * entrada da venda, pelo webhook e pelo sync. Este endpoint serve para
+ * reprocessar um período fechado; é idempotente.
+ */
+export const generateRoletaFromHotmartFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { from: string; to: string }) => d)
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.claims);
+    const db = await admin();
+    const { syncRoletaSpinsFromSales } = await import("@/lib/roleta-auto.server");
+    return await syncRoletaSpinsFromSales(db, data.from, data.to);
+  });
+
 export const generateRoletaSpinsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { period_id: number; from: string; to: string }) => d)
@@ -421,6 +438,7 @@ export const generateRoletaSpinsFn = createServerFn({ method: "POST" })
       roleta_type: string | null;
       installment_number: number | null;
       categoria_produto: string | null;
+      confirmed_hotmart_sale_id: string | null;
     };
     const sales = await fetchAllRows<RoletaSale>(
       ({ from, to }) =>
@@ -428,13 +446,18 @@ export const generateRoletaSpinsFn = createServerFn({ method: "POST" })
           db
             .from("manual_sales")
             .select(
-              "id,seller_name,product,client_name,sale_date,roleta_type,installment_number,categoria_produto",
+              "id,seller_name,product,client_name,sale_date,roleta_type,installment_number,categoria_produto,confirmed_hotmart_sale_id",
             ),
         ).range(from, to),
       () => roletaFilter(db.from("manual_sales").select("*", { count: "exact", head: true })),
     );
 
-    const elegiveis = sales.filter((s) => s.categoria_produto !== "RENOVACAO");
+    // Venda do fechamento já confirmada contra a Hotmart é a MESMA venda que
+    // generateRoletaFromHotmartFn processa. Sem este filtro, ela geraria dois
+    // giros — um por `manual_sales.id` e outro por `transacao`.
+    const elegiveis = sales.filter(
+      (s) => s.categoria_produto !== "RENOVACAO" && !s.confirmed_hotmart_sale_id,
+    );
     if (elegiveis.length === 0) return { created: 0 };
 
     const { data: existing, error: e2 } = await db

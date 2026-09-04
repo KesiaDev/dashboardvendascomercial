@@ -5,6 +5,7 @@ import {
   upsertRoletaSpinFn,
   deleteRoletaSpinFn,
   generateRoletaSpinsFn,
+  generateRoletaFromHotmartFn,
   type RoletaSpinRow,
 } from "@/lib/commission.functions";
 import type { CommissionPeriod } from "@/lib/commission";
@@ -41,7 +42,11 @@ const SOURCES = [
 ];
 
 const money = (v: number, c: "BRL" | "EUR" = "BRL") =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: c, maximumFractionDigits: 0 }).format(v || 0);
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: c,
+    maximumFractionDigits: 0,
+  }).format(v || 0);
 
 type FormState = {
   id?: string;
@@ -96,7 +101,9 @@ export function RoletaSpinsCard({
   }, [allSpins, period, filtroRoleta]);
 
   const totals = useMemo(() => {
-    const cot = eurBrlRate(period);
+    // Sem cotação, os prêmios em euro não entram no total em BRL — melhor um
+    // total menor e visivelmente incompleto que um número inventado.
+    const cot = eurBrlRate(period) ?? 0;
     let brl = 0;
     let pendentes = 0;
     const porRoleta: Record<string, number> = { mentoria: 0, accelerator: 0 };
@@ -151,12 +158,30 @@ export function RoletaSpinsCard({
   const genMut = useMutation({
     mutationFn: async () => {
       if (!period) throw new Error("Selecione um período");
-      return generateRoletaSpinsFn({
-        data: { period_id: period.id, from: period.data_inicio, to: period.data_fim },
-      });
+      // Duas fontes: as vendas da Hotmart (regra oficial desde 04/09/2026) e os
+      // lançamentos do fechamento que ainda não foram confirmados na Hotmart.
+      // Ambas são idempotentes, então reprocessar não duplica.
+      const [hotmart, fechamento] = await Promise.all([
+        generateRoletaFromHotmartFn({
+          data: { from: period.data_inicio, to: period.data_fim },
+        }),
+        generateRoletaSpinsFn({
+          data: { period_id: period.id, from: period.data_inicio, to: period.data_fim },
+        }),
+      ]);
+      return { hotmart, fechamento };
     },
-    onSuccess: (r: any) => {
-      toast.success(r.created > 0 ? `${r.created} giro(s) gerado(s)` : "Nenhum giro novo");
+    onSuccess: (r) => {
+      const total = r.hotmart.criados + r.fechamento.created;
+      const avisos: string[] = [];
+      if (r.hotmart.semCotacao > 0)
+        avisos.push(`${r.hotmart.semCotacao} venda(s) sem cotação no período`);
+      if (r.hotmart.semVendedor > 0)
+        avisos.push(`${r.hotmart.semVendedor} sem vendedor identificado`);
+      const sufixo = avisos.length ? ` · ${avisos.join(" · ")}` : "";
+      if (total > 0) toast.success(`${total} giro(s) gerado(s)${sufixo}`);
+      else if (avisos.length) toast.warning(`Nenhum giro novo${sufixo}`);
+      else toast.success("Nenhum giro novo");
       invalidate();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -451,12 +476,19 @@ export function RoletaSpinsCard({
                     )}
                   </td>
                   <td className="py-1.5 px-3 text-right tabular-nums">
-                    {Number(s.prize_value_eur) > 0 && <div>{money(Number(s.prize_value_eur), "EUR")}</div>}
+                    {Number(s.prize_value_eur) > 0 && (
+                      <div>{money(Number(s.prize_value_eur), "EUR")}</div>
+                    )}
                     {Number(s.prize_value_brl) > 0 && <div>{money(Number(s.prize_value_brl))}</div>}
                     {!Number(s.prize_value_eur) && !Number(s.prize_value_brl) && "—"}
                   </td>
                   <td className="py-1.5 px-3 text-right whitespace-nowrap">
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(s)}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => startEdit(s)}
+                    >
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button

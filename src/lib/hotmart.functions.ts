@@ -249,6 +249,28 @@ export async function runHotmartSync(opts?: {
     if (error) throw new Error(error.message);
   }
 
+  // Giros de roleta da janela sincronizada. Idempotente: reprocessar a mesma
+  // janela não duplica giro.
+  let roleta: unknown = null;
+  try {
+    const datas = mapped
+      .map((r) => r.data_venda)
+      .filter((d): d is string => !!d)
+      .sort();
+    if (datas.length > 0) {
+      const { syncRoletaSpinsFromSales } = await import("@/lib/roleta-auto.server");
+      roleta = await syncRoletaSpinsFromSales(
+        db,
+        datas[0].slice(0, 10),
+        datas[datas.length - 1].slice(0, 10),
+      );
+    }
+  } catch (e) {
+    // Não derruba o sync de vendas por causa da roleta.
+    console.error("[hotmart sync] falha ao gerar giros de roleta:", e);
+    roleta = { erro: e instanceof Error ? e.message : String(e) };
+  }
+
   const newRows = mapped.filter((r) => !existing.has(r.transacao)).length;
   const updatedRows = mapped.length - newRows;
   const dates = mapped
