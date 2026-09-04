@@ -327,9 +327,10 @@ function AgenteIaPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {(() => {
-                const reunioes = Math.max(k.reunioes, DEMO_REUNIOES);
-                const vendas = Math.max(d.vendas.vendasTotal, DEMO_VENDAS);
-                const noShows = NO_SHOWS_2_SEMANAS;
+                const reunioes = Math.max(k.reunioes, d.clint.reunioesAgendadas);
+                const vendas = Math.max(d.vendas.vendasTotal, d.clint.ganhos);
+                const noShows = d.clint.noShows;
+
                 const realizadas = Math.max(reunioes - noShows, 0);
                 const taxaNoShow = reunioes > 0 ? (noShows / reunioes) * 100 : 0;
                 const taxaComparecimento = reunioes > 0 ? (realizadas / reunioes) * 100 : 0;
