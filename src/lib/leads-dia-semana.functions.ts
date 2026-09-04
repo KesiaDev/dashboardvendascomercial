@@ -156,7 +156,7 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
     const total = Array.from(porDow.values()).reduce((s, v) => s + v.leads, 0);
     const dows: DowStat[] = DOW_LABELS.map((label, i) => {
       const dow = i + 1;
-      const v = porDow.get(dow) ?? { leads: 0, porBucket: {} };
+      const v = porDow.get(dow) ?? { leads: 0, atendidos: 0, porBucket: {} };
       const nd = diasPorDow[dow] || 1;
       return {
         dow,
@@ -166,7 +166,10 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
         media: v.leads / nd,
         share: total ? (v.leads / total) * 100 : 0,
         porBucket: v.porBucket,
+        atendidos: v.atendidos,
+        taxaAtendimento: v.leads ? (v.atendidos / v.leads) * 100 : 0,
       };
+
     });
 
     const uteis = dows.filter((d) => d.dias > 0);
