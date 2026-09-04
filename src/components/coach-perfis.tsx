@@ -299,7 +299,58 @@ export function PerfisTab() {
         </CardContent>
       </Card>
 
-
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Users className="h-4 w-4" /> Vendas do fechamento e o perfil de cada cliente
+          </CardTitle>
+          <p className="text-[11px] text-muted-foreground">
+            {(data?.total_vendas ?? 0)} venda{(data?.total_vendas ?? 0) === 1 ? "" : "s"} no período ·{" "}
+            {(data?.total_vendas ?? 0) - (data?.vendas_sem_conversa ?? 0)} com conversa analisada ·{" "}
+            {(data?.vendas_sem_conversa ?? 0)} sem conversa registrada. A soma das vendas por perfil bate
+            com o fechamento.
+          </p>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead className="text-[11px] uppercase text-muted-foreground bg-muted/40">
+              <tr>
+                <th className="text-left p-3">Data</th>
+                <th className="text-left p-3">Cliente</th>
+                <th className="text-left p-3">Vendedor</th>
+                <th className="text-left p-3">Produto</th>
+                <th className="text-left p-3">Funil</th>
+                <th className="text-left p-3">Perfil</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data?.vendas ?? []).map((v, i) => (
+                <tr key={`${v.cliente}-${v.data}-${i}`} className={`border-b border-border/60 ${i % 2 ? "bg-muted/10" : ""}`}>
+                  <td className="p-3 whitespace-nowrap">{v.data.split("-").reverse().join("/")}</td>
+                  <td className="p-3">
+                    <p className="font-medium">{v.cliente}</p>
+                    {v.email && <p className="text-[11px] text-muted-foreground">{v.email}</p>}
+                  </td>
+                  <td className="p-3">{v.seller}</td>
+                  <td className="p-3">{v.produto}</td>
+                  <td className="p-3">{v.funil}</td>
+                  <td className="p-3">
+                    <Badge
+                      variant={v.vinculo === "conversa" ? "secondary" : "outline"}
+                      className="text-[10px]"
+                    >
+                      {v.perfil}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+              {(data?.vendas?.length ?? 0) === 0 && (
+                <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">{isLoading ? "Carregando..." : "Nenhuma venda registrada no período."}</td></tr>
+              )}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
 
 
       {insight && (
