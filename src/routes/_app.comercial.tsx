@@ -148,7 +148,10 @@ function Comercial() {
   const { format: money, currency, brlPerEur: rate } = useCurrency();
 
   const { data: deals = [], isLoading } = useQuery({
-    queryKey: ["clint_deals"],
+    // Mesma chave de /executivo, /produtividade e /vendedor-produto: é a MESMA
+    // fetchAllDeals. Com chaves diferentes, navegar entre essas rotas rebaixava a
+    // tabela inteira de novo e o browser guardava duas cópias do payload.
+    queryKey: ["bi_deals"],
     queryFn: fetchDeals,
   });
   const { data: sales = [] } = useQuery({ queryKey: ["bi_sales"], queryFn: fetchAllSales });
@@ -178,7 +181,7 @@ function Comercial() {
     },
     onSuccess: (r) => {
       toast.success(`Sincronizado: ${r.count} negócios atualizados`);
-      qc.invalidateQueries({ queryKey: ["clint_deals"] });
+      qc.invalidateQueries({ queryKey: ["bi_deals"] });
       qc.invalidateQueries({ queryKey: ["clint_origins"] });
       qc.invalidateQueries({ queryKey: ["clint_stages"] });
       qc.invalidateQueries({ queryKey: ["clint_lost_statuses"] });

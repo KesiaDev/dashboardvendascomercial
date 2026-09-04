@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { eurBrlRate } from "./eur-rate";
 
 async function adminDb() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -134,7 +135,9 @@ export const getCancelamentosFn = createServerFn({ method: "GET" })
 
 // ─── Vendas por Vendedor ─────────────────────────────────────────────────────
 // Usa manual_sales (lançamentos do vendedor) + confirmed_hotmart_valor_brl
-// quando confirmado, senão value_eur convertido em BRL (assumindo 1 EUR ≈ 6 BRL).
+// quando confirmado, senão value_eur convertido pela cotação do período de
+// comissionamento que cobre o mês — a MESMA que /comissionamento usa. Antes isto era
+// um `* 6` cru, o que fazia as duas telas divergirem ~2,5% para as mesmas vendas.
 // Também traz breakdown por categoria e faturamento que conta para meta.
 export const getVendasPorVendedorFn = createServerFn({ method: "GET" })
   .inputValidator((d: { month?: string } | undefined) => d ?? {})
@@ -156,6 +159,17 @@ export const getVendasPorVendedorFn = createServerFn({ method: "GET" })
       .order("sale_date", { ascending: false });
     if (error) throw new Error(error.message);
 
+    // Cotação contratual do período que cobre o mês (mesma fonte de /comissionamento).
+    const { data: periodRow } = await db
+      .from("bi_commission_periods")
+      .select("cotacao_eur")
+      .lte("data_inicio", endDate)
+      .gte("data_fim", startDate)
+      .order("data_inicio", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const cotacao = eurBrlRate(periodRow);
+
     type Bucket = {
       seller: string;
       qtdTotal: number;
@@ -171,7 +185,7 @@ export const getVendasPorVendedorFn = createServerFn({ method: "GET" })
     for (const r of rows ?? []) {
       const cat = r.categoria_produto ?? "OUTROS";
       // Valor: se confirmado com Hotmart, usa BRL confirmado; senão EUR * 6.
-      const brl = Number(r.confirmed_hotmart_valor_brl ?? Number(r.value_eur) * 6);
+      const brl = Number(r.confirmed_hotmart_valor_brl ?? Number(r.value_eur) * cotacao);
       const b =
         bySeller.get(r.seller_name) ??
         ({

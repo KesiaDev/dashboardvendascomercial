@@ -19,6 +19,7 @@ import {
   type RoletaSpinRow,
 } from "@/lib/commission.functions";
 import { RoletaSpinsCard } from "@/components/roleta-spins";
+import { FALLBACK_EUR_BRL, eurBrlRate } from "@/lib/eur-rate";
 import {
   calculateCommissions,
   periodWeeks,
@@ -360,11 +361,11 @@ function Dashboard() {
               />
               <Kpi
                 label="Cotação EUR do período"
-                value={`R$ ${(activePeriod.cotacao_eur ?? 5.85).toFixed(2)}`}
+                value={`R$ ${eurBrlRate(activePeriod).toFixed(2)}`}
                 onClick={() => {
                   const val = prompt(
                     "Cotação EUR→BRL:",
-                    String(activePeriod.cotacao_eur ?? 5.85),
+                    String(eurBrlRate(activePeriod)),
                   );
                   if (val !== null && !isNaN(Number(val)))
                     upsertPeriodMut.mutate({ ...activePeriod, cotacao_eur: Number(val) });
@@ -414,7 +415,7 @@ function Dashboard() {
               <tbody>
                 {summary.sellers.map((s) => {
                   // Cada vendedor é exibido na sua moeda (Rita/João em EUR, os demais em BRL)
-                  const cot = activePeriod?.cotacao_eur ?? 5.86;
+                  const cot = eurBrlRate(activePeriod);
                   const mo = (s.moeda ?? "BRL").toUpperCase() === "EUR" ? "EUR" : "BRL";
                   const mm = (brl: number) => money(mo === "EUR" ? brl / cot : brl, mo);
                   return (
@@ -487,7 +488,7 @@ function Dashboard() {
             key={s.sellerName}
             s={s}
             rates={rates}
-            cotacao={activePeriod?.cotacao_eur ?? 5.86}
+            cotacao={eurBrlRate(activePeriod)}
             weeks={weeks.map((w) => w.label)}
 
             onClose={() => setExpandedSeller(null)}
@@ -618,7 +619,7 @@ function SellerDetail({
 }) {
   // Planilha: valores na moeda do vendedor (Rita/João em EUR, os demais em BRL)
   const moeda = (s.moeda ?? "BRL").toUpperCase() === "EUR" ? "EUR" : "BRL";
-  const cv = (brl: number) => (moeda === "EUR" ? brl / (cotacao || 5.86) : brl);
+  const cv = (brl: number) => (moeda === "EUR" ? brl / (cotacao || FALLBACK_EUR_BRL) : brl);
   const m = (brl: number) => money(cv(brl), moeda);
 
   // Todas as linhas de produto do vendedor, mesmo com faturamento zero
@@ -1187,7 +1188,7 @@ function NewPeriodForm({ onSave }: { onSave: (d: any) => void }) {
   const [nome, setNome] = useState("");
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState("");
-  const [cotacao, setCotacao] = useState("5.85");
+  const [cotacao, setCotacao] = useState(String(FALLBACK_EUR_BRL));
 
   const handleCreate = () => {
     onSave({
@@ -1196,12 +1197,12 @@ function NewPeriodForm({ onSave }: { onSave: (d: any) => void }) {
       data_fim: fim,
       roleta_pool_brl: 0,
       roleta_pool_eur: 0,
-      cotacao_eur: Number(cotacao) || 5.85,
+      cotacao_eur: Number(cotacao) || FALLBACK_EUR_BRL,
     });
     setNome("");
     setInicio("");
     setFim("");
-    setCotacao("5.85");
+    setCotacao(String(FALLBACK_EUR_BRL));
   };
 
   return (
@@ -1237,7 +1238,7 @@ function NewPeriodForm({ onSave }: { onSave: (d: any) => void }) {
         <p className="text-xs text-muted-foreground">Cotação EUR (R$)</p>
         <Input
           className="w-[90px]"
-          placeholder="5.85"
+          placeholder={String(FALLBACK_EUR_BRL)}
           value={cotacao}
           onChange={(e) => setCotacao(e.target.value)}
         />

@@ -6,9 +6,13 @@ export const getRouter = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        // Dados de BI vêm de syncs/imports periódicos, não tempo real —
-        // evita refetch a cada troca de aba dentro da mesma sessão.
-        staleTime: 60_000,
+        // Dados de BI vêm de syncs/imports periódicos (o mais frequente roda a cada
+        // 30 min), não tempo real. 60s obrigava a rebaixar payloads grandes a cada
+        // navegação; 10 min cobre a janela real de atualização dos dados.
+        staleTime: 10 * 60_000,
+        gcTime: 30 * 60_000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
       },
     },
   });
@@ -17,7 +21,12 @@ export const getRouter = () => {
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
-    defaultPreloadStaleTime: 0,
+    // Prefetch no hover/foco do link — sem isto cada clique de menu paga o chunk a
+    // frio. defaultPreloadStaleTime precisa acompanhar o staleTime acima, senão o
+    // resultado do preload é considerado velho e o trabalho é jogado fora.
+    defaultPreload: "intent",
+    defaultPreloadDelay: 50,
+    defaultPreloadStaleTime: 10 * 60_000,
   });
 
   return router;

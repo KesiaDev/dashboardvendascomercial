@@ -148,7 +148,11 @@ function CoachPage() {
         }
       } catch {}
     };
-    runAnalysis();
+    // NÃO dispare a análise no mount. runAutoAnalysisFn processa até 10 conversas em
+    // loop serial (cada uma é uma chamada de LLM) = 30–120s de trabalho de servidor a
+    // cada carregamento da página, competindo com as outras queries da rota pelo mesmo
+    // worker. O backfill periódico é responsabilidade do cron em
+    // /api/public/sync/coach-auto; aqui só mantemos o refresh da sessão aberta.
     analysisTimerRef.current = setInterval(runAnalysis, analysisIntervalMs);
     return () => { if (analysisTimerRef.current) clearInterval(analysisTimerRef.current); };
   }, [autoEnabled, analysisIntervalMs, qc, isAdmin]);

@@ -8,6 +8,7 @@ import {
   type RoletaSpinRow,
 } from "@/lib/commission.functions";
 import type { CommissionPeriod } from "@/lib/commission";
+import { eurBrlRate } from "@/lib/eur-rate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -95,7 +96,7 @@ export function RoletaSpinsCard({
   }, [allSpins, period, filtroRoleta]);
 
   const totals = useMemo(() => {
-    const cot = period?.cotacao_eur ?? 5.85;
+    const cot = eurBrlRate(period);
     let brl = 0;
     let pendentes = 0;
     const porRoleta: Record<string, number> = { mentoria: 0, accelerator: 0 };

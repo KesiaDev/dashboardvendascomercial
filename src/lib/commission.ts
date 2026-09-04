@@ -1,3 +1,4 @@
+import { eurBrlRate } from "./eur-rate";
 import { PRODUCT_GROUPS, mapProductToGroup } from "./product-groups";
 import { resolveSaleSeller, sellerFromAffiliate } from "./sck-attribution";
 
@@ -333,7 +334,7 @@ export function calculateCommissions(
 ): CommissionSummary {
   const start = new Date(`${period.data_inicio}T00:00:00`);
   const end = new Date(`${period.data_fim}T23:59:59`);
-  const cotacao = period.cotacao_eur ?? 5.85;
+  const cotacao = eurBrlRate(period);
   const activeSellers = sellers.filter((s) => s.is_active);
   const sellerNames = new Set(activeSellers.map((s) => s.seller_name));
 
