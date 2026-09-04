@@ -111,6 +111,10 @@ const normalize = (s: string) =>
 type PerfilDef = { nome: string; descricao: string; kw: string[] };
 
 const NAO_IDENTIFICADO = "Perfil não identificado";
+// Venda do fechamento que não tem conversa registrada na Clint (veio de call/LDP).
+// Existe para que a soma das vendas por perfil bata sempre com o fechamento.
+const SEM_CONVERSA = "Venda sem conversa registrada";
+
 
 // Heurística de perfil de lead a partir do que o PRÓPRIO lead escreve.
 const PERFIS: PerfilDef[] = [
