@@ -1,16 +1,30 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-// Combined sync function used by the public cron trigger (n8n daily 6am).
+// Sync combinado usado pelo cron público (a cada 30 min).
+//
+// A janela incremental é de 2 dias, não 90. Com 90, cada execução reescrevia via
+// upsert dezenas de milhares de linhas de clint_deals — 48 vezes por dia, cada
+// UPDATE gerando uma tupla morta e cada linha carregando a coluna `raw` JSONB
+// (TOAST). Era a causa raiz do bloat que deixava as rotas de BI progressivamente
+// mais lentas. Para recarregar o histórico inteiro, chame com { full: true }.
+const INCREMENTAL_SINCE_DAYS = 2;
+
 export async function runFullClintSync(opts?: { full?: boolean }) {
   const token = process.env.CLINT_API_TOKEN;
   if (!token) throw new Error("CLINT_API_TOKEN not configured");
   const users = await syncClintUsers();
   const origins = await syncClintOrigins();
   const areas = await syncPipelineAreas();
-  const deals = await syncClintDeals({ data: opts?.full ? { full: true } : { sinceDays: 90 } });
-  return { ok: true, synced_at: new Date().toISOString(), results: { users, origins, areas, deals } };
+  const deals = await syncClintDeals({
+    data: opts?.full ? { full: true } : { sinceDays: INCREMENTAL_SINCE_DAYS },
+  });
+  return {
+    ok: true,
+    synced_at: new Date().toISOString(),
+    results: { users, origins, areas, deals },
+  };
 }
-
 
 const CLINT_BASE = "https://api.clint.digital";
 
@@ -34,89 +48,94 @@ async function clintFetch(path: string, token: string) {
   return res.json();
 }
 
-export const syncClintUsers = createServerFn({ method: "POST" }).handler(async () => {
-  const token = process.env.CLINT_API_TOKEN;
-  if (!token) throw new Error("CLINT_API_TOKEN not configured");
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+export const syncClintUsers = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const token = process.env.CLINT_API_TOKEN;
+    if (!token) throw new Error("CLINT_API_TOKEN not configured");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  let page = 1;
-  const users: any[] = [];
-  while (true) {
-    const data = await clintFetch(`/v1/users?limit=100&page=${page}`, token);
-    users.push(...(data.data ?? []));
-    if (!data.hasNext) break;
-    page += 1;
-    if (page > 20) break;
-  }
-  const rows = users.map((u: any) => ({
-    id: u.id,
-    email: u.email,
-    first_name: u.first_name,
-    last_name: u.last_name,
-    synced_at: new Date().toISOString(),
-  }));
-  if (rows.length) {
-    const { error } = await supabaseAdmin.from("clint_users").upsert(rows, { onConflict: "id" });
-    if (error) throw error;
-  }
-  return { count: rows.length };
-});
+    let page = 1;
+    const users: any[] = [];
+    while (true) {
+      const data = await clintFetch(`/v1/users?limit=100&page=${page}`, token);
+      users.push(...(data.data ?? []));
+      if (!data.hasNext) break;
+      page += 1;
+      if (page > 20) break;
+    }
+    const rows = users.map((u: any) => ({
+      id: u.id,
+      email: u.email,
+      first_name: u.first_name,
+      last_name: u.last_name,
+      synced_at: new Date().toISOString(),
+    }));
+    if (rows.length) {
+      const { error } = await supabaseAdmin.from("clint_users").upsert(rows, { onConflict: "id" });
+      if (error) throw error;
+    }
+    return { count: rows.length };
+  });
 
 /**
  * Sincroniza os funis (origins) da Clint e suas etapas (stages).
  * Necessário para reconstruir o gráfico de funil e o filtro por origem.
  */
-export const syncClintOrigins = createServerFn({ method: "POST" }).handler(async () => {
-  const token = process.env.CLINT_API_TOKEN;
-  if (!token) throw new Error("CLINT_API_TOKEN not configured");
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+export const syncClintOrigins = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const token = process.env.CLINT_API_TOKEN;
+    if (!token) throw new Error("CLINT_API_TOKEN not configured");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  let page = 1;
-  const origins: any[] = [];
-  while (true) {
-    const data = await clintFetch(`/v1/origins?limit=100&page=${page}`, token);
-    origins.push(...(data.data ?? []));
-    if (!data.hasNext) break;
-    page += 1;
-    if (page > 20) break;
-  }
+    let page = 1;
+    const origins: any[] = [];
+    while (true) {
+      const data = await clintFetch(`/v1/origins?limit=100&page=${page}`, token);
+      origins.push(...(data.data ?? []));
+      if (!data.hasNext) break;
+      page += 1;
+      if (page > 20) break;
+    }
 
-  const originRows = origins.map((o: any) => ({
-    id: o.id,
-    name: o.name,
-    group_name: o.group?.name?.trim() ?? null,
-    archived: !!o.archived_at,
-    synced_at: new Date().toISOString(),
-  }));
-
-  const stageRows = origins.flatMap((o: any) =>
-    (o.stages ?? []).map((s: any) => ({
-      id: s.id,
-      origin_id: o.id,
-      label: s.label,
-      stage_order: s.order,
-      type: s.type,
+    const originRows = origins.map((o: any) => ({
+      id: o.id,
+      name: o.name,
+      group_name: o.group?.name?.trim() ?? null,
+      archived: !!o.archived_at,
       synced_at: new Date().toISOString(),
-    })),
-  );
+    }));
 
-  if (originRows.length) {
-    const { error } = await supabaseAdmin
-      .from("clint_origins")
-      .upsert(originRows, { onConflict: "id" });
-    if (error) throw error;
-  }
-  if (stageRows.length) {
-    const { error } = await supabaseAdmin
-      .from("clint_origin_stages")
-      .upsert(stageRows, { onConflict: "id" });
-    if (error) throw error;
-  }
+    const stageRows = origins.flatMap((o: any) =>
+      (o.stages ?? []).map((s: any) => ({
+        id: s.id,
+        origin_id: o.id,
+        label: s.label,
+        stage_order: s.order,
+        type: s.type,
+        synced_at: new Date().toISOString(),
+      })),
+    );
 
-  return { origins: originRows.length, stages: stageRows.length };
-});
+    if (originRows.length) {
+      const { error } = await supabaseAdmin
+        .from("clint_origins")
+        .upsert(originRows, { onConflict: "id" });
+      if (error) throw error;
+    }
+    if (stageRows.length) {
+      const { error } = await supabaseAdmin
+        .from("clint_origin_stages")
+        .upsert(stageRows, { onConflict: "id" });
+      if (error) throw error;
+    }
+
+    return { origins: originRows.length, stages: stageRows.length };
+  });
 
 export const syncClintDeals = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { sinceDays?: number; full?: boolean }) => d ?? {})
   .handler(async ({ data }) => {
     const token = process.env.CLINT_API_TOKEN;
@@ -124,9 +143,7 @@ export const syncClintDeals = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const sinceDays = data?.sinceDays ?? 180;
-    const since = data?.full
-      ? null
-      : new Date(Date.now() - sinceDays * 86_400_000).toISOString();
+    const since = data?.full ? null : new Date(Date.now() - sinceDays * 86_400_000).toISOString();
 
     const { data: logRow, error: logErr } = await supabaseAdmin
       .from("clint_sync_log")
@@ -150,7 +167,10 @@ export const syncClintDeals = createServerFn({ method: "POST" })
     const userMap = new Map<string, { name: string | null; email: string | null }>(
       (usersRows ?? []).map((u: any) => [
         u.id,
-        { name: `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email || null, email: u.email ?? null },
+        {
+          name: `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email || null,
+          email: u.email ?? null,
+        },
       ]),
     );
 
@@ -245,6 +265,7 @@ export const syncClintDeals = createServerFn({ method: "POST" })
 
 /** Permite o usuário renomear um motivo de perda (lost_status_id) com label amigável. */
 export const setLostStatusLabel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string; label: string | null }) => d)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -262,32 +283,34 @@ export const setLostStatusLabel = createServerFn({ method: "POST" })
  * Backfill: gera linhas em clint_lost_statuses para todos os lost_status_id já existentes
  * em clint_deals (útil pra quem já tem dados sincronizados antes desta versão).
  */
-export const backfillLostStatuses = createServerFn({ method: "POST" }).handler(async () => {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const ids = new Set<string>();
-  let from = 0;
-  const pageSize = 1000;
-  while (true) {
-    const { data, error } = await supabaseAdmin
-      .from("clint_deals")
-      .select("lost_status_id")
-      .not("lost_status_id", "is", null)
-      .range(from, from + pageSize - 1);
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    for (const r of data) if (r.lost_status_id) ids.add(r.lost_status_id);
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  if (ids.size) {
-    const rows = Array.from(ids).map((id) => ({ id, label: null }));
-    const { error } = await supabaseAdmin
-      .from("clint_lost_statuses")
-      .upsert(rows, { onConflict: "id", ignoreDuplicates: true });
-    if (error) throw error;
-  }
-  return { count: ids.size };
-});
+export const backfillLostStatuses = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const ids = new Set<string>();
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data, error } = await supabaseAdmin
+        .from("clint_deals")
+        .select("lost_status_id")
+        .not("lost_status_id", "is", null)
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      for (const r of data) if (r.lost_status_id) ids.add(r.lost_status_id);
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    if (ids.size) {
+      const rows = Array.from(ids).map((id) => ({ id, label: null }));
+      const { error } = await supabaseAdmin
+        .from("clint_lost_statuses")
+        .upsert(rows, { onConflict: "id", ignoreDuplicates: true });
+      if (error) throw error;
+    }
+    return { count: ids.size };
+  });
 
 /**
  * Classifica automaticamente todos os pipelines em áreas de negócio
@@ -295,31 +318,33 @@ export const backfillLostStatuses = createServerFn({ method: "POST" }).handler(a
  * no group_name que a própria Clint já atribui a cada origin. Roda com
  * ignoreDuplicates: true para nunca sobrescrever uma classificação manual.
  */
-export const syncPipelineAreas = createServerFn({ method: "POST" }).handler(async () => {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { classifyByGroupName } = await import("@/lib/pipeline-areas");
+export const syncPipelineAreas = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { classifyByGroupName } = await import("@/lib/pipeline-areas");
 
-  const { data: origins, error } = await supabaseAdmin
-    .from("clint_origins")
-    .select("id,group_name,archived");
-  if (error) throw error;
+    const { data: origins, error } = await supabaseAdmin
+      .from("clint_origins")
+      .select("id,group_name,archived");
+    if (error) throw error;
 
-  const rows = (origins ?? []).map((o) => ({
-    pipeline_id: o.id,
-    area: classifyByGroupName(o.group_name),
-    ativo: !o.archived,
-    auto_classified: true,
-    updated_at: new Date().toISOString(),
-  }));
+    const rows = (origins ?? []).map((o) => ({
+      pipeline_id: o.id,
+      area: classifyByGroupName(o.group_name),
+      ativo: !o.archived,
+      auto_classified: true,
+      updated_at: new Date().toISOString(),
+    }));
 
-  if (rows.length) {
-    const { error: upErr } = await supabaseAdmin
-      .from("bi_pipeline_areas")
-      .upsert(rows, { onConflict: "pipeline_id", ignoreDuplicates: true });
-    if (upErr) throw upErr;
-  }
-  return { classified: rows.length };
-});
+    if (rows.length) {
+      const { error: upErr } = await supabaseAdmin
+        .from("bi_pipeline_areas")
+        .upsert(rows, { onConflict: "pipeline_id", ignoreDuplicates: true });
+      if (upErr) throw upErr;
+    }
+    return { classified: rows.length };
+  });
 
 /**
  * Busca o ranking de vendedores DIRETO da API da Clint (mesma fonte que o
@@ -328,15 +353,15 @@ export const syncPipelineAreas = createServerFn({ method: "POST" }).handler(asyn
  * fallback para user (responsável), excluindo sellers internos.
  */
 export const fetchClintRankingFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { year: number; month: number }) => d)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const now = new Date();
-    const targetYear  = data.year;
+    const targetYear = data.year;
     const targetMonth = data.month;
-    const isCurrentMonth =
-      targetYear === now.getFullYear() && targetMonth === now.getMonth() + 1;
+    const isCurrentMonth = targetYear === now.getFullYear() && targetMonth === now.getMonth() + 1;
 
     // A partir de Julho/2026 o ranking vem do fechamento manual (manual_sales).
     // Não depende da API da Clint — evita quebrar quando o token está expirado.
@@ -357,7 +382,6 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || (u.email as string) || "—",
       ]),
     );
-
 
     // Whitelist de FUNIS que contam para o ranking comercial (decisão de negócio:
     // somente vendas de PIPELINE_COMERCIAL-V3, Sessão Estratégica, Renovações e FGRS).
@@ -396,7 +420,7 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       let p = 1;
       while (true) {
         const r = await clintFetch(`/v1/origins?limit=200&page=${p}`, token);
-        for (const o of (r.data ?? [])) {
+        for (const o of r.data ?? []) {
           const name = o.name ?? "";
           _originNameMap.set(o.id, name);
           if (EXCLUDED_ORIGIN_PATTERNS.some((re) => re.test(name))) continue;
@@ -422,20 +446,17 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       }
     }
 
-
-
-
     // Override fechamento Junho/2026 (valores oficiais do relatório semanal).
     // Valores informados em BRL; convertemos pra EUR com 1€ = 6 R$ pra bater
     // exatamente com o print quando o toggle está em reais.
     if (targetYear === 2026 && targetMonth === 6) {
       const BRL_TO_EUR = 1 / 6;
       const fixed = [
-        { name: "Gisele Pimentel",  won: 28, brl: 9410 },
-        { name: "João Pessoa",      won: 19, brl: 7984 },
-        { name: "Rita Bandeira",    won: 7,  brl: 2495 },
-        { name: "Fabio Nadal",      won: 5,  brl: 2495 },
-        { name: "Luana Guimarães",  won: 2,  brl: 499  },
+        { name: "Gisele Pimentel", won: 28, brl: 9410 },
+        { name: "João Pessoa", won: 19, brl: 7984 },
+        { name: "Rita Bandeira", won: 7, brl: 2495 },
+        { name: "Fabio Nadal", won: 5, brl: 2495 },
+        { name: "Luana Guimarães", won: 2, brl: 499 },
       ];
       const mes = fixed
         .map((s, i) => ({
@@ -443,26 +464,27 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
           name: s.name,
           won: s.won,
           revenue: s.brl * BRL_TO_EUR,
-          leads: 0, lost: 0, open: 0, email: "",
+          leads: 0,
+          lost: 0,
+          open: 0,
+          email: "",
         }))
         .sort((a, b) => b.revenue - a.revenue);
       return {
         mes,
         semana: isCurrentMonth ? mes : [],
-        dia:    isCurrentMonth ? [] : [],
+        dia: isCurrentMonth ? [] : [],
         destaques: {
-          dia:    null,
+          dia: null,
           semana: isCurrentMonth ? (mes[0] ?? null) : null,
-          mes:    mes[0] ?? null,
+          mes: mes[0] ?? null,
         },
         _debug: { source: "fixed-override-jun-2026" },
       };
     }
 
-
-
     const monthStart = new Date(targetYear, targetMonth - 1, 1);
-    const monthEnd   = new Date(targetYear, targetMonth, 1);
+    const monthEnd = new Date(targetYear, targetMonth, 1);
 
     const since = new Date(monthStart.getTime() - 3 * 86_400_000).toISOString();
     const all: any[] = [];
@@ -479,8 +501,12 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
 
     const EXCLUDED = new Set(["camila faria", "aline goncalves"]);
     const normStr = (s: string) =>
-      s.trim().toLowerCase().replace(/\s+/g, " ")
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      s
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
 
     // Valor mínimo de venda nova: €399. Abaixo disso são prestações
     // (parcelas de vendas antigas) e não contam como nova venda.
@@ -508,8 +534,8 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
         const key = contactId
           ? `id:${contactId}`
           : contactEmail
-          ? `eml:${String(contactEmail).toLowerCase()}`
-          : `deal:${d.id}`;
+            ? `eml:${String(contactEmail).toLowerCase()}`
+            : `deal:${d.id}`;
         const cur = byContact.get(key);
         if (!cur || new Date(d.won_at) > new Date(cur.won_at)) {
           byContact.set(key, d);
@@ -521,14 +547,14 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       for (const d of byContact.values()) {
         const v = parseFloat(String(d.value ?? 0)) || 0;
         const userId: string | undefined =
-          (typeof d.user === "string" ? d.user : d.user?.id)
-          || (typeof d.won_by === "string" ? d.won_by : d.won_by?.id);
+          (typeof d.user === "string" ? d.user : d.user?.id) ||
+          (typeof d.won_by === "string" ? d.won_by : d.won_by?.id);
         if (!userId) continue;
         const userName: string =
-          (typeof d.user === "object" && (d.user?.full_name || d.user?.email))
-          || userMap.get(userId)
-          || (typeof d.won_by === "object" && (d.won_by?.full_name || d.won_by?.email))
-          || "—";
+          (typeof d.user === "object" && (d.user?.full_name || d.user?.email)) ||
+          userMap.get(userId) ||
+          (typeof d.won_by === "object" && (d.won_by?.full_name || d.won_by?.email)) ||
+          "—";
         const clean = userName.trim().replace(/\s+/g, " ");
         if (EXCLUDED.has(normStr(clean))) continue;
         const cur = map.get(userId) ?? { name: clean, won: 0, revenue: 0 };
@@ -538,12 +564,19 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
       }
       return Array.from(map.values())
         .sort((a, b) => b.revenue - a.revenue)
-        .map((s, i) => ({ user_id: `clint-${i}`, name: s.name, won: s.won, revenue: s.revenue, leads: 0, lost: 0, open: 0, email: "" }));
+        .map((s, i) => ({
+          user_id: `clint-${i}`,
+          name: s.name,
+          won: s.won,
+          revenue: s.revenue,
+          leads: 0,
+          lost: 0,
+          open: 0,
+          email: "",
+        }));
     }
 
     const mes = buildRanking(monthStart, monthEnd);
-
-
 
     // "Hoje" / "Semana" usam horário de Brasília (UTC-3) como referência —
     // assim o time BR vê o que esperaria; vendedores em Portugal (UTC+1) vão
@@ -559,15 +592,14 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
     const daysSinceMonday = (dayOfWeekBR + 6) % 7;
     const weekStart = new Date(todayStart.getTime() - daysSinceMonday * 86_400_000);
 
-
     return {
       mes,
       semana: isCurrentMonth ? buildRanking(weekStart, null) : [],
-      dia:    isCurrentMonth ? buildRanking(todayStart, null) : [],
+      dia: isCurrentMonth ? buildRanking(todayStart, null) : [],
       destaques: {
-        dia:    isCurrentMonth ? (buildRanking(todayStart, null)[0] ?? null) : null,
+        dia: isCurrentMonth ? (buildRanking(todayStart, null)[0] ?? null) : null,
         semana: isCurrentMonth ? (buildRanking(weekStart, null)[0] ?? null) : null,
-        mes:    mes[0] ?? null,
+        mes: mes[0] ?? null,
       },
       _debug: {
         allowedOriginCount: allowedOriginIds.size,
@@ -582,6 +614,7 @@ export const fetchClintRankingFn = createServerFn({ method: "GET" })
  * nunca mais ser sobrescrita por syncPipelineAreas.
  */
 export const setPipelineArea = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { pipelineId: string; area: string; ativo: boolean }) => d)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -616,7 +649,10 @@ async function buildManualRanking(
     .from("manual_sales")
     .select("seller_name,value_eur,sale_date")
     .gte("sale_date", monthStart)
-    .lt("sale_date", nextMonth);
+    .lt("sale_date", nextMonth)
+    // Um mês inteiro de lançamentos manuais não chega perto de 1000, mas o teto
+    // explícito é a regra do projeto (ver src/lib/supabase-paging.ts).
+    .limit(5000);
   if (error) throw new Error(error.message);
 
   const aggregate = (filter: (saleDate: string) => boolean) => {
@@ -635,7 +671,10 @@ async function buildManualRanking(
         name: s.name,
         won: s.won,
         revenue: s.revenue,
-        leads: 0, lost: 0, open: 0, email: "",
+        leads: 0,
+        lost: 0,
+        open: 0,
+        email: "",
       }));
   };
 
@@ -647,10 +686,13 @@ async function buildManualRanking(
   const todayStr = `${nowBR.getUTCFullYear()}-${pad(nowBR.getUTCMonth() + 1)}-${pad(nowBR.getUTCDate())}`;
   const dayOfWeekBR = nowBR.getUTCDay();
   const daysSinceMonday = (dayOfWeekBR + 6) % 7;
-  const weekStartDate = new Date(Date.UTC(nowBR.getUTCFullYear(), nowBR.getUTCMonth(), nowBR.getUTCDate()) - daysSinceMonday * 86_400_000);
+  const weekStartDate = new Date(
+    Date.UTC(nowBR.getUTCFullYear(), nowBR.getUTCMonth(), nowBR.getUTCDate()) -
+      daysSinceMonday * 86_400_000,
+  );
   const weekStartStr = `${weekStartDate.getUTCFullYear()}-${pad(weekStartDate.getUTCMonth() + 1)}-${pad(weekStartDate.getUTCDate())}`;
 
-  const dia    = isCurrentMonth ? aggregate((d) => d === todayStr) : [];
+  const dia = isCurrentMonth ? aggregate((d) => d === todayStr) : [];
   const semana = isCurrentMonth ? aggregate((d) => d >= weekStartStr && d <= todayStr) : [];
 
   return {
@@ -658,9 +700,9 @@ async function buildManualRanking(
     semana,
     dia,
     destaques: {
-      dia:    dia[0] ?? null,
+      dia: dia[0] ?? null,
       semana: semana[0] ?? null,
-      mes:    mes[0] ?? null,
+      mes: mes[0] ?? null,
     },
     _debug: { source: "manual_sales", total: rows?.length ?? 0 },
   };

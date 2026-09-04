@@ -1,5 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertAdmin } from "@/lib/authz.server";
 import { parseWiseTab, type WiseSheetRow } from "@/lib/wise-sheet";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 // Planilha "Wise recebimentos" (Google Sheets) — fonte oficial dos recebimentos em EUR.
 const SPREADSHEET_ID = "1tpjc0UiXhmQKzZPP58hep9EqLCKfDXIl4gjRkB7qI5E";
@@ -33,15 +36,18 @@ async function gatewayGet(path: string) {
 }
 
 /** Lista as abas da planilha Wise (uma por mês). */
-export const listWiseSheetTabsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const meta = await gatewayGet(
-    `/spreadsheets/${SPREADSHEET_ID}?fields=properties.title,sheets.properties.title`,
-  );
-  const tabs: string[] = (meta.sheets ?? [])
-    .map((s: any) => s?.properties?.title as string)
-    .filter(Boolean);
-  return { title: meta?.properties?.title ?? "Wise", tabs };
-});
+export const listWiseSheetTabsFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    assertAdmin(context.claims);
+    const meta = await gatewayGet(
+      `/spreadsheets/${SPREADSHEET_ID}?fields=properties.title,sheets.properties.title`,
+    );
+    const tabs: string[] = (meta.sheets ?? [])
+      .map((s: any) => s?.properties?.title as string)
+      .filter(Boolean);
+    return { title: meta?.properties?.title ?? "Wise", tabs };
+  });
 
 /**
  * Sincroniza a planilha Wise para bi_wise_payments.
@@ -49,8 +55,10 @@ export const listWiseSheetTabsFn = createServerFn({ method: "GET" }).handler(asy
  * preservando vendedor e período já atribuídos manualmente.
  */
 export const syncWiseSheetFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { tabs?: string[] } | undefined) => d ?? {})
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.claims);
     const db = await admin();
 
     let tabs = data.tabs;
@@ -63,9 +71,7 @@ export const syncWiseSheetFn = createServerFn({ method: "POST" })
         .filter((t: string) => !!t && !/hotmart/i.test(t));
     }
 
-    const rangeParams = tabs!
-      .map((t) => `ranges=${encodeURIComponent(`${t}!A1:F1000`)}`)
-      .join("&");
+    const rangeParams = tabs!.map((t) => `ranges=${encodeURIComponent(`${t}!A1:F1000`)}`).join("&");
     const batch = await gatewayGet(
       `/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${rangeParams}`,
     );
@@ -79,11 +85,25 @@ export const syncWiseSheetFn = createServerFn({ method: "POST" })
     if (parsed.length === 0) return { imported: 0, tabs: tabs!.length, inadimplentes: 0 };
 
     // Preserva atribuições manuais (vendedor / período) já feitas no dashboard.
-    const { data: existing } = await db
-      .from("bi_wise_payments")
-      .select("data_pagamento,cliente,valor_eur,seller_name,period_id");
+    // Truncar AQUI é destrutivo: o que não vier nesta leitura é tratado como
+    // "não existia", e a atribuição manual de vendedor/período feita no
+    // dashboard é sobrescrita na reimportação.
+    const existing = await fetchAllRows<{
+      data_pagamento: string;
+      cliente: string;
+      valor_eur: number;
+      seller_name: string | null;
+      period_id: number | null;
+    }>(
+      ({ from, to }) =>
+        db
+          .from("bi_wise_payments")
+          .select("data_pagamento,cliente,valor_eur,seller_name,period_id")
+          .range(from, to),
+      () => db.from("bi_wise_payments").select("*", { count: "exact", head: true }),
+    );
     const keep = new Map<string, { seller_name: string | null; period_id: number | null }>();
-    for (const e of existing ?? []) {
+    for (const e of existing) {
       keep.set(`${e.data_pagamento}|${e.cliente}|${e.valor_eur}`, {
         seller_name: e.seller_name ?? null,
         period_id: e.period_id ?? null,
@@ -120,8 +140,6 @@ export const syncWiseSheetFn = createServerFn({ method: "POST" })
 
     const { error } = await db.from("bi_wise_payments").insert(unique);
     if (error) throw new Error(error.message);
-
-
 
     return {
       imported: unique.length,

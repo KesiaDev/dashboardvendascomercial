@@ -35,7 +35,7 @@ function isDST(date: Date): boolean {
   // Portugal WEST: last Sunday in March to last Sunday in October
   const year = date.getFullYear();
   const start = lastSunday(year, 2); // March (0-indexed)
-  const end = lastSunday(year, 9);   // October
+  const end = lastSunday(year, 9); // October
   return date >= start && date < end;
 }
 
@@ -51,8 +51,8 @@ interface BookBody {
   lead_name?: string;
   lead_phone?: string;
   lead_email?: string;
-  scheduled_at?: string;   // ISO string or [AGENDA:...] tag
-  agenda_tag?: string;     // raw [AGENDA:DD/MM:HH:MM] tag
+  scheduled_at?: string; // ISO string or [AGENDA:...] tag
+  agenda_tag?: string; // raw [AGENDA:DD/MM:HH:MM] tag
   clint_deal_id?: string;
   notes?: string;
   source?: string;
@@ -72,21 +72,24 @@ async function handleBook(request: Request) {
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  if (!body.lead_name) return Response.json({ ok: false, error: "lead_name required" }, { status: 400 });
-  if (!body.seller_email) return Response.json({ ok: false, error: "seller_email required" }, { status: 400 });
+  if (!body.lead_name)
+    return Response.json({ ok: false, error: "lead_name required" }, { status: 400 });
+  if (!body.seller_email)
+    return Response.json({ ok: false, error: "seller_email required" }, { status: 400 });
 
   let scheduledAt: Date | null = null;
   if (body.agenda_tag) {
     scheduledAt = parseAgendaTag(body.agenda_tag);
   } else if (body.scheduled_at) {
-    const tag = body.scheduled_at.match(/\[AGENDA:[^\]]+\]/)
-      ? body.scheduled_at
-      : null;
+    const tag = body.scheduled_at.match(/\[AGENDA:[^\]]+\]/) ? body.scheduled_at : null;
     scheduledAt = tag ? parseAgendaTag(tag) : new Date(body.scheduled_at);
   }
 
   if (!scheduledAt || isNaN(scheduledAt.getTime())) {
-    return Response.json({ ok: false, error: "valid scheduled_at or agenda_tag required" }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "valid scheduled_at or agenda_tag required" },
+      { status: 400 },
+    );
   }
 
   // Respeita a janela de trabalho do vendedor (brasileiros só a partir das 10:00 de Lisboa = 06:00 BR)
@@ -103,8 +106,6 @@ async function handleBook(request: Request) {
       { status: 409 },
     );
   }
-
-
 
   const { data: inserted, error } = await supabaseAdmin
     .from("seller_agenda")

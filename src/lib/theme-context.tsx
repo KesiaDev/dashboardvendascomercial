@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 type Theme = "light" | "dark";
 const KEY = "theme";
@@ -26,14 +34,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyTheme(initial);
   }, []);
 
-  const setTheme = (t: Theme) => {
+  const setTheme = useCallback((t: Theme) => {
     setThemeState(t);
     localStorage.setItem(KEY, t);
     applyTheme(t);
-  };
-  const toggle = () => setTheme(theme === "dark" ? "light" : "dark");
+  }, []);
+  const toggle = useCallback(
+    () => setTheme(theme === "dark" ? "light" : "dark"),
+    [theme, setTheme],
+  );
 
-  return <ThemeContext.Provider value={{ theme, setTheme, toggle }}>{children}</ThemeContext.Provider>;
+  // Memoizado pelo mesmo motivo do currency-context: envolve o app inteiro.
+  const value = useMemo(() => ({ theme, setTheme, toggle }), [theme, setTheme, toggle]);
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

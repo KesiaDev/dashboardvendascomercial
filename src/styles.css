@@ -27,6 +27,9 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-success-fg: var(--success-fg);
+  --color-warning-fg: var(--warning-fg);
+  --color-destructive-fg: var(--destructive-fg);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -58,6 +61,13 @@
   --destructive-foreground: oklch(0.99 0.003 250);
   --success: oklch(0.6 0.17 155);
   --warning: oklch(0.72 0.16 75);
+  /* Variantes para TEXTO. --success/--warning são calibrados para preenchimento
+     (badge, barra, ponto de gráfico) e ficam claros demais como texto sobre o card
+     branco: --warning em L 0.72 dá ~2,5:1, abaixo do mínimo legível. Estas versões
+     escurecidas ficam acima de 4,5:1 sobre --card em cada tema. */
+  --success-fg: oklch(0.52 0.14 155);
+  --warning-fg: oklch(0.52 0.12 70);
+  --destructive-fg: oklch(0.52 0.2 25);
   --border: oklch(0.9 0.01 260);
   --input: oklch(0.9 0.01 260);
   --ring: oklch(0.55 0.2 265);
@@ -88,6 +98,10 @@
   --destructive-foreground: oklch(1 0 0);
   --success: oklch(0.78 0.16 160);
   --warning: oklch(0.84 0.15 80);
+  /* No escuro o movimento é o inverso: clarear para destacar do card. */
+  --success-fg: oklch(0.8 0.15 160);
+  --warning-fg: oklch(0.85 0.14 80);
+  --destructive-fg: oklch(0.75 0.18 25);
   --border: oklch(0.42 0.03 260);
   --input: oklch(0.38 0.028 260);
   --ring: oklch(0.78 0.16 265);
@@ -97,7 +111,6 @@
   --chart-4: oklch(0.75 0.2 25);
   --chart-5: oklch(0.75 0.17 330);
 }
-
 
 @layer base {
   * {
@@ -112,83 +125,218 @@
 
 /* ── Ranking celebration animations ──────────────────────────────────────── */
 @keyframes rk-slideUp {
-  from { transform: translateY(60px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
+  from {
+    transform: translateY(60px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 @keyframes rk-float {
-  0%, 100% { transform: translateY(0px)    rotate(0deg); }
-  50%       { transform: translateY(-10px) rotate(5deg); }
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(5deg);
+  }
 }
 @keyframes rk-crown {
-  0%, 100% { transform: translateY(0) scale(1);      }
-  50%       { transform: translateY(-6px) scale(1.15); }
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.15);
+  }
 }
 @keyframes rk-glow {
-  0%, 100% { box-shadow: 0 0 20px 4px  rgba(251,191,36,0.25); }
-  50%       { box-shadow: 0 0 40px 12px rgba(251,191,36,0.55); }
+  0%,
+  100% {
+    box-shadow: 0 0 20px 4px rgba(251, 191, 36, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 40px 12px rgba(251, 191, 36, 0.55);
+  }
 }
 @keyframes rk-badge {
-  0%, 100% { transform: scale(1);    }
-  50%       { transform: scale(1.18); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
 }
 @keyframes rk-fadeIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0);    }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* canvas overlay */
-.rk-confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 9999; }
+.rk-confetti-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
 
 /* podium pedestals */
-.rk-pedestal-1 { height: 120px; background: linear-gradient(180deg,#FBBF24 0%,#D97706 100%); box-shadow: 0 0 30px rgba(251,191,36,0.4); }
-.rk-pedestal-2 { height: 80px;  background: linear-gradient(180deg,#94A3B8 0%,#64748B 100%); }
-.rk-pedestal-3 { height: 55px;  background: linear-gradient(180deg,#FB923C 0%,#C2410C 100%); }
-.rk-podium-order-1 { order: 2; } /* #1 center */
-.rk-podium-order-2 { order: 1; } /* #2 left   */
-.rk-podium-order-3 { order: 3; } /* #3 right  */
+.rk-pedestal-1 {
+  height: 120px;
+  background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+  box-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
+}
+.rk-pedestal-2 {
+  height: 80px;
+  background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+}
+.rk-pedestal-3 {
+  height: 55px;
+  background: linear-gradient(180deg, #fb923c 0%, #c2410c 100%);
+}
+.rk-podium-order-1 {
+  order: 2;
+} /* #1 center */
+.rk-podium-order-2 {
+  order: 1;
+} /* #2 left   */
+.rk-podium-order-3 {
+  order: 3;
+} /* #3 right  */
 
 /* podium item entrance */
-.rk-podium-item           { opacity: 0; }
-.rk-podium-item.rk-show   { animation: rk-slideUp 0.6s ease-out both; opacity: 1; }
-.rk-podium-item.rk-show.rk-d1 { animation-delay: 0.1s; }
-.rk-podium-item.rk-show.rk-d2 { animation-delay: 0.3s; }
-.rk-podium-item.rk-show.rk-d3 { animation-delay: 0.5s; }
+.rk-podium-item {
+  opacity: 0;
+}
+.rk-podium-item.rk-show {
+  animation: rk-slideUp 0.6s ease-out both;
+  opacity: 1;
+}
+.rk-podium-item.rk-show.rk-d1 {
+  animation-delay: 0.1s;
+}
+.rk-podium-item.rk-show.rk-d2 {
+  animation-delay: 0.3s;
+}
+.rk-podium-item.rk-show.rk-d3 {
+  animation-delay: 0.5s;
+}
 
 /* avatar gold glow for #1 */
-.rk-avatar-glow { animation: rk-glow 2.5s ease-in-out infinite; border-radius: 9999px; }
+.rk-avatar-glow {
+  animation: rk-glow 2.5s ease-in-out infinite;
+  border-radius: 9999px;
+}
 
 /* floating trophy icons */
-.rk-crown-pulse { animation: rk-crown 2.5s ease-in-out infinite; }
-.rk-crown-pulse.rk-d0 { animation-delay: 0s;   }
-.rk-crown-pulse.rk-d1 { animation-delay: 0.3s; }
+.rk-crown-pulse {
+  animation: rk-crown 2.5s ease-in-out infinite;
+}
+.rk-crown-pulse.rk-d0 {
+  animation-delay: 0s;
+}
+.rk-crown-pulse.rk-d1 {
+  animation-delay: 0.3s;
+}
 
 /* floating sparkles (up to 5 per section) */
-.rk-spark-0 { animation: rk-float 2.5s ease-in-out infinite 0.0s; }
-.rk-spark-1 { animation: rk-float 2.9s ease-in-out infinite 0.3s; }
-.rk-spark-2 { animation: rk-float 3.3s ease-in-out infinite 0.8s; }
-.rk-spark-3 { animation: rk-float 3.7s ease-in-out infinite 1.2s; }
-.rk-spark-4 { animation: rk-float 4.1s ease-in-out infinite 1.6s; }
+.rk-spark-0 {
+  animation: rk-float 2.5s ease-in-out infinite 0s;
+}
+.rk-spark-1 {
+  animation: rk-float 2.9s ease-in-out infinite 0.3s;
+}
+.rk-spark-2 {
+  animation: rk-float 3.3s ease-in-out infinite 0.8s;
+}
+.rk-spark-3 {
+  animation: rk-float 3.7s ease-in-out infinite 1.2s;
+}
+.rk-spark-4 {
+  animation: rk-float 4.1s ease-in-out infinite 1.6s;
+}
 
 /* badge bounce per podium position */
-.rk-badge-1 { animation: rk-badge 1.8s ease-in-out infinite; }
-.rk-badge-2 { animation: rk-badge 2.1s ease-in-out infinite 0.2s; }
-.rk-badge-3 { animation: rk-badge 2.4s ease-in-out infinite 0.4s; }
+.rk-badge-1 {
+  animation: rk-badge 1.8s ease-in-out infinite;
+}
+.rk-badge-2 {
+  animation: rk-badge 2.1s ease-in-out infinite 0.2s;
+}
+.rk-badge-3 {
+  animation: rk-badge 2.4s ease-in-out infinite 0.4s;
+}
 
 /* destaque cards */
-.rk-destaque-top  { background: linear-gradient(135deg,rgba(251,191,36,0.12) 0%,rgba(139,92,246,0.08) 100%); border-color: rgba(251,191,36,0.35); }
-.rk-destaque-base { border-color: rgba(255,255,255,0.08); }
+.rk-destaque-top {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.12) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border-color: rgba(251, 191, 36, 0.35);
+}
+.rk-destaque-base {
+  border-color: rgba(255, 255, 255, 0.08);
+}
 
 /* page fade-ins with stagger */
-.rk-fadein   { animation: rk-fadeIn 0.4s ease-out both; }
-.rk-fadein-1 { animation: rk-fadeIn 0.5s ease-out 0.15s both; }
-.rk-fadein-2 { animation: rk-fadeIn 0.4s ease-out 0.20s both; }
-.rk-fadein-3 { animation: rk-fadeIn 0.4s ease-out 0.30s both; }
-.rk-fadein-4 { animation: rk-fadeIn 0.4s ease-out 0.40s both; }
+.rk-fadein {
+  animation: rk-fadeIn 0.4s ease-out both;
+}
+.rk-fadein-1 {
+  animation: rk-fadeIn 0.5s ease-out 0.15s both;
+}
+.rk-fadein-2 {
+  animation: rk-fadeIn 0.4s ease-out 0.2s both;
+}
+.rk-fadein-3 {
+  animation: rk-fadeIn 0.4s ease-out 0.3s both;
+}
+.rk-fadein-4 {
+  animation: rk-fadeIn 0.4s ease-out 0.4s both;
+}
 
 /* rank row stagger */
-.rk-row-0 { animation: rk-fadeIn 0.4s ease-out 0.00s both; }
-.rk-row-1 { animation: rk-fadeIn 0.4s ease-out 0.07s both; }
-.rk-row-2 { animation: rk-fadeIn 0.4s ease-out 0.14s both; }
-.rk-row-3 { animation: rk-fadeIn 0.4s ease-out 0.21s both; }
-.rk-row-4 { animation: rk-fadeIn 0.4s ease-out 0.28s both; }
-.rk-row-5 { animation: rk-fadeIn 0.4s ease-out 0.35s both; }
+.rk-row-0 {
+  animation: rk-fadeIn 0.4s ease-out 0s both;
+}
+.rk-row-1 {
+  animation: rk-fadeIn 0.4s ease-out 0.07s both;
+}
+.rk-row-2 {
+  animation: rk-fadeIn 0.4s ease-out 0.14s both;
+}
+.rk-row-3 {
+  animation: rk-fadeIn 0.4s ease-out 0.21s both;
+}
+.rk-row-4 {
+  animation: rk-fadeIn 0.4s ease-out 0.28s both;
+}
+.rk-row-5 {
+  animation: rk-fadeIn 0.4s ease-out 0.35s both;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Movimento reduzido.
+
+   O /ranking tem 10 animações `infinite` (glow de avatar, pulso da coroa, faíscas
+   e badges) que rodavam para sempre, consumindo GPU e bateria mesmo com a aba
+   parada — e sem saída para quem tem sensibilidade vestibular. Respeitar a
+   preferência do sistema é o mínimo; a página continua legível sem o movimento.
+   ───────────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

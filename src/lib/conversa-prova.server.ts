@@ -15,7 +15,9 @@ export async function loadConversaProva(id: string): Promise<ConversaProva> {
   const db = supabaseAdmin;
   const { data: c, error } = await db
     .from("coach_conversations")
-    .select("id, contact_name, contact_email, seller_name, seller_email, is_ai_conversation, origin_name, stage, deal_id")
+    .select(
+      "id, contact_name, contact_email, seller_name, seller_email, is_ai_conversation, origin_name, stage, deal_id",
+    )
     .eq("id", id)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -23,7 +25,11 @@ export async function loadConversaProva(id: string): Promise<ConversaProva> {
 
   let status: "ganho" | "perdido" | "aberto" = "aberto";
   if ((c as any).deal_id) {
-    const { data: d } = await db.from("clint_deals").select("status").eq("id", (c as any).deal_id).maybeSingle();
+    const { data: d } = await db
+      .from("clint_deals")
+      .select("status")
+      .eq("id", (c as any).deal_id)
+      .maybeSingle();
     const s = String((d as any)?.status ?? "").toUpperCase();
     status = s === "WON" ? "ganho" : s === "LOST" ? "perdido" : "aberto";
   }

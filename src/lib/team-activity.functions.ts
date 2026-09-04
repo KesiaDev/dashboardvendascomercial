@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchTeamActivityFn, fetchFollowupActivitiesFn } from "@/lib/data.functions";
 
 export type TeamActivityRow = {
@@ -31,12 +32,20 @@ export async function fetchFollowupActivities(): Promise<FollowupActivityRow[]> 
 type ProdutividadeInput = {
   periodoInicio: string;
   periodoFim: string;
-  rows: { userName: string; ligacoes: number; emails: number; tarefas: number; reunioesAgendadas: number; whatsapp: number }[];
+  rows: {
+    userName: string;
+    ligacoes: number;
+    emails: number;
+    tarefas: number;
+    reunioesAgendadas: number;
+    whatsapp: number;
+  }[];
 };
 
 export const importProdutividade = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: ProdutividadeInput) => d)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const rows = data.rows.map((r) => ({
       periodo_inicio: data.periodoInicio,
@@ -62,8 +71,9 @@ type NegociosTrabalhadosInput = {
 };
 
 export const importNegociosTrabalhados = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: NegociosTrabalhadosInput) => d)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const rows = data.rows.map((r) => ({
       periodo_inicio: data.periodoInicio,
@@ -85,8 +95,9 @@ type FollowupInput = {
 };
 
 export const importFollowup = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: FollowupInput) => d)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const rows = data.rows.map((r) => ({
       periodo_inicio: data.periodoInicio,

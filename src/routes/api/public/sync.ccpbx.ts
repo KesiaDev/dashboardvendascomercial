@@ -1,11 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { syncCcpbxCallsFn } from "@/lib/ccpbx.functions";
+import { syncCcpbxCallsCore } from "@/lib/ccpbx.functions";
+import { requireApiKey } from "@/lib/api-auth";
 
 async function handle(request: Request) {
+  const denied = requireApiKey(request);
+  if (denied) return denied;
   const url = new URL(request.url);
-  const days = Number(url.searchParams.get("days") ?? "7");
+  // ?days não tinha limite: aceitava qualquer número e virava um sync arbitrariamente
+  // grande. Mesmo clamp de sync/hotmart.
+  const days = Math.max(1, Math.min(90, Number(url.searchParams.get("days") ?? "7") || 7));
   try {
-    const r = await syncCcpbxCallsFn({ data: { days } });
+    const r = await syncCcpbxCallsCore({ days });
     return Response.json(r);
   } catch (e: any) {
     return Response.json({ ok: false, error: String(e?.message ?? e) }, { status: 500 });
@@ -13,5 +18,7 @@ async function handle(request: Request) {
 }
 
 export const Route = createFileRoute("/api/public/sync/ccpbx")({
-  server: { handlers: { GET: ({ request }) => handle(request), POST: ({ request }) => handle(request) } },
+  server: {
+    handlers: { GET: ({ request }) => handle(request), POST: ({ request }) => handle(request) },
+  },
 });

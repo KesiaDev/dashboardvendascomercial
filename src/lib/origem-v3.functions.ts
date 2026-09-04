@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 export type OrigemRow = {
   origem: string;
@@ -55,7 +57,10 @@ export type AuditoriaVendaRow = {
 
 export type OrigemV3Result = { rows: OrigemRow[]; auditoria: AuditoriaVendaRow[] };
 
-const normEmail = (e: unknown) => String(e ?? "").trim().toLowerCase();
+const normEmail = (e: unknown) =>
+  String(e ?? "")
+    .trim()
+    .toLowerCase();
 const normName = (n: unknown) =>
   String(n ?? "")
     .trim()
@@ -63,9 +68,12 @@ const normName = (n: unknown) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, " ");
-const normPhone = (p: unknown) => String(p ?? "").replace(/\D/g, "").slice(-9);
+const normPhone = (p: unknown) =>
+  String(p ?? "")
+    .replace(/\D/g, "")
+    .slice(-9);
 
-const chunk = <T,>(arr: T[], size: number) => {
+const chunk = <T>(arr: T[], size: number) => {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
@@ -80,30 +88,35 @@ const chunk = <T,>(arr: T[], size: number) => {
  * toque antes da venda → SCK/afiliado da Hotmart → funil declarado).
  */
 export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<OrigemV3Result> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller, tagBucket } = await import(
-      "@/lib/origem-v3.server"
-    );
+    const { V3_ORIGIN_NAMES, classifyOrigemV3, sckFunnel, sameSeller, tagBucket } =
+      await import("@/lib/origem-v3.server");
     const { LEADS_ORIGINS, leadBucket } = await import("@/lib/leads-comercial.server");
 
     const pageSize = 1000;
-    const rows: any[] = [];
-    for (let page = 0; page < 20; page++) {
-      const { data: c, error } = await supabaseAdmin
-        .from("clint_deals")
-        .select("id,origin_name,status,value,created_at,contact_email,raw,contact_tags,user_name")
+    // Sem a coluna `raw`: é o payload JSONB inteiro da API da Clint, TOASTed,
+    // buscado em até 20.000 linhas — e o único consumidor (classifyOrigemV3)
+    // nunca leu nada dele. A classificação usa origin_name e contact_tags.
+    // As páginas também deixaram de ser seriais.
+    const fLeads = <Q>(q: Q) =>
+      (q as any)
         .in("origin_name", LEADS_ORIGINS)
         .gte("created_at", data.from)
-        .lte("created_at", `${data.to}T23:59:59`)
-        .order("created_at", { ascending: false })
-        .range(page * pageSize, page * pageSize + pageSize - 1);
-      if (error) throw new Error(error.message);
-      rows.push(...(c ?? []));
-      if ((c ?? []).length < pageSize) break;
-    }
-
+        .lte("created_at", `${data.to}T23:59:59`);
+    const rows = await fetchAllRows<any>(
+      ({ from, to }) =>
+        fLeads(
+          supabaseAdmin
+            .from("clint_deals")
+            .select("id,origin_name,status,value,created_at,contact_email,contact_tags,user_name"),
+        )
+          .order("created_at", { ascending: false })
+          .range(from, to),
+      () => fLeads(supabaseAdmin.from("clint_deals").select("*", { count: "exact", head: true })),
+    );
 
     // --- Vendas do fechamento manual do período (fonte de verdade de "venda") ---
     const { data: salesRows } = await supabaseAdmin
@@ -118,8 +131,12 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       .limit(20000);
     const sales = salesRows ?? [];
 
-    const saleEmails = Array.from(new Set(sales.map((s: any) => normEmail(s.client_email)).filter(Boolean)));
-    const saleNames = Array.from(new Set(sales.map((s: any) => normName(s.client_name)).filter(Boolean)));
+    const saleEmails = Array.from(
+      new Set(sales.map((s: any) => normEmail(s.client_email)).filter(Boolean)),
+    );
+    const saleNames = Array.from(
+      new Set(sales.map((s: any) => normName(s.client_name)).filter(Boolean)),
+    );
 
     // --- Todos os negócios do cliente na Clint (não só o primeiro) ---
     type Touch = {
@@ -127,7 +144,6 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       created_at: string | null;
       won_at: string | null;
       status: string | null;
-      raw: any;
       contact_tags: string[] | null;
       user_name: string | null;
     };
@@ -148,7 +164,6 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
           created_at: d.created_at,
           won_at: d.won_at ?? null,
           status: d.status ?? null,
-          raw: d.raw,
           contact_tags: d.contact_tags,
           user_name: d.user_name,
         };
@@ -159,24 +174,48 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     };
 
     const dealCols =
-      "origin_name,created_at,won_at,status,raw,contact_tags,user_name,contact_email,contact_name,contact_phone";
-    for (const part of chunk(saleEmails, 100)) {
-      const { data: c } = await supabaseAdmin.from("clint_deals").select(dealCols).in("contact_email", part);
-      ingest(c ?? []);
-    }
-    for (const part of chunk(saleNames, 100)) {
-      const { data: c } = await supabaseAdmin.from("clint_deals").select(dealCols).in("contact_name", part);
-      ingest(c ?? []);
-    }
+      "origin_name,created_at,won_at,status,contact_tags,user_name,contact_email,contact_name,contact_phone";
+    // Três laços de blocos rodavam com await dentro do for — ~30 idas ao banco
+    // em série. Agora os blocos vão todos juntos. O teto por bloco cobre o caso
+    // de um contato ter vários negócios.
+    const byEmailPages = await Promise.all(
+      chunk(saleEmails, 100).map((part) =>
+        supabaseAdmin
+          .from("clint_deals")
+          .select(dealCols)
+          .in("contact_email", part)
+          .limit(part.length * 20),
+      ),
+    );
+    const byNamePages = await Promise.all(
+      chunk(saleNames, 100).map((part) =>
+        supabaseAdmin
+          .from("clint_deals")
+          .select(dealCols)
+          .in("contact_name", part)
+          .limit(part.length * 20),
+      ),
+    );
+    for (const { data: c } of [...byEmailPages, ...byNamePages]) ingest(c ?? []);
 
     // --- Vendas Hotmart (SCK / afiliado) para cruzar com o fechamento manual ---
-    const hotByEmail = new Map<string, { sck: string | null; afiliado: string | null; data: string | null }>();
-    for (const part of chunk(saleEmails, 100)) {
-      const { data: h } = await supabaseAdmin
-        .from("sales")
-        .select("email_cliente,origem_checkout,nome_afiliado,data_venda")
-        .in("email_cliente", part)
-        .order("data_venda", { ascending: false });
+    const hotByEmail = new Map<
+      string,
+      { sck: string | null; afiliado: string | null; data: string | null }
+    >();
+    const hotPages = await Promise.all(
+      chunk(saleEmails, 100).map((part) =>
+        supabaseAdmin
+          .from("sales")
+          .select("email_cliente,origem_checkout,nome_afiliado,data_venda")
+          .in("email_cliente", part)
+          .order("data_venda", { ascending: false })
+          // Só a venda mais recente de cada e-mail é usada, mas o teto precisa
+          // caber em várias vendas por cliente.
+          .limit(part.length * 20),
+      ),
+    );
+    for (const { data: h } of hotPages) {
       for (const r of h ?? []) {
         const k = normEmail((r as any).email_cliente);
         if (!k || hotByEmail.has(k)) continue;
@@ -213,7 +252,8 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     const convRows: any[] = [];
     for (const p of convPages) convRows.push(...(p.data ?? []));
     const humanConvIds = new Set<string>();
-    for (const p of msgPages) for (const m of p.data ?? []) humanConvIds.add((m as any).conversation_id);
+    for (const p of msgPages)
+      for (const m of p.data ?? []) humanConvIds.add((m as any).conversation_id);
     const humanEmails = new Set<string>();
     const humanNames = new Set<string>();
     const anyConvEmails = new Set<string>();
@@ -228,7 +268,9 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     }
 
     // --- Agregação de leads por origem ---
-    type Acc = OrigemRow & { camp: Map<string, { leads: number; ganhos: number; atendidos: number }> };
+    type Acc = OrigemRow & {
+      camp: Map<string, { leads: number; ganhos: number; atendidos: number }>;
+    };
     const map = new Map<string, Acc>();
     const ensure = (origem: string): Acc => {
       let r = map.get(origem);
@@ -267,21 +309,17 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       if (d.status === "LOST") r.perdidos++;
       else r.abertos++;
 
-
       let c = r.camp.get(hit.tag);
       if (!c) {
         c = { leads: 0, ganhos: 0, atendidos: 0 };
         r.camp.set(hit.tag, c);
       }
       c.leads++;
-
     }
-
-
 
     const funnelLabel = (t: Touch) =>
       V3_ORIGIN_NAMES.includes(t.origin_name ?? "")
-        ? classifyOrigemV3(t.origin_name, t.raw, t.contact_tags).origem
+        ? classifyOrigemV3(t.origin_name, t.contact_tags).origem
         : (t.origin_name ?? "Sem funil (entrada manual)");
 
     // --- Auditoria: captação (1º toque) + conversão (onde a venda aconteceu) ---
@@ -296,7 +334,9 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         if (touches.length) match = "nome";
       }
 
-      const sorted = [...touches].sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
+      const sorted = [...touches].sort((a, b) =>
+        String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")),
+      );
       const first = sorted[0];
       const saleDay = String(s.sale_date);
       const hot = email ? hotByEmail.get(email) : undefined;
@@ -305,13 +345,23 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       const won = sorted
         .filter((t) => t.status === "WON" && t.won_at)
         .sort((a, b) => String(b.won_at).localeCompare(String(a.won_at)))
-        .find((t) => Math.abs(new Date(t.won_at!).getTime() - new Date(`${saleDay}T12:00:00Z`).getTime()) < 60 * 864e5);
+        .find(
+          (t) =>
+            Math.abs(new Date(t.won_at!).getTime() - new Date(`${saleDay}T12:00:00Z`).getTime()) <
+            60 * 864e5,
+        );
       // 2) negócio do próprio vendedor que fechou, aberto antes da venda
       const doVendedor = [...sorted]
         .reverse()
-        .find((t) => sameSeller(t.user_name, s.seller_name) && String(t.created_at ?? "") <= `${saleDay}T23:59:59`);
+        .find(
+          (t) =>
+            sameSeller(t.user_name, s.seller_name) &&
+            String(t.created_at ?? "") <= `${saleDay}T23:59:59`,
+        );
       // 3) último toque antes da venda
-      const ultimo = [...sorted].reverse().find((t) => String(t.created_at ?? "") <= `${saleDay}T23:59:59`);
+      const ultimo = [...sorted]
+        .reverse()
+        .find((t) => String(t.created_at ?? "") <= `${saleDay}T23:59:59`);
 
       let funilConversao: string;
       let metodo: AuditoriaVendaRow["metodo"];
@@ -383,7 +433,10 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       const hitTag = v3Touch ? tagBucket(v3Touch.contact_tags) : null;
       // Sem tag identificada na Clint → conta como Sessão Estratégica (padrão do V3).
       const linha =
-        bucketDeclarado ?? hitTag?.bucket ?? (email ? bucketByEmail.get(email) : undefined) ?? "Sessão Estratégica";
+        bucketDeclarado ??
+        hitTag?.bucket ??
+        (email ? bucketByEmail.get(email) : undefined) ??
+        "Sessão Estratégica";
       const r = ensure(linha);
       r.ganhos++;
       r.valor += Number(s.value_eur ?? 0);
@@ -400,11 +453,7 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
         r.ganhosSemContato++;
         r.valorSemContato += Number(s.value_eur ?? 0);
       }
-
     }
-
-
-
 
     const result = Array.from(map.values())
       .map(({ camp, ...r }) => ({
@@ -419,18 +468,17 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
     let wgtLeads = 0;
     let wgtGanhos = 0;
     let wgtValor = 0;
-    for (let page = 0; page < 20; page++) {
-      const { data: w, error: wErr } = await supabaseAdmin
+    // Este laço paginava até 20.000 linhas para somar `length` — ou seja, só
+    // para CONTAR. O banco devolve a contagem sem transferir linha nenhuma.
+    {
+      const { count, error: wErr } = await supabaseAdmin
         .from("clint_deals")
-        .select("id,status,created_at")
+        .select("*", { count: "exact", head: true })
         .eq("origin_name", "WGT - Perpétuo")
         .gte("created_at", data.from)
-        .lte("created_at", `${data.to}T23:59:59`)
-        .order("created_at", { ascending: false })
-        .range(page * pageSize, page * pageSize + pageSize - 1);
+        .lte("created_at", `${data.to}T23:59:59`);
       if (wErr) throw new Error(wErr.message);
-      wgtLeads += (w ?? []).length;
-      if ((w ?? []).length < pageSize) break;
+      wgtLeads = count ?? 0;
     }
     // Vendas do WGT no período (funil declarado WGT no fechamento manual)
     const { data: wgtSales } = await supabaseAdmin
@@ -439,7 +487,8 @@ export const fetchOrigemV3Fn = createServerFn({ method: "GET" })
       .eq("installment_number", 1)
       .ilike("funnel", "%WGT%")
       .gte("sale_date", data.from)
-      .lte("sale_date", data.to);
+      .lte("sale_date", data.to)
+      .limit(5000);
     for (const s of wgtSales ?? []) {
       wgtGanhos++;
       wgtValor += Number((s as any).value_eur ?? 0);

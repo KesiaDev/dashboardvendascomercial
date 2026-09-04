@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 export type DowStat = {
   dow: number; // 1=Seg .. 7=Dom
@@ -45,26 +47,29 @@ function mondayOf(dateStr: string) {
 }
 
 export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<LeadsDiaSemanaResult> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { leadBucket } = await import("@/lib/leads-comercial.server");
 
-    const PAGE = 1000;
-    const rows: { created_at: string; origin_name: string | null; contact_tags: string[] | null }[] = [];
-    for (let page = 0; page < 60; page++) {
-      const { data: batch, error } = await supabaseAdmin
-        .from("clint_deals")
-        .select("created_at,origin_name,contact_tags")
+    // Eram até 60 páginas com await dentro do for — 60 idas ao banco em série,
+    // ~60 x latência. Agora o count vem primeiro e as páginas vão em paralelo.
+    const f = <Q>(q: Q) =>
+      (q as any)
         .gte("created_at", `${data.from}T00:00:00Z`)
-        .lte("created_at", `${data.to}T23:59:59Z`)
-        .order("created_at", { ascending: true })
-        .range(page * PAGE, (page + 1) * PAGE - 1);
-      if (error) throw new Error(error.message);
-      const b = (batch ?? []) as any[];
-      rows.push(...b);
-      if (b.length < PAGE) break;
-    }
+        .lte("created_at", `${data.to}T23:59:59Z`);
+    const rows = await fetchAllRows<{
+      created_at: string;
+      origin_name: string | null;
+      contact_tags: string[] | null;
+    }>(
+      ({ from, to }) =>
+        f(supabaseAdmin.from("clint_deals").select("created_at,origin_name,contact_tags"))
+          .order("created_at", { ascending: true })
+          .range(from, to),
+      () => f(supabaseAdmin.from("clint_deals").select("*", { count: "exact", head: true })),
+    );
 
     const dias = new Map<string, { dow: number; leads: number }>();
     const porDow = new Map<number, { leads: number; porBucket: Record<string, number> }>();
@@ -145,7 +150,13 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
       .map(([date, v]) => {
         const st = statsDow.get(v.dow)!;
         const z = st.sd > 0 ? (v.leads - st.mean) / st.sd : 0;
-        return { data: date, dow: DOW_LABELS[v.dow - 1], leads: v.leads, mediaDow: st.mean, desvio: z };
+        return {
+          data: date,
+          dow: DOW_LABELS[v.dow - 1],
+          leads: v.leads,
+          mediaDow: st.mean,
+          desvio: z,
+        };
       })
       .filter((o) => Math.abs(o.desvio) >= 2)
       .sort((a, b) => Math.abs(b.desvio) - Math.abs(a.desvio))

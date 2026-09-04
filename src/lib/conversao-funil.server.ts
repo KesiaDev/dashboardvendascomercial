@@ -1,4 +1,5 @@
 import { canonicalSeller } from "@/lib/commission";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 export const PAGE = 1000;
 
@@ -38,7 +39,6 @@ export function funnelVisibleInPeriod(funnel: string, refDate: string): boolean 
   if (funnel === "IGT 23") return ym < "2026-09";
   return true;
 }
-
 
 /**
  * Funis que os vendedores realmente trabalham — mesma lista do formulário de
@@ -124,39 +124,46 @@ const normStage = (s: string | null | undefined) =>
  * O negócio deve entrar nas métricas do comercial?
  * No WGT (webinar perpétuo) todos os leads entram, inclusive os inscritos.
  */
-export function isComercialDeal(_originName: string | null | undefined, _stage: string | null | undefined): boolean {
+export function isComercialDeal(
+  _originName: string | null | undefined,
+  _stage: string | null | undefined,
+): boolean {
   return true;
 }
-
 
 /** Agregação de leads/perdidos direto no banco (evita paginar 100k linhas). */
 export async function fetchDealsAgg(db: any, from: string, to: string) {
   const { data, error } = await db.rpc("conversao_deals_agg", { _from: from, _to: to });
   if (error) throw new Error(error.message);
-  return (data ?? []) as { origin_name: string | null; user_name: string | null; leads: number; lost: number }[];
+  return (data ?? []) as {
+    origin_name: string | null;
+    user_name: string | null;
+    leads: number;
+    lost: number;
+  }[];
 }
 
-export async function pagedDeals(db: any, column: string, from: string, to: string, tagFilter = "") {
+export async function pagedDeals(
+  db: any,
+  column: string,
+  from: string,
+  to: string,
+  tagFilter = "",
+) {
   const selectCols = tagFilter
     ? "origin_name,user_name,status,stage,contact_tags"
     : "origin_name,user_name,status,stage";
-  const rows: any[] = [];
-  for (let page = 0; page < 30; page++) {
-    let q = db
-      .from("clint_deals")
-      .select(selectCols)
-      .gte(column, `${from}T00:00:00Z`)
-      .lte(column, `${to}T23:59:59Z`)
-      .order(column, { ascending: true })
-      .range(page * PAGE, (page + 1) * PAGE - 1);
-    if (column === "lost_at") q = q.eq("status", "LOST");
-    const { data, error } = await q;
-    if (error) throw new Error(error.message);
-    const batch = data ?? [];
-    rows.push(...batch);
-    if (batch.length < PAGE) break;
-  }
-  return rows;
+  // Eram 30 páginas com await dentro do for. Agora vão em paralelo.
+  const f = <Q>(q: Q) => {
+    let out = (q as any).gte(column, `${from}T00:00:00Z`).lte(column, `${to}T23:59:59Z`);
+    if (column === "lost_at") out = out.eq("status", "LOST");
+    return out;
+  };
+  return await fetchAllRows<any>(
+    ({ from: a, to: b }: { from: number; to: number }) =>
+      f(db.from("clint_deals").select(selectCols)).order(column, { ascending: true }).range(a, b),
+    () => f(db.from("clint_deals").select("*", { count: "exact", head: true })),
+  );
 }
 
 export async function fetchManualSales(db: any, from: string, to: string) {

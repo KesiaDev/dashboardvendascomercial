@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 async function adminDb() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -36,30 +38,38 @@ export type Referral = {
   updated_at: string;
 };
 
-export const listReferralsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const db = await adminDb();
-  const { data, error } = await db
-    .from("referrals")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return (data ?? []) as Referral[];
-});
+export const listReferralsFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = await adminDb();
+    // Lista completa e sem filtro: passa de 1000 e as indicações antigas somem.
+    return (await fetchAllRows(
+      ({ from, to }) =>
+        db.from("referrals").select("*").order("created_at", { ascending: false }).range(from, to),
+      () => db.from("referrals").select("*", { count: "exact", head: true }),
+    )) as Referral[];
+  });
 
 export const createReferralFn = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => data as {
-    seller_name: string;
-    client_name: string;
-    client_email?: string | null;
-    referred_name: string;
-    referred_phone?: string | null;
-    referred_email?: string | null;
-    product_interest?: string | null;
-    notes?: string | null;
-    source_sale_id?: string | null;
-    created_by_email?: string | null;
-  })
-  .handler(async ({ data }) => {
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: unknown) =>
+      data as {
+        seller_name: string;
+        client_name: string;
+        client_email?: string | null;
+        referred_name: string;
+        referred_phone?: string | null;
+        referred_email?: string | null;
+        product_interest?: string | null;
+        notes?: string | null;
+        source_sale_id?: string | null;
+        // created_by_email NÃO entra mais pelo payload: era possível criar uma
+        // indicação no nome de outro vendedor (ou tirar as próprias do caminho de uma
+        // meta) simplesmente mandando outro e-mail. Agora vem do token validado.
+      },
+  )
+  .handler(async ({ data, context }) => {
     const db = await adminDb();
     const { data: row, error } = await db
       .from("referrals")
@@ -73,7 +83,7 @@ export const createReferralFn = createServerFn({ method: "POST" })
         product_interest: data.product_interest ?? null,
         notes: data.notes ?? null,
         source_sale_id: data.source_sale_id ?? null,
-        created_by_email: data.created_by_email ?? null,
+        created_by_email: (context.claims?.email as string | undefined) ?? null,
         status: "novo",
       })
       .select()
@@ -83,20 +93,24 @@ export const createReferralFn = createServerFn({ method: "POST" })
   });
 
 export const updateReferralFn = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => data as {
-    id: string;
-    seller_name?: string;
-    client_name?: string;
-    client_email?: string | null;
-    referred_name?: string;
-    referred_phone?: string | null;
-    referred_email?: string | null;
-    product_interest?: string | null;
-    notes?: string | null;
-    status?: ReferralStatus;
-    converted_value_eur?: number | null;
-  })
-  .handler(async ({ data }) => {
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: unknown) =>
+      data as {
+        id: string;
+        seller_name?: string;
+        client_name?: string;
+        client_email?: string | null;
+        referred_name?: string;
+        referred_phone?: string | null;
+        referred_email?: string | null;
+        product_interest?: string | null;
+        notes?: string | null;
+        status?: ReferralStatus;
+        converted_value_eur?: number | null;
+      },
+  )
+  .handler(async ({ data, context }) => {
     const db = await adminDb();
     const { id, ...rest } = data;
     const patch: Record<string, unknown> = {};
@@ -104,18 +118,25 @@ export const updateReferralFn = createServerFn({ method: "POST" })
       if (v !== undefined) patch[k] = v === "" ? null : v;
     }
     if (Object.keys(patch).length === 0) return { ok: true };
-    const { error } = await db.from("referrals").update(patch as never).eq("id", id);
+    const { error } = await db
+      .from("referrals")
+      .update(patch as never)
+      .eq("id", id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 export const updateReferralStatusFn = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => data as {
-    id: string;
-    status: ReferralStatus;
-    converted_value_eur?: number | null;
-  })
-  .handler(async ({ data }) => {
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: unknown) =>
+      data as {
+        id: string;
+        status: ReferralStatus;
+        converted_value_eur?: number | null;
+      },
+  )
+  .handler(async ({ data, context }) => {
     const db = await adminDb();
     const patch: Record<string, unknown> = { status: data.status };
     if (data.status === "contactado") patch.contacted_at = new Date().toISOString();
@@ -123,14 +144,18 @@ export const updateReferralStatusFn = createServerFn({ method: "POST" })
       patch.converted_at = new Date().toISOString();
       if (data.converted_value_eur != null) patch.converted_value_eur = data.converted_value_eur;
     }
-    const { error } = await db.from("referrals").update(patch as never).eq("id", data.id);
+    const { error } = await db
+      .from("referrals")
+      .update(patch as never)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 export const deleteReferralFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => data as { id: string })
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const db = await adminDb();
     const { error } = await db.from("referrals").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -214,4 +239,3 @@ Prometo tratar cada indicação com o mesmo cuidado e sem pressão nenhuma — �
 Muito obrigado pela força! 🚀
 ${params.sellerName}`;
 }
-

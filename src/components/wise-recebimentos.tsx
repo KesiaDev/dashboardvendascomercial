@@ -114,9 +114,9 @@ export function WiseRecebimentosCard({ payments }: { payments: WisePayment[] }) 
           </div>
           <div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <AlertTriangle className="h-3 w-3 text-amber-500" /> Inadimplências
+              <AlertTriangle className="h-3 w-3 text-warning-fg" /> Inadimplências
             </p>
-            <p className="text-2xl font-bold tabular-nums text-amber-500">
+            <p className="text-2xl font-bold tabular-nums text-warning-fg">
               {totals.inad_count}
             </p>
             <p className="text-xs text-muted-foreground tabular-nums">
@@ -177,7 +177,7 @@ export function WiseRecebimentosCard({ payments }: { payments: WisePayment[] }) 
                   </td>
                   <td className="px-3 py-1.5">
                     {p.inadimplente ? (
-                      <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30">
+                      <Badge className="bg-warning/15 text-warning-fg border-warning/30">
                         Inadimplente
                       </Badge>
                     ) : (

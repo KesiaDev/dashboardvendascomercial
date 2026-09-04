@@ -58,7 +58,10 @@ const norm = (s: unknown) =>
  * (ex.: "SESSAO_ESTRATEGICA-V3 - CLICOU WHATSAPP", "IGT23 - DISPARO AULA 1").
  * Guardamos só a raiz da tag, antes do " - ".
  */
-const tagRoot = (t: string) => String(t ?? "").split(/\s+[-–]\s+/)[0]!.trim();
+const tagRoot = (t: string) =>
+  String(t ?? "")
+    .split(/\s+[-–]\s+/)[0]!
+    .trim();
 
 /** Rótulo canônico das tags que interessam ao comercial. */
 const TAG_CANON: Array<[RegExp, string]> = [
@@ -78,9 +81,7 @@ const TAG_CANON: Array<[RegExp, string]> = [
  * Sem tag sincronizada → "Sem tag na Clint". UTM nunca é usada.
  */
 export function mainTag(contactTags?: string[] | null): string {
-  const roots = (contactTags ?? [])
-    .map((t) => tagRoot(String(t ?? "")))
-    .filter(Boolean);
+  const roots = (contactTags ?? []).map((t) => tagRoot(String(t ?? ""))).filter(Boolean);
   if (!roots.length) return SEM_TAG;
   for (const [re, label] of TAG_CANON) {
     if (roots.some((t) => re.test(norm(t)))) return label;
@@ -94,7 +95,6 @@ export function mainTag(contactTags?: string[] | null): string {
  */
 export function classifyOrigemV3(
   originName: string | null,
-  _raw?: any,
   contactTags?: string[] | null,
 ): { origem: string; campanha: string } {
   const origem = FUNIL_LABEL[originName ?? ""] ?? originName ?? "Sem funil (entrada manual)";
@@ -118,7 +118,9 @@ const SCK_FUNNEL_LABEL: Array<[RegExp, string]> = [
 export function sckFunnel(origemCheckout: string | null | undefined): string | null {
   const raw = String(origemCheckout ?? "").trim();
   if (!raw) return null;
-  const tokens = norm(raw).split(/[^a-z0-9]+/).filter(Boolean);
+  const tokens = norm(raw)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
   for (const t of tokens) {
     for (const [re, label] of SCK_FUNNEL_LABEL) if (re.test(t)) return label;
   }
@@ -127,8 +129,14 @@ export function sckFunnel(origemCheckout: string | null | undefined): string | n
 
 /** Compara nomes de vendedor por token (ex.: "João Pessoa" ≈ "joao"). */
 export function sameSeller(a: string | null | undefined, b: string | null | undefined): boolean {
-  const ta = new Set(norm(a).split(/[^a-z0-9]+/).filter((t) => t.length > 2));
-  const tb = norm(b).split(/[^a-z0-9]+/).filter((t) => t.length > 2);
+  const ta = new Set(
+    norm(a)
+      .split(/[^a-z0-9]+/)
+      .filter((t) => t.length > 2),
+  );
+  const tb = norm(b)
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length > 2);
   return tb.some((t) => ta.has(t));
 }
 

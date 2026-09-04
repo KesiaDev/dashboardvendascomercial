@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { V3_ORIGIN_NAMES } from "@/lib/origem-v3.server";
 
 async function admin() {
@@ -14,7 +15,11 @@ function hashText(t: string): string {
 }
 
 const normalize = (s: string) =>
-  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 
 export type ObjecaoEvidencia = {
   conversation_id: string;
@@ -64,7 +69,6 @@ const FECHAMENTO_RE =
 
 /** Mapa das objeções escritas em texto livre nas ligações → catálogo fechado. */
 
-
 // Catálogo fechado de objeções — a IA precisa escolher uma destas, sempre com
 // trecho literal do lead. Nada é "forçado" para o topo: o ranking é o real.
 export const OBJECOES = [
@@ -85,17 +89,47 @@ const SEM_OBJECAO = "Nenhuma objeção declarada";
 
 /** Objeções das ligações vêm em texto livre → mapeadas para o catálogo. */
 const LIGACAO_MAP: { re: RegExp; label: string }[] = [
-  { re: /(dinheiro|valor|pre[cç]o|caro|matr[ií]cula|invest|pagar|salario|sal[aá]rio|or[cç]amento|financ)/i, label: "Preço / não tem o dinheiro agora" },
-  { re: /(medo de n[aã]o|n[aã]o vou conseguir|inseguran|d[uú]vida se funciona|ser[aá] que d[aá] certo|resultado)/i, label: "Medo de não conseguir resultado" },
-  { re: /(tempo|agenda|trabalha|hor[aá]rio|corrido)/i, label: "Falta de tempo para estudar/aplicar" },
-  { re: /(pensar|decidir depois|depois|amanh[aã]|semana que vem|viagem|f[eé]rias|analisar)/i, label: "Vai decidir depois (data/motivo concreto)" },
+  {
+    re: /(dinheiro|valor|pre[cç]o|caro|matr[ií]cula|invest|pagar|salario|sal[aá]rio|or[cç]amento|financ)/i,
+    label: "Preço / não tem o dinheiro agora",
+  },
+  {
+    re: /(medo de n[aã]o|n[aã]o vou conseguir|inseguran|d[uú]vida se funciona|ser[aá] que d[aá] certo|resultado)/i,
+    label: "Medo de não conseguir resultado",
+  },
+  {
+    re: /(tempo|agenda|trabalha|hor[aá]rio|corrido)/i,
+    label: "Falta de tempo para estudar/aplicar",
+  },
+  {
+    re: /(pensar|decidir depois|depois|amanh[aã]|semana que vem|viagem|f[eé]rias|analisar)/i,
+    label: "Vai decidir depois (data/motivo concreto)",
+  },
   { re: /(golpe|confian|desconfi|seguran[cç]a|garantia)/i, label: "Desconfiança / medo de golpe" },
-  { re: /(esposa|marido|mulher|c[oô]njuge|fam[ií]lia|s[oó]cio|pais)/i, label: "Precisa falar com cônjuge/família" },
-  { re: /(j[aá] tentou|j[aá] fiz|outro curso antes|n[aã]o deu certo)/i, label: "Já tentou antes e não deu certo" },
-  { re: /(comparar|outra mentoria|outro curso|concorr)/i, label: "Quer comparar com outro curso/mentoria" },
-  { re: /(gr[aá]tis|gratuito|n[aã]o sabia que era pago|achou que era)/i, label: "Achou que era grátis / não esperava pagar" },
-  { re: /(sem interesse|n[aã]o quer|n[aã]o tem interesse|n[aã]o é para mim|desistiu)/i, label: "Sem interesse real / não é o público" },
-  { re: /(d[uú]vida|como funciona|entrega|conte[uú]do|aula|suporte)/i, label: "Dúvidas sobre o produto ou a entrega" },
+  {
+    re: /(esposa|marido|mulher|c[oô]njuge|fam[ií]lia|s[oó]cio|pais)/i,
+    label: "Precisa falar com cônjuge/família",
+  },
+  {
+    re: /(j[aá] tentou|j[aá] fiz|outro curso antes|n[aã]o deu certo)/i,
+    label: "Já tentou antes e não deu certo",
+  },
+  {
+    re: /(comparar|outra mentoria|outro curso|concorr)/i,
+    label: "Quer comparar com outro curso/mentoria",
+  },
+  {
+    re: /(gr[aá]tis|gratuito|n[aã]o sabia que era pago|achou que era)/i,
+    label: "Achou que era grátis / não esperava pagar",
+  },
+  {
+    re: /(sem interesse|n[aã]o quer|n[aã]o tem interesse|n[aã]o é para mim|desistiu)/i,
+    label: "Sem interesse real / não é o público",
+  },
+  {
+    re: /(d[uú]vida|como funciona|entrega|conte[uú]do|aula|suporte)/i,
+    label: "Dúvidas sobre o produto ou a entrega",
+  },
 ];
 
 function mapLigacaoObjecao(txt: string): string | null {
@@ -107,18 +141,35 @@ function mapLigacaoObjecao(txt: string): string | null {
 
 // Mensagens de automação / opt-in — não são conversa real do lead.
 const AUTOMACAO_PATTERNS = [
-  "acabei de inscrever", "acabei de me inscrever", "gostaria de receb", "quero receber o ebook",
-  "quero o ebook", "quero receber o minicurso", "quero participar da sessao", "quero minha sessao estrategica",
-  "vim pelo anuncio", "vim pelo instagram", "recebi o link", "confirmo minha presenca",
-  "quero receber o presente", "quero o presente", "quero participar da imersao", "quero entrar no grupo",
-  "quero as aulas", "quero o link", "quero receber os links",
+  "acabei de inscrever",
+  "acabei de me inscrever",
+  "gostaria de receb",
+  "quero receber o ebook",
+  "quero o ebook",
+  "quero receber o minicurso",
+  "quero participar da sessao",
+  "quero minha sessao estrategica",
+  "vim pelo anuncio",
+  "vim pelo instagram",
+  "recebi o link",
+  "confirmo minha presenca",
+  "quero receber o presente",
+  "quero o presente",
+  "quero participar da imersao",
+  "quero entrar no grupo",
+  "quero as aulas",
+  "quero o link",
+  "quero receber os links",
 ];
 
 function isAutomacao(body: string): boolean {
   const t = normalize(body).replace(/\s+/g, " ");
   if (t.length < 3) return true;
   if (/^(sim|nao|ok|okay|quero|sim quero|sim!|ja|ja entrei|\d{1,2})$/.test(t)) return true;
-  if (t.length < 20 && /^(sim|ok|quero|ja|entrei|consegui|combinado|obrigad|bom dia|boa tarde|boa noite)/.test(t))
+  if (
+    t.length < 20 &&
+    /^(sim|ok|quero|ja|entrei|consegui|combinado|obrigad|bom dia|boa tarde|boa noite)/.test(t)
+  )
     return true;
   return AUTOMACAO_PATTERNS.some((p) => t.includes(p));
 }
@@ -127,9 +178,7 @@ type IAObj = { objecao: string; trecho: string };
 
 // A IA lê o que o LEAD escreveu e devolve as objeções REAIS, cada uma com o
 // trecho literal que a comprova. Sem trecho → a objeção é descartada.
-async function detectWithAI(
-  items: { id: string; text: string }[],
-): Promise<Map<string, IAObj[]>> {
+async function detectWithAI(items: { id: string; text: string }[]): Promise<Map<string, IAObj[]>> {
   const out = new Map<string, IAObj[]>();
   const key = process.env["LOVABLE_API_KEY"];
   if (!key || items.length === 0) return out;
@@ -168,7 +217,9 @@ async function detectWithAI(
             {
               role: "user",
               content: batch
-                .map((b) => `ID: ${b.id}\nLEAD DISSE: ${b.text.replace(/\s+/g, " ").slice(0, 2200)}`)
+                .map(
+                  (b) => `ID: ${b.id}\nLEAD DISSE: ${b.text.replace(/\s+/g, " ").slice(0, 2200)}`,
+                )
                 .join("\n---\n"),
             },
           ],
@@ -187,7 +238,10 @@ async function detectWithAI(
         for (const o of it?.objecoes ?? []) {
           const label = String(o?.objecao ?? "").trim();
           if (!lista.includes(label as any)) continue;
-          const trecho = String(o?.trecho ?? "").replace(/\s+/g, " ").trim().slice(0, 160);
+          const trecho = String(o?.trecho ?? "")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 160);
           if (label !== SEM_OBJECAO && !trecho) continue;
           if (objs.some((x) => x.objecao === label)) continue;
           objs.push({ objecao: label, trecho });
@@ -210,6 +264,7 @@ async function detectWithAI(
 const CACHE_VERSION = "obj-v2-fecho";
 
 export const fetchObjecoesFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { from?: string; to?: string; seller?: string; funil?: string } = {}) => d)
   .handler(async ({ data }): Promise<ObjecoesResult> => {
     const db = await admin();
@@ -221,7 +276,9 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
     // 1) Conversas humanas do funil comercial no período
     const { data: convs, error } = await db
       .from("coach_conversations")
-      .select("id, seller_name, seller_email, origin_name, contact_name, last_message_at, is_ai_conversation")
+      .select(
+        "id, seller_name, seller_email, origin_name, contact_name, last_message_at, is_ai_conversation",
+      )
       .in("origin_name", V3_ORIGIN_NAMES)
       .eq("is_ai_conversation", false)
       .gte("last_message_at", `${from}T00:00:00Z`)
@@ -242,20 +299,25 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
     for (let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100));
     for (let i = 0; i < chunks.length; i += 5) {
       const res = await Promise.all(
-        chunks.slice(i, i + 5).map((ch) =>
-          db
-            .from("coach_messages")
-            .select("conversation_id, body, direction, sent_at")
-            .in("conversation_id", ch)
-            .limit(40000),
-        ),
+        chunks
+          .slice(i, i + 5)
+          .map((ch) =>
+            db
+              .from("coach_messages")
+              .select("conversation_id, body, direction, sent_at")
+              .in("conversation_id", ch)
+              .limit(40000),
+          ),
       );
       for (const r of res) {
-        for (const m of ((r.data ?? []) as any[])) {
+        for (const m of (r.data ?? []) as any[]) {
           if (!m.body) continue;
           const cid = String(m.conversation_id);
           let arr = msgsById.get(cid);
-          if (!arr) { arr = []; msgsById.set(cid, arr); }
+          if (!arr) {
+            arr = [];
+            msgsById.set(cid, arr);
+          }
           arr.push({ at: String(m.sent_at ?? ""), dir: String(m.direction), body: String(m.body) });
         }
       }
@@ -274,14 +336,18 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
       let cut = -1;
       for (let i = 0; i < arr.length; i++) {
         const m = arr[i]!;
-        if (m.dir !== "inbound" && FECHAMENTO_RE.test(m.body)) { cut = i; break; }
+        if (m.dir !== "inbound" && FECHAMENTO_RE.test(m.body)) {
+          cut = i;
+          break;
+        }
       }
       if (cut >= 0) comFechamento.add(cid);
       const leadAll = arr.filter((m) => m.dir === "inbound" && !isAutomacao(m.body));
       const out = arr.filter((m) => m.dir !== "inbound");
       outbound.set(cid, out.length);
 
-      let lead = cut >= 0 ? arr.slice(cut).filter((m) => m.dir === "inbound" && !isAutomacao(m.body)) : [];
+      let lead =
+        cut >= 0 ? arr.slice(cut).filter((m) => m.dir === "inbound" && !isAutomacao(m.body)) : [];
       if (lead.length === 0) {
         // fallback: metade final das falas do lead (mínimo 3 últimas)
         const keep = Math.max(3, Math.ceil(leadAll.length / 2));
@@ -306,7 +372,11 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
     // conversa real: o lead falou e o vendedor respondeu
     const validos = list.filter((c) => {
       const t = textById.get(String(c.id)) ?? "";
-      return (inbound.get(String(c.id)) ?? 0) >= 1 && (outbound.get(String(c.id)) ?? 0) >= 1 && t.trim().length >= 25;
+      return (
+        (inbound.get(String(c.id)) ?? 0) >= 1 &&
+        (outbound.get(String(c.id)) ?? 0) >= 1 &&
+        t.trim().length >= 25
+      );
     });
 
     // 3) Notas das análises (para nota média por objeção)
@@ -316,9 +386,11 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
         .from("coach_analyses")
         .select("conversation_id, score_geral")
         .in("conversation_id", ids.slice(i, i + 200))
-        .eq("status", "ok");
+        .eq("status", "ok")
+        .limit(400);
       for (const a of (an ?? []) as any[]) {
-        if (typeof a.score_geral === "number") scoreById.set(String(a.conversation_id), Number(a.score_geral));
+        if (typeof a.score_geral === "number")
+          scoreById.set(String(a.conversation_id), Number(a.score_geral));
       }
     }
 
@@ -335,11 +407,15 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
       for (let i = 0; i < tIds.length; i += 200) cchunks.push(tIds.slice(i, i + 200));
       const cached = await Promise.all(
         cchunks.map((ch) =>
-          db.from("lead_objecao_cache").select("conversation_id, text_hash, objecoes").in("conversation_id", ch),
+          db
+            .from("lead_objecao_cache")
+            .select("conversation_id, text_hash, objecoes")
+            .in("conversation_id", ch),
         ),
       );
       const byId = new Map<string, any>();
-      for (const r of cached) for (const row of ((r.data ?? []) as any[])) byId.set(String(row.conversation_id), row);
+      for (const r of cached)
+        for (const row of (r.data ?? []) as any[]) byId.set(String(row.conversation_id), row);
       for (const t of targets) {
         const row = byId.get(t.id);
         if (row && String(row.text_hash) === t.hash) {
@@ -363,7 +439,9 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
           });
         }
         for (let i = 0; i < rows.length; i += 200) {
-          await db.from("lead_objecao_cache").upsert(rows.slice(i, i + 200), { onConflict: "conversation_id" });
+          await db
+            .from("lead_objecao_cache")
+            .upsert(rows.slice(i, i + 200), { onConflict: "conversation_id" });
         }
       }
     }
@@ -374,15 +452,27 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
     const agg = new Map<
       string,
       {
-        total: number; mensagens: number; ligacoes: number;
-        scores: number[]; sellers: Map<string, number>; funis: Map<string, number>;
+        total: number;
+        mensagens: number;
+        ligacoes: number;
+        scores: number[];
+        sellers: Map<string, number>;
+        funis: Map<string, number>;
         evidencias: ObjecaoEvidencia[];
       }
     >();
     const bucket = (label: string) => {
       let a = agg.get(label);
       if (!a) {
-        a = { total: 0, mensagens: 0, ligacoes: 0, scores: [], sellers: new Map(), funis: new Map(), evidencias: [] };
+        a = {
+          total: 0,
+          mensagens: 0,
+          ligacoes: 0,
+          scores: [],
+          sellers: new Map(),
+          funis: new Map(),
+          evidencias: [],
+        };
         agg.set(label, a);
       }
       return a;
@@ -434,7 +524,10 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
         }
         if (mes) {
           let m = evoMap.get(mes);
-          if (!m) { m = new Map(); evoMap.set(mes, m); }
+          if (!m) {
+            m = new Map();
+            evoMap.set(mes, m);
+          }
           m.set(o.objecao, (m.get(o.objecao) ?? 0) + 1);
         }
       }
@@ -452,7 +545,7 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
         .lte("started_at", `${to}T23:59:59Z`)
         .limit(2000);
 
-      for (const call of ((calls ?? []) as any[])) {
+      for (const call of (calls ?? []) as any[]) {
         const seller = String(call.agent_name || call.agent_email || "—").trim();
         sellersSet.add(seller);
         if (data.seller && data.seller !== "all" && seller !== data.seller) continue;
@@ -463,7 +556,9 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
         const score = typeof call.score === "number" ? Number(call.score) : null;
         const jaContadas = new Set<string>();
         for (const item of raw) {
-          const frase = String(item ?? "").replace(/\s+/g, " ").trim();
+          const frase = String(item ?? "")
+            .replace(/\s+/g, " ")
+            .trim();
           const label = mapLigacaoObjecao(frase);
           if (!label || jaContadas.has(label)) continue;
           jaContadas.add(label);
@@ -486,7 +581,10 @@ export const fetchObjecoesFn = createServerFn({ method: "GET" })
           }
           if (mes) {
             let m = evoMap.get(mes);
-            if (!m) { m = new Map(); evoMap.set(mes, m); }
+            if (!m) {
+              m = new Map();
+              evoMap.set(mes, m);
+            }
             m.set(label, (m.get(label) ?? 0) + 1);
           }
         }
@@ -555,6 +653,7 @@ export type ObjecoesPlaybook = {
 };
 
 export const generateObjecoesPlaybookFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       ranking: { objecao: string; total: number; avg_score: number | null; exemplos?: string[] }[];
@@ -588,10 +687,15 @@ export const generateObjecoesPlaybookFn = createServerFn({ method: "POST" })
         ],
       }),
     });
-    if (!resp.ok) throw new Error(`Lovable AI ${resp.status}: ${await resp.text().catch(() => "")}`);
+    if (!resp.ok)
+      throw new Error(`Lovable AI ${resp.status}: ${await resp.text().catch(() => "")}`);
     const j = (await resp.json()) as any;
     let parsed: any = {};
-    try { parsed = JSON.parse(j?.choices?.[0]?.message?.content ?? "{}"); } catch { parsed = {}; }
+    try {
+      parsed = JSON.parse(j?.choices?.[0]?.message?.content ?? "{}");
+    } catch {
+      parsed = {};
+    }
     return {
       generated_at: new Date().toISOString(),
       resumo: parsed.resumo ?? "",

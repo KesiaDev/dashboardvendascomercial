@@ -15,9 +15,9 @@ function fmtEur(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 }
 function pctColor(v: number) {
-  if (v >= 10) return "text-emerald-500";
-  if (v >= 4) return "text-amber-500";
-  return "text-red-500";
+  if (v >= 10) return "text-success-fg";
+  if (v >= 4) return "text-warning-fg";
+  return "text-destructive-fg";
 }
 
 type FunnelAgg = {
@@ -149,7 +149,7 @@ export function ConversaoFunilCard({
                           </span>
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">{f.leads}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-emerald-500 font-medium">{f.vendas}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-success-fg font-medium">{f.vendas}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{fmtEur(f.valor)}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{f.lost}</td>
                         <td className={`px-3 py-2 text-right tabular-nums font-semibold ${pctColor(conv)}`}>
@@ -165,7 +165,7 @@ export function ConversaoFunilCard({
                                 {s.seller}
                               </td>
                               <td className="px-3 py-1.5 text-right tabular-nums">{s.leads}</td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-emerald-500">{s.vendas}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums text-success-fg">{s.vendas}</td>
                               <td className="px-3 py-1.5 text-right tabular-nums">{fmtEur(s.valor)}</td>
                               <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{s.lost}</td>
                               <td className={`px-3 py-1.5 text-right tabular-nums font-medium ${pctColor(sConv)}`}>

@@ -16,12 +16,24 @@ export interface Channel {
 
 export const CHANNELS: Channel[] = [
   { id: "igt", label: "IGT", tipo: "aquisicao", clintGroupNames: ["IGT"], sckPrefixes: ["igt"] },
-  { id: "fgrs", label: "FGRS", tipo: "aquisicao", clintGroupNames: ["FGRS"], sckPrefixes: ["fgrs"] },
+  {
+    id: "fgrs",
+    label: "FGRS",
+    tipo: "aquisicao",
+    clintGroupNames: ["FGRS"],
+    sckPrefixes: ["fgrs"],
+  },
   // A planilha de metas trata Webinar Mentoria, Perpétuo Mentoria e Webinar FGRS como
   // funis distintos (seções separadas, investimento/meta próprios) — mesmo que hoje não
   // seja possível diferenciá-los com certeza via sck/group_name (ver gap-analysis.md,
   // limitação a resolver quando o "Realizado automático" for implementado).
-  { id: "webinar_mentoria", label: "Webinar Mentoria", tipo: "aquisicao", clintGroupNames: ["WGT"], sckPrefixes: [] },
+  {
+    id: "webinar_mentoria",
+    label: "Webinar Mentoria",
+    tipo: "aquisicao",
+    clintGroupNames: ["WGT"],
+    sckPrefixes: [],
+  },
   {
     id: "perpetuo_mentoria",
     label: "Perpétuo Mentoria",
@@ -29,14 +41,62 @@ export const CHANNELS: Channel[] = [
     clintGroupNames: ["FUNIS PERPETUOS", "MGT"],
     sckPrefixes: ["mse"],
   },
-  { id: "webinar_fgrs", label: "Webinar FGRS", tipo: "aquisicao", clintGroupNames: [], sckPrefixes: [] },
-  { id: "ldp", label: "LDP (Live Direto ao Ponto)", tipo: "aquisicao", clintGroupNames: ["INFOEDITORA"], sckPrefixes: ["ldp"] },
-  { id: "mas", label: "Master and Scale", tipo: "aquisicao", clintGroupNames: ["MASTER AND SCALE"], sckPrefixes: ["mas"] },
-  { id: "accelerator", label: "Accelerator (perpétuo)", tipo: "aquisicao", clintGroupNames: ["Accelerator"], sckPrefixes: [] },
-  { id: "evento_presencial", label: "Evento Presencial", tipo: "aquisicao", clintGroupNames: [], sckPrefixes: [] },
-  { id: "perpetuo_ia", label: "Perpétuo IA", tipo: "aquisicao", clintGroupNames: [], sckPrefixes: [] },
-  { id: "renovacao", label: "Renovação", tipo: "renovacao", clintGroupNames: ["SUCESSO DO CLIENTE"], sckPrefixes: [] },
-  { id: "outros", label: "Outros / não classificado", tipo: "outro", clintGroupNames: [], sckPrefixes: [] },
+  {
+    id: "webinar_fgrs",
+    label: "Webinar FGRS",
+    tipo: "aquisicao",
+    clintGroupNames: [],
+    sckPrefixes: [],
+  },
+  {
+    id: "ldp",
+    label: "LDP (Live Direto ao Ponto)",
+    tipo: "aquisicao",
+    clintGroupNames: ["INFOEDITORA"],
+    sckPrefixes: ["ldp"],
+  },
+  {
+    id: "mas",
+    label: "Master and Scale",
+    tipo: "aquisicao",
+    clintGroupNames: ["MASTER AND SCALE"],
+    sckPrefixes: ["mas"],
+  },
+  {
+    id: "accelerator",
+    label: "Accelerator (perpétuo)",
+    tipo: "aquisicao",
+    clintGroupNames: ["Accelerator"],
+    sckPrefixes: [],
+  },
+  {
+    id: "evento_presencial",
+    label: "Evento Presencial",
+    tipo: "aquisicao",
+    clintGroupNames: [],
+    sckPrefixes: [],
+  },
+  {
+    id: "perpetuo_ia",
+    label: "Perpétuo IA",
+    tipo: "aquisicao",
+    clintGroupNames: [],
+    sckPrefixes: [],
+  },
+  {
+    id: "renovacao",
+    label: "Renovação",
+    tipo: "renovacao",
+    clintGroupNames: ["SUCESSO DO CLIENTE"],
+    sckPrefixes: [],
+  },
+  {
+    id: "outros",
+    label: "Outros / não classificado",
+    tipo: "outro",
+    clintGroupNames: [],
+    sckPrefixes: [],
+  },
 ];
 
 function sckPrefix(sck: string | null | undefined): string | null {
@@ -51,7 +111,10 @@ function sckPrefix(sck: string | null | undefined): string | null {
  * Clint quando não há sck (ex.: negócio criado direto na Clint, sem origem de
  * checkout/tracking).
  */
-export function classifyChannel(groupName: string | null | undefined, sck: string | null | undefined): string {
+export function classifyChannel(
+  groupName: string | null | undefined,
+  sck: string | null | undefined,
+): string {
   const prefix = sckPrefix(sck);
   if (prefix) {
     const bySck = CHANNELS.find((c) => c.sckPrefixes.includes(prefix));

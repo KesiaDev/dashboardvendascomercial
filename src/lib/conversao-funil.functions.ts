@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type ConversaoRow = {
   funnel: string;
@@ -17,6 +17,7 @@ export type ConversaoRow = {
  * - vendas / valor: fechamento manual dos vendedores (manual_sales, 1ª parcela)
  */
 export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<ConversaoRow[]> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -58,7 +59,6 @@ export const fetchConversaoFunilFn = createServerFn({ method: "GET" })
       row.vendas++;
       row.valor += Number(s.value_eur ?? 0);
     }
-
 
     return Array.from(map.values()).filter(
       (r) =>

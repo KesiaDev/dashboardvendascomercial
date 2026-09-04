@@ -43,8 +43,8 @@ const STATUS_LABEL: Record<string, string> = {
 };
 const STATUS_CLASS: Record<string, string> = {
   todo: "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30",
-  doing: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40",
-  done: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40",
+  doing: "bg-warning/15 text-warning-fg border-warning/40",
+  done: "bg-success/15 text-success-fg border-success/40",
 };
 
 function currentQuarter() {

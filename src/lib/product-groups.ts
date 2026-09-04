@@ -1,3 +1,5 @@
+import { isApproved } from "./sales-status";
+
 // Mapeamento dos nomes de produto (CSV) para os grupos do dashboard.
 // A correspondência é feita por palavras-chave em ordem (a primeira que casar ganha).
 
@@ -14,20 +16,78 @@ export interface ProductGroup {
 }
 
 export const PRODUCT_GROUPS: ProductGroup[] = [
-  { id: "gtp_au", label: "Gestor Tráfego Pago 2.0 - AU", color: "#6366f1", categoria: "entrada", parentId: null },
-  { id: "formacao_rs", label: "Formação Gestor Redes Sociais 2.0", color: "#06b6d4", categoria: "entrada", parentId: null },
-  { id: "accelerator", label: "Programa Accelerator", color: "#10b981", categoria: "upsell", parentId: "gtp_au" },
-  { id: "estrategista", label: "Estrategista de Infoprodutos", color: "#f59e0b", categoria: "outro", parentId: null },
-  { id: "master_scale", label: "Master and Scale 2025", color: "#ec4899", categoria: "outro", parentId: null },
-  { id: "traffic_master", label: "Traffic Master", color: "#8b5cf6", categoria: "upsell", parentId: "accelerator" },
-  { id: "renov_mentoria", label: "Renovação Mentoria", color: "#3b82f6", categoria: "renovacao", parentId: "gtp_au" },
-  { id: "renov_tm", label: "Renovação Traffic Master", color: "#a855f7", categoria: "renovacao", parentId: "traffic_master" },
-  { id: "renov_acc", label: "Renovação Accelerator", color: "#14b8a6", categoria: "renovacao", parentId: "accelerator" },
+  {
+    id: "gtp_au",
+    label: "Gestor Tráfego Pago 2.0 - AU",
+    color: "#6366f1",
+    categoria: "entrada",
+    parentId: null,
+  },
+  {
+    id: "formacao_rs",
+    label: "Formação Gestor Redes Sociais 2.0",
+    color: "#06b6d4",
+    categoria: "entrada",
+    parentId: null,
+  },
+  {
+    id: "accelerator",
+    label: "Programa Accelerator",
+    color: "#10b981",
+    categoria: "upsell",
+    parentId: "gtp_au",
+  },
+  {
+    id: "estrategista",
+    label: "Estrategista de Infoprodutos",
+    color: "#f59e0b",
+    categoria: "outro",
+    parentId: null,
+  },
+  {
+    id: "master_scale",
+    label: "Master and Scale 2025",
+    color: "#ec4899",
+    categoria: "outro",
+    parentId: null,
+  },
+  {
+    id: "traffic_master",
+    label: "Traffic Master",
+    color: "#8b5cf6",
+    categoria: "upsell",
+    parentId: "accelerator",
+  },
+  {
+    id: "renov_mentoria",
+    label: "Renovação Mentoria",
+    color: "#3b82f6",
+    categoria: "renovacao",
+    parentId: "gtp_au",
+  },
+  {
+    id: "renov_tm",
+    label: "Renovação Traffic Master",
+    color: "#a855f7",
+    categoria: "renovacao",
+    parentId: "traffic_master",
+  },
+  {
+    id: "renov_acc",
+    label: "Renovação Accelerator",
+    color: "#14b8a6",
+    categoria: "renovacao",
+    parentId: "accelerator",
+  },
   { id: "outros", label: "Outros", color: "#64748b", categoria: "outro", parentId: null },
 ];
 
 function norm(s: string): string {
-  return (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  return (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 export function mapProductToGroup(productName: string): string {
@@ -56,7 +116,6 @@ export function mapProductToGroup(productName: string): string {
   return "outros";
 }
 
-
 /** Retorna true se o nome do produto (do fechamento manual ou Hotmart) for uma renovação. */
 export function isRenewalProduct(productName: string | null | undefined): boolean {
   return (productName || "").toLowerCase().includes("renova");
@@ -71,7 +130,8 @@ export type StatusCategory = "aprovado" | "cancelado" | "chargeback" | "reembols
 
 export function categorizeStatus(status: string): StatusCategory {
   const s = (status || "").toLowerCase().trim();
-  if (s === "aprovado" || s === "completo" || s === "completed" || s === "approved") return "aprovado";
+  // "aprovado" delega para o módulo canônico — esta cópia perdia "complete".
+  if (isApproved(s)) return "aprovado";
   if (s === "cancelado" || s === "cancelled" || s === "canceled") return "cancelado";
   if (s === "chargeback") return "chargeback";
   if (s.includes("reembols") || s.includes("refund") || s === "reclamado") return "reembolso";

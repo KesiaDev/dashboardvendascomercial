@@ -7,9 +7,28 @@ const MODEL = "google/gemini-3-flash-preview";
 const DIFFICULTIES = ["Bronze", "Prata", "Ouro", "Diamante", "Elite", "Lenda"] as const;
 type Difficulty = (typeof DIFFICULTIES)[number];
 
-const CHANNELS = ["Instagram", "Facebook", "Google", "Indicação", "WhatsApp", "Webinar", "Masterclass", "Renovação", "Lead perdido"] as const;
+const CHANNELS = [
+  "Instagram",
+  "Facebook",
+  "Google",
+  "Indicação",
+  "WhatsApp",
+  "Webinar",
+  "Masterclass",
+  "Renovação",
+  "Lead perdido",
+] as const;
 
-const EMOTIONS = ["animado", "neutro", "desconfiado", "irritado", "ocupado", "frustrado", "interessado", "seguro"] as const;
+const EMOTIONS = [
+  "animado",
+  "neutro",
+  "desconfiado",
+  "irritado",
+  "ocupado",
+  "frustrado",
+  "interessado",
+  "seguro",
+] as const;
 
 function leagueForXp(xp: number): string {
   if (xp >= 20000) return "Lenda";
@@ -36,15 +55,27 @@ async function aiJson(system: string, user: string, temperature = 0.9): Promise<
       response_format: { type: "json_object" },
     }),
   });
-  if (res.status === 402) throw new Error("Créditos de IA esgotados no workspace Lovable. Recarregue para continuar a treinar na Arena.");
-  if (res.status === 429) throw new Error("Muitos pedidos à IA num curto espaço de tempo. Tente novamente em instantes.");
+  if (res.status === 402)
+    throw new Error(
+      "Créditos de IA esgotados no workspace Lovable. Recarregue para continuar a treinar na Arena.",
+    );
+  if (res.status === 429)
+    throw new Error("Muitos pedidos à IA num curto espaço de tempo. Tente novamente em instantes.");
   if (!res.ok) throw new Error(`IA falhou: ${res.status} ${await res.text()}`);
   const data = await res.json();
   const txt = data.choices?.[0]?.message?.content ?? "{}";
-  try { return JSON.parse(txt); } catch { return {}; }
+  try {
+    return JSON.parse(txt);
+  } catch {
+    return {};
+  }
 }
 
-async function aiText(system: string, messages: Array<{ role: "user" | "assistant"; content: string }>, temperature = 0.85): Promise<string> {
+async function aiText(
+  system: string,
+  messages: Array<{ role: "user" | "assistant"; content: string }>,
+  temperature = 0.85,
+): Promise<string> {
   const key = process.env.LOVABLE_API_KEY;
   if (!key) throw new Error("LOVABLE_API_KEY ausente");
   const res = await fetch(AI_URL, {
@@ -56,8 +87,12 @@ async function aiText(system: string, messages: Array<{ role: "user" | "assistan
       messages: [{ role: "system", content: system }, ...messages],
     }),
   });
-  if (res.status === 402) throw new Error("Créditos de IA esgotados no workspace Lovable. Recarregue para continuar a treinar na Arena.");
-  if (res.status === 429) throw new Error("Muitos pedidos à IA num curto espaço de tempo. Tente novamente em instantes.");
+  if (res.status === 402)
+    throw new Error(
+      "Créditos de IA esgotados no workspace Lovable. Recarregue para continuar a treinar na Arena.",
+    );
+  if (res.status === 429)
+    throw new Error("Muitos pedidos à IA num curto espaço de tempo. Tente novamente em instantes.");
   if (!res.ok) throw new Error(`IA falhou: ${res.status} ${await res.text()}`);
   const data = await res.json();
   return String(data.choices?.[0]?.message?.content ?? "").trim();
@@ -70,14 +105,30 @@ export const getArenaDashboardFn = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const [progressRes, simsRes, missionRes] = await Promise.all([
       supabase.from("arena_progress").select("*").eq("seller_user_id", userId).maybeSingle(),
-      supabase.from("arena_simulations").select("id, started_at, ended_at, score, xp_earned, outcome, status, evaluation, persona_id").eq("seller_user_id", userId).order("started_at", { ascending: false }).limit(20),
-      supabase.from("arena_missions").select("*").eq("seller_user_id", userId).eq("mission_date", new Date().toISOString().slice(0, 10)).maybeSingle(),
+      supabase
+        .from("arena_simulations")
+        .select(
+          "id, started_at, ended_at, score, xp_earned, outcome, status, evaluation, persona_id",
+        )
+        .eq("seller_user_id", userId)
+        .order("started_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("arena_missions")
+        .select("*")
+        .eq("seller_user_id", userId)
+        .eq("mission_date", new Date().toISOString().slice(0, 10))
+        .maybeSingle(),
     ]);
 
     const sims = simsRes.data ?? [];
     const finished = sims.filter((s: any) => s.status === "finished");
-    const wins = finished.filter((s: any) => s.outcome === "venda" || s.outcome === "agendamento").length;
-    const avgScore = finished.length ? finished.reduce((a: number, s: any) => a + Number(s.score ?? 0), 0) / finished.length : 0;
+    const wins = finished.filter(
+      (s: any) => s.outcome === "venda" || s.outcome === "agendamento",
+    ).length;
+    const avgScore = finished.length
+      ? finished.reduce((a: number, s: any) => a + Number(s.score ?? 0), 0) / finished.length
+      : 0;
 
     // agregação de competências
     const compSums: Record<string, { sum: number; n: number }> = {};
@@ -124,7 +175,12 @@ export const generateDailyMissionFn = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     const today = new Date().toISOString().slice(0, 10);
-    const existing = await supabase.from("arena_missions").select("*").eq("seller_user_id", userId).eq("mission_date", today).maybeSingle();
+    const existing = await supabase
+      .from("arena_missions")
+      .select("*")
+      .eq("seller_user_id", userId)
+      .eq("mission_date", today)
+      .maybeSingle();
     if (existing.data) return existing.data;
 
     const spec = await aiJson(
@@ -135,18 +191,29 @@ Contexto: produtos possíveis: "Mentoria Gestor de Tráfego", "Accelerator", "Ma
       1.1,
     );
 
-    const { data } = await supabase.from("arena_missions").insert({
-      seller_user_id: userId,
-      mission_date: today,
-      spec,
-    }).select("*").single();
+    const { data } = await supabase
+      .from("arena_missions")
+      .insert({
+        seller_user_id: userId,
+        mission_date: today,
+        spec,
+      })
+      .select("*")
+      .single();
     return data;
   });
 
 // ---------- Iniciar simulação ----------
 export const startSimulationFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { missionId?: string | null; difficulty?: Difficulty; product?: string; channel?: string }) => d)
+  .inputValidator(
+    (d: {
+      missionId?: string | null;
+      difficulty?: Difficulty;
+      product?: string;
+      channel?: string;
+    }) => d,
+  )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
 
@@ -156,7 +223,12 @@ export const startSimulationFn = createServerFn({ method: "POST" })
     let missionId: string | null = data.missionId ?? null;
 
     if (missionId) {
-      const m = await supabase.from("arena_missions").select("*").eq("id", missionId).eq("seller_user_id", userId).maybeSingle();
+      const m = await supabase
+        .from("arena_missions")
+        .select("*")
+        .eq("id", missionId)
+        .eq("seller_user_id", userId)
+        .maybeSingle();
       if (m.data) {
         const spec: any = m.data.spec ?? {};
         product = spec.produto ?? product;
@@ -166,8 +238,15 @@ export const startSimulationFn = createServerFn({ method: "POST" })
     }
 
     // Contexto de produto
-    const kn = await supabase.from("arena_knowledge").select("content").eq("product", product).limit(3);
-    const productContext = (kn.data ?? []).map((k) => k.content).join("\n\n").slice(0, 4000);
+    const kn = await supabase
+      .from("arena_knowledge")
+      .select("content")
+      .eq("product", product)
+      .limit(3);
+    const productContext = (kn.data ?? [])
+      .map((k) => k.content)
+      .join("\n\n")
+      .slice(0, 4000);
 
     const persona = await aiJson(
       "Você cria personas realistas de clientes brasileiros/portugueses para simulação comercial. Responda JSON, sem markdown.",
@@ -199,28 +278,38 @@ Difficulty guide:
       1.05,
     );
 
-    const personaRow = await supabase.from("arena_personas").insert({
-      seller_user_id: userId,
-      persona,
-      difficulty,
-      product,
-      channel,
-    }).select("*").single();
+    const personaRow = await supabase
+      .from("arena_personas")
+      .insert({
+        seller_user_id: userId,
+        persona,
+        difficulty,
+        product,
+        channel,
+      })
+      .select("*")
+      .single();
 
     if (personaRow.error) throw personaRow.error;
 
-    const sim = await supabase.from("arena_simulations").insert({
-      seller_user_id: userId,
-      persona_id: personaRow.data.id,
-      mission_id: missionId,
-      status: "open",
-      current_emotion: persona?.humor_inicial ?? "neutro",
-    }).select("*").single();
+    const sim = await supabase
+      .from("arena_simulations")
+      .insert({
+        seller_user_id: userId,
+        persona_id: personaRow.data.id,
+        mission_id: missionId,
+        status: "open",
+        current_emotion: persona?.humor_inicial ?? "neutro",
+      })
+      .select("*")
+      .single();
 
     if (sim.error) throw sim.error;
 
     // Primeira mensagem do cliente
-    const abertura = String(persona?.abertura ?? `Oi, vi sobre ${product} e queria entender melhor.`);
+    const abertura = String(
+      persona?.abertura ?? `Oi, vi sobre ${product} e queria entender melhor.`,
+    );
     await supabase.from("arena_messages").insert({
       simulation_id: sim.data.id,
       role: "client",
@@ -239,7 +328,11 @@ export const getSimulationFn = createServerFn({ method: "GET" })
     const { supabase } = context;
     const [sim, msgs] = await Promise.all([
       supabase.from("arena_simulations").select("*, arena_personas(*)").eq("id", data.id).single(),
-      supabase.from("arena_messages").select("*").eq("simulation_id", data.id).order("sent_at", { ascending: true }),
+      supabase
+        .from("arena_messages")
+        .select("*")
+        .eq("simulation_id", data.id)
+        .order("sent_at", { ascending: true }),
     ]);
     if (sim.error) throw sim.error;
     return { simulation: sim.data, messages: msgs.data ?? [] };
@@ -254,7 +347,12 @@ export const sendArenaMessageFn = createServerFn({ method: "POST" })
     const body = data.body.trim();
     if (!body) throw new Error("Mensagem vazia");
 
-    const sim = await supabase.from("arena_simulations").select("*, arena_personas(*)").eq("id", data.simulationId).eq("seller_user_id", userId).single();
+    const sim = await supabase
+      .from("arena_simulations")
+      .select("*, arena_personas(*)")
+      .eq("id", data.simulationId)
+      .eq("seller_user_id", userId)
+      .single();
     if (sim.error) throw sim.error;
     if (sim.data.status !== "open") throw new Error("Simulação encerrada");
 
@@ -264,7 +362,11 @@ export const sendArenaMessageFn = createServerFn({ method: "POST" })
       body,
     });
 
-    const msgsRes = await supabase.from("arena_messages").select("role, body").eq("simulation_id", data.simulationId).order("sent_at", { ascending: true });
+    const msgsRes = await supabase
+      .from("arena_messages")
+      .select("role, body")
+      .eq("simulation_id", data.simulationId)
+      .order("sent_at", { ascending: true });
     const history = (msgsRes.data ?? []).map((m: any) => ({
       role: m.role === "seller" ? ("user" as const) : ("assistant" as const),
       content: m.body,
@@ -293,7 +395,10 @@ Essa tag será removida antes de mostrar ao vendedor.`;
 
     const raw = await aiText(system, history);
     const emoMatch = raw.match(/\[\[EMOTION:([a-zçãáéíóú]+)\]\]/i);
-    const emotion = emoMatch && (EMOTIONS as readonly string[]).includes(emoMatch[1].toLowerCase()) ? emoMatch[1].toLowerCase() : currentEmotion;
+    const emotion =
+      emoMatch && (EMOTIONS as readonly string[]).includes(emoMatch[1].toLowerCase())
+        ? emoMatch[1].toLowerCase()
+        : currentEmotion;
     const cleaned = raw.replace(/\[\[EMOTION:[^\]]+\]\]/gi, "").trim();
 
     await supabase.from("arena_messages").insert({
@@ -302,7 +407,10 @@ Essa tag será removida antes de mostrar ao vendedor.`;
       body: cleaned,
       emotion_after: emotion,
     });
-    await supabase.from("arena_simulations").update({ current_emotion: emotion }).eq("id", data.simulationId);
+    await supabase
+      .from("arena_simulations")
+      .update({ current_emotion: emotion })
+      .eq("id", data.simulationId);
 
     return { reply: cleaned, emotion };
   });
@@ -313,18 +421,36 @@ export const finishSimulationFn = createServerFn({ method: "POST" })
   .inputValidator((d: { simulationId: string }) => d)
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
-    const sim = await supabase.from("arena_simulations").select("*, arena_personas(*)").eq("id", data.simulationId).eq("seller_user_id", userId).single();
+    const sim = await supabase
+      .from("arena_simulations")
+      .select("*, arena_personas(*)")
+      .eq("id", data.simulationId)
+      .eq("seller_user_id", userId)
+      .single();
     if (sim.error) throw sim.error;
     if (sim.data.status === "finished") {
-      return { evaluation: sim.data.evaluation, score: sim.data.score, xp_earned: sim.data.xp_earned };
+      return {
+        evaluation: sim.data.evaluation,
+        score: sim.data.score,
+        xp_earned: sim.data.xp_earned,
+      };
     }
-    const msgs = await supabase.from("arena_messages").select("id, role, body, sent_at").eq("simulation_id", data.simulationId).order("sent_at", { ascending: true });
-    const transcript = (msgs.data ?? []).map((m: any, i: number) => `#${i + 1} [${m.role === "seller" ? "VENDEDOR" : "CLIENTE"}] ${m.body}`).join("\n");
+    const msgs = await supabase
+      .from("arena_messages")
+      .select("id, role, body, sent_at")
+      .eq("simulation_id", data.simulationId)
+      .order("sent_at", { ascending: true });
+    const transcript = (msgs.data ?? [])
+      .map(
+        (m: any, i: number) =>
+          `#${i + 1} [${m.role === "seller" ? "VENDEDOR" : "CLIENTE"}] ${m.body}`,
+      )
+      .join("\n");
     const persona = (sim.data as any).arena_personas?.persona ?? {};
 
     const evaluation = await aiJson(
       "Você é um coach comercial rigoroso. Responda JSON válido.",
-      `Avalie a conversa abaixo entre um VENDEDOR e um CLIENTE virtual (persona: ${persona.nome ?? "—"}, dificuldade ${((sim.data as any).arena_personas?.difficulty) ?? "Ouro"}, produto ${((sim.data as any).arena_personas?.product) ?? "—"}).
+      `Avalie a conversa abaixo entre um VENDEDOR e um CLIENTE virtual (persona: ${persona.nome ?? "—"}, dificuldade ${(sim.data as any).arena_personas?.difficulty ?? "Ouro"}, produto ${(sim.data as any).arena_personas?.product ?? "—"}).
 
 TRANSCRIÇÃO:
 ${transcript}
@@ -348,7 +474,8 @@ Devolva JSON:
     const score = Number(evaluation?.score_geral ?? 0);
     const outcome = String(evaluation?.outcome ?? "followup");
     const xpFromScore = Math.round(score * 3);
-    const xpFromOutcome = outcome === "venda" ? 120 : outcome === "agendamento" ? 70 : outcome === "followup" ? 20 : 0;
+    const xpFromOutcome =
+      outcome === "venda" ? 120 : outcome === "agendamento" ? 70 : outcome === "followup" ? 20 : 0;
     const xpEarned = xpFromScore + xpFromOutcome;
 
     // aplica comentários do replay às mensagens do vendedor
@@ -359,46 +486,63 @@ Devolva JSON:
       const idx = Number(r.index) - 1;
       const target = (msgs.data ?? [])[idx];
       if (target && target.role === "seller") {
-        await supabase.from("arena_messages").update({ ai_comment: { tag: r.tag, comentario: r.comentario } }).eq("id", target.id);
+        await supabase
+          .from("arena_messages")
+          .update({ ai_comment: { tag: r.tag, comentario: r.comentario } })
+          .eq("id", target.id);
       }
     }
 
     void sellerMsgs;
 
-    await supabase.from("arena_simulations").update({
-      status: "finished",
-      ended_at: new Date().toISOString(),
-      score,
-      outcome,
-      xp_earned: xpEarned,
-      evaluation,
-    }).eq("id", data.simulationId);
+    await supabase
+      .from("arena_simulations")
+      .update({
+        status: "finished",
+        ended_at: new Date().toISOString(),
+        score,
+        outcome,
+        xp_earned: xpEarned,
+        evaluation,
+      })
+      .eq("id", data.simulationId);
 
     if (sim.data.mission_id) {
-      await supabase.from("arena_missions").update({ completed_simulation_id: data.simulationId }).eq("id", sim.data.mission_id);
+      await supabase
+        .from("arena_missions")
+        .update({ completed_simulation_id: data.simulationId })
+        .eq("id", sim.data.mission_id);
     }
 
     // progress
     const today = new Date().toISOString().slice(0, 10);
-    const prog = await supabase.from("arena_progress").select("*").eq("seller_user_id", userId).maybeSingle();
+    const prog = await supabase
+      .from("arena_progress")
+      .select("*")
+      .eq("seller_user_id", userId)
+      .maybeSingle();
     if (prog.data) {
       const last = prog.data.last_played_date;
       let streak = prog.data.streak_days ?? 0;
       if (last === today) {
         // mesmo dia, mantém
       } else {
-        const y = new Date(); y.setDate(y.getDate() - 1);
+        const y = new Date();
+        y.setDate(y.getDate() - 1);
         const yStr = y.toISOString().slice(0, 10);
         streak = last === yStr ? streak + 1 : 1;
       }
       const newXp = (prog.data.xp ?? 0) + xpEarned;
-      await supabase.from("arena_progress").update({
-        xp: newXp,
-        league: leagueForXp(newXp),
-        streak_days: streak,
-        last_played_date: today,
-        updated_at: new Date().toISOString(),
-      }).eq("seller_user_id", userId);
+      await supabase
+        .from("arena_progress")
+        .update({
+          xp: newXp,
+          league: leagueForXp(newXp),
+          streak_days: streak,
+          last_played_date: today,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("seller_user_id", userId);
     } else {
       await supabase.from("arena_progress").insert({
         seller_user_id: userId,

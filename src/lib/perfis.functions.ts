@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { V3_ORIGIN_NAMES } from "@/lib/origem-v3.server";
-
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -13,7 +13,6 @@ function hashText(t: string): string {
   for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0;
   return `${t.length}-${h.toString(36)}`;
 }
-
 
 export type PerfilConversa = {
   id: string;
@@ -48,7 +47,6 @@ export type PerfilRow = {
   conversas: PerfilConversa[];
 };
 
-
 export type PerfisResult = {
   from: string;
   to: string;
@@ -61,11 +59,27 @@ export type PerfisResult = {
 
 // o comercial perguntou sobre trabalho/profissão do lead?
 const PERGUNTA_PROF = [
-  "com o que voce trabalha", "com o que trabalha", "no que voce trabalha", "onde voce trabalha",
-  "qual a sua profissao", "qual sua profissao", "qual e a sua profissao", "sua profissao",
-  "o que voce faz", "o que faz da vida", "o que faz hoje", "com o que atua", "em que area",
-  "qual sua area", "qual a sua area", "voce trabalha com", "trabalha atualmente",
-  "esta trabalhando", "voce ja trabalha com", "atua com o que", "qual sua ocupacao",
+  "com o que voce trabalha",
+  "com o que trabalha",
+  "no que voce trabalha",
+  "onde voce trabalha",
+  "qual a sua profissao",
+  "qual sua profissao",
+  "qual e a sua profissao",
+  "sua profissao",
+  "o que voce faz",
+  "o que faz da vida",
+  "o que faz hoje",
+  "com o que atua",
+  "em que area",
+  "qual sua area",
+  "qual a sua area",
+  "voce trabalha com",
+  "trabalha atualmente",
+  "esta trabalhando",
+  "voce ja trabalha com",
+  "atua com o que",
+  "qual sua ocupacao",
 ];
 function isPerguntaProfissao(body: string): boolean {
   const t = normalize(body);
@@ -73,12 +87,14 @@ function isPerguntaProfissao(body: string): boolean {
 }
 
 const normalize = (s: string) =>
-  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 
 type PerfilDef = { nome: string; descricao: string; kw: string[] };
 
 const NAO_IDENTIFICADO = "Perfil não identificado";
-
 
 // Heurística de perfil de lead a partir do que o PRÓPRIO lead escreve.
 const PERFIS: PerfilDef[] = [
@@ -86,56 +102,137 @@ const PERFIS: PerfilDef[] = [
     nome: "Mães com filhos pequenos",
     descricao: "Mães/pais que buscam renda em casa para cuidar dos filhos",
     kw: [
-      "sou mae", "sou mãe", "mae de", "maes", "minha filha pequena", "meu filho pequeno",
-      "bebe", "bebê", "recem nascido", "amamenta", "gravida", "gestante", "licenca maternidade",
-      "cuidar dos meus filhos", "cuidar do meu filho", "cuidar da minha filha", "filho pequeno",
-      "filha pequena", "creche", "escola dos meus filhos", "dona de casa", "do lar",
+      "sou mae",
+      "sou mãe",
+      "mae de",
+      "maes",
+      "minha filha pequena",
+      "meu filho pequeno",
+      "bebe",
+      "bebê",
+      "recem nascido",
+      "amamenta",
+      "gravida",
+      "gestante",
+      "licenca maternidade",
+      "cuidar dos meus filhos",
+      "cuidar do meu filho",
+      "cuidar da minha filha",
+      "filho pequeno",
+      "filha pequena",
+      "creche",
+      "escola dos meus filhos",
+      "dona de casa",
+      "do lar",
     ],
   },
   {
     nome: "Desempregados",
     descricao: "Sem emprego no momento, buscam recolocação/renda urgente",
     kw: [
-      "desempregad", "sem emprego", "estou sem trabalho", "to sem trabalho", "perdi meu emprego",
-      "fui demitid", "demissao", "sem renda", "estou parad", "procurando emprego",
-      "nao tenho renda", "estou desempregada", "seguro desemprego",
+      "desempregad",
+      "sem emprego",
+      "estou sem trabalho",
+      "to sem trabalho",
+      "perdi meu emprego",
+      "fui demitid",
+      "demissao",
+      "sem renda",
+      "estou parad",
+      "procurando emprego",
+      "nao tenho renda",
+      "estou desempregada",
+      "seguro desemprego",
     ],
   },
   {
     nome: "Caminhoneiros / motoristas",
     descricao: "Motoristas de caminhão, app, uber, entregadores",
     kw: [
-      "caminhoneir", "caminhao", "carreta", "motorista", "uber", "99", "ifood", "entregador",
-      "estrada", "rodovia", "frete", "motoboy", "app de transporte",
+      "caminhoneir",
+      "caminhao",
+      "carreta",
+      "motorista",
+      "uber",
+      "99",
+      "ifood",
+      "entregador",
+      "estrada",
+      "rodovia",
+      "frete",
+      "motoboy",
+      "app de transporte",
     ],
   },
   {
     nome: "CLT / assalariados",
     descricao: "Empregados com carteira que querem renda extra ou transição",
     kw: [
-      "clt", "carteira assinada", "trabalho registrad", "meu patrao", "meu chefe", "expediente",
-      "trabalho das 8", "horario comercial", "meu emprego atual", "trabalho fixo", "empresa que trabalho",
-      "renda extra", "sair do emprego", "largar o emprego", "escala 6x1", "turno",
+      "clt",
+      "carteira assinada",
+      "trabalho registrad",
+      "meu patrao",
+      "meu chefe",
+      "expediente",
+      "trabalho das 8",
+      "horario comercial",
+      "meu emprego atual",
+      "trabalho fixo",
+      "empresa que trabalho",
+      "renda extra",
+      "sair do emprego",
+      "largar o emprego",
+      "escala 6x1",
+      "turno",
     ],
   },
   {
     nome: "Autônomos / pequenos empresários",
     descricao: "Têm negócio próprio, loja, prestação de serviço",
     kw: [
-      "autonom", "tenho meu negocio", "minha empresa", "minha loja", "meu comercio", "mei",
-      "empreendedor", "sou dono", "sou dona", "presto servico", "meu salao", "barbearia",
-      "clinica", "consultorio", "meu cnpj",
+      "autonom",
+      "tenho meu negocio",
+      "minha empresa",
+      "minha loja",
+      "meu comercio",
+      "mei",
+      "empreendedor",
+      "sou dono",
+      "sou dona",
+      "presto servico",
+      "meu salao",
+      "barbearia",
+      "clinica",
+      "consultorio",
+      "meu cnpj",
     ],
   },
   {
     nome: "Já atua com tráfego/marketing",
     descricao: "Só entra quando o lead DIZ que já trabalha na área (não basta citar o produto)",
     kw: [
-      "sou gestor de trafego", "sou gestora de trafego", "trabalho com trafego", "trabalho com trafego pago",
-      "ja gerencio", "gerencio campanha", "gerencio anuncio", "rodo campanha", "faco anuncio",
-      "tenho clientes", "meus clientes", "atendo clientes", "sou social media", "tenho agencia",
-      "trabalho numa agencia", "trabalho com marketing", "sou designer", "sou freelancer",
-      "ja trabalho com anuncio", "ja fiz campanha", "tenho experiencia com trafego", "sei mexer no meta ads",
+      "sou gestor de trafego",
+      "sou gestora de trafego",
+      "trabalho com trafego",
+      "trabalho com trafego pago",
+      "ja gerencio",
+      "gerencio campanha",
+      "gerencio anuncio",
+      "rodo campanha",
+      "faco anuncio",
+      "tenho clientes",
+      "meus clientes",
+      "atendo clientes",
+      "sou social media",
+      "tenho agencia",
+      "trabalho numa agencia",
+      "trabalho com marketing",
+      "sou designer",
+      "sou freelancer",
+      "ja trabalho com anuncio",
+      "ja fiz campanha",
+      "tenho experiencia com trafego",
+      "sei mexer no meta ads",
       "ja uso o gerenciador de anuncio",
     ],
   },
@@ -144,8 +241,18 @@ const PERFIS: PerfilDef[] = [
     nome: "Estudantes / iniciantes",
     descricao: "Estudando, primeiro emprego, começando do zero",
     kw: [
-      "estudante", "faculdade", "cursando", "universidade", "estagio", "primeiro emprego",
-      "comecando do zero", "sou iniciante", "nao sei nada", "17 anos", "18 anos", "19 anos",
+      "estudante",
+      "faculdade",
+      "cursando",
+      "universidade",
+      "estagio",
+      "primeiro emprego",
+      "comecando do zero",
+      "sou iniciante",
+      "nao sei nada",
+      "17 anos",
+      "18 anos",
+      "19 anos",
       "acabei de terminar o ensino",
     ],
   },
@@ -153,14 +260,34 @@ const PERFIS: PerfilDef[] = [
     nome: "Servidores / militares / saúde",
     descricao: "Concursados, militares, enfermagem, professores",
     kw: [
-      "servidor", "concurs", "militar", "policia", "bombeiro", "exercito", "enfermeir",
-      "tecnico de enfermagem", "professor", "professora", "hospital", "plantao", "sou funcionario publico",
+      "servidor",
+      "concurs",
+      "militar",
+      "policia",
+      "bombeiro",
+      "exercito",
+      "enfermeir",
+      "tecnico de enfermagem",
+      "professor",
+      "professora",
+      "hospital",
+      "plantao",
+      "sou funcionario publico",
     ],
   },
   {
     nome: "Aposentados / 50+",
     descricao: "Aposentados ou público mais velho buscando nova fonte de renda",
-    kw: ["aposentad", "inss", "pensionista", "ja tenho 5", "ja tenho 6", "60 anos", "55 anos", "idade avancada"],
+    kw: [
+      "aposentad",
+      "inss",
+      "pensionista",
+      "ja tenho 5",
+      "ja tenho 6",
+      "60 anos",
+      "55 anos",
+      "idade avancada",
+    ],
   },
   {
     // Os leads são, na sua normalidade, de Portugal — morar em PT/Lisboa/Porto
@@ -169,11 +296,28 @@ const PERFIS: PerfilDef[] = [
     nome: "Imigrantes / residentes no exterior",
     descricao: "Leads que imigraram para Portugal ou moram noutro país",
     kw: [
-      "imigrante", "vim morar em portugal", "vim para portugal", "mudaram-me para portugal",
-      "sou brasileir", "sou brasileira", "venezuelan", "caboverdian", "angolan", "guineense",
-      "moro nos estados unidos", "moro na irlanda", "moro no japao", "moro em londres",
-      "moro na espanha", "moro na franca", "moro na alemanha", "morando fora de portugal",
-      "moro fora de portugal", "vim do brasil", "vim da venezuela", "vim de angola",
+      "imigrante",
+      "vim morar em portugal",
+      "vim para portugal",
+      "mudaram-me para portugal",
+      "sou brasileir",
+      "sou brasileira",
+      "venezuelan",
+      "caboverdian",
+      "angolan",
+      "guineense",
+      "moro nos estados unidos",
+      "moro na irlanda",
+      "moro no japao",
+      "moro em londres",
+      "moro na espanha",
+      "moro na franca",
+      "moro na alemanha",
+      "morando fora de portugal",
+      "moro fora de portugal",
+      "vim do brasil",
+      "vim da venezuela",
+      "vim de angola",
     ],
   },
 ];
@@ -187,15 +331,33 @@ const OCUPACAO_RE =
   /\b(?:sou|trabalho como|atuo como|trabalho de|trabalho na area de|minha profissao e|minha profissao é|sou formad[ao] em|faco faculdade de)\s+([a-zà-ú][a-zà-ú\s()/-]{2,40})/i;
 
 const OCUPACAO_STOP = [
-  "muito", "bem", "so", "só", "de casa", "do lar", "grato", "grata", "aqui", "novo", "nova",
-  "interessad", "curios", "iniciante", "sim", "eu", "a favor",
+  "muito",
+  "bem",
+  "so",
+  "só",
+  "de casa",
+  "do lar",
+  "grato",
+  "grata",
+  "aqui",
+  "novo",
+  "nova",
+  "interessad",
+  "curios",
+  "iniciante",
+  "sim",
+  "eu",
+  "a favor",
 ];
 
 function extractOcupacao(text: string): string | null {
   for (const frase of text.split(/[.!?\n]/)) {
     const m = OCUPACAO_RE.exec(frase.trim());
     if (!m) continue;
-    const raw = m[1].replace(/\s+/g, " ").trim().replace(/[,;]+$/, "");
+    const raw = m[1]
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/[,;]+$/, "");
     const n = normalize(raw);
     if (n.length < 4) continue;
     if (OCUPACAO_STOP.some((s) => n.startsWith(normalize(s)))) continue;
@@ -277,7 +439,9 @@ async function classifyWithAI(
             {
               role: "user",
               content: batch
-                .map((b) => `ID: ${b.id}\nLEAD DISSE: ${b.text.replace(/\s+/g, " ").slice(0, 1800)}`)
+                .map(
+                  (b) => `ID: ${b.id}\nLEAD DISSE: ${b.text.replace(/\s+/g, " ").slice(0, 1800)}`,
+                )
                 .join("\n---\n"),
             },
           ],
@@ -296,7 +460,9 @@ async function classifyWithAI(
         out.set(String(it?.id), {
           perfil: perfil === NAO_IDENTIFICADO ? "" : perfil,
           evidencia: perfil === NAO_IDENTIFICADO ? "" : String(it?.evidencia ?? "").slice(0, 200),
-          profissao: String(it?.profissao ?? "").slice(0, 40).trim(),
+          profissao: String(it?.profissao ?? "")
+            .slice(0, 40)
+            .trim(),
         });
       }
     } catch {
@@ -312,8 +478,6 @@ async function classifyWithAI(
   return out;
 }
 
-
-
 function snippet(text: string, perfil: string): string | null {
   const def = PERFIS.find((p) => p.nome === perfil);
   if (!def) return null;
@@ -322,7 +486,10 @@ function snippet(text: string, perfil: string): string | null {
     const i = lower.indexOf(normalize(k));
     if (i >= 0) {
       const start = Math.max(0, i - 60);
-      return `...${text.slice(start, i + 100).replace(/\s+/g, " ").trim()}...`;
+      return `...${text
+        .slice(start, i + 100)
+        .replace(/\s+/g, " ")
+        .trim()}...`;
     }
   }
   return null;
@@ -374,9 +541,8 @@ function isAutomacao(body: string): boolean {
   return AUTOMACAO_PATTERNS.some((p) => t.includes(p));
 }
 
-
-
 export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { from?: string; to?: string; origem?: "todas" | "humano" | "ia" } = {}) => d)
   .handler(async ({ data }): Promise<PerfisResult> => {
     const db = await admin();
@@ -386,7 +552,9 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
 
     let q = db
       .from("coach_conversations")
-      .select("id, seller_name, seller_email, is_ai_conversation, contact_name, contact_email, deal_id, origin_name, last_message_at")
+      .select(
+        "id, seller_name, seller_email, is_ai_conversation, contact_name, contact_email, deal_id, origin_name, last_message_at",
+      )
       .in("origin_name", V3_ORIGIN_NAMES)
       .gte("last_message_at", `${from}T00:00:00Z`)
       .lte("last_message_at", `${to}T23:59:59Z`)
@@ -403,12 +571,14 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     );
     const ids = list.map((c) => c.id);
 
-
     // Clientes que compraram (fechamento manual) — para conversão por perfil
     const soldEmails = new Set<string>();
     const soldNames = new Set<string>();
     {
-      const { data: vendas } = await db.from("manual_sales").select("client_name, client_email").limit(5000);
+      const { data: vendas } = await db
+        .from("manual_sales")
+        .select("client_name, client_email")
+        .limit(5000);
       for (const v of (vendas ?? []) as any[]) {
         if (v.client_email) soldEmails.add(String(v.client_email).trim().toLowerCase());
         if (v.client_name) soldNames.add(normalize(String(v.client_name).trim()));
@@ -424,13 +594,15 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     const dealStatus = new Map<string, string>();
     {
       const dealIds = Array.from(new Set(list.map((c) => c.deal_id).filter(Boolean))) as string[];
-      for (let i = 0; i < dealIds.length; i += 200) {
-        const { data: ds } = await db
-          .from("clint_deals")
-          .select("id, status")
-          .in("id", dealIds.slice(i, i + 200));
-        for (const d of (ds ?? []) as any[]) dealStatus.set(String(d.id), String(d.status ?? "").toUpperCase());
-      }
+      // Blocos em paralelo — antes era await dentro do for.
+      const dealChunks: string[][] = [];
+      for (let i = 0; i < dealIds.length; i += 200) dealChunks.push(dealIds.slice(i, i + 200));
+      const dealPages = await Promise.all(
+        dealChunks.map((c) => db.from("clint_deals").select("id, status").in("id", c).limit(200)),
+      );
+      for (const { data: ds } of dealPages)
+        for (const d of (ds ?? []) as any[])
+          dealStatus.set(String(d.id), String(d.status ?? "").toUpperCase());
     }
     const statusOf = (c: any, vendeu: boolean): "ganho" | "perdido" | "aberto" => {
       if (vendeu) return "ganho";
@@ -439,8 +611,6 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       if (s === "LOST") return "perdido";
       return "aberto";
     };
-
-
 
     // Texto do lead (mensagens inbound reais — sem automação/opt-in, sem repetições)
     const textById = new Map<string, string>();
@@ -452,16 +622,18 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
     for (let i = 0; i < ids.length; i += 100) msgChunks.push(ids.slice(i, i + 100));
     for (let i = 0; i < msgChunks.length; i += 5) {
       const res = await Promise.all(
-        msgChunks.slice(i, i + 5).map((chunk) =>
-          db
-            .from("coach_messages")
-            .select("conversation_id, body, direction")
-            .in("conversation_id", chunk)
-            .limit(40000),
-        ),
+        msgChunks
+          .slice(i, i + 5)
+          .map((chunk) =>
+            db
+              .from("coach_messages")
+              .select("conversation_id, body, direction")
+              .in("conversation_id", chunk)
+              .limit(40000),
+          ),
       );
       for (const r of res) {
-        for (const m of ((r.data ?? []) as any[])) {
+        for (const m of (r.data ?? []) as any[]) {
           if (!m.body) continue;
           const body = String(m.body);
           if (String(m.direction) !== "inbound") {
@@ -472,7 +644,10 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
           if (isAutomacao(body)) continue;
           const key = normalize(body).replace(/\s+/g, " ").trim().slice(0, 120);
           let seen = seenById.get(m.conversation_id);
-          if (!seen) { seen = new Set(); seenById.set(m.conversation_id, seen); }
+          if (!seen) {
+            seen = new Set();
+            seenById.set(m.conversation_id, seen);
+          }
           if (seen.has(key)) continue;
           seen.add(key);
           inboundCount.set(m.conversation_id, (inboundCount.get(m.conversation_id) ?? 0) + 1);
@@ -483,9 +658,6 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       }
     }
 
-
-
-
     // Notas das análises
     const scoreById = new Map<string, number>();
     for (let i = 0; i < ids.length; i += 200) {
@@ -494,18 +666,27 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         .from("coach_analyses")
         .select("conversation_id, score_geral")
         .in("conversation_id", chunk)
-        .eq("status", "ok");
+        .eq("status", "ok")
+        .limit(chunk.length * 2);
       for (const a of (an ?? []) as any[]) {
-        if (typeof a.score_geral === "number") scoreById.set(a.conversation_id, Number(a.score_geral));
+        if (typeof a.score_geral === "number")
+          scoreById.set(a.conversation_id, Number(a.score_geral));
       }
     }
 
     const agg = new Map<
       string,
       {
-        total: number; humano: number; ia: number; vendas: number;
-        ganhos: number; perdidos: number; abertos: number;
-        scores: number[]; exemplos: string[]; sellers: Map<string, number>;
+        total: number;
+        humano: number;
+        ia: number;
+        vendas: number;
+        ganhos: number;
+        perdidos: number;
+        abertos: number;
+        scores: number[];
+        exemplos: string[];
+        sellers: Map<string, number>;
         profissoes: Map<string, { nome: string; total: number; vendas: number; ganhos: number }>;
         conversas: PerfilConversa[];
         semPergunta: number;
@@ -565,7 +746,8 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         ),
       );
       const byId = new Map<string, any>();
-      for (const r of results) for (const row of ((r.data ?? []) as any[])) byId.set(String(row.conversation_id), row);
+      for (const r of results)
+        for (const row of (r.data ?? []) as any[]) byId.set(String(row.conversation_id), row);
       for (const s of aiTargets) {
         const row = byId.get(s.id);
         if (row && String(row.text_hash) === s.hash) {
@@ -601,7 +783,9 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
           };
         });
       for (let i = 0; i < rows.length; i += 200) {
-        await db.from("lead_perfil_cache").upsert(rows.slice(i, i + 200), { onConflict: "conversation_id" });
+        await db
+          .from("lead_perfil_cache")
+          .upsert(rows.slice(i, i + 200), { onConflict: "conversation_id" });
       }
     }
 
@@ -615,7 +799,6 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       if (hits.length > 0) hitsById.set(id, [hits[0]]);
     }
 
-
     for (const { c, text } of validos) {
       const hits = hitsById.get(c.id) ?? [];
       if (hits.length > 0) classificadas++;
@@ -624,12 +807,23 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       const vendeu = isSold(c);
       const st = statusOf(c, vendeu);
       for (const h of buckets) {
-
-
-
         let a = agg.get(h);
         if (!a) {
-          a = { total: 0, humano: 0, ia: 0, vendas: 0, ganhos: 0, perdidos: 0, abertos: 0, scores: [], exemplos: [], sellers: new Map(), profissoes: new Map(), conversas: [], semPergunta: 0 };
+          a = {
+            total: 0,
+            humano: 0,
+            ia: 0,
+            vendas: 0,
+            ganhos: 0,
+            perdidos: 0,
+            abertos: 0,
+            scores: [],
+            exemplos: [],
+            sellers: new Map(),
+            profissoes: new Map(),
+            conversas: [],
+            semPergunta: 0,
+          };
           agg.set(h, a);
         }
         a.total++;
@@ -680,8 +874,7 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         descricao:
           perfil === NAO_IDENTIFICADO
             ? "Lead conversou, mas não revelou nada sobre a vida/profissão dele — precisa de pergunta de qualificação"
-            : PERFIS.find((p) => p.nome === perfil)?.descricao ?? "",
-
+            : (PERFIS.find((p) => p.nome === perfil)?.descricao ?? ""),
 
         total: a.total,
         pct: comTexto ? (a.total / comTexto) * 100 : 0,
@@ -702,16 +895,15 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
         profissoes: Array.from(a.profissoes.values()).sort(
           (x, y) => y.vendas - x.vendas || y.ganhos - x.ganhos || y.total - x.total,
         ),
-        conversas: a.conversas.sort((x, y) => (y.last_message_at ?? "").localeCompare(x.last_message_at ?? "")),
+        conversas: a.conversas.sort((x, y) =>
+          (y.last_message_at ?? "").localeCompare(x.last_message_at ?? ""),
+        ),
       }))
       .sort((a, b) => {
         if (a.perfil === NAO_IDENTIFICADO) return 1;
         if (b.perfil === NAO_IDENTIFICADO) return -1;
         return b.vendas - a.vendas || b.total - a.total;
       });
-
-
-
 
     return {
       from,
@@ -733,7 +925,13 @@ export type PerfisInsight = {
 };
 
 export const generatePerfisInsightFn = createServerFn({ method: "POST" })
-  .inputValidator((d: { ranking: { perfil: string; total: number; pct: number; avg_score: number | null }[]; contexto?: string }) => d)
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      ranking: { perfil: string; total: number; pct: number; avg_score: number | null }[];
+      contexto?: string;
+    }) => d,
+  )
   .handler(async ({ data }): Promise<PerfisInsight> => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("LOVABLE_API_KEY não configurada");
@@ -752,14 +950,22 @@ export const generatePerfisInsightFn = createServerFn({ method: "POST" })
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: sys },
-          { role: "user", content: `${data.contexto ?? ""}\nPERFIS:\n${JSON.stringify(data.ranking.slice(0, 10), null, 2)}` },
+          {
+            role: "user",
+            content: `${data.contexto ?? ""}\nPERFIS:\n${JSON.stringify(data.ranking.slice(0, 10), null, 2)}`,
+          },
         ],
       }),
     });
-    if (!resp.ok) throw new Error(`Lovable AI ${resp.status}: ${await resp.text().catch(() => "")}`);
+    if (!resp.ok)
+      throw new Error(`Lovable AI ${resp.status}: ${await resp.text().catch(() => "")}`);
     const j = (await resp.json()) as any;
     let parsed: any = {};
-    try { parsed = JSON.parse(j?.choices?.[0]?.message?.content ?? "{}"); } catch { parsed = {}; }
+    try {
+      parsed = JSON.parse(j?.choices?.[0]?.message?.content ?? "{}");
+    } catch {
+      parsed = {};
+    }
     return {
       generated_at: new Date().toISOString(),
       resumo: parsed.resumo ?? "",
@@ -768,4 +974,3 @@ export const generatePerfisInsightFn = createServerFn({ method: "POST" })
       acoes: Array.isArray(parsed.acoes) ? parsed.acoes.slice(0, 5) : [],
     };
   });
-

@@ -26,7 +26,12 @@ function normalizeFunnel(raw: string | null | undefined): string {
   const s = (raw ?? "").trim().toUpperCase();
   if (!s) return "SEM FUNIL";
   if (s.includes("SESSÃO ESTRAT") || s.includes("SESSAO ESTRAT")) return "Sessão Estratégica";
-  if (s.startsWith("PIPELINE_COMERCIAL") || s.includes("COMERCIAL-V3") || s.includes("COMERCIAL V3")) return "Pipeline Comercial V3";
+  if (
+    s.startsWith("PIPELINE_COMERCIAL") ||
+    s.includes("COMERCIAL-V3") ||
+    s.includes("COMERCIAL V3")
+  )
+    return "Pipeline Comercial V3";
   if (s.startsWith("WGT")) return "WGT";
   if (s.startsWith("IGT")) return "IGT";
   if (s.startsWith("FGRS")) return "FGRS";
@@ -63,7 +68,11 @@ export const getMetasComercialFn = createServerFn({ method: "GET" })
       .select("indicador,valor")
       .eq("granularidade", "anual")
       .eq("periodo", PERIODO)
-      .in("indicador", ["meta_comercial_frontend", "meta_comercial_ht_renov", "meta_comercial_mas"]);
+      .in("indicador", [
+        "meta_comercial_frontend",
+        "meta_comercial_ht_renov",
+        "meta_comercial_mas",
+      ]);
 
     const metaMap = new Map<string, number>();
     (targets ?? []).forEach((t: any) => metaMap.set(t.indicador, Number(t.valor)));
@@ -79,7 +88,10 @@ export const getMetasComercialFn = createServerFn({ method: "GET" })
 
     const rows = sales ?? [];
     const realizado = { frontend: 0, ht: 0, mas: 0 };
-    const funnelMap = new Map<string, { frontend: number; ht: number; mas: number; total: number }>();
+    const funnelMap = new Map<
+      string,
+      { frontend: number; ht: number; mas: number; total: number }
+    >();
 
     for (const s of rows as any[]) {
       const bucket = bucketOf(s.categoria_produto);

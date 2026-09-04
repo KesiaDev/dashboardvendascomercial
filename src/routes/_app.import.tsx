@@ -11,13 +11,24 @@ import {
   type NegociosTrabalhadosRow,
   type FollowupRow,
 } from "@/lib/team-activity-csv";
-import { importProdutividade, importNegociosTrabalhados, importFollowup } from "@/lib/team-activity.functions";
+import {
+  importProdutividade,
+  importNegociosTrabalhados,
+  importFollowup,
+} from "@/lib/team-activity.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, Trash2, CalendarIcon } from "lucide-react";
+import {
+  Upload,
+  FileSpreadsheet,
+  CheckCircle2,
+  AlertTriangle,
+  Trash2,
+  CalendarIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { formatDateBR, formatInt } from "@/lib/format";
 import { PRODUCT_GROUPS, getGroupById } from "@/lib/product-groups";
@@ -56,12 +67,24 @@ function ImportPage() {
   const [isParsing, setIsParsing] = useState(false);
 
   const [activityRange, setActivityRange] = useState<DateRange | undefined>();
-  const [produtividadePreview, setProdutividadePreview] = useState<{ rows: ProdutividadeRow[]; filename: string } | null>(null);
-  const [trabalhadosPreview, setTrabalhadosPreview] = useState<{ rows: NegociosTrabalhadosRow[]; filename: string } | null>(null);
-  const [followupPreview, setFollowupPreview] = useState<{ rows: FollowupRow[]; filename: string } | null>(null);
+  const [produtividadePreview, setProdutividadePreview] = useState<{
+    rows: ProdutividadeRow[];
+    filename: string;
+  } | null>(null);
+  const [trabalhadosPreview, setTrabalhadosPreview] = useState<{
+    rows: NegociosTrabalhadosRow[];
+    filename: string;
+  } | null>(null);
+  const [followupPreview, setFollowupPreview] = useState<{
+    rows: FollowupRow[];
+    filename: string;
+  } | null>(null);
 
   const { data: imports = [] } = useQuery({ queryKey: ["imports"], queryFn: fetchImports });
-  const { data: groupCounts = {} } = useQuery({ queryKey: ["group-counts"], queryFn: fetchGroupCounts });
+  const { data: groupCounts = {} } = useQuery({
+    queryKey: ["group-counts"],
+    queryFn: fetchGroupCounts,
+  });
 
   const importMutation = useMutation({
     mutationFn: async ({ rows, filename }: { rows: SaleRow[]; filename: string }) => {
@@ -83,8 +106,11 @@ function ImportPage() {
 
   const produtividadeMutation = useMutation({
     mutationFn: async () => {
-      if (!periodoInicio || !periodoFim || !produtividadePreview) throw new Error("Selecione o período e o arquivo");
-      return await importProdutividade({ data: { periodoInicio, periodoFim, rows: produtividadePreview.rows } });
+      if (!periodoInicio || !periodoFim || !produtividadePreview)
+        throw new Error("Selecione o período e o arquivo");
+      return await importProdutividade({
+        data: { periodoInicio, periodoFim, rows: produtividadePreview.rows },
+      });
     },
     onSuccess: (r) => {
       toast.success(`Produtividade importada: ${r.imported} vendedores`);
@@ -96,8 +122,11 @@ function ImportPage() {
 
   const trabalhadosMutation = useMutation({
     mutationFn: async () => {
-      if (!periodoInicio || !periodoFim || !trabalhadosPreview) throw new Error("Selecione o período e o arquivo");
-      return await importNegociosTrabalhados({ data: { periodoInicio, periodoFim, rows: trabalhadosPreview.rows } });
+      if (!periodoInicio || !periodoFim || !trabalhadosPreview)
+        throw new Error("Selecione o período e o arquivo");
+      return await importNegociosTrabalhados({
+        data: { periodoInicio, periodoFim, rows: trabalhadosPreview.rows },
+      });
     },
     onSuccess: (r) => {
       toast.success(`Negócios trabalhados importados: ${r.imported} vendedores`);
@@ -109,8 +138,11 @@ function ImportPage() {
 
   const followupMutation = useMutation({
     mutationFn: async () => {
-      if (!periodoInicio || !periodoFim || !followupPreview) throw new Error("Selecione o período e o arquivo");
-      return await importFollowup({ data: { periodoInicio, periodoFim, rows: followupPreview.rows } });
+      if (!periodoInicio || !periodoFim || !followupPreview)
+        throw new Error("Selecione o período e o arquivo");
+      return await importFollowup({
+        data: { periodoInicio, periodoFim, rows: followupPreview.rows },
+      });
     },
     onSuccess: (r) => {
       toast.success(`Follow-up importado: ${r.imported} atividades`);
@@ -154,7 +186,10 @@ function ImportPage() {
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Importar relatório semanal</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Suba o CSV exportado da plataforma. Os dados são deduplicados por <span className="text-foreground">Transação</span>: vendas existentes são <em>atualizadas</em> (ex.: aprovado → cancelado), e novas vendas são adicionadas ao histórico.
+          Suba o CSV exportado da plataforma. Os dados são deduplicados por{" "}
+          <span className="text-foreground">Transação</span>: vendas existentes são{" "}
+          <em>atualizadas</em> (ex.: aprovado → cancelado), e novas vendas são adicionadas ao
+          histórico.
         </p>
       </div>
 
@@ -181,8 +216,12 @@ function ImportPage() {
             />
             <Upload className="h-10 w-10 text-muted-foreground" />
             <div>
-              <p className="font-medium">{isParsing ? "Processando…" : "Clique ou arraste o CSV aqui"}</p>
-              <p className="text-xs text-muted-foreground mt-1">Separador ;  ·  formato HotPay/Hotmart</p>
+              <p className="font-medium">
+                {isParsing ? "Processando…" : "Clique ou arraste o CSV aqui"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Separador ; · formato HotPay/Hotmart
+              </p>
             </div>
           </label>
         </CardContent>
@@ -202,7 +241,11 @@ function ImportPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" onClick={() => setPreview(null)} disabled={importMutation.isPending}>
+                <Button
+                  variant="ghost"
+                  onClick={() => setPreview(null)}
+                  disabled={importMutation.isPending}
+                >
                   Cancelar
                 </Button>
                 <Button
@@ -215,7 +258,9 @@ function ImportPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-xs font-medium text-muted-foreground mb-2">Distribuição por grupo:</p>
+            <p className="text-xs font-medium text-muted-foreground mb-2">
+              Distribuição por grupo:
+            </p>
             <div className="flex flex-wrap gap-2">
               {previewGroups.map(([gid, count]) => {
                 const g = getGroupById(gid);
@@ -237,8 +282,8 @@ function ImportPage() {
           <CardTitle className="text-base">Atividade do time (Clint)</CardTitle>
           <p className="text-xs text-muted-foreground">
             Ligações, e-mails, tarefas, reuniões, WhatsApp e negócios trabalhados não têm API —
-            exporte em Indicadores → dashboard → ⋮ → "Exportar dados em CSV" e suba aqui. Recomendado:
-            toda semana (ou quando quiser), referente ao período selecionado abaixo.
+            exporte em Indicadores → dashboard → ⋮ → "Exportar dados em CSV" e suba aqui.
+            Recomendado: toda semana (ou quando quiser), referente ao período selecionado abaixo.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -247,7 +292,10 @@ function ImportPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className={cn("justify-start text-left font-normal gap-2", !activityRange?.from && "text-muted-foreground")}
+                className={cn(
+                  "justify-start text-left font-normal gap-2",
+                  !activityRange?.from && "text-muted-foreground",
+                )}
               >
                 <CalendarIcon className="h-4 w-4" />
                 {activityRange?.from ? (
@@ -316,18 +364,24 @@ function ImportPage() {
         <CardHeader>
           <CardTitle className="text-base">Grupos de produtos</CardTitle>
           <p className="text-xs text-muted-foreground">
-            Mapeamento automático por palavra-chave. Cada venda do CSV é classificada em um destes grupos.
+            Mapeamento automático por palavra-chave. Cada venda do CSV é classificada em um destes
+            grupos.
           </p>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {PRODUCT_GROUPS.map((g) => (
-              <div key={g.id} className="flex items-center justify-between rounded-md border border-border bg-secondary/30 px-3 py-2">
+              <div
+                key={g.id}
+                className="flex items-center justify-between rounded-md border border-border bg-secondary/30 px-3 py-2"
+              >
                 <div className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: g.color }} />
                   <span className="text-sm">{g.label}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">{formatInt(groupCounts[g.id] ?? 0)} no histórico</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatInt(groupCounts[g.id] ?? 0)} no histórico
+                </span>
               </div>
             ))}
           </div>
@@ -345,19 +399,25 @@ function ImportPage() {
           ) : (
             <div className="space-y-2">
               {imports.map((imp) => (
-                <div key={imp.id} className="flex items-center justify-between rounded-md border border-border bg-secondary/30 px-3 py-2 text-sm">
+                <div
+                  key={imp.id}
+                  className="flex items-center justify-between rounded-md border border-border bg-secondary/30 px-3 py-2 text-sm"
+                >
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="h-4 w-4 text-success" />
                     <div>
                       <p className="font-medium">{imp.filename ?? "—"}</p>
                       <p className="text-xs text-muted-foreground">
-                        {formatDateBR(imp.created_at)} · período: {formatDateBR(imp.period_start)} → {formatDateBR(imp.period_end)}
+                        {formatDateBR(imp.created_at)} · período: {formatDateBR(imp.period_start)} →{" "}
+                        {formatDateBR(imp.period_end)}
                       </p>
                     </div>
                   </div>
                   <div className="text-right text-xs">
                     <p>{formatInt(imp.total_rows)} linhas</p>
-                    <p className="text-muted-foreground">+{imp.new_rows} novas · ~{imp.updated_rows} atualizadas</p>
+                    <p className="text-muted-foreground">
+                      +{imp.new_rows} novas · ~{imp.updated_rows} atualizadas
+                    </p>
                   </div>
                 </div>
               ))}
@@ -367,7 +427,11 @@ function ImportPage() {
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Veja os resultados no <Link to="/" className="text-primary underline">Dashboard</Link>.
+        Veja os resultados no{" "}
+        <Link to="/" className="text-primary underline">
+          Dashboard
+        </Link>
+        .
       </p>
     </div>
   );
@@ -418,7 +482,9 @@ function ActivityUploadCard<T>({
             <FileSpreadsheet className="h-4 w-4 text-primary shrink-0" />
             <span className="truncate">{preview.filename}</span>
           </div>
-          <Badge variant="secondary" className="text-xs">{renderCount(preview.rows)}</Badge>
+          <Badge variant="secondary" className="text-xs">
+            {renderCount(preview.rows)}
+          </Badge>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={() => setPreview(null)} disabled={isPending}>
               Cancelar

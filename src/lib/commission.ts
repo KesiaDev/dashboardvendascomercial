@@ -1,3 +1,5 @@
+import { eurBrlRate } from "./eur-rate";
+import { isApproved } from "./sales-status";
 import { PRODUCT_GROUPS, mapProductToGroup } from "./product-groups";
 import { resolveSaleSeller, sellerFromAffiliate } from "./sck-attribution";
 
@@ -128,7 +130,6 @@ export function hotmartBaseBrl(sale: SaleRow, cotacao: number): number {
   const moeda = (sale.moeda_original ?? "EUR").toUpperCase();
   return moeda === "BRL" ? total : total * cotacao;
 }
-
 
 // ── Metas de faturamento (EUR) por nível ─────────────────────────────────────
 // N1: Luana · N3: Gisele, Rita, João, Nadal (padrão para novos vendedores)
@@ -315,11 +316,6 @@ function getProductLabel(pg: string): string {
   return PRODUCT_GROUPS.find((p) => p.id === pg)?.label ?? pg;
 }
 
-function isApproved(status: string) {
-  const s = (status ?? "").toLowerCase();
-  return s === "aprovado" || s === "completo" || s === "approved" || s === "completed";
-}
-
 export function calculateCommissions(
   period: CommissionPeriod,
   sellers: SellerConfig[],
@@ -333,7 +329,7 @@ export function calculateCommissions(
 ): CommissionSummary {
   const start = new Date(`${period.data_inicio}T00:00:00`);
   const end = new Date(`${period.data_fim}T23:59:59`);
-  const cotacao = period.cotacao_eur ?? 5.85;
+  const cotacao = eurBrlRate(period);
   const activeSellers = sellers.filter((s) => s.is_active);
   const sellerNames = new Set(activeSellers.map((s) => s.seller_name));
 
@@ -560,7 +556,10 @@ export function calculateCommissions(
       const fat_sck = linhaSck.reduce((s, sale) => s + sale.base_brl, 0);
 
       const linhaWise = myWise.filter((w) => w.produto_grupo === pg);
-      let fat_wise = linhaWise.reduce((s, w) => s + (w.valor_brl ?? w.valor_eur * w.cotacao_eur), 0);
+      let fat_wise = linhaWise.reduce(
+        (s, w) => s + (w.valor_brl ?? w.valor_eur * w.cotacao_eur),
+        0,
+      );
       let qtd_wise = linhaWise.length;
       if (pg === "outros") {
         fat_wise += wiseSemProdutoBrl;

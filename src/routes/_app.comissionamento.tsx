@@ -19,6 +19,8 @@ import {
   type RoletaSpinRow,
 } from "@/lib/commission.functions";
 import { RoletaSpinsCard } from "@/components/roleta-spins";
+import { useAppAuth } from "@/routes/_app";
+import { FALLBACK_EUR_BRL, eurBrlRate } from "@/lib/eur-rate";
 import {
   calculateCommissions,
   periodWeeks,
@@ -79,55 +81,6 @@ export const Route = createFileRoute("/_app/comissionamento")({
   }),
 });
 
-const ADMIN_KEY = "comm_admin_v1";
-const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN ?? "1234";
-
-// ── PIN Gate ──────────────────────────────────────────────────────────────────
-
-function PinGate({ onUnlock }: { onUnlock: () => void }) {
-  const [pin, setPin] = useState("");
-  const [err, setErr] = useState(false);
-
-  const submit = () => {
-    if (pin === ADMIN_PIN) {
-      localStorage.setItem(ADMIN_KEY, "1");
-      onUnlock();
-    } else {
-      setErr(true);
-      setPin("");
-    }
-  };
-
-  return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <Card className="w-full max-w-xs">
-        <CardHeader className="text-center space-y-1">
-          <Lock className="mx-auto h-8 w-8 text-muted-foreground" />
-          <CardTitle className="text-base">Área restrita</CardTitle>
-          <p className="text-xs text-muted-foreground">Digite o PIN de administrador</p>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Input
-            type="password"
-            placeholder="PIN"
-            value={pin}
-            onChange={(e) => {
-              setPin(e.target.value);
-              setErr(false);
-            }}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-            className={err ? "border-destructive" : ""}
-          />
-          {err && <p className="text-xs text-destructive">PIN incorreto</p>}
-          <Button className="w-full" onClick={submit}>
-            Entrar
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function money(v: number, moeda = "BRL") {
@@ -150,10 +103,27 @@ function fmtDate(d: string | null | undefined) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 function ComissionamentoPage() {
-  const [unlocked, setUnlocked] = useState(
-    () => typeof window !== "undefined" && localStorage.getItem(ADMIN_KEY) === "1",
-  );
-  if (!unlocked) return <PinGate onUnlock={() => setUnlocked(true)} />;
+  // O gate de PIN que ficava aqui não protegia nada. VITE_ADMIN_PIN é substituído
+  // pelo valor literal no bundle em tempo de build (e caía em "1234" quando a
+  // variável não estava definida), a comparação era em JavaScript no browser, e
+  // dava para pular tudo com localStorage.setItem("comm_admin_v1","1") no console.
+  //
+  // A proteção real é no servidor: as 18 server functions de comissionamento
+  // exigem requireSupabaseAuth + assertAdmin(context.claims). Aqui só evitamos
+  // mostrar a tela a quem não vai receber dado nenhum de qualquer forma.
+  const { admin, loading } = useAppAuth();
+  if (loading) return <div className="text-sm text-muted-foreground">Carregando…</div>;
+  if (!admin) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
+        <Lock className="h-8 w-8 text-muted-foreground" />
+        <p className="text-sm font-medium">Área restrita</p>
+        <p className="max-w-xs text-xs text-muted-foreground">
+          O comissionamento é visível apenas para administradores.
+        </p>
+      </div>
+    );
+  }
   return <Dashboard />;
 }
 
@@ -293,8 +263,7 @@ function Dashboard() {
   });
 
   const totalAPagar = summary?.sellers.reduce((s, r) => s + r.total_a_pagar, 0) ?? 0;
-  const totalFaturamento =
-    summary?.sellers.reduce((s, r) => s + r.faturamento_total_brl, 0) ?? 0;
+  const totalFaturamento = summary?.sellers.reduce((s, r) => s + r.faturamento_total_brl, 0) ?? 0;
   const totalSplitHotmart =
     summary?.sellers.reduce((s, r) => s + r.comissao_hotmart_direto, 0) ?? 0;
 
@@ -360,12 +329,9 @@ function Dashboard() {
               />
               <Kpi
                 label="Cotação EUR do período"
-                value={`R$ ${(activePeriod.cotacao_eur ?? 5.85).toFixed(2)}`}
+                value={`R$ ${eurBrlRate(activePeriod).toFixed(2)}`}
                 onClick={() => {
-                  const val = prompt(
-                    "Cotação EUR→BRL:",
-                    String(activePeriod.cotacao_eur ?? 5.85),
-                  );
+                  const val = prompt("Cotação EUR→BRL:", String(eurBrlRate(activePeriod)));
                   if (val !== null && !isNaN(Number(val)))
                     upsertPeriodMut.mutate({ ...activePeriod, cotacao_eur: Number(val) });
                 }}
@@ -414,55 +380,54 @@ function Dashboard() {
               <tbody>
                 {summary.sellers.map((s) => {
                   // Cada vendedor é exibido na sua moeda (Rita/João em EUR, os demais em BRL)
-                  const cot = activePeriod?.cotacao_eur ?? 5.86;
+                  const cot = eurBrlRate(activePeriod);
                   const mo = (s.moeda ?? "BRL").toUpperCase() === "EUR" ? "EUR" : "BRL";
                   const mm = (brl: number) => money(mo === "EUR" ? brl / cot : brl, mo);
                   return (
-                  <tr
-                    key={s.sellerName}
-                    className="border-b border-border/40 last:border-0 cursor-pointer hover:bg-muted/30"
-                    onClick={() =>
-                      setExpandedSeller((v) => (v === s.sellerName ? null : s.sellerName))
-                    }
-                  >
-                    <td className="px-4 py-2 font-medium">
-                      {s.sellerName}
-                      <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
-                        {mo}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
-                      {s.fat_hotmart ? mm(s.fat_hotmart) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
-                      {s.fat_sck ? mm(s.fat_sck) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
-                      {s.fat_wise ? mm(s.fat_wise) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums font-medium">
-                      {mm(s.faturamento_total_brl)}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{mm(s.comissao_total)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
-                      {s.comissao_hotmart_direto ? `− ${mm(s.comissao_hotmart_direto)}` : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
-                      {s.bonus_metas_brl ? mm(s.bonus_metas_brl) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-amber-600 dark:text-amber-400">
-                      {s.roleta_ganho_brl ? mm(s.roleta_ganho_brl) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      {s.bonus_total || s.descontos ? mm(s.bonus_total - s.descontos) : "—"}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums font-semibold text-primary">
-                      {mm(s.total_a_pagar)}
-                    </td>
-                  </tr>
+                    <tr
+                      key={s.sellerName}
+                      className="border-b border-border/40 last:border-0 cursor-pointer hover:bg-muted/30"
+                      onClick={() =>
+                        setExpandedSeller((v) => (v === s.sellerName ? null : s.sellerName))
+                      }
+                    >
+                      <td className="px-4 py-2 font-medium">
+                        {s.sellerName}
+                        <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+                          {mo}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                        {s.fat_hotmart ? mm(s.fat_hotmart) : "—"}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                        {s.fat_sck ? mm(s.fat_sck) : "—"}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                        {s.fat_wise ? mm(s.fat_wise) : "—"}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums font-medium">
+                        {mm(s.faturamento_total_brl)}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">{mm(s.comissao_total)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                        {s.comissao_hotmart_direto ? `− ${mm(s.comissao_hotmart_direto)}` : "—"}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-success-fg">
+                        {s.bonus_metas_brl ? mm(s.bonus_metas_brl) : "—"}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-warning-fg">
+                        {s.roleta_ganho_brl ? mm(s.roleta_ganho_brl) : "—"}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {s.bonus_total || s.descontos ? mm(s.bonus_total - s.descontos) : "—"}
+                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums font-semibold text-primary">
+                        {mm(s.total_a_pagar)}
+                      </td>
+                    </tr>
                   );
                 })}
-
               </tbody>
               <tfoot>
                 <tr className="border-t border-border bg-muted/40 font-semibold">
@@ -487,13 +452,15 @@ function Dashboard() {
             key={s.sellerName}
             s={s}
             rates={rates}
-            cotacao={activePeriod?.cotacao_eur ?? 5.86}
+            cotacao={eurBrlRate(activePeriod)}
             weeks={weeks.map((w) => w.label)}
 
             onClose={() => setExpandedSeller(null)}
             bonusForm={bonusForm}
             setBonusForm={setBonusForm}
-            onAddBonus={(d) => activePeriod && addBonusMut.mutate({ ...d, period_id: activePeriod.id })}
+            onAddBonus={(d) =>
+              activePeriod && addBonusMut.mutate({ ...d, period_id: activePeriod.id })
+            }
             onDelBonus={(id) => delBonusMut.mutate(id)}
           />
         ) : null,
@@ -506,7 +473,6 @@ function Dashboard() {
           sellerNames={sellers.filter((x: any) => x.is_active).map((x: any) => x.seller_name)}
         />
       )}
-
 
       {/* ── Conferência das vendas ── */}
       {summary && (
@@ -618,7 +584,7 @@ function SellerDetail({
 }) {
   // Planilha: valores na moeda do vendedor (Rita/João em EUR, os demais em BRL)
   const moeda = (s.moeda ?? "BRL").toUpperCase() === "EUR" ? "EUR" : "BRL";
-  const cv = (brl: number) => (moeda === "EUR" ? brl / (cotacao || 5.86) : brl);
+  const cv = (brl: number) => (moeda === "EUR" ? brl / (cotacao || FALLBACK_EUR_BRL) : brl);
   const m = (brl: number) => money(cv(brl), moeda);
 
   // Todas as linhas de produto do vendedor, mesmo com faturamento zero
@@ -709,7 +675,7 @@ function SellerDetail({
               )}
 
               {/* Roleta / Bônus / Descontos — como na planilha */}
-              <tr className="border-b border-border/40 bg-amber-500/5">
+              <tr className="border-b border-border/40 bg-warning/5">
                 <td className="px-3 py-1.5 font-medium">Roleta</td>
                 <td colSpan={4} />
                 <td className="px-3 py-1.5 text-right tabular-nums">{m(roletaBrl)}</td>
@@ -748,7 +714,6 @@ function SellerDetail({
           </table>
         </div>
 
-
         {/* Metas */}
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
@@ -761,7 +726,7 @@ function SellerDetail({
                 key={w.week}
                 className={`rounded-md border px-3 py-2 text-xs ${
                   w.bateu_super
-                    ? "border-emerald-500/50 bg-emerald-500/10"
+                    ? "border-success/50 bg-success/10"
                     : w.bateu_meta
                       ? "border-sky-500/50 bg-sky-500/10"
                       : "border-border/60 bg-muted/20"
@@ -925,7 +890,6 @@ function SellerDetail({
             <p className="text-xs text-muted-foreground">Total a pagar</p>
             <p className="font-bold tabular-nums text-primary">{m(s.total_a_pagar)}</p>
           </div>
-
         </div>
       </CardContent>
     </Card>
@@ -979,7 +943,11 @@ function VendasConferencia({
             </p>
           </div>
           <Button size="sm" variant="outline" onClick={() => setOpen((v) => !v)}>
-            {open ? <ChevronUp className="h-4 w-4 mr-1" /> : <ChevronDown className="h-4 w-4 mr-1" />}
+            {open ? (
+              <ChevronUp className="h-4 w-4 mr-1" />
+            ) : (
+              <ChevronDown className="h-4 w-4 mr-1" />
+            )}
             {open ? "Ocultar" : "Ver vendas"}
           </Button>
         </div>
@@ -1027,7 +995,12 @@ function VendasConferencia({
               </thead>
               <tbody>
                 {filtered.map((v) => (
-                  <VendaRow key={v.transacao} v={v} sellers={sellers} onSave={(d) => mut.mutate(d)} />
+                  <VendaRow
+                    key={v.transacao}
+                    v={v}
+                    sellers={sellers}
+                    onSave={(d) => mut.mutate(d)}
+                  />
                 ))}
               </tbody>
             </table>
@@ -1072,7 +1045,10 @@ function VendaRow({
       <td className="px-3 py-1.5 text-right tabular-nums">{money(v.base_brl)}</td>
       <td className="px-3 py-1.5">
         {v.source ? (
-          <Badge variant={v.source === "afiliado" ? "default" : "secondary"} className="text-[10px]">
+          <Badge
+            variant={v.source === "afiliado" ? "default" : "secondary"}
+            className="text-[10px]"
+          >
             {v.source}
           </Badge>
         ) : (
@@ -1187,7 +1163,7 @@ function NewPeriodForm({ onSave }: { onSave: (d: any) => void }) {
   const [nome, setNome] = useState("");
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState("");
-  const [cotacao, setCotacao] = useState("5.85");
+  const [cotacao, setCotacao] = useState(String(FALLBACK_EUR_BRL));
 
   const handleCreate = () => {
     onSave({
@@ -1196,12 +1172,12 @@ function NewPeriodForm({ onSave }: { onSave: (d: any) => void }) {
       data_fim: fim,
       roleta_pool_brl: 0,
       roleta_pool_eur: 0,
-      cotacao_eur: Number(cotacao) || 5.85,
+      cotacao_eur: Number(cotacao) || FALLBACK_EUR_BRL,
     });
     setNome("");
     setInicio("");
     setFim("");
-    setCotacao("5.85");
+    setCotacao(String(FALLBACK_EUR_BRL));
   };
 
   return (
@@ -1237,7 +1213,7 @@ function NewPeriodForm({ onSave }: { onSave: (d: any) => void }) {
         <p className="text-xs text-muted-foreground">Cotação EUR (R$)</p>
         <Input
           className="w-[90px]"
-          placeholder="5.85"
+          placeholder={String(FALLBACK_EUR_BRL)}
           value={cotacao}
           onChange={(e) => setCotacao(e.target.value)}
         />

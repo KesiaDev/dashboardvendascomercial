@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type DisplayCurrency = "BRL" | "EUR";
 
@@ -73,50 +81,73 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(id);
   }, [refreshRate]);
 
-  const setCurrency = (c: DisplayCurrency) => {
+  const setCurrency = useCallback((c: DisplayCurrency) => {
     setCurrencyState(c);
     localStorage.setItem(CUR_KEY, c);
-  };
-  const setBrlPerEur = (r: number) => {
+  }, []);
+  const setBrlPerEur = useCallback((r: number) => {
     setBrlPerEurState(r);
     localStorage.setItem(RATE_KEY, String(r));
     const now = new Date().toISOString();
     setRateUpdatedAt(now);
     localStorage.setItem(RATE_TS_KEY, now);
-  };
-  const toggle = () => setCurrency(currency === "BRL" ? "EUR" : "BRL");
-
-  const convert = (brl: number | null | undefined) => {
-    const v = brl ?? 0;
-    return currency === "EUR" ? v / brlPerEur : v;
-  };
-
-  const format = (brl: number | null | undefined) => {
-    const v = convert(brl);
-    return new Intl.NumberFormat(currency === "EUR" ? "de-DE" : "pt-BR", {
-      style: "currency",
-      currency,
-    }).format(v);
-  };
-
-  return (
-    <CurrencyContext.Provider
-      value={{
-        currency,
-        setCurrency,
-        toggle,
-        brlPerEur,
-        setBrlPerEur,
-        rateUpdatedAt,
-        rateLoading,
-        refreshRate,
-        convert,
-        format,
-      }}
-    >
-      {children}
-    </CurrencyContext.Provider>
+  }, []);
+  const toggle = useCallback(
+    () => setCurrency(currency === "BRL" ? "EUR" : "BRL"),
+    [currency, setCurrency],
   );
+
+  const convert = useCallback(
+    (brl: number | null | undefined) => {
+      const v = brl ?? 0;
+      return currency === "EUR" ? v / brlPerEur : v;
+    },
+    [currency, brlPerEur],
+  );
+
+  const format = useCallback(
+    (brl: number | null | undefined) => {
+      const v = convert(brl);
+      return new Intl.NumberFormat(currency === "EUR" ? "de-DE" : "pt-BR", {
+        style: "currency",
+        currency,
+      }).format(v);
+    },
+    [convert, currency],
+  );
+
+  // O value PRECISA ser memoizado: este provider envolve o app inteiro e o fetch da
+  // cotação (refreshRate) muda o estado logo após a montagem. Com um objeto literal,
+  // todo consumidor re-renderiza e os useMemo que dependem de `convert`/`format`
+  // reprocessam os datasets grandes das rotas de BI de novo.
+  const value = useMemo(
+    () => ({
+      currency,
+      setCurrency,
+      toggle,
+      brlPerEur,
+      setBrlPerEur,
+      rateUpdatedAt,
+      rateLoading,
+      refreshRate,
+      convert,
+      format,
+    }),
+    [
+      currency,
+      setCurrency,
+      toggle,
+      brlPerEur,
+      setBrlPerEur,
+      rateUpdatedAt,
+      rateLoading,
+      refreshRate,
+      convert,
+      format,
+    ],
+  );
+
+  return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
 }
 
 export function useCurrency() {

@@ -18,7 +18,8 @@ function mapEventToStatus(evt: string): string {
   if (e === "PURCHASE_CHARGEBACK") return "Chargeback";
   if (e === "PURCHASE_CANCELED" || e === "PURCHASE_CANCELLED") return "Cancelado";
   if (e === "PURCHASE_PROTEST" || e === "PURCHASE_DISPUTE") return "Dispute";
-  if (e === "PURCHASE_BILLET_PRINTED" || e === "PURCHASE_OUT_OF_SHOPPING_CART") return "Aguardando pagamento";
+  if (e === "PURCHASE_BILLET_PRINTED" || e === "PURCHASE_OUT_OF_SHOPPING_CART")
+    return "Aguardando pagamento";
   if (e === "PURCHASE_EXPIRED") return "Expirado";
   if (e === "PURCHASE_DELAYED") return "Vencido";
   return "Desconhecido";
@@ -67,10 +68,10 @@ async function handle(request: Request) {
       console.error(
         "[Hotmart webhook] REJECTED: HOTMART_WEBHOOK_TOKEN not set in environment (fail-closed)",
       );
-      return new Response(
-        JSON.stringify({ ok: false, error: "webhook not configured" }),
-        { status: 500, headers: { "content-type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ ok: false, error: "webhook not configured" }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      });
     }
     if (token !== expected) {
       console.error("[Hotmart webhook] unauthorized: token mismatch", {
@@ -102,8 +103,7 @@ async function handle(request: Request) {
     }
 
     const produto_original = String(product?.name ?? "").trim() || "—";
-    const currency =
-      purchase?.price?.currency_value ?? purchase?.price?.currency_code ?? null;
+    const currency = purchase?.price?.currency_value ?? purchase?.price?.currency_code ?? null;
     const priceVal = Number(purchase?.price?.value);
     const offerVal = Number(purchase?.offer?.value ?? purchase?.price?.value);
     const installments = Number(
@@ -130,10 +130,7 @@ async function handle(request: Request) {
       numero_parcela: Number.isFinite(installments) && installments > 0 ? installments : null,
       cupom: purchase?.offer?.code ?? null,
       origem_checkout:
-        purchase?.origin?.sck ??
-        purchase?.origin?.src ??
-        purchase?.tracking?.source_sck ??
-        null,
+        purchase?.origin?.sck ?? purchase?.origin?.src ?? purchase?.tracking?.source_sck ?? null,
       nome_afiliado: affiliates?.[0]?.name ?? null,
       raw: payload,
       updated_at: new Date().toISOString(),

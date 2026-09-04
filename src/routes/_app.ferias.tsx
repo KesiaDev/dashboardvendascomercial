@@ -10,11 +10,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { listVacationsFn, upsertVacationFn, deleteVacationFn, type Vacation } from "@/lib/vacations.functions";
+import {
+  listVacationsFn,
+  upsertVacationFn,
+  deleteVacationFn,
+  type Vacation,
+} from "@/lib/vacations.functions";
 
 export const Route = createFileRoute("/_app/ferias")({
   component: FeriasPage,
@@ -28,7 +45,7 @@ const TYPE_LABEL: Record<string, string> = {
 };
 const TYPE_COLORS: Record<string, string> = {
   ferias: "bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/40",
-  folga: "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40",
+  folga: "bg-warning/20 text-warning-fg border-warning/40",
   licenca: "bg-violet-500/20 text-violet-700 dark:text-violet-300 border-violet-500/40",
   outro: "bg-slate-500/20 text-slate-700 dark:text-slate-300 border-slate-500/40",
 };
@@ -164,13 +181,28 @@ function FeriasPage() {
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="capitalize text-base">{monthLabel}</CardTitle>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" onClick={() => { const n = new Date(); setCursor(new Date(n.getFullYear(), n.getMonth(), 1)); }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const n = new Date();
+                setCursor(new Date(n.getFullYear(), n.getMonth(), 1));
+              }}
+            >
               Hoje
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+            >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -178,7 +210,9 @@ function FeriasPage() {
         <CardContent>
           <div className="grid grid-cols-7 gap-1 text-xs">
             {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
-              <div key={d} className="text-center font-semibold text-muted-foreground py-1">{d}</div>
+              <div key={d} className="text-center font-semibold text-muted-foreground py-1">
+                {d}
+              </div>
             ))}
             {grid.map((cell, i) => {
               const dayItems = cell.iso ? itemsOnDay(cell.iso) : [];
@@ -212,7 +246,9 @@ function FeriasPage() {
                           </button>
                         ))}
                         {dayItems.length > 3 && (
-                          <div className="text-[10px] text-muted-foreground px-1">+{dayItems.length - 3}</div>
+                          <div className="text-[10px] text-muted-foreground px-1">
+                            +{dayItems.length - 3}
+                          </div>
                         )}
                       </div>
                     </>
@@ -232,7 +268,9 @@ function FeriasPage() {
           {isLoading ? (
             <p className="text-sm text-muted-foreground">A carregar…</p>
           ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma ausência registrada para este período.</p>
+            <p className="text-sm text-muted-foreground">
+              Nenhuma ausência registrada para este período.
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -256,7 +294,12 @@ function FeriasPage() {
                         <div className="text-xs text-muted-foreground">{v.seller_email}</div>
                       </td>
                       <td className="py-2 pr-2">
-                        <span className={"text-xs px-2 py-0.5 rounded border " + (TYPE_COLORS[v.vacation_type] ?? TYPE_COLORS.outro)}>
+                        <span
+                          className={
+                            "text-xs px-2 py-0.5 rounded border " +
+                            (TYPE_COLORS[v.vacation_type] ?? TYPE_COLORS.outro)
+                          }
+                        >
                           {TYPE_LABEL[v.vacation_type] ?? v.vacation_type}
                         </span>
                       </td>
@@ -264,11 +307,22 @@ function FeriasPage() {
                       <td className="py-2 pr-2">{fmtBR(v.end_date)}</td>
                       <td className="py-2 pr-2">{daysBetween(v.start_date, v.end_date)}</td>
                       <td className="py-2 pr-2">
-                        <Badge variant={v.status === "aprovado" ? "default" : v.status === "cancelado" ? "destructive" : "secondary"}>
+                        <Badge
+                          variant={
+                            v.status === "aprovado"
+                              ? "default"
+                              : v.status === "cancelado"
+                                ? "destructive"
+                                : "secondary"
+                          }
+                        >
                           {STATUS_LABEL[v.status] ?? v.status}
                         </Badge>
                       </td>
-                      <td className="py-2 pr-2 text-xs text-muted-foreground max-w-[220px] truncate" title={v.notes ?? ""}>
+                      <td
+                        className="py-2 pr-2 text-xs text-muted-foreground max-w-[220px] truncate"
+                        title={v.notes ?? ""}
+                      >
                         {v.notes ?? "—"}
                       </td>
                       {admin && (
@@ -296,7 +350,13 @@ function FeriasPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditing(null); }}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(o) => {
+          setDialogOpen(o);
+          if (!o) setEditing(null);
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editing?.id ? "Editar ausência" : "Nova ausência"}</DialogTitle>
@@ -347,7 +407,9 @@ function FeriasPage() {
                     value={editing.vacation_type ?? "ferias"}
                     onValueChange={(v) => setEditing({ ...editing, vacation_type: v })}
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ferias">Férias</SelectItem>
                       <SelectItem value="folga">Folga</SelectItem>
@@ -362,7 +424,9 @@ function FeriasPage() {
                     value={editing.status ?? "aprovado"}
                     onValueChange={(v) => setEditing({ ...editing, status: v })}
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="aprovado">Aprovado</SelectItem>
                       <SelectItem value="pendente">Pendente</SelectItem>
@@ -397,7 +461,9 @@ function FeriasPage() {
                 <Trash2 className="h-4 w-4 mr-1" /> Remover
               </Button>
             )}
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancelar
+            </Button>
             <Button
               onClick={() => editing && upsertMut.mutate(editing)}
               disabled={upsertMut.isPending}

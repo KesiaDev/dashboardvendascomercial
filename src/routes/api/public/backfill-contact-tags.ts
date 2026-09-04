@@ -57,7 +57,9 @@ async function runBackfill() {
           });
           if (!res.ok) return;
           const json = await res.json();
-          const tags: string[] = (json.tags ?? []).map((t: any) => t.name as string).filter(Boolean);
+          const tags: string[] = (json.tags ?? [])
+            .map((t: any) => t.name as string)
+            .filter(Boolean);
           contactMap.set(contactId, tags);
         } catch {
           // silently skip individual failures
@@ -69,12 +71,12 @@ async function runBackfill() {
   // Atualiza clint_deals com as tags
   for (const deal of pending) {
     const tags = contactMap.get(deal.contact_id);
-    if (!tags) { skipped++; continue; }
+    if (!tags) {
+      skipped++;
+      continue;
+    }
 
-    const { error } = await db
-      .from("clint_deals")
-      .update({ contact_tags: tags })
-      .eq("id", deal.id);
+    const { error } = await db.from("clint_deals").update({ contact_tags: tags }).eq("id", deal.id);
 
     if (error) {
       errors.push({ deal_id: deal.id, error: error.message });

@@ -22,7 +22,10 @@ function stripAccents(s: string): string {
 export function sellerFromSck(origemCheckout: string | null | undefined): string | null {
   if (!origemCheckout) return null;
   // Quebra por qualquer separador comum: . - _ /
-  const tokens = origemCheckout.toLowerCase().split(/[.\-_/]+/).filter(Boolean);
+  const tokens = origemCheckout
+    .toLowerCase()
+    .split(/[.\-_/]+/)
+    .filter(Boolean);
   if (tokens.length === 0) return null;
 
   // Tenta do último para o primeiro (nome do vendedor costuma vir no fim).
@@ -41,7 +44,9 @@ export function sellerFromSck(origemCheckout: string | null | undefined): string
  */
 export function sellerFromAffiliate(nomeAfiliado: string | null | undefined): string | null {
   if (!nomeAfiliado) return null;
-  const tokens = stripAccents(nomeAfiliado.toLowerCase()).split(/[^a-z0-9]+/).filter(Boolean);
+  const tokens = stripAccents(nomeAfiliado.toLowerCase())
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
   for (const t of tokens) {
     if (SCK_NAME_MAP[t]) return SCK_NAME_MAP[t];
   }
@@ -67,7 +72,9 @@ const IGNORED_SCK_TOKENS = new Set([
 
 export function isIgnoredOrigin(origemCheckout: string | null | undefined): boolean {
   if (!origemCheckout) return false;
-  const tokens = stripAccents(origemCheckout.toLowerCase()).split(/[^a-z0-9]+/).filter(Boolean);
+  const tokens = stripAccents(origemCheckout.toLowerCase())
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
   return tokens.some((t) => IGNORED_SCK_TOKENS.has(t));
 }
 

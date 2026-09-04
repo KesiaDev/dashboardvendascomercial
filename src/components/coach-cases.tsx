@@ -102,7 +102,7 @@ export function CasesTab() {
               }`}
               onClick={() => setSelected(c.conversation_id)}
             >
-              <div className={`text-lg font-bold w-10 shrink-0 ${(c.score ?? 10) < 6 ? "text-rose-600" : (c.score ?? 10) < 8 ? "text-amber-600" : "text-emerald-600"}`}>
+              <div className={`text-lg font-bold w-10 shrink-0 ${(c.score ?? 10) < 6 ? "text-destructive-fg" : (c.score ?? 10) < 8 ? "text-warning-fg" : "text-success-fg"}`}>
                 {c.score ?? "—"}
               </div>
               <div className="min-w-0 flex-1">
@@ -177,7 +177,7 @@ function CaseView({ caso }: { caso: TrainingCase }) {
           <Section title="O que a IA identificou de errado">
             <div className="space-y-2">
               {caso.o_que_a_ia_viu.map((x, i) => (
-                <div key={i} className="rounded-md border-l-4 border-rose-500/60 bg-rose-500/5 p-3">
+                <div key={i} className="rounded-md border-l-4 border-destructive/60 bg-destructive/5 p-3">
                   <div className="font-medium">{x.tema}</div>
                   <div>{x.o_que_aconteceu}</div>
                   <div className="text-xs text-muted-foreground mt-1">Impacto: {x.impacto}</div>
@@ -192,7 +192,7 @@ function CaseView({ caso }: { caso: TrainingCase }) {
           <div className="grid gap-2 md:grid-cols-3">
             <div className="rounded-md border p-3"><div className="text-xs text-muted-foreground mb-1">O que foi feito</div>{caso.abertura.o_que_foi_feito}</div>
             <div className="rounded-md border p-3"><div className="text-xs text-muted-foreground mb-1">Por que não funciona</div>{caso.abertura.por_que_nao_funciona}</div>
-            <div className="rounded-md border p-3 bg-emerald-500/5"><div className="text-xs text-muted-foreground mb-1">Modelo melhor</div>{caso.abertura.modelo_melhor}</div>
+            <div className="rounded-md border p-3 bg-success/5"><div className="text-xs text-muted-foreground mb-1">Modelo melhor</div>{caso.abertura.modelo_melhor}</div>
           </div>
         </Section>
 
@@ -202,8 +202,8 @@ function CaseView({ caso }: { caso: TrainingCase }) {
               {caso.objecoes.map((o, i) => (
                 <div key={i} className="rounded-md border p-3 space-y-1">
                   <div className="font-medium">{o.objecao}</div>
-                  <div className="text-rose-700 dark:text-rose-400 text-xs">Resposta dada: {o.resposta_dada}</div>
-                  <div className="text-emerald-700 dark:text-emerald-400 text-xs">Resposta ideal: {o.resposta_ideal}</div>
+                  <div className="text-destructive-fg text-xs">Resposta dada: {o.resposta_dada}</div>
+                  <div className="text-success-fg text-xs">Resposta ideal: {o.resposta_ideal}</div>
                   {o.tecnica && <Badge variant="secondary" className="text-[10px]">{o.tecnica}</Badge>}
                 </div>
               ))}

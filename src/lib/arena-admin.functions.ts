@@ -73,11 +73,15 @@ export const getArenaTeamOverviewFn = createServerFn({ method: "GET" })
     const [simsRes, progRes, missionsRes, usersRes] = await Promise.all([
       supabaseAdmin
         .from("arena_simulations")
-        .select("id, seller_user_id, started_at, ended_at, score, xp_earned, outcome, status, evaluation")
+        .select(
+          "id, seller_user_id, started_at, ended_at, score, xp_earned, outcome, status, evaluation",
+        )
         .order("started_at", { ascending: false })
         .limit(2000),
       supabaseAdmin.from("arena_progress").select("*"),
-      supabaseAdmin.from("arena_missions").select("id, seller_user_id, mission_date, completed_simulation_id"),
+      supabaseAdmin
+        .from("arena_missions")
+        .select("id, seller_user_id, mission_date, completed_simulation_id"),
       supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
     ]);
 
@@ -100,16 +104,24 @@ export const getArenaTeamOverviewFn = createServerFn({ method: "GET" })
     const sellers = [...ids].map((uid) => {
       const mine = sims.filter((s) => s.seller_user_id === uid);
       const finished = mine.filter((s) => s.status === "finished");
-      const wins = finished.filter((s) => s.outcome === "venda" || s.outcome === "agendamento").length;
+      const wins = finished.filter(
+        (s) => s.outcome === "venda" || s.outcome === "agendamento",
+      ).length;
       const avgScore = finished.length
-        ? Math.round((finished.reduce((a, s) => a + Number(s.score ?? 0), 0) / finished.length) * 10) / 10
+        ? Math.round(
+            (finished.reduce((a, s) => a + Number(s.score ?? 0), 0) / finished.length) * 10,
+          ) / 10
         : 0;
       const prog: any = (progRes.data ?? []).find((p: any) => p.seller_user_id === uid);
       const xp = prog?.xp ?? 0;
       const last = mine[0]?.started_at ?? null;
       const daysSince = last ? Math.floor((now - new Date(last).getTime()) / 86_400_000) : null;
-      const last7 = mine.filter((s) => now - new Date(s.started_at).getTime() <= 7 * 86_400_000).length;
-      const last30 = mine.filter((s) => now - new Date(s.started_at).getTime() <= 30 * 86_400_000).length;
+      const last7 = mine.filter(
+        (s) => now - new Date(s.started_at).getTime() <= 7 * 86_400_000,
+      ).length;
+      const last30 = mine.filter(
+        (s) => now - new Date(s.started_at).getTime() <= 30 * 86_400_000,
+      ).length;
       const missions = (missionsRes.data ?? []).filter((m: any) => m.seller_user_id === uid);
       const comps = competencyAverages(finished);
       return {
@@ -146,7 +158,9 @@ export const getArenaTeamOverviewFn = createServerFn({ method: "GET" })
         totalSims: sims.length,
         finished: finishedAll.length,
         avgScore: finishedAll.length
-          ? Math.round((finishedAll.reduce((a, s) => a + Number(s.score ?? 0), 0) / finishedAll.length) * 10) / 10
+          ? Math.round(
+              (finishedAll.reduce((a, s) => a + Number(s.score ?? 0), 0) / finishedAll.length) * 10,
+            ) / 10
           : 0,
         weakest: competencyAverages(finishedAll).slice(-5).reverse(),
         commonImprovements: collectStrings(finishedAll, "melhorias"),
@@ -165,7 +179,9 @@ export const getArenaSellerDetailFn = createServerFn({ method: "GET" })
     const [simsRes, missionsRes] = await Promise.all([
       supabaseAdmin
         .from("arena_simulations")
-        .select("id, seller_user_id, started_at, ended_at, score, xp_earned, outcome, status, evaluation, persona_id, arena_personas(persona, difficulty, product, channel)")
+        .select(
+          "id, seller_user_id, started_at, ended_at, score, xp_earned, outcome, status, evaluation, persona_id, arena_personas(persona, difficulty, product, channel)",
+        )
         .eq("seller_user_id", data.userId)
         .order("started_at", { ascending: false })
         .limit(100),
@@ -209,8 +225,16 @@ export const getArenaSimAdminFn = createServerFn({ method: "GET" })
     assertAdmin(context.claims);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const [sim, msgs] = await Promise.all([
-      supabaseAdmin.from("arena_simulations").select("*, arena_personas(*)").eq("id", data.id).single(),
-      supabaseAdmin.from("arena_messages").select("*").eq("simulation_id", data.id).order("sent_at", { ascending: true }),
+      supabaseAdmin
+        .from("arena_simulations")
+        .select("*, arena_personas(*)")
+        .eq("id", data.id)
+        .single(),
+      supabaseAdmin
+        .from("arena_messages")
+        .select("*")
+        .eq("simulation_id", data.id)
+        .order("sent_at", { ascending: true }),
     ]);
     if (sim.error) throw sim.error;
     return { simulation: sim.data, messages: msgs.data ?? [] };

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
  * Análise de desempenho do Agente IA (SDR COMERCIAL IA) da Clint.
@@ -143,6 +144,7 @@ function median(nums: number[]): number | null {
 }
 
 export const fetchAgenteIaFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { startDate: string; endDate: string }) => d)
   .handler(async ({ data }): Promise<AgenteIaResult> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -230,7 +232,8 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
           .select(
             "id,stage,updated_stage_at,status,value,currency,won_at,won_by_name,user_name,contact_email,contact_phone,contact_name",
           )
-          .in("id", chunk),
+          .in("id", chunk)
+          .limit(chunk.length),
       ),
     );
     const dealById = new Map<string, any>();
@@ -255,7 +258,6 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
     const vendasKeys = new Set<string>();
     let iniciadasPelaIa = 0;
     let vendasIaIniciou = 0;
-
 
     const daily = new Map<string, { iniciadas: number; responderam: number; reunioes: number }>();
     const touch = (d: string) => {
@@ -320,7 +322,6 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
       const startedAt = aiMsgs[0].sent_at;
       const dayKey = dayISO(startedAt);
       touch(dayKey).iniciadas += 1;
-
 
       const afterStart = msgs.filter((m) => m.sent_at >= startedAt);
       const inbound = afterStart.filter((m) => m.direction === "inbound");
@@ -484,13 +485,13 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
         respostasLead: inbound.length,
         status,
         stage,
-        tempo1aRespostaMin: first.length && firstDone ? Number(first[first.length - 1].toFixed(1)) : null,
+        tempo1aRespostaMin:
+          first.length && firstDone ? Number(first[first.length - 1].toFixed(1)) : null,
         iaIniciou,
         vendeu,
         ultimaMensagem: (last?.body ?? "").slice(0, 200),
       });
     }
-
 
     const pct = (a: number, b: number) => (b > 0 ? Number(((a / b) * 100).toFixed(1)) : 0);
 
@@ -516,7 +517,9 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
         conversaoReuniaoPct: pct(reunioes, conversasIa),
         agendaClint,
         msgsAteReuniao: msgsAteReuniaoArr.length
-          ? Number((msgsAteReuniaoArr.reduce((a, b) => a + b, 0) / msgsAteReuniaoArr.length).toFixed(1))
+          ? Number(
+              (msgsAteReuniaoArr.reduce((a, b) => a + b, 0) / msgsAteReuniaoArr.length).toFixed(1),
+            )
           : null,
         passouParaHumano,
         semResposta,
@@ -552,12 +555,12 @@ export const fetchAgenteIaFn = createServerFn({ method: "POST" })
         lista: vendasLista.sort((a, b) => b.data.localeCompare(a.data)),
       },
     };
-
   });
 
 export const generateAgenteIaInsightsFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { startDate: string; endDate: string }) => d)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("LOVABLE_API_KEY não configurada");
     const res = await fetchAgenteIaFn({ data });
@@ -576,7 +579,15 @@ export const generateAgenteIaInsightsFn = createServerFn({ method: "POST" })
           {
             role: "user",
             content: `Período ${res.periodStart} a ${res.periodEnd}:\n${JSON.stringify(
-              { kpis: res.kpis, funil: res.funil, stages: res.stages, tempos: res.respostaBuckets, vendas_atribuidas: res.vendas, amostra_sem_resposta: res.amostraSemResposta, amostra_convertida: res.amostraConvertida },
+              {
+                kpis: res.kpis,
+                funil: res.funil,
+                stages: res.stages,
+                tempos: res.respostaBuckets,
+                vendas_atribuidas: res.vendas,
+                amostra_sem_resposta: res.amostraSemResposta,
+                amostra_convertida: res.amostraConvertida,
+              },
               null,
               2,
             )}`,

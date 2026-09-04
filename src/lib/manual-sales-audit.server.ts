@@ -1,3 +1,6 @@
+import { APPROVED_STATUS_DB_VALUES } from "@/lib/sales-status";
+import { fetchAllRows } from "@/lib/supabase-paging";
+
 // Auditoria automática do fechamento manual.
 // 1) Reconfere vendas pendentes contra a Hotmart (mesma lógica do botão manual).
 // 2) Gera/atualiza alertas em `commission_alerts` para pendências > 24h e
@@ -13,12 +16,14 @@ function normEmail(e: string | null | undefined) {
 }
 
 function firstNameNorm(name: string | null | undefined) {
-  return (name ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)[0] ?? "";
+  return (
+    (name ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)[0] ?? ""
+  );
 }
 
 export function isAffiliateMismatch(sellerName: string, nomeAfiliado: string | null | undefined) {
@@ -31,13 +36,17 @@ export async function findHotmartMatch(email: string, saleDate: string) {
   const em = normEmail(email);
   if (!em) return null;
   const d = new Date(saleDate);
-  const from = new Date(d); from.setDate(d.getDate() - 7);
-  const to = new Date(d); to.setDate(d.getDate() + 7);
+  const from = new Date(d);
+  from.setDate(d.getDate() - 7);
+  const to = new Date(d);
+  to.setDate(d.getDate() + 7);
   const { data, error } = await supabaseAdmin
     .from("sales")
     .select("id,faturamento_liquido_brl,nome_afiliado")
     .eq("email_cliente", em)
-    .in("status", ["Aprovado", "Completo", "APPROVED"])
+    // Esta lista perdia "COMPLETE"/"COMPLETED": a venda aparecia em /vendas-reais e
+    // sumia da auditoria que confirma o pagamento da comissão.
+    .in("status", APPROVED_STATUS_DB_VALUES)
     .gte("data_venda", from.toISOString().slice(0, 10))
     .lte("data_venda", to.toISOString().slice(0, 10))
     .order("data_venda", { ascending: false })
@@ -52,7 +61,10 @@ export async function reconfirmPending() {
     .from("manual_sales")
     .select("id,client_email,sale_date,seller_name")
     .eq("confirmation_status", "pendente")
-    .not("client_email", "is", null);
+    .not("client_email", "is", null)
+    // A fila de pendentes não tem filtro de período: cresce enquanto ninguém
+    // confirma. Passando de 1000, as mais antigas nunca mais eram auditadas.
+    .limit(5000);
   if (error) throw new Error(error.message);
 
   let confirmed = 0;
@@ -106,7 +118,10 @@ export async function refreshCommissionAlerts() {
       "id,seller_name,client_name,client_email,sale_date,value_eur,created_at,confirmation_status,affiliate_mismatch,hotmart_nome_afiliado",
     )
     .lte("sale_date", today)
-    .or("confirmation_status.eq.pendente,affiliate_mismatch.eq.true");
+    .or("confirmation_status.eq.pendente,affiliate_mismatch.eq.true")
+    // Mesma situação: sem teto explícito, os alertas mais antigos deixavam de
+    // ser gerados em silêncio.
+    .limit(5000);
   if (error) throw new Error(error.message);
 
   const alerts: AlertRow[] = [];

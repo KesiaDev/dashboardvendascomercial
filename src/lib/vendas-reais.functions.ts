@@ -1,4 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertAdmin } from "@/lib/authz.server";
+import { eurBrlRate } from "./eur-rate";
+import { fetchAllRows } from "@/lib/supabase-paging";
+import { APPROVED_STATUS_DB_VALUES } from "./sales-status";
 
 async function adminDb() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -31,7 +36,9 @@ export const CATEGORIA_COLOR: Record<string, string> = {
 };
 
 // Status agrupados
-const APROVADOS = ["Aprovado", "Completo", "APPROVED", "COMPLETE"];
+// Antes esta lista era local e case-sensitive, e divergia da usada em
+// manual-sales/auditoria de comissão: uma venda "COMPLETE" contava aqui e sumia lá.
+const APROVADOS = APPROVED_STATUS_DB_VALUES;
 const CANCEL_EFETIVADO = ["Chargeback", "Reembolsado", "CHARGEBACK", "REFUNDED"];
 const CANCEL_PENDENTE = ["Dispute", "DISPUTE", "Em análise", "UNDER_ANALISYS"];
 
@@ -45,19 +52,33 @@ function monthRange(monthYYYYMM: string): { start: string; end: string } {
 
 // ─── Faturamento por Produto ────────────────────────────────────────────────
 export const getFaturamentoPorProdutoFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { month?: string } | undefined) => d ?? {})
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.claims);
     const db = await adminDb();
     const month = data.month ?? new Date().toISOString().slice(0, 7);
     const { start, end } = monthRange(month);
 
-    const { data: rows, error } = await db
-      .from("sales")
-      .select("categoria_produto,conta_meta,faturamento_liquido_brl,status,produto_original")
-      .gte("data_venda", start)
-      .lt("data_venda", end)
-      .in("status", APROVADOS);
-    if (error) throw new Error(error.message);
+    // Um mês cheio passa de 1000 vendas e o PostgREST truncava sem erro:
+    // o total do mês saía menor do que a realidade, em silêncio.
+    const f = <Q>(q: Q) =>
+      (q as any).gte("data_venda", start).lt("data_venda", end).in("status", APROVADOS);
+    const rows = await fetchAllRows<{
+      categoria_produto: string | null;
+      conta_meta: boolean | null;
+      faturamento_liquido_brl: number | null;
+      status: string;
+      produto_original: string | null;
+    }>(
+      ({ from, to }) =>
+        f(
+          db
+            .from("sales")
+            .select("categoria_produto,conta_meta,faturamento_liquido_brl,status,produto_original"),
+        ).range(from, to),
+      () => f(db.from("sales").select("*", { count: "exact", head: true })),
+    );
 
     const agg = new Map<
       string,
@@ -87,21 +108,35 @@ export const getFaturamentoPorProdutoFn = createServerFn({ method: "GET" })
 
 // ─── Renovações ──────────────────────────────────────────────────────────────
 export const getRenovacoesFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { month?: string } | undefined) => d ?? {})
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.claims);
     const db = await adminDb();
     const month = data.month ?? new Date().toISOString().slice(0, 7);
     const { start, end } = monthRange(month);
 
-    const { data: rows, error } = await db
-      .from("sales")
-      .select("id,data_venda,produto_original,nome_cliente,email_cliente,nome_afiliado,faturamento_liquido_brl,status")
-      .eq("categoria_produto", "RENOVACAO")
-      .gte("data_venda", start)
-      .lt("data_venda", end)
-      .in("status", APROVADOS)
-      .order("data_venda", { ascending: false });
-    if (error) throw new Error(error.message);
+    // Um mês cheio passa de 1000 vendas e o PostgREST truncava sem erro:
+    // o total do mês saía menor do que a realidade, em silêncio.
+    const f = <Q>(q: Q) =>
+      (q as any)
+        .eq("categoria_produto", "RENOVACAO")
+        .gte("data_venda", start)
+        .lt("data_venda", end)
+        .in("status", APROVADOS);
+    const rows = await fetchAllRows<Record<string, any>>(
+      ({ from, to }) =>
+        f(
+          db
+            .from("sales")
+            .select(
+              "id,data_venda,produto_original,nome_cliente,email_cliente,nome_afiliado,faturamento_liquido_brl,status",
+            ),
+        )
+          .order("data_venda", { ascending: false })
+          .range(from, to),
+      () => f(db.from("sales").select("*", { count: "exact", head: true })),
+    );
 
     const total = (rows ?? []).reduce((s, r) => s + Number(r.faturamento_liquido_brl ?? 0), 0);
     return { month, total, renovacoes: rows ?? [] };
@@ -109,24 +144,41 @@ export const getRenovacoesFn = createServerFn({ method: "GET" })
 
 // ─── Cancelamentos ───────────────────────────────────────────────────────────
 export const getCancelamentosFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { month?: string } | undefined) => d ?? {})
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.claims);
     const db = await adminDb();
     const month = data.month ?? new Date().toISOString().slice(0, 7);
     const { start, end } = monthRange(month);
 
-    const { data: rows, error } = await db
-      .from("sales")
-      .select("id,data_venda,produto_original,categoria_produto,nome_cliente,email_cliente,nome_afiliado,faturamento_liquido_brl,status")
-      .in("status", [...CANCEL_EFETIVADO, ...CANCEL_PENDENTE])
-      .gte("data_venda", start)
-      .lt("data_venda", end)
-      .order("data_venda", { ascending: false });
-    if (error) throw new Error(error.message);
+    // Um mês cheio passa de 1000 vendas e o PostgREST truncava sem erro:
+    // o total do mês saía menor do que a realidade, em silêncio.
+    const f = <Q>(q: Q) =>
+      (q as any)
+        .in("status", [...CANCEL_EFETIVADO, ...CANCEL_PENDENTE])
+        .gte("data_venda", start)
+        .lt("data_venda", end);
+    const rows = await fetchAllRows<Record<string, any>>(
+      ({ from, to }) =>
+        f(
+          db
+            .from("sales")
+            .select(
+              "id,data_venda,produto_original,categoria_produto,nome_cliente,email_cliente,nome_afiliado,faturamento_liquido_brl,status",
+            ),
+        )
+          .order("data_venda", { ascending: false })
+          .range(from, to),
+      () => f(db.from("sales").select("*", { count: "exact", head: true })),
+    );
 
     const efetivados = (rows ?? []).filter((r) => CANCEL_EFETIVADO.includes(r.status));
     const pendentes = (rows ?? []).filter((r) => CANCEL_PENDENTE.includes(r.status));
-    const totalEfetivado = efetivados.reduce((s, r) => s + Number(r.faturamento_liquido_brl ?? 0), 0);
+    const totalEfetivado = efetivados.reduce(
+      (s, r) => s + Number(r.faturamento_liquido_brl ?? 0),
+      0,
+    );
     const totalPendente = pendentes.reduce((s, r) => s + Number(r.faturamento_liquido_brl ?? 0), 0);
 
     return { month, totalEfetivado, totalPendente, efetivados, pendentes };
@@ -134,11 +186,15 @@ export const getCancelamentosFn = createServerFn({ method: "GET" })
 
 // ─── Vendas por Vendedor ─────────────────────────────────────────────────────
 // Usa manual_sales (lançamentos do vendedor) + confirmed_hotmart_valor_brl
-// quando confirmado, senão value_eur convertido em BRL (assumindo 1 EUR ≈ 6 BRL).
+// quando confirmado, senão value_eur convertido pela cotação do período de
+// comissionamento que cobre o mês — a MESMA que /comissionamento usa. Antes isto era
+// um `* 6` cru, o que fazia as duas telas divergirem ~2,5% para as mesmas vendas.
 // Também traz breakdown por categoria e faturamento que conta para meta.
 export const getVendasPorVendedorFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { month?: string } | undefined) => d ?? {})
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.claims);
     const db = await adminDb();
     const month = data.month ?? new Date().toISOString().slice(0, 7);
     const [y, m] = month.split("-").map(Number);
@@ -146,15 +202,33 @@ export const getVendasPorVendedorFn = createServerFn({ method: "GET" })
     const nextMonth = m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 };
     const endDate = `${nextMonth.y}-${String(nextMonth.m).padStart(2, "0")}-01`;
 
-    const { data: rows, error } = await db
-      .from("manual_sales")
-      .select(
-        "id,seller_name,product,categoria_produto,conta_meta,value_eur,confirmed_hotmart_valor_brl,confirmation_status,sale_date,client_name,client_email",
-      )
-      .gte("sale_date", startDate)
-      .lt("sale_date", endDate)
-      .order("sale_date", { ascending: false });
-    if (error) throw new Error(error.message);
+    // Um mês cheio passa de 1000 vendas e o PostgREST truncava sem erro:
+    // o total do mês saía menor do que a realidade, em silêncio.
+    const f = <Q>(q: Q) => (q as any).gte("sale_date", startDate).lt("sale_date", endDate);
+    const rows = await fetchAllRows<Record<string, any>>(
+      ({ from, to }) =>
+        f(
+          db
+            .from("manual_sales")
+            .select(
+              "id,seller_name,product,categoria_produto,conta_meta,value_eur,confirmed_hotmart_valor_brl,confirmation_status,sale_date,client_name,client_email",
+            ),
+        )
+          .order("sale_date", { ascending: false })
+          .range(from, to),
+      () => f(db.from("manual_sales").select("*", { count: "exact", head: true })),
+    );
+
+    // Cotação contratual do período que cobre o mês (mesma fonte de /comissionamento).
+    const { data: periodRow } = await db
+      .from("bi_commission_periods")
+      .select("cotacao_eur")
+      .lte("data_inicio", endDate)
+      .gte("data_fim", startDate)
+      .order("data_inicio", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const cotacao = eurBrlRate(periodRow);
 
     type Bucket = {
       seller: string;
@@ -171,7 +245,7 @@ export const getVendasPorVendedorFn = createServerFn({ method: "GET" })
     for (const r of rows ?? []) {
       const cat = r.categoria_produto ?? "OUTROS";
       // Valor: se confirmado com Hotmart, usa BRL confirmado; senão EUR * 6.
-      const brl = Number(r.confirmed_hotmart_valor_brl ?? Number(r.value_eur) * 6);
+      const brl = Number(r.confirmed_hotmart_valor_brl ?? Number(r.value_eur) * cotacao);
       const b =
         bySeller.get(r.seller_name) ??
         ({

@@ -220,7 +220,7 @@ export function ObjecoesTab() {
                     <td className="p-2 text-right text-muted-foreground">{r.mensagens}</td>
                     <td className="p-2 text-right text-muted-foreground">{r.ligacoes}</td>
                     <td className="p-2 text-right">{r.pct.toFixed(1)}%</td>
-                    <td className={`p-2 text-right ${r.avg_score != null && r.avg_score < 6 ? "text-red-500 font-semibold" : ""}`}>
+                    <td className={`p-2 text-right ${r.avg_score != null && r.avg_score < 6 ? "text-destructive-fg font-semibold" : ""}`}>
                       {r.avg_score != null ? r.avg_score.toFixed(2) : "—"}
                     </td>
                     <td className="p-2">
@@ -284,7 +284,7 @@ export function ObjecoesTab() {
                     <span className="font-medium text-sm">{it.objecao}</span>
                     <Badge
                       variant="outline"
-                      className={`ml-auto text-[10px] ${it.prioridade === "alta" ? "border-red-500/50 text-red-500" : ""}`}
+                      className={`ml-auto text-[10px] ${it.prioridade === "alta" ? "border-destructive/50 text-destructive-fg" : ""}`}
                     >
                       {it.prioridade}
                     </Badge>

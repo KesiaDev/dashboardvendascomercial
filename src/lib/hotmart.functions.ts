@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { mapProductToGroup } from "@/lib/product-groups";
 
 // ─── Hotmart API ──────────────────────────────────────────────────────────────
@@ -33,7 +34,12 @@ async function getAccessToken(): Promise<string> {
     const body = await res.text();
     throw new Error(`Hotmart auth ${res.status}: ${body}`);
   }
-  const json = (await res.json()) as { access_token?: string; expires_in?: number; error?: string; error_description?: string };
+  const json = (await res.json()) as {
+    access_token?: string;
+    expires_in?: number;
+    error?: string;
+    error_description?: string;
+  };
   if (!json.access_token) {
     throw new Error(`Hotmart auth OK but no access_token. Body: ${JSON.stringify(json)}`);
   }
@@ -87,8 +93,10 @@ function extractProducerBRL(purchase: any, commissions: any[]): number | null {
     if (Number.isFinite(v)) {
       if (cur === "BRL") return v;
       // se veio conversão em BRL
-      if (Number.isFinite(Number(producer?.exchange?.value)) &&
-          String(producer?.exchange?.currency_code ?? "").toUpperCase() === "BRL") {
+      if (
+        Number.isFinite(Number(producer?.exchange?.value)) &&
+        String(producer?.exchange?.currency_code ?? "").toUpperCase() === "BRL"
+      ) {
         return Number(producer.exchange.value);
       }
     }
@@ -114,8 +122,7 @@ function mapItemToSale(item: any) {
   if (!transacao) return null;
 
   const produto_original = String(product?.name ?? "").trim() || "—";
-  const currency =
-    purchase?.price?.currency_value ?? purchase?.price?.currency_code ?? null;
+  const currency = purchase?.price?.currency_value ?? purchase?.price?.currency_code ?? null;
   const priceVal = Number(purchase?.price?.value);
   const offerVal = Number(purchase?.offer?.value ?? purchase?.price?.value);
   const installments = Number(
@@ -145,10 +152,10 @@ function mapItemToSale(item: any) {
     estado: address?.state ?? null,
     cidade: address?.city ?? null,
     numero_parcela: Number.isFinite(installments) && installments > 0 ? installments : null,
-    tem_coproducao: Array.isArray(item?.producer?.co_productions) &&
-      item.producer.co_productions.length > 0
-      ? "Sim"
-      : null,
+    tem_coproducao:
+      Array.isArray(item?.producer?.co_productions) && item.producer.co_productions.length > 0
+        ? "Sim"
+        : null,
     cupom: purchase?.offer?.code ?? null,
     origem_checkout:
       purchase?.origin?.sck ??
@@ -195,7 +202,11 @@ async function fetchAllSales(startEpochMs: number, endEpochMs: number) {
 // ─── Sync principal ──────────────────────────────────────────────────────────
 // windowDays = 3 (default) pega a janela dos últimos 3 dias para pegar
 // mudanças de status (aprovado→cancelado, chargeback). Backfill maior é opcional.
-export async function runHotmartSync(opts?: { windowDays?: number; startDate?: string; endDate?: string }) {
+export async function runHotmartSync(opts?: {
+  windowDays?: number;
+  startDate?: string;
+  endDate?: string;
+}) {
   const now = Date.now();
   let start: number;
   let end: number;
@@ -209,7 +220,9 @@ export async function runHotmartSync(opts?: { windowDays?: number; startDate?: s
   }
 
   const items = await fetchAllSales(start, end);
-  const mapped = items.map(mapItemToSale).filter((r): r is NonNullable<ReturnType<typeof mapItemToSale>> => !!r);
+  const mapped = items
+    .map(mapItemToSale)
+    .filter((r): r is NonNullable<ReturnType<typeof mapItemToSale>> => !!r);
 
   const db = await adminDb();
   const txs = mapped.map((r) => r.transacao);
@@ -217,14 +230,21 @@ export async function runHotmartSync(opts?: { windowDays?: number; startDate?: s
   const batchSize = 500;
   for (let i = 0; i < txs.length; i += batchSize) {
     const chunk = txs.slice(i, i + batchSize);
-    const { data, error } = await db.from("sales").select("transacao").in("transacao", chunk);
+    // Uma transação existe no máximo uma vez.
+    const { data, error } = await db
+      .from("sales")
+      .select("transacao")
+      .in("transacao", chunk)
+      .limit(chunk.length);
     if (error) throw new Error(error.message);
     for (const r of data ?? []) existing.add((r as { transacao: string }).transacao);
   }
 
   const upBatch = 500;
   for (let i = 0; i < mapped.length; i += upBatch) {
-    const chunk = mapped.slice(i, i + upBatch).map((r) => ({ ...r, updated_at: new Date().toISOString() }));
+    const chunk = mapped
+      .slice(i, i + upBatch)
+      .map((r) => ({ ...r, updated_at: new Date().toISOString() }));
     const { error } = await db.from("sales").upsert(chunk, { onConflict: "transacao" });
     if (error) throw new Error(error.message);
   }
@@ -257,5 +277,8 @@ export async function runHotmartSync(opts?: { windowDays?: number; startDate?: s
 
 // ─── ServerFn callable from UI ───────────────────────────────────────────────
 export const syncHotmartFn = createServerFn({ method: "POST" })
-  .inputValidator((d: { windowDays?: number; startDate?: string; endDate?: string } | undefined) => d ?? {})
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: { windowDays?: number; startDate?: string; endDate?: string } | undefined) => d ?? {},
+  )
   .handler(async ({ data }) => runHotmartSync(data));

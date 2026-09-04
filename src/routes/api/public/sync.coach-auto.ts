@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runCoachV3Sync } from "./sync.coach-v3";
-import { syncCcpbxCallsFn, analyzeCallFn } from "@/lib/ccpbx.functions";
+import { syncCcpbxCallsCore, analyzeCallCore } from "@/lib/ccpbx.functions";
 import { analyzeConversationCore } from "@/lib/coach.functions";
+import { requireApiKey } from "@/lib/api-auth";
 
 // Pipeline automático: sincroniza mensagens (Clint) e ligações (CCPBX)
 // e re-analisa o que tem novidade desde a última análise.
@@ -20,7 +21,7 @@ async function runAutoPipeline(sinceDays: number, maxAnalyses: number) {
 
   // 2) Sincroniza ligações
   try {
-    out.ligacoes = await syncCcpbxCallsFn({ data: { days: Math.min(sinceDays, 7) } });
+    out.ligacoes = await syncCcpbxCallsCore({ days: Math.min(sinceDays, 7) });
   } catch (e) {
     out.ligacoes = { error: e instanceof Error ? e.message : String(e) };
   }
@@ -53,7 +54,8 @@ async function runAutoPipeline(sinceDays: number, maxAnalyses: number) {
             .from("coach_analyses")
             .select("conversation_id,analyzed_at")
             .in("conversation_id", ids.slice(i, i + 100))
-            .eq("status", "ok");
+            .eq("status", "ok")
+            .limit(300);
           for (const a of (an ?? []) as any[]) {
             const prev = analysedMap.get(a.conversation_id);
             if (!prev || new Date(a.analyzed_at) > new Date(prev)) {
@@ -95,7 +97,7 @@ async function runAutoPipeline(sinceDays: number, maxAnalyses: number) {
 
     for (const c of (calls ?? []) as any[]) {
       try {
-        await analyzeCallFn({ data: { callId: c.id } });
+        await analyzeCallCore({ callId: c.id });
         callsAnalisadas++;
       } catch {}
     }
@@ -108,12 +110,13 @@ async function runAutoPipeline(sinceDays: number, maxAnalyses: number) {
 }
 
 async function handle(request: Request) {
+  // Este é o endpoint mais caro do projeto: dispara até 30 análises por LLM por
+  // requisição, na fatura da empresa. Nunca deve ficar aberto.
+  const denied = requireApiKey(request);
+  if (denied) return denied;
   const url = new URL(request.url);
   const sinceDays = parseInt(url.searchParams.get("sinceDays") ?? "3", 10) || 3;
-  const maxAnalyses = Math.min(
-    30,
-    parseInt(url.searchParams.get("max") ?? "8", 10) || 8,
-  );
+  const maxAnalyses = Math.min(30, parseInt(url.searchParams.get("max") ?? "8", 10) || 8);
   try {
     return Response.json(await runAutoPipeline(sinceDays, maxAnalyses));
   } catch (e) {

@@ -163,9 +163,9 @@ function statusOf(proj: number, meta: number): "ok" | "atencao" | "risco" {
 }
 
 const STATUS_UI = {
-  ok: { dot: "🟢", label: "No ritmo", cls: "bg-emerald-500/15 text-emerald-500", bar: "bg-emerald-500" },
-  atencao: { dot: "🟡", label: "Atenção", cls: "bg-amber-500/15 text-amber-500", bar: "bg-amber-500" },
-  risco: { dot: "🔴", label: "Abaixo do ritmo", cls: "bg-red-500/15 text-red-500", bar: "bg-red-500" },
+  ok: { dot: "🟢", label: "No ritmo", cls: "bg-success/15 text-success-fg", bar: "bg-success" },
+  atencao: { dot: "🟡", label: "Atenção", cls: "bg-warning/15 text-warning-fg", bar: "bg-warning" },
+  risco: { dot: "🔴", label: "Abaixo do ritmo", cls: "bg-destructive/15 text-destructive-fg", bar: "bg-destructive" },
 } as const;
 
 export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?: string }) {
@@ -189,8 +189,8 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
   /** Cor distinta por mês do trimestre (index 0..2) */
   const MONTH_CLR = [
     "bg-orange-500/20 text-orange-400", // Jul
-    "bg-amber-500/20 text-amber-400", // Ago
-    "bg-yellow-500/20 text-yellow-400", // Set
+    "bg-warning/20 text-warning-fg", // Ago
+    "bg-warning/20 text-warning-fg", // Set
   ];
   const persist = () => {
     try {
@@ -566,10 +566,10 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                   <span
                     className={`tabular-nums font-semibold ${
                       l.convTri >= l.metaTri
-                        ? "text-emerald-500"
+                        ? "text-success-fg"
                         : l.convTri >= l.metaTri * 0.85
-                          ? "text-amber-500"
-                          : "text-red-500"
+                          ? "text-warning-fg"
+                          : "text-destructive-fg"
                     }`}
                     title={`${l.vendasTri} vendas / ${l.leadsTri} leads`}
                   >
@@ -599,15 +599,15 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
             <CardContent className="pt-0">
               <div className="flex items-center gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-emerald-500 tabular-nums">{resumoStatus.ok}</p>
+                  <p className="text-2xl font-bold text-success-fg tabular-nums">{resumoStatus.ok}</p>
                   <p className="text-[11px] text-muted-foreground">No ritmo</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-amber-500 tabular-nums">{resumoStatus.atencao}</p>
+                  <p className="text-2xl font-bold text-warning-fg tabular-nums">{resumoStatus.atencao}</p>
                   <p className="text-[11px] text-muted-foreground">Atenção</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-red-500 tabular-nums">{resumoStatus.risco}</p>
+                  <p className="text-2xl font-bold text-destructive-fg tabular-nums">{resumoStatus.risco}</p>
                   <p className="text-[11px] text-muted-foreground">Abaixo</p>
                 </div>
               </div>
@@ -731,7 +731,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                           ) : (
                             <span
                               className={
-                                d.vendas >= d.metaVendas ? "text-emerald-500 font-semibold" : "text-red-500 font-semibold"
+                                d.vendas >= d.metaVendas ? "text-success-fg font-semibold" : "text-destructive-fg font-semibold"
                               }
                               title={`${d.vendas} vendas / ${d.leads} leads = ${d.conv.toFixed(2)}%`}
                             >
@@ -745,22 +745,22 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                     <td className="px-2 py-3 text-right tabular-nums font-semibold">{l.vendasMetaTri}</td>
                     <td
                       className={`px-2 py-3 text-right tabular-nums font-semibold ${
-                        l.vendasTri >= l.vendasMetaTri ? "text-emerald-500" : "text-red-500"
+                        l.vendasTri >= l.vendasMetaTri ? "text-success-fg" : "text-destructive-fg"
                       }`}
                     >
                       {l.vendasTri}
                     </td>
                     <td className="px-2 py-3 text-right tabular-nums">
                       {l.gapFechados > 0 ? (
-                        <span className="text-red-500 font-semibold">+{l.gapFechados}</span>
+                        <span className="text-destructive-fg font-semibold">+{l.gapFechados}</span>
                       ) : l.gapFechados < 0 ? (
-                        <span className="text-emerald-500 font-semibold">{l.gapFechados}</span>
+                        <span className="text-success-fg font-semibold">{l.gapFechados}</span>
                       ) : (
-                        <span className="text-emerald-500">0</span>
+                        <span className="text-success-fg">0</span>
                       )}
                     </td>
                     <td
-                      className="px-2 py-3 text-right tabular-nums font-bold text-amber-500"
+                      className="px-2 py-3 text-right tabular-nums font-bold text-warning-fg"
                       title="Total que ainda falta vender no trimestre, já somando o gap"
                     >
                       {l.metaAjustadaRestante}
@@ -792,7 +792,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                           <td className="px-2 py-3.5 text-right tabular-nums">{totMetaMes[i]}</td>
                           <td
                             className={`px-2 py-3.5 text-right tabular-nums border-r border-border/40 ${
-                              totRealMes[i] >= totMetaMes[i] ? "text-emerald-400" : "text-red-400"
+                              totRealMes[i] >= totMetaMes[i] ? "text-success-fg" : "text-destructive-fg"
                             }`}
                           >
                             {totRealMes[i]}
@@ -803,7 +803,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                       <td className="px-2 py-3.5 text-right tabular-nums">{totMetaTri}</td>
                       <td
                         className={`px-2 py-3.5 text-right tabular-nums ${
-                          totRealTri >= totMetaTri ? "text-emerald-400" : "text-red-400"
+                          totRealTri >= totMetaTri ? "text-success-fg" : "text-destructive-fg"
                         }`}
                       >
                         {totRealTri}
@@ -811,14 +811,14 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
                       <td
                         className={`px-2 py-3.5 text-right tabular-nums ${
                           linhas.reduce((a, l) => a + l.gapFechados, 0) > 0
-                            ? "text-red-400"
-                            : "text-emerald-400 font-semibold"
+                            ? "text-destructive-fg"
+                            : "text-success-fg font-semibold"
                         }`}
                       >
                         {linhas.reduce((a, l) => a + l.gapFechados, 0) > 0 ? "+" : ""}
                         {linhas.reduce((a, l) => a + l.gapFechados, 0)}
                       </td>
-                      <td className="px-2 py-3.5 text-right tabular-nums text-amber-400">
+                      <td className="px-2 py-3.5 text-right tabular-nums text-warning-fg">
                         {linhas.reduce((a, l) => a + l.metaAjustadaRestante, 0)}
                       </td>
                     </tr>
@@ -835,7 +835,7 @@ export function MetasTrimestreCard({ refDate, title }: { refDate: string; title?
       {/* Botão flutuante fixo — sempre visível enquanto houver alterações */}
       {dirty && (
         <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-border bg-background/95 px-3 py-2 shadow-lg backdrop-blur">
-          <span className="text-xs text-amber-500">alterações não salvas</span>
+          <span className="text-xs text-warning-fg">alterações não salvas</span>
           <Button size="sm" className="h-8 rounded-full text-xs" onClick={persist}>
             <Save className="h-4 w-4 mr-1" />
             Salvar metas

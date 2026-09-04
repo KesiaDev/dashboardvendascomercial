@@ -4,7 +4,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { fetchOriginsFn, fetchPipelineAreasFn } from "@/lib/data.functions";
 import { setPipelineArea } from "@/lib/clint.functions";
-import { syncProductConfig, setProductActive, fetchProductConfig } from "@/lib/product-config.functions";
+import {
+  syncProductConfig,
+  setProductActive,
+  fetchProductConfig,
+} from "@/lib/product-config.functions";
 import { syncChannels, fetchChannels } from "@/lib/channels.functions";
 import { AREA_LABELS, AREA_ORDER, type BusinessArea } from "@/lib/pipeline-areas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,8 +38,18 @@ type Row = {
 };
 
 async function fetchRows(): Promise<Row[]> {
-  const origins = (await fetchOriginsFn()) as Array<{ id: string; name: string; group_name: string | null; archived: boolean }>;
-  const areas = (await fetchPipelineAreasFn()) as Array<{ pipeline_id: string; area: string; ativo: boolean; auto_classified: boolean }>;
+  const origins = (await fetchOriginsFn()) as Array<{
+    id: string;
+    name: string;
+    group_name: string | null;
+    archived: boolean;
+  }>;
+  const areas = (await fetchPipelineAreasFn()) as Array<{
+    pipeline_id: string;
+    area: string;
+    ativo: boolean;
+    auto_classified: boolean;
+  }>;
 
   const areaById = new Map(areas.map((a) => [a.pipeline_id, a]));
   return origins.map((o) => {
@@ -55,11 +69,15 @@ function AreasConfig() {
   const qc = useQueryClient();
   const [view, setView] = useState<"pipelines" | "produtos" | "canais">("pipelines");
   const [filter, setFilter] = useState<BusinessArea | "ALL">("ALL");
-  const { data: rows = [], isLoading } = useQuery({ queryKey: ["bi_areas_config"], queryFn: fetchRows });
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: ["bi_areas_config"],
+    queryFn: fetchRows,
+  });
 
   const setAreaFn = useServerFn(setPipelineArea);
   const mutation = useMutation({
-    mutationFn: (vars: { pipelineId: string; area: string; ativo: boolean }) => setAreaFn({ data: vars }),
+    mutationFn: (vars: { pipelineId: string; area: string; ativo: boolean }) =>
+      setAreaFn({ data: vars }),
     onSuccess: () => {
       toast.success("Área atualizada");
       qc.invalidateQueries({ queryKey: ["bi_areas_config"] });
@@ -91,7 +109,12 @@ function AreasConfig() {
   // Garante que todo produto de PRODUCT_GROUPS tenha uma linha aqui, na primeira
   // vez que a lista vier vazia (ex.: antes da migration ser aplicada não há nada).
   useEffect(() => {
-    if (view === "produtos" && !productsLoading && products.length === 0 && !syncProductsMutation.isPending) {
+    if (
+      view === "produtos" &&
+      !productsLoading &&
+      products.length === 0 &&
+      !syncProductsMutation.isPending
+    ) {
       syncProductsMutation.mutate();
     }
   }, [view, productsLoading, products.length]);
@@ -131,7 +154,11 @@ function AreasConfig() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">
-            {view === "pipelines" ? "Dicionário de Pipelines" : view === "produtos" ? "Produtos" : "Canais"}
+            {view === "pipelines"
+              ? "Dicionário de Pipelines"
+              : view === "produtos"
+                ? "Produtos"
+                : "Canais"}
           </h2>
           <p className="text-sm text-muted-foreground">
             {view === "pipelines"
@@ -157,7 +184,9 @@ function AreasConfig() {
               <button
                 onClick={() => setFilter("ALL")}
                 className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-                  filter === "ALL" ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/70"
+                  filter === "ALL"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary hover:bg-secondary/70"
                 }`}
               >
                 Todos ({rows.length})
@@ -169,7 +198,9 @@ function AreasConfig() {
                     key={a}
                     onClick={() => setFilter(a)}
                     className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-                      filter === a ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/70"
+                      filter === a
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary hover:bg-secondary/70"
                     }`}
                   >
                     {AREA_LABELS[a]} ({count})
@@ -219,7 +250,11 @@ function AreasConfig() {
                         <Switch
                           checked={r.ativo}
                           onCheckedChange={(checked) =>
-                            mutation.mutate({ pipelineId: r.pipeline_id, area: r.area, ativo: checked })
+                            mutation.mutate({
+                              pipelineId: r.pipeline_id,
+                              area: r.area,
+                              ativo: checked,
+                            })
                           }
                         />
                       </div>
@@ -240,8 +275,8 @@ function AreasConfig() {
               <div className="text-muted-foreground">Carregando…</div>
             ) : products.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">
-                Nenhum produto encontrado. Verifique se a migration `bi_product_config`
-                já foi aplicada no banco.
+                Nenhum produto encontrado. Verifique se a migration `bi_product_config` já foi
+                aplicada no banco.
               </p>
             ) : (
               products.map((p) => {
@@ -287,8 +322,8 @@ function AreasConfig() {
               <div className="text-muted-foreground">Carregando…</div>
             ) : channels.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">
-                Nenhum canal encontrado. Verifique se a migration `bi_channels` já foi
-                aplicada no banco.
+                Nenhum canal encontrado. Verifique se a migration `bi_channels` já foi aplicada no
+                banco.
               </p>
             ) : (
               channels.map((c) => (
@@ -302,7 +337,9 @@ function AreasConfig() {
                       {c.clint_group_names.length > 0 && (
                         <span>grupo Clint: {c.clint_group_names.join(", ")}</span>
                       )}
-                      {c.clint_group_names.length > 0 && c.sck_prefixes.length > 0 && <span> · </span>}
+                      {c.clint_group_names.length > 0 && c.sck_prefixes.length > 0 && (
+                        <span> · </span>
+                      )}
                       {c.sck_prefixes.length > 0 && <span>sck: {c.sck_prefixes.join(", ")}.*</span>}
                       {c.clint_group_names.length === 0 && c.sck_prefixes.length === 0 && (
                         <span className="italic">sem mapeamento ainda — placeholder</span>

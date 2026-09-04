@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -45,9 +46,7 @@ export type FunilLostStatus = {
 const PAGE_SIZE = 1000;
 
 async function fetchAllDeals(supabase: any): Promise<FunilDeal[]> {
-  const { count } = await supabase
-    .from("clint_deals")
-    .select("*", { count: "exact", head: true });
+  const { count } = await supabase.from("clint_deals").select("*", { count: "exact", head: true });
   const total = count ?? 0;
   if (total === 0) return [];
   const pages = Math.ceil(total / PAGE_SIZE);
@@ -55,7 +54,9 @@ async function fetchAllDeals(supabase: any): Promise<FunilDeal[]> {
     Array.from({ length: pages }, (_, i) =>
       supabase
         .from("clint_deals")
-        .select("id,origin_id,origin_name,stage,stage_id,status,value,created_at,won_at,lost_at,lost_status_id,won_by_name,user_name,contact_name,contact_email")
+        .select(
+          "id,origin_id,origin_name,stage,stage_id,status,value,created_at,won_at,lost_at,lost_status_id,won_by_name,user_name,contact_name,contact_email",
+        )
         .order("created_at", { ascending: false })
         .range(i * PAGE_SIZE, (i + 1) * PAGE_SIZE - 1),
     ),
@@ -65,18 +66,23 @@ async function fetchAllDeals(supabase: any): Promise<FunilDeal[]> {
   return all;
 }
 
-export const fetchFunisDataFn = createServerFn({ method: "GET" }).handler(async () => {
-  const supabase = await admin();
-  const [deals, originsRes, stagesRes, lostRes] = await Promise.all([
-    fetchAllDeals(supabase),
-    supabase.from("clint_origins").select("id,name,group_name").order("name"),
-    supabase.from("clint_origin_stages").select("id,origin_id,label,stage_order,type").order("stage_order"),
-    supabase.from("clint_lost_statuses").select("id,label"),
-  ]);
-  return {
-    deals,
-    origins: (originsRes.data ?? []) as FunilOrigin[],
-    stages: (stagesRes.data ?? []) as FunilStage[],
-    lostStatuses: (lostRes.data ?? []) as FunilLostStatus[],
-  };
-});
+export const fetchFunisDataFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const supabase = await admin();
+    const [deals, originsRes, stagesRes, lostRes] = await Promise.all([
+      fetchAllDeals(supabase),
+      supabase.from("clint_origins").select("id,name,group_name").order("name"),
+      supabase
+        .from("clint_origin_stages")
+        .select("id,origin_id,label,stage_order,type")
+        .order("stage_order"),
+      supabase.from("clint_lost_statuses").select("id,label"),
+    ]);
+    return {
+      deals,
+      origins: (originsRes.data ?? []) as FunilOrigin[],
+      stages: (stagesRes.data ?? []) as FunilStage[],
+      lostStatuses: (lostRes.data ?? []) as FunilLostStatus[],
+    };
+  });

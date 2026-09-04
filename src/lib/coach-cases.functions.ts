@@ -9,7 +9,8 @@ async function admin() {
 
 function assertOwner(email: string | null | undefined) {
   const e = (email ?? "").trim().toLowerCase();
-  if (!CASE_OWNER_EMAILS.includes(e)) throw new Error("Sem permissão para acessar os cases de treinamento.");
+  if (!CASE_OWNER_EMAILS.includes(e))
+    throw new Error("Sem permissão para acessar os cases de treinamento.");
 }
 
 export type CaseCandidate = {
@@ -35,13 +36,22 @@ export type TrainingCase = {
   abertura: { o_que_foi_feito: string; por_que_nao_funciona: string; modelo_melhor: string };
   objecoes: { objecao: string; resposta_dada: string; resposta_ideal: string; tecnica: string }[];
   trechos: { quem: string; texto: string; comentario_ia: string }[];
-  roteiro: { bloco: string; minutos: number; como_conduzir: string; perguntas_para_equipe: string[] }[];
-  roleplay: { cenario: string; papel_cliente: string; objecoes_do_cliente: string[]; criterios_avaliacao: string[] };
+  roteiro: {
+    bloco: string;
+    minutos: number;
+    como_conduzir: string;
+    perguntas_para_equipe: string[];
+  }[];
+  roleplay: {
+    cenario: string;
+    papel_cliente: string;
+    objecoes_do_cliente: string[];
+    criterios_avaliacao: string[];
+  };
   mensagens_modelo: { situacao: string; texto: string }[];
   compromissos: string[];
   indicador_acompanhamento: string;
 };
-
 
 const AI_SOURCES = new Set(["AI_CONVERSATION"]);
 
@@ -65,7 +75,9 @@ export const listCaseCandidatesFn = createServerFn({ method: "POST" })
     // 1) Conversas humanas (não-IA) com volume relevante
     const { data: convs, error: convErr } = await db
       .from("coach_conversations")
-      .select("id, seller_name, seller_email, contact_name, message_count, last_message_at, is_ai_conversation")
+      .select(
+        "id, seller_name, seller_email, contact_name, message_count, last_message_at, is_ai_conversation",
+      )
       .gte("last_message_at", since)
       .eq("is_ai_conversation", false)
       .gte("message_count", 10)
@@ -106,9 +118,13 @@ export const listCaseCandidatesFn = createServerFn({ method: "POST" })
       .select("conversation_id, score_geral, resumo, pontos_melhoria, analyzed_at")
       .in("conversation_id", eligible)
       .eq("status", "ok")
-      .order("analyzed_at", { ascending: false });
+      .order("analyzed_at", { ascending: false })
+      // Só a análise mais recente de cada conversa é usada; o teto cobre o caso
+      // de haver várias por conversa.
+      .limit(eligible.length * 5);
     const byConv = new Map<string, any>();
-    for (const a of (analyses ?? []) as any[]) if (!byConv.has(a.conversation_id)) byConv.set(a.conversation_id, a);
+    for (const a of (analyses ?? []) as any[])
+      if (!byConv.has(a.conversation_id)) byConv.set(a.conversation_id, a);
 
     const convById = new Map<string, any>();
     for (const c of convRows) convById.set((c as any).id, c);
@@ -138,7 +154,6 @@ export const listCaseCandidatesFn = createServerFn({ method: "POST" })
       .slice(0, 30);
   });
 
-
 export const generateTrainingCaseFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { conversationId: string; duracao?: number; foco?: string }) => d)
@@ -151,7 +166,9 @@ export const generateTrainingCaseFn = createServerFn({ method: "POST" })
 
     const { data: conv, error: cErr } = await db
       .from("coach_conversations")
-      .select("id, seller_name, seller_email, contact_name, origin_name, stage, deal_value, first_message_at, last_message_at")
+      .select(
+        "id, seller_name, seller_email, contact_name, origin_name, stage, deal_value, first_message_at, last_message_at",
+      )
       .eq("id", data.conversationId)
       .maybeSingle();
     if (cErr) throw new Error(cErr.message);
@@ -159,7 +176,9 @@ export const generateTrainingCaseFn = createServerFn({ method: "POST" })
 
     const { data: analysis } = await db
       .from("coach_analyses")
-      .select("score_geral, resumo, pontos_fortes, pontos_melhoria, objecoes, oportunidades_perdidas, sugestoes, justificativa_nota")
+      .select(
+        "score_geral, resumo, pontos_fortes, pontos_melhoria, objecoes, oportunidades_perdidas, sugestoes, justificativa_nota",
+      )
       .eq("conversation_id", data.conversationId)
       .eq("status", "ok")
       .order("analyzed_at", { ascending: false })
@@ -174,7 +193,10 @@ export const generateTrainingCaseFn = createServerFn({ method: "POST" })
       .limit(200);
 
     const transcript = (msgs ?? [])
-      .map((m: any) => `[${m.direction === "outbound" ? "VENDEDOR" : "CLIENTE"} ${new Date(m.sent_at).toLocaleString("pt-BR")}] ${String(m.body ?? "").slice(0, 600)}`)
+      .map(
+        (m: any) =>
+          `[${m.direction === "outbound" ? "VENDEDOR" : "CLIENTE"} ${new Date(m.sent_at).toLocaleString("pt-BR")}] ${String(m.body ?? "").slice(0, 600)}`,
+      )
       .join("\n");
     if (!transcript.trim()) throw new Error("Conversa sem mensagens para gerar o case");
 
@@ -216,13 +238,19 @@ export const generateTrainingCaseFn = createServerFn({ method: "POST" })
       }),
     });
     if (!resp.ok) {
-      if (resp.status === 429) throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
-      if (resp.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
+      if (resp.status === 429)
+        throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
+      if (resp.status === 402)
+        throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
       throw new Error(`Lovable AI ${resp.status}: ${await resp.text().catch(() => "")}`);
     }
     const j = (await resp.json()) as any;
     let p: any = {};
-    try { p = JSON.parse(j?.choices?.[0]?.message?.content ?? "{}"); } catch { p = {}; }
+    try {
+      p = JSON.parse(j?.choices?.[0]?.message?.content ?? "{}");
+    } catch {
+      p = {};
+    }
 
     return {
       generated_at: new Date().toISOString(),
@@ -231,13 +259,20 @@ export const generateTrainingCaseFn = createServerFn({ method: "POST" })
       titulo: p.titulo ?? `Case de treinamento — ${seller}`,
       duracao_min: duracao,
       contexto: p.contexto ?? "",
-      objetivo_aprendizagem: Array.isArray(p.objetivo_aprendizagem) ? p.objetivo_aprendizagem.slice(0, 6) : [],
+      objetivo_aprendizagem: Array.isArray(p.objetivo_aprendizagem)
+        ? p.objetivo_aprendizagem.slice(0, 6)
+        : [],
       o_que_a_ia_viu: Array.isArray(p.o_que_a_ia_viu) ? p.o_que_a_ia_viu.slice(0, 8) : [],
       abertura: p.abertura ?? { o_que_foi_feito: "", por_que_nao_funciona: "", modelo_melhor: "" },
       objecoes: Array.isArray(p.objecoes) ? p.objecoes.slice(0, 6) : [],
       trechos: Array.isArray(p.trechos) ? p.trechos.slice(0, 8) : [],
       roteiro: Array.isArray(p.roteiro) ? p.roteiro.slice(0, 8) : [],
-      roleplay: p.roleplay ?? { cenario: "", papel_cliente: "", objecoes_do_cliente: [], criterios_avaliacao: [] },
+      roleplay: p.roleplay ?? {
+        cenario: "",
+        papel_cliente: "",
+        objecoes_do_cliente: [],
+        criterios_avaliacao: [],
+      },
       mensagens_modelo: Array.isArray(p.mensagens_modelo) ? p.mensagens_modelo.slice(0, 8) : [],
       compromissos: Array.isArray(p.compromissos) ? p.compromissos.slice(0, 8) : [],
       indicador_acompanhamento: p.indicador_acompanhamento ?? "",

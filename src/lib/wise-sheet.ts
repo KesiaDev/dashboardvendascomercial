@@ -20,7 +20,9 @@ export type WiseSheetRow = {
 /** "€2.400,00" | "R$ 14.273,28" | "5,9472" → number */
 export function parseMoney(raw: string | undefined | null): number {
   if (!raw) return 0;
-  const s = String(raw).replace(/[^\d,.-]/g, "").trim();
+  const s = String(raw)
+    .replace(/[^\d,.-]/g, "")
+    .trim();
   if (!s) return 0;
   // formato pt-BR: ponto = milhar, vírgula = decimal
   const normalized = s.replace(/\./g, "").replace(",", ".");
@@ -31,7 +33,9 @@ export function parseMoney(raw: string | undefined | null): number {
 /** "02/07/2026" → "2026-07-02" */
 export function parseDateBR(raw: string | undefined | null): string | null {
   if (!raw) return null;
-  const m = String(raw).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  const m = String(raw)
+    .trim()
+    .match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   if (!m) return null;
   const [, d, mo, y] = m;
   const yyyy = y.length === 2 ? `20${y}` : y;
@@ -54,8 +58,14 @@ export function mapWiseProduct(descricao: string): string | null {
 }
 
 /** Extrai a situação (2º segmento da descrição) e se é inadimplência. */
-export function parseSituacao(descricao: string): { situacao: string | null; inadimplente: boolean } {
-  const parts = descricao.split("-").map((p) => p.trim()).filter(Boolean);
+export function parseSituacao(descricao: string): {
+  situacao: string | null;
+  inadimplente: boolean;
+} {
+  const parts = descricao
+    .split("-")
+    .map((p) => p.trim())
+    .filter(Boolean);
   const situacao = parts.length > 1 && !EMAIL_RE.test(parts[1]) ? parts[1] : null;
   const inadimplente = /inadimpl/i.test(descricao);
   return { situacao, inadimplente };

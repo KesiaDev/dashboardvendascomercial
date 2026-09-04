@@ -14,6 +14,12 @@ import {
   fetchChannelsFn,
 } from "@/lib/data.functions";
 import type { BusinessArea } from "@/lib/pipeline-areas";
+import { conversionRate } from "@/lib/conversion";
+import {
+  canonicalSellerName,
+  isExcludedSeller as isExcludedSellerCanonical,
+  resolveSeller,
+} from "@/lib/sellers";
 import { classifyChannel } from "@/lib/channels";
 
 export type Deal = {
@@ -48,7 +54,8 @@ export function periodStart(p: Period): Date | null {
   if (p === "day") return d;
   if (p === "week") d.setDate(d.getDate() - 7);
   else if (p === "month") return new Date(now.getFullYear(), now.getMonth(), 1);
-  else if (p === "quarter") return new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+  else if (p === "quarter")
+    return new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
   else if (p === "semester") return new Date(now.getFullYear(), now.getMonth() < 6 ? 0 : 6, 1);
   else if (p === "year") return new Date(now.getFullYear(), 0, 1);
   return d;
@@ -58,9 +65,7 @@ export function periodRange(period: Period, dateRange?: { from?: Date; to?: Date
   const usingRange = !!dateRange?.from;
   const start = usingRange ? dateRange!.from! : periodStart(period);
   const end =
-    usingRange && dateRange?.to
-      ? new Date(dateRange.to.getTime() + 24 * 60 * 60 * 1000 - 1)
-      : null;
+    usingRange && dateRange?.to ? new Date(dateRange.to.getTime() + 24 * 60 * 60 * 1000 - 1) : null;
   return { start, end };
 }
 
@@ -156,7 +161,10 @@ export function compareMetaRealizado(
     realizado.set(channelId, cur);
   }
 
-  const meta = new Map<string, { leads: number; vendas: number; faturamento: number; investimento: number }>();
+  const meta = new Map<
+    string,
+    { leads: number; vendas: number; faturamento: number; investimento: number }
+  >();
   for (const t of targets) {
     if (!t.channel_id || t.product_id) continue;
     const periodo = new Date(t.periodo);
@@ -200,7 +208,7 @@ export function filterDealsByArea(
   area: BusinessArea | null,
 ): Deal[] {
   return deals.filter((d) => {
-    const dealArea = d.origin_id ? areaMap.get(d.origin_id) ?? "OUTROS" : "OUTROS";
+    const dealArea = d.origin_id ? (areaMap.get(d.origin_id) ?? "OUTROS") : "OUTROS";
     if (area) return dealArea === area;
     return dealArea !== "TESTES";
   });
@@ -222,15 +230,11 @@ export function filterByPeriodCreated(deals: Deal[], start: Date | null, end: Da
  * (ex.: equipe interna, suporte). Comparação por nome normalizado (sem acento,
  * minúsculo, sem espaços duplicados) para resistir a variações de grafia.
  */
-const EXCLUDED_SELLERS = new Set([
-  "camila faria",
-  "aline gonçalves",
-]);
-
-
 export function isExcludedSeller(name: string | null | undefined): boolean {
-  if (!name) return false;
-  return EXCLUDED_SELLERS.has(name.toLowerCase().trim().replace(/\s+/g, " "));
+  // A lista canônica vive em src/lib/sellers.ts. A implementação anterior
+  // comparava string EXATA com cedilha, então um "Aline Goncalves" vindo de
+  // export CSV passava pelo filtro e o faturamento dela entrava nas métricas.
+  return isExcludedSellerCanonical(name);
 }
 
 /**
@@ -246,7 +250,11 @@ export function isExcludedSeller(name: string | null | undefined): boolean {
  */
 export function effectiveWinner(d: Deal): { id: string; name: string; email: string } | null {
   if (d.won_by_user_id) {
-    return { id: d.won_by_user_id, name: d.won_by_name ?? d.won_by_email ?? "—", email: d.won_by_email ?? "" };
+    return {
+      id: d.won_by_user_id,
+      name: d.won_by_name ?? d.won_by_email ?? "—",
+      email: d.won_by_email ?? "",
+    };
   }
   return null;
 }
@@ -262,7 +270,12 @@ export type SellerStats = {
   revenue: number;
 };
 
-function convertValue(value: number, dealCurrency: string | null, displayCurrency: "BRL" | "EUR", rate: number) {
+function convertValue(
+  value: number,
+  dealCurrency: string | null,
+  displayCurrency: "BRL" | "EUR",
+  rate: number,
+) {
   const dealCur = (dealCurrency ?? "BRL").toUpperCase();
   if (dealCur === displayCurrency) return value;
   if (dealCur === "EUR" && displayCurrency === "BRL") return value * rate;
@@ -290,7 +303,16 @@ export function rankSellers(
   const ensure = (id: string, name: string, email: string): SellerStats => {
     let cur = map.get(id);
     if (!cur) {
-      cur = { user_id: id, name: cleanSellerName(name), email, leads: 0, won: 0, lost: 0, open: 0, revenue: 0 };
+      cur = {
+        user_id: id,
+        name: cleanSellerName(name),
+        email,
+        leads: 0,
+        won: 0,
+        lost: 0,
+        open: 0,
+        revenue: 0,
+      };
       map.set(id, cur);
     }
     return cur;
@@ -378,8 +400,19 @@ export function computeAreaKpis(
     revenue += convertValue(d.value, d.currency, currency, rate);
   }
 
-  const closed = won + lost;
-  return { leads, won, lost, open, revenue, convRate: closed > 0 ? won / closed : 0 };
+  // Conversão pela DEFINIÇÃO OFICIAL (src/lib/conversion.ts): ganhos e perdidos
+  // ambos pela data de FECHAMENTO. O código anterior contava os perdidos por
+  // created_at e os ganhos por won_at — uma razão entre duas coortes diferentes,
+  // que fazia /executivo e /comercial divergirem para o mesmo período.
+  //
+  // `leads` e `open` continuam datados pela criação: são outra pergunta
+  // ("quantos leads entraram no mês?"), não o denominador da conversão.
+  const conv = conversionRate(
+    allDealsInArea.filter((d) => !isExcludedSeller(d.user_name) && !phantomWonIds?.has(d.id)),
+    start,
+    end,
+  );
+  return { leads, won, lost: conv.lost, open, revenue, convRate: conv.rate };
 }
 
 // ── Cruzamento Clint x Hotmart (vendedor x produto) ─────────────────────────
@@ -409,33 +442,12 @@ export type SaleRecord = {
  * confiável que o cruzamento por e-mail porque vem direto da Hotmart, sem
  * adivinhação de qual negócio da Clint corresponde à venda.
  */
-const KNOWN_SELLERS = ["Gisele Pimentel", "Fabio Nadal", "João Pessoa", "Rita Bandeira", "Luana Guimarães", "Kesia Nandi"];
 
-const ACCENT_MAP: Record<string, string> = {
-  á: "a", à: "a", â: "a", ã: "a", ä: "a",
-  é: "e", è: "e", ê: "e", ë: "e",
-  í: "i", ì: "i", î: "i", ï: "i",
-  ó: "o", ò: "o", ô: "o", õ: "o", ö: "o",
-  ú: "u", ù: "u", û: "u", ü: "u",
-  ç: "c", ñ: "n",
-};
-
-function normalizeName(s: string): string {
-  return s
-    .toLowerCase()
-    .split("")
-    .map((ch) => ACCENT_MAP[ch] ?? ch)
-    .join("");
-}
-
+// A lista de vendedores vive em src/lib/sellers.ts. A que ficava aqui tinha a
+// Luana (que saiu) e não tinha a Pamela — divergindo da lista logo abaixo, no
+// mesmo arquivo.
 function matchAffiliateToSeller(nomeAfiliado: string | null): string | null {
-  if (!nomeAfiliado) return null;
-  const normalized = normalizeName(nomeAfiliado);
-  for (const seller of KNOWN_SELLERS) {
-    const tokens = normalizeName(seller).split(/\s+/);
-    if (tokens.every((t) => normalized.includes(t))) return seller;
-  }
-  return null;
+  return resolveSeller(nomeAfiliado)?.name ?? null;
 }
 
 function isResetRelacional(produtoOriginal: string): boolean {
@@ -448,29 +460,17 @@ function isResetRelacional(produtoOriginal: string): boolean {
  * (fechamento manual) e "kesia@llmidiaco.com" virem UMA única linha nos
  * relatórios em vez de duplicar/triplicar o mesmo vendedor.
  */
-const CANONICAL_SELLERS: { name: string; tokens: string[] }[] = [
-  { name: "Kesia Nandi", tokens: ["kesia", "nandi"] },
-  { name: "Gisele Pimentel", tokens: ["gisele"] },
-  { name: "Fabio Nadal", tokens: ["nadal"] },
-  { name: "João Pessoa", tokens: ["pessoa"] },
-  { name: "Rita Bandeira", tokens: ["rita"] },
-  { name: "Pamela", tokens: ["pamela"] },
-];
-
 /**
  * Colapsa espaços duplos (comuns em nomes vindos da Clint, ex.: "Fabio  Nadal")
- * e unifica variantes conhecidas do mesmo vendedor num nome canónico único.
+ * e unifica variantes do mesmo vendedor num nome canônico único, para que
+ * "Késia weige Nandi", "Kesia Nandi" e "kesia@llmidiaco.com" virem UMA linha
+ * nos relatórios em vez de três.
+ *
+ * A lista vive em src/lib/sellers.ts.
  */
 export function cleanSellerName(name: string): string {
-  const cleaned = name.trim().replace(/\s+/g, " ");
-  if (!cleaned) return cleaned;
-  const norm = normalizeName(cleaned.includes("@") ? cleaned.split("@")[0] : cleaned);
-  for (const s of CANONICAL_SELLERS) {
-    if (s.tokens.some((t) => norm.includes(t))) return s.name;
-  }
-  return cleaned;
+  return canonicalSellerName(name);
 }
-
 
 export async function fetchAllSales(): Promise<SaleRecord[]> {
   return (await fetchAllSalesFn()) as SaleRecord[];
@@ -575,7 +575,12 @@ export function matchSellerProduct(
     if (affiliateSeller) {
       const seller = cleanSellerName(affiliateSeller);
       const key = `${seller}::${s.produto_grupo}`;
-      const cur = agg.get(key) ?? { seller, produto_grupo: s.produto_grupo, vendas: 0, faturamento: 0 };
+      const cur = agg.get(key) ?? {
+        seller,
+        produto_grupo: s.produto_grupo,
+        vendas: 0,
+        faturamento: 0,
+      };
       cur.vendas += 1;
       cur.faturamento += s.faturamento_liquido_brl ?? 0;
       agg.set(key, cur);
@@ -594,15 +599,24 @@ export function matchSellerProduct(
     if (candidates.length > 1 && s.data_venda) {
       const saleTime = new Date(s.data_venda).getTime();
       best = candidates.reduce((closest, cur) => {
-        const closestDelta = closest.won_at ? Math.abs(new Date(closest.won_at).getTime() - saleTime) : Infinity;
-        const curDelta = cur.won_at ? Math.abs(new Date(cur.won_at).getTime() - saleTime) : Infinity;
+        const closestDelta = closest.won_at
+          ? Math.abs(new Date(closest.won_at).getTime() - saleTime)
+          : Infinity;
+        const curDelta = cur.won_at
+          ? Math.abs(new Date(cur.won_at).getTime() - saleTime)
+          : Infinity;
         return curDelta < closestDelta ? cur : closest;
       }, best);
     }
 
     const seller = cleanSellerName(effectiveWinner(best)!.name);
     const key = `${seller}::${s.produto_grupo}`;
-    const cur = agg.get(key) ?? { seller, produto_grupo: s.produto_grupo, vendas: 0, faturamento: 0 };
+    const cur = agg.get(key) ?? {
+      seller,
+      produto_grupo: s.produto_grupo,
+      vendas: 0,
+      faturamento: 0,
+    };
     cur.vendas += 1;
     cur.faturamento += s.faturamento_liquido_brl ?? 0;
     agg.set(key, cur);

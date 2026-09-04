@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 /**
  * Versão LEVE do detalhamento V3, usada pelos cards de meta (mensal/trimestral).
@@ -16,14 +18,18 @@ export type OrigemV3ResumoRow = {
   ganhos: number;
 };
 
-const normEmail = (e: unknown) => String(e ?? "").trim().toLowerCase();
-const chunk = <T,>(arr: T[], size: number) => {
+const normEmail = (e: unknown) =>
+  String(e ?? "")
+    .trim()
+    .toLowerCase();
+const chunk = <T>(arr: T[], size: number) => {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
 };
 
 export const fetchOrigemV3ResumoFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<OrigemV3ResumoRow[]> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -32,20 +38,18 @@ export const fetchOrigemV3ResumoFn = createServerFn({ method: "GET" })
     const pageSize = 1000;
 
     // --- Leads V3 do período (só as colunas necessárias) ---
-    const deals: any[] = [];
-    for (let page = 0; page < 20; page++) {
-      const { data: c, error } = await supabaseAdmin
-        .from("clint_deals")
-        .select("created_at,contact_tags,contact_email")
+    const f = <Q>(q: Q) =>
+      (q as any)
         .eq("origin_name", "PIPELINE_COMERCIAL-V3")
         .gte("created_at", data.from)
-        .lte("created_at", `${data.to}T23:59:59`)
-        .order("created_at", { ascending: false })
-        .range(page * pageSize, page * pageSize + pageSize - 1);
-      if (error) throw new Error(error.message);
-      deals.push(...(c ?? []));
-      if ((c ?? []).length < pageSize) break;
-    }
+        .lte("created_at", `${data.to}T23:59:59`);
+    const deals = await fetchAllRows<any>(
+      ({ from, to }) =>
+        f(supabaseAdmin.from("clint_deals").select("created_at,contact_tags,contact_email"))
+          .order("created_at", { ascending: false })
+          .range(from, to),
+      () => f(supabaseAdmin.from("clint_deals").select("*", { count: "exact", head: true })),
+    );
 
     const acc = new Map<string, OrigemV3ResumoRow>();
     const ensure = (mes: string, origem: string) => {
@@ -91,7 +95,9 @@ export const fetchOrigemV3ResumoFn = createServerFn({ method: "GET" })
         .from("clint_deals")
         .select("contact_email,contact_tags,created_at")
         .eq("origin_name", "PIPELINE_COMERCIAL-V3")
-        .in("contact_email", part);
+        .in("contact_email", part)
+        // Um contato pode ter vários negócios no mesmo funil.
+        .limit(part.length * 20);
       for (const d of (c ?? []) as any[]) {
         const hit = tagBucket(d.contact_tags);
         const e = normEmail(d.contact_email);
@@ -116,7 +122,8 @@ export const fetchOrigemV3ResumoFn = createServerFn({ method: "GET" })
             : null;
       if (!declaradoV3 && !bucketDeclarado) continue;
       const email = normEmail(s.client_email);
-      const linha = bucketDeclarado ?? (email ? bucketByEmail.get(email) : undefined) ?? "Sessão Estratégica";
+      const linha =
+        bucketDeclarado ?? (email ? bucketByEmail.get(email) : undefined) ?? "Sessão Estratégica";
       ensure(String(s.sale_date).slice(0, 7), linha).ganhos++;
     }
 

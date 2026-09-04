@@ -5,12 +5,23 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Pencil, Target, TrendingUp, Award } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OkrBoard } from "@/components/okr-board";
-import { getMetasComercialFn, updateMetaComercialFn, type MetaKey } from "@/lib/metas-comercial.functions";
+import {
+  getMetasComercialFn,
+  updateMetaComercialFn,
+  type MetaKey,
+} from "@/lib/metas-comercial.functions";
 
 export const Route = createFileRoute("/_app/metas-comercial")({
   component: MetasComercialPage,
@@ -56,82 +67,84 @@ function MetasComercialPage() {
         </TabsContent>
 
         <TabsContent value="metas" className="mt-4 space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        <MetaCard
-          title="Frontend"
-          subtitle="Mentoria Tráfego + Formação Redes Sociais"
-          icon={<Target className="h-4 w-4" />}
-          meta={data.metas.frontend}
-          realizado={data.realizado.frontend}
-          onSave={(v) => mut.mutate({ key: "meta_comercial_frontend", valor: v })}
-          saving={mut.isPending}
-        />
-        <MetaCard
-          title="HT + Renovações"
-          subtitle="Accelerator + Renovações"
-          icon={<TrendingUp className="h-4 w-4" />}
-          meta={data.metas.ht}
-          realizado={data.realizado.ht}
-          onSave={(v) => mut.mutate({ key: "meta_comercial_ht_renov", valor: v })}
-          saving={mut.isPending}
-        />
-        <MetaCard
-          title="MAS"
-          subtitle="Master and Scale"
-          icon={<Award className="h-4 w-4" />}
-          meta={data.metas.mas}
-          realizado={data.realizado.mas}
-          onSave={(v) => mut.mutate({ key: "meta_comercial_mas", valor: v })}
-          saving={mut.isPending}
-        />
-      </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <MetaCard
+              title="Frontend"
+              subtitle="Mentoria Tráfego + Formação Redes Sociais"
+              icon={<Target className="h-4 w-4" />}
+              meta={data.metas.frontend}
+              realizado={data.realizado.frontend}
+              onSave={(v) => mut.mutate({ key: "meta_comercial_frontend", valor: v })}
+              saving={mut.isPending}
+            />
+            <MetaCard
+              title="HT + Renovações"
+              subtitle="Accelerator + Renovações"
+              icon={<TrendingUp className="h-4 w-4" />}
+              meta={data.metas.ht}
+              realizado={data.realizado.ht}
+              onSave={(v) => mut.mutate({ key: "meta_comercial_ht_renov", valor: v })}
+              saving={mut.isPending}
+            />
+            <MetaCard
+              title="MAS"
+              subtitle="Master and Scale"
+              icon={<Award className="h-4 w-4" />}
+              meta={data.metas.mas}
+              realizado={data.realizado.mas}
+              onSave={(v) => mut.mutate({ key: "meta_comercial_mas", valor: v })}
+              saving={mut.isPending}
+            />
+          </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Vendas por funil de origem</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {data.funnelBreakdown.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Nenhuma venda registrada em {data.year} ainda.</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Funil de origem</TableHead>
-                  <TableHead className="text-right">Frontend</TableHead>
-                  <TableHead className="text-right">HT + Renov</TableHead>
-                  <TableHead className="text-right">MAS</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.funnelBreakdown.map((r) => (
-                  <TableRow key={r.funnel}>
-                    <TableCell className="font-medium">{r.funnel}</TableCell>
-                    <TableCell className="text-right">{r.frontend}</TableCell>
-                    <TableCell className="text-right">{r.ht}</TableCell>
-                    <TableCell className="text-right">{r.mas}</TableCell>
-                    <TableCell className="text-right font-semibold">{r.total}</TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="bg-muted/40 font-semibold">
-                  <TableCell>Total</TableCell>
-                  <TableCell className="text-right">{data.realizado.frontend}</TableCell>
-                  <TableCell className="text-right">{data.realizado.ht}</TableCell>
-                  <TableCell className="text-right">{data.realizado.mas}</TableCell>
-                  <TableCell className="text-right">
-                    {data.realizado.frontend + data.realizado.ht + data.realizado.mas}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          )}
-          <p className="mt-3 text-xs text-muted-foreground">
-            Fonte: fechamentos registrados em <em>Fechamento</em>. Cada venda conta 1 unidade
-            (parcelas da mesma venda não são somadas em duplicado).
-          </p>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Vendas por funil de origem</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.funnelBreakdown.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  Nenhuma venda registrada em {data.year} ainda.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Funil de origem</TableHead>
+                      <TableHead className="text-right">Frontend</TableHead>
+                      <TableHead className="text-right">HT + Renov</TableHead>
+                      <TableHead className="text-right">MAS</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.funnelBreakdown.map((r) => (
+                      <TableRow key={r.funnel}>
+                        <TableCell className="font-medium">{r.funnel}</TableCell>
+                        <TableCell className="text-right">{r.frontend}</TableCell>
+                        <TableCell className="text-right">{r.ht}</TableCell>
+                        <TableCell className="text-right">{r.mas}</TableCell>
+                        <TableCell className="text-right font-semibold">{r.total}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/40 font-semibold">
+                      <TableCell>Total</TableCell>
+                      <TableCell className="text-right">{data.realizado.frontend}</TableCell>
+                      <TableCell className="text-right">{data.realizado.ht}</TableCell>
+                      <TableCell className="text-right">{data.realizado.mas}</TableCell>
+                      <TableCell className="text-right">
+                        {data.realizado.frontend + data.realizado.ht + data.realizado.mas}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              )}
+              <p className="mt-3 text-xs text-muted-foreground">
+                Fonte: fechamentos registrados em <em>Fechamento</em>. Cada venda conta 1 unidade
+                (parcelas da mesma venda não são somadas em duplicado).
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

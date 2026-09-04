@@ -50,7 +50,7 @@ export function ArenaAdminPanel() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-500" />Competências mais fracas da equipa</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-warning-fg" />Competências mais fracas da equipa</CardTitle></CardHeader>
           <CardContent className="space-y-1.5">
             {data.team.weakest.length === 0 ? <p className="text-xs text-muted-foreground">Sem dados ainda.</p> :
               data.team.weakest.map((c) => (
@@ -113,7 +113,7 @@ export function ArenaAdminPanel() {
                     <TableCell>
                       <span className="text-xs">{fmtDate(s.lastPlayedAt)}</span>
                       {s.daysSinceLastPlay != null && s.daysSinceLastPlay >= 7 && (
-                        <Badge variant="outline" className="ml-2 text-[10px] border-amber-500/50 text-amber-600 dark:text-amber-400">{s.daysSinceLastPlay}d parado</Badge>
+                        <Badge variant="outline" className="ml-2 text-[10px] border-warning/50 text-warning-fg">{s.daysSinceLastPlay}d parado</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">

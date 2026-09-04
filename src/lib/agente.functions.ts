@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 function monthBounds(monthsAgo: number) {
   const now = new Date();
@@ -8,7 +9,14 @@ function monthBounds(monthsAgo: number) {
 }
 
 function aggregate(
-  deals: { user_name: string | null; user_email: string | null; status: string | null; value: number | null; won_at: string | null; lost_at: string | null }[],
+  deals: {
+    user_name: string | null;
+    user_email: string | null;
+    status: string | null;
+    value: number | null;
+    won_at: string | null;
+    lost_at: string | null;
+  }[],
   start: Date,
   end: Date,
 ) {
@@ -39,13 +47,17 @@ function aggregate(
       lost += 1;
     }
   }
+  // O laço acima já data ganhos por won_at e perdidos por lost_at, que é a
+  // definição oficial (src/lib/conversion.ts). Mantido inline porque agrega por
+  // vendedor no mesmo passo; se for mexer aqui, use conversionRate().
   const sellers = Array.from(bySeller.entries())
     .map(([name, s]) => ({
       name,
       ganhos: s.won,
       perdidos: s.lost,
       faturamento: Number(s.revenue.toFixed(2)),
-      taxa_conversao_pct: s.won + s.lost > 0 ? Number(((s.won / (s.won + s.lost)) * 100).toFixed(1)) : 0,
+      taxa_conversao_pct:
+        s.won + s.lost > 0 ? Number(((s.won / (s.won + s.lost)) * 100).toFixed(1)) : 0,
     }))
     .sort((a, b) => b.faturamento - a.faturamento);
   return {
@@ -58,6 +70,7 @@ function aggregate(
 }
 
 export const askAgent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { messages: { role: "user" | "assistant"; content: string }[] }) => d)
   .handler(async ({ data }) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -79,7 +92,9 @@ export const askAgent = createServerFn({ method: "POST" })
 
     let query = supabaseAdmin
       .from("clint_deals")
-      .select("user_name, user_email, status, value, origin_name, won_at, lost_at, created_at, origin_id")
+      .select(
+        "user_name, user_email, status, value, origin_name, won_at, lost_at, created_at, origin_id",
+      )
       .gte("created_at", sincePrev.toISOString())
       .limit(20000);
     if (comercialIds.length) query = query.in("origin_id", comercialIds);
@@ -94,7 +109,11 @@ export const askAgent = createServerFn({ method: "POST" })
     const deltaConv = current.taxa_conversao_pct - previous.taxa_conversao_pct;
     const deltaFaturamento =
       previous.faturamento > 0
-        ? Number((((current.faturamento - previous.faturamento) / previous.faturamento) * 100).toFixed(1))
+        ? Number(
+            (((current.faturamento - previous.faturamento) / previous.faturamento) * 100).toFixed(
+              1,
+            ),
+          )
         : null;
 
     const context = {
@@ -129,5 +148,8 @@ export const askAgent = createServerFn({ method: "POST" })
       .map((b: any) => b.text)
       .join("\n");
 
-    return { reply: text, context_summary: { vendedores: current.vendedores.length, ganhos_mes: current.ganhos } };
+    return {
+      reply: text,
+      context_summary: { vendedores: current.vendedores.length, ganhos_mes: current.ganhos },
+    };
   });

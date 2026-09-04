@@ -21,7 +21,8 @@ export const Route = createFileRoute("/_app/leads-dia")({
       { property: "og:title", content: "Leads por dia da semana | Painel Comercial" },
       {
         property: "og:description",
-        content: "Descubra o melhor e o pior dia de captação de leads e detecte discrepâncias semanais.",
+        content:
+          "Descubra o melhor e o pior dia de captação de leads e detecte discrepâncias semanais.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -76,9 +77,19 @@ function LeadsDiaPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-[150px]" />
+          <Input
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="w-[150px]"
+          />
           <span className="text-muted-foreground text-sm">até</span>
-          <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-[150px]" />
+          <Input
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="w-[150px]"
+          />
         </div>
       </div>
 
@@ -109,9 +120,9 @@ function LeadsDiaPage() {
             <Card>
               <CardContent className="pt-5">
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <TrendingUp className="h-4 w-4 text-emerald-500" /> Dia que mais chega
+                  <TrendingUp className="h-4 w-4 text-success-fg" /> Dia que mais chega
                 </p>
-                <p className="text-3xl font-black text-emerald-500">{data.melhor?.label ?? "—"}</p>
+                <p className="text-3xl font-black text-success-fg">{data.melhor?.label ?? "—"}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   média de {data.melhor?.media.toFixed(1) ?? 0} leads/dia
                 </p>
@@ -120,9 +131,9 @@ function LeadsDiaPage() {
             <Card>
               <CardContent className="pt-5">
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <TrendingDown className="h-4 w-4 text-rose-500" /> Dia que menos chega
+                  <TrendingDown className="h-4 w-4 text-destructive-fg" /> Dia que menos chega
                 </p>
-                <p className="text-3xl font-black text-rose-500">{data.pior?.label ?? "—"}</p>
+                <p className="text-3xl font-black text-destructive-fg">{data.pior?.label ?? "—"}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   média de {data.pior?.media.toFixed(1) ?? 0} leads/dia
                 </p>
@@ -146,7 +157,9 @@ function LeadsDiaPage() {
           {/* Média por dia da semana */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium">Média de leads por dia da semana</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Média de leads por dia da semana
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={260}>
@@ -189,7 +202,9 @@ function LeadsDiaPage() {
                     <tr key={d.dow} className="border-b border-border/50 hover:bg-secondary/30">
                       <td className="py-2.5 pr-4 font-medium">{d.label}</td>
                       <td className="py-2.5 pr-4 text-right tabular-nums font-bold">{d.leads}</td>
-                      <td className="py-2.5 pr-4 text-right tabular-nums text-muted-foreground">{d.dias}</td>
+                      <td className="py-2.5 pr-4 text-right tabular-nums text-muted-foreground">
+                        {d.dias}
+                      </td>
                       <td className="py-2.5 pr-4 text-right tabular-nums">{d.media.toFixed(1)}</td>
                       <td className="py-2.5 pr-4 text-right tabular-nums">{d.share.toFixed(1)}%</td>
                       <td className="py-2.5">
@@ -239,7 +254,9 @@ function LeadsDiaPage() {
                           <div
                             className="rounded-md py-1 text-xs font-semibold tabular-nums"
                             style={{
-                              background: v ? `hsl(243 75% 59% / ${0.12 + (v / maxHeat) * 0.75})` : "transparent",
+                              background: v
+                                ? `hsl(243 75% 59% / ${0.12 + (v / maxHeat) * 0.75})`
+                                : "transparent",
                               color: v / maxHeat > 0.55 ? "#fff" : undefined,
                             }}
                           >
@@ -259,13 +276,15 @@ function LeadsDiaPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" /> Dias fora do padrão (±2 desvios)
+                <AlertTriangle className="h-4 w-4 text-warning-fg" /> Dias fora do padrão (±2
+                desvios)
               </CardTitle>
             </CardHeader>
             <CardContent>
               {data.outliers.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4">
-                  Nenhuma discrepância relevante — a captação está estável dentro de cada dia da semana.
+                  Nenhuma discrepância relevante — a captação está estável dentro de cada dia da
+                  semana.
                 </p>
               ) : (
                 <table className="w-full text-sm">
@@ -291,7 +310,7 @@ function LeadsDiaPage() {
                         </td>
                         <td
                           className={`py-2 text-right tabular-nums font-semibold ${
-                            o.desvio > 0 ? "text-emerald-500" : "text-rose-500"
+                            o.desvio > 0 ? "text-success-fg" : "text-destructive-fg"
                           }`}
                         >
                           {o.desvio > 0 ? "+" : ""}
@@ -308,7 +327,9 @@ function LeadsDiaPage() {
           {/* Por hora */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium">Horário de chegada dos leads (Brasília)</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Horário de chegada dos leads (Brasília)
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>

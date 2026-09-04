@@ -202,9 +202,9 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
   );
 
   const statusBadge = (atg: number) => {
-    if (atg >= 100) return <Badge className="bg-emerald-500/15 text-emerald-500 border-0">No alvo</Badge>;
-    if (atg >= 70) return <Badge className="bg-amber-500/15 text-amber-500 border-0">Atenção</Badge>;
-    return <Badge className="bg-red-500/15 text-red-500 border-0">Abaixo</Badge>;
+    if (atg >= 100) return <Badge className="bg-success/15 text-success-fg border-0">No alvo</Badge>;
+    if (atg >= 70) return <Badge className="bg-warning/15 text-warning-fg border-0">Atenção</Badge>;
+    return <Badge className="bg-destructive/15 text-destructive-fg border-0">Abaixo</Badge>;
   };
 
   const toggle = (
@@ -334,9 +334,9 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                   {dirty ? "Salvar metas" : "Salvo"}
                 </Button>
                 {dirty ? (
-                  <span className="text-[11px] text-amber-500">alterações não salvas</span>
+                  <span className="text-[11px] text-warning-fg">alterações não salvas</span>
                 ) : savedAt ? (
-                  <span className="text-[11px] text-emerald-500">salvo às {savedAt}</span>
+                  <span className="text-[11px] text-success-fg">salvo às {savedAt}</span>
                 ) : null}
               </>
             )}
@@ -387,7 +387,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                   <tr key={r.funnel} className="border-t border-border/40 hover:bg-muted/20 transition-colors">
                     <td className="px-3 py-3 font-medium text-[13px] whitespace-nowrap truncate" title={r.funnel}>{r.funnel}</td>
                     <td className="px-2 py-3 text-right tabular-nums text-base font-semibold border-l border-border/30">{r.leads}</td>
-                    <td className="px-2 py-3 text-right tabular-nums text-base font-bold text-emerald-500">{r.vendas}</td>
+                    <td className="px-2 py-3 text-right tabular-nums text-base font-bold text-success-fg">{r.vendas}</td>
                     <td className="px-2 py-3 text-right border-l border-border/30">
                       {cfg.modo === "qtd" ? (
                         <>
@@ -413,7 +413,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                               }
                             }}
                             onBlur={() => setDrafts((d) => { const n = { ...d }; delete n[`q:${r.funnel}`]; return n; })}
-                            className={`h-7 w-full text-xs text-right ${isWeek && cfg.metasQtdSemana[r.funnel] != null ? "border-amber-500" : ""}`}
+                            className={`h-7 w-full text-xs text-right ${isWeek && cfg.metasQtdSemana[r.funnel] != null ? "border-warning" : ""}`}
                           />
                           <span className="block text-[9px] opacity-60">= {fmtPct(r.meta)}</span>
                         </>
@@ -432,12 +432,12 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                               }
                             }}
                             onBlur={() => setDrafts((d) => { const n = { ...d }; delete n[`s:${r.funnel}`]; return n; })}
-                            className={`h-7 w-full text-xs text-right ${cfg.metasSemana[r.funnel] != null ? "border-amber-500" : ""}`}
+                            className={`h-7 w-full text-xs text-right ${cfg.metasSemana[r.funnel] != null ? "border-warning" : ""}`}
                           />
                           {cfg.metasSemana[r.funnel] != null && (
                             <button
                               type="button"
-                              className="block ml-auto text-[9px] text-amber-500 hover:underline"
+                              className="block ml-auto text-[9px] text-warning-fg hover:underline"
                               onClick={() => {
                                 const semana = { ...cfg.metasSemana };
                                 delete semana[r.funnel];
@@ -475,7 +475,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                       <div className="flex items-center gap-1.5">
                         <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden min-w-0">
                           <div
-                            className={`h-full rounded-full transition-all ${r.atingimento >= 100 ? "bg-emerald-500" : r.atingimento >= 70 ? "bg-amber-500" : "bg-red-500"}`}
+                            className={`h-full rounded-full transition-all ${r.atingimento >= 100 ? "bg-success" : r.atingimento >= 70 ? "bg-warning" : "bg-destructive"}`}
                             style={{ width: `${Math.min(100, r.atingimento)}%` }}
                           />
                         </div>
@@ -485,9 +485,9 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                     <td className="px-2 py-3 text-right tabular-nums text-base font-semibold border-l border-border/30">{r.vendasMeta.toFixed(0)}</td>
                     <td className="px-2 py-3 text-right tabular-nums text-base">
                       {r.gap >= 0 ? (
-                        <span className="text-emerald-500 font-medium">✓</span>
+                        <span className="text-success-fg font-medium">✓</span>
                       ) : (
-                        <span className="text-red-500 font-medium">{Math.abs(r.gap).toFixed(0)}</span>
+                        <span className="text-destructive-fg font-medium">{Math.abs(r.gap).toFixed(0)}</span>
                       )}
                     </td>
                   </tr>
@@ -497,7 +497,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                 <tr className="border-t-2 border-border bg-muted/40 font-bold text-base">
                   <td className="px-3 py-3 text-[13px] uppercase tracking-wide">Total</td>
                   <td className="px-2 py-3 text-right tabular-nums">{totals.leads}</td>
-                  <td className="px-2 py-3 text-right tabular-nums text-emerald-500">{totals.vendas}</td>
+                  <td className="px-2 py-3 text-right tabular-nums text-success-fg">{totals.vendas}</td>
                   <td className="px-1.5 py-2" />
                   <td className="px-1.5 py-2 text-right tabular-nums">
                     {fmtPct(totals.leads > 0 ? (totals.vendas / totals.leads) * 100 : 0)}
@@ -568,7 +568,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                       <p className="text-[11px] text-muted-foreground">Vendas necessárias</p>
                       <p className="text-2xl font-bold tabular-nums tracking-tight">
                         {vendasNecessarias.toFixed(0)}
-                        <span className={`ml-1 text-xs ${faltam > 0 ? "text-red-500" : "text-emerald-500"}`}>
+                        <span className={`ml-1 text-xs ${faltam > 0 ? "text-destructive-fg" : "text-success-fg"}`}>
                           ({faltam > 0 ? `faltam ${faltam.toFixed(0)}` : `+${Math.abs(faltam).toFixed(0)}`})
                         </span>
                       </p>
@@ -576,7 +576,7 @@ export function MetasFunilCard({ from, to, title, period = "mes" }: { from: stri
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
                     <div
-                      className={`h-full ${atgGeral >= 100 ? "bg-emerald-500" : atgGeral >= 70 ? "bg-amber-500" : "bg-red-500"}`}
+                      className={`h-full ${atgGeral >= 100 ? "bg-success" : atgGeral >= 70 ? "bg-warning" : "bg-destructive"}`}
                       style={{ width: `${Math.min(100, atgGeral)}%` }}
                     />
                   </div>

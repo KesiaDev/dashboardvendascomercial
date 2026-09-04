@@ -2,7 +2,8 @@ import { useMemo, useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { fetchOriginsFn, fetchStagesFn, fetchLostStatusesFn, fetchLastSyncFn, fetchAllDealsFn } from "@/lib/data.functions";
+import { fetchOriginsFn, fetchStagesFn, fetchLastSyncFn } from "@/lib/data.functions";
+import { fetchComercialDashboardFn, type ComercialDashboard } from "@/lib/comercial.functions";
 import {
   syncClintUsers,
   syncClintDeals,
@@ -11,7 +12,6 @@ import {
   setLostStatusLabel,
   backfillLostStatuses,
 } from "@/lib/clint.functions";
-import { fetchAllSales, findPhantomWonDeals, isExcludedSeller, effectiveWinner, cleanSellerName } from "@/lib/bi";
 import { useCurrency } from "@/lib/currency-context";
 import { formatInt, formatPct } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,37 +60,14 @@ import {
   Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { conversionRate } from "@/lib/conversion";
 
 export const Route = createFileRoute("/_app/comercial")({
   component: Comercial,
 });
 
-type Deal = {
-  id: string;
-  user_id: string | null;
-  user_name: string | null;
-  user_email: string | null;
-  won_by_user_id: string | null;
-  won_by_name: string | null;
-  won_by_email: string | null;
-  contact_email: string | null;
-  contact_name: string | null;
-  status: string;
-  value: number | null;
-  currency: string | null;
-  created_at: string | null;
-  won_at: string | null;
-  lost_at: string | null;
-  lost_status_id: string | null;
-  stage: string | null;
-  stage_id: string | null;
-  origin_id: string | null;
-  origin_name: string | null;
-};
-
 type Origin = { id: string; name: string; group_name: string | null; archived: boolean };
 type Stage = { id: string; origin_id: string; label: string; stage_order: number; type: string };
-type LostStatus = { id: string; label: string | null };
 
 type Period = "week" | "month" | "quarter" | "semester" | "year" | "all";
 
@@ -100,14 +77,11 @@ function periodStart(p: Period): Date | null {
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if (p === "week") d.setDate(d.getDate() - 7);
   else if (p === "month") return new Date(now.getFullYear(), now.getMonth(), 1);
-  else if (p === "quarter") return new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+  else if (p === "quarter")
+    return new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
   else if (p === "semester") return new Date(now.getFullYear(), now.getMonth() < 6 ? 0 : 6, 1);
   else if (p === "year") return new Date(now.getFullYear(), 0, 1);
   return d;
-}
-
-async function fetchDeals(): Promise<Deal[]> {
-  return (await fetchAllDealsFn()) as Deal[];
 }
 
 async function fetchOrigins(): Promise<Origin[]> {
@@ -118,18 +92,26 @@ async function fetchStages(): Promise<Stage[]> {
   return (await fetchStagesFn()) as Stage[];
 }
 
-async function fetchLostStatuses(): Promise<LostStatus[]> {
-  return (await fetchLostStatusesFn()) as LostStatus[];
-}
-
 async function fetchLastSync() {
   return await fetchLastSyncFn();
 }
 
 const COLORS = [
-  "#8b5cf6", "#6366f1", "#3b82f6", "#06b6d4", "#10b981",
-  "#84cc16", "#f59e0b", "#ef4444", "#ec4899", "#a855f7",
-  "#0ea5e9", "#14b8a6", "#eab308", "#f97316", "#f43f5e",
+  "#8b5cf6",
+  "#6366f1",
+  "#3b82f6",
+  "#06b6d4",
+  "#10b981",
+  "#84cc16",
+  "#f59e0b",
+  "#ef4444",
+  "#ec4899",
+  "#a855f7",
+  "#0ea5e9",
+  "#14b8a6",
+  "#eab308",
+  "#f97316",
+  "#f43f5e",
 ];
 
 function fmtDuration(ms: number): string {
@@ -147,18 +129,8 @@ function Comercial() {
   const [originId, setOriginId] = useState<string>("");
   const { format: money, currency, brlPerEur: rate } = useCurrency();
 
-  const { data: deals = [], isLoading } = useQuery({
-    queryKey: ["clint_deals"],
-    queryFn: fetchDeals,
-  });
-  const { data: sales = [] } = useQuery({ queryKey: ["bi_sales"], queryFn: fetchAllSales });
-  const phantomWonIds = useMemo(() => findPhantomWonDeals(deals, sales), [deals, sales]);
   const { data: origins = [] } = useQuery({ queryKey: ["clint_origins"], queryFn: fetchOrigins });
   const { data: stages = [] } = useQuery({ queryKey: ["clint_stages"], queryFn: fetchStages });
-  const { data: lostStatuses = [] } = useQuery({
-    queryKey: ["clint_lost_statuses"],
-    queryFn: fetchLostStatuses,
-  });
   const { data: lastSync } = useQuery({ queryKey: ["clint_last_sync"], queryFn: fetchLastSync });
 
   const syncUsersFn = useServerFn(syncClintUsers);
@@ -178,7 +150,7 @@ function Comercial() {
     },
     onSuccess: (r) => {
       toast.success(`Sincronizado: ${r.count} negócios atualizados`);
-      qc.invalidateQueries({ queryKey: ["clint_deals"] });
+      qc.invalidateQueries({ queryKey: ["bi_deals"] });
       qc.invalidateQueries({ queryKey: ["clint_origins"] });
       qc.invalidateQueries({ queryKey: ["clint_stages"] });
       qc.invalidateQueries({ queryKey: ["clint_lost_statuses"] });
@@ -211,248 +183,60 @@ function Comercial() {
     }
   }, [origins, stages, originId]);
 
-  const currentStages = useMemo(
-    () =>
-      stages
-        .filter((s) => s.origin_id === originId)
-        .sort((a, b) => a.stage_order - b.stage_order),
-    [stages, originId],
-  );
+  const usingRange = !!dateRange?.from;
+  const start = usingRange ? dateRange!.from! : periodStart(period);
+  const end =
+    usingRange && dateRange?.to ? new Date(dateRange.to.getTime() + 24 * 60 * 60 * 1000 - 1) : null;
 
-  const stageOrderById = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const s of currentStages) m.set(s.id, s.stage_order);
-    return m;
-  }, [currentStages]);
+  // Toda a agregação acontece no servidor (src/lib/comercial.functions.ts).
+  // Esta tela baixava clint_deals e sales INTEIRAS e rodava dez agregações
+  // sobre elas no navegador. As três janelas de tempo que convivem aqui
+  // (created_at no funil, created_at em todos os funis, e won_at) estão
+  // documentadas lá — recortar só por created_at perderia os negócios antigos
+  // fechados no período.
+  //
+  // A cotação entra na chave porque há negócios em EUR e a conversão acontece
+  // no servidor. Ela muda uma vez por sessão, e o payload agora é pequeno.
+  const { data, isLoading } = useQuery({
+    queryKey: [
+      "comercial",
+      period,
+      dateRange?.from?.toISOString() ?? null,
+      dateRange?.to?.toISOString() ?? null,
+      originId,
+      rate,
+    ],
+    queryFn: () =>
+      fetchComercialDashboardFn({
+        data: {
+          from: start ? start.toISOString() : null,
+          to: end ? end.toISOString() : null,
+          originId,
+          rate,
+        },
+      }),
+  });
 
-  const filtered = useMemo(() => {
-    const usingRange = !!dateRange?.from;
-    const start = usingRange ? dateRange!.from! : periodStart(period);
-    const end =
-      usingRange && dateRange?.to
-        ? new Date(dateRange.to.getTime() + 24 * 60 * 60 * 1000 - 1)
-        : null;
-    return deals.filter((d) => {
-      if (originId && d.origin_id !== originId) return false;
-      if (!d.created_at) return !usingRange && period === "all";
-      const dt = new Date(d.created_at);
-      if (start && dt < start) return false;
-      if (end && dt > end) return false;
-      return true;
-    });
-  }, [deals, period, dateRange, originId]);
-
-  // Deals filtrados SÓ por período (sem filtro de funil) — para "Detalhe por vendedor"
-  const filteredAllOrigins = useMemo(() => {
-    const usingRange = !!dateRange?.from;
-    const start = usingRange ? dateRange!.from! : periodStart(period);
-    const end =
-      usingRange && dateRange?.to
-        ? new Date(dateRange.to.getTime() + 24 * 60 * 60 * 1000 - 1)
-        : null;
-    return deals.filter((d) => {
-      if (!d.created_at) return !usingRange && period === "all";
-      const dt = new Date(d.created_at);
-      if (start && dt < start) return false;
-      if (end && dt > end) return false;
-      return true;
-    });
-  }, [deals, period, dateRange]);
-
-  // KPIs + funnel
-  const metrics = useMemo(() => {
-    let won = 0;
-    let lost = 0;
-    let open = 0;
-    let revenueDisplay = 0;
-    const cycleMs: number[] = [];
-    const stageReached = new Map<number, number>(); // order -> count reached
-    let respondedBase = 0;
-    let reuniaoAgendada = 0;
-    let reuniaoRealizada = 0;
-
-    // identify "reunião agendada/realizada" stage orders if they exist
-    const reuniaoAgOrder = currentStages.find((s) =>
-      /reuni[ãa]o\s*(1|agendada)/i.test(s.label),
-    )?.stage_order;
-    const reuniaoReOrder = currentStages.find((s) =>
-      /reuni[ãa]o\s*(2|realizada)/i.test(s.label),
-    )?.stage_order;
-    const baseOrder = 1; // base is always order 1
-
-    for (const d of filtered) {
-      const winner = effectiveWinner(d);
-      const excluded = isExcludedSeller(d.user_name) || (winner && isExcludedSeller(winner.name));
-      if (d.status === "WON" && !phantomWonIds.has(d.id) && !excluded) {
-        won += 1;
-        const v = d.value ?? 0;
-        const dealCur = (d.currency ?? "BRL").toUpperCase();
-        let display = v;
-        if (dealCur !== currency) {
-          if (dealCur === "EUR" && currency === "BRL") display = v * rate;
-          else if (dealCur === "BRL" && currency === "EUR") display = v / rate;
-        }
-        revenueDisplay += display;
-        if (d.won_at && d.created_at) {
-          cycleMs.push(new Date(d.won_at).getTime() - new Date(d.created_at).getTime());
-        }
-      } else if (d.status === "LOST") {
-        lost += 1;
-      } else {
-        open += 1;
-      }
-
-      const order = d.stage_id ? stageOrderById.get(d.stage_id) : undefined;
-      if (order !== undefined) {
-        // Reached this stage AND every previous one
-        for (let i = 1; i <= order; i++) {
-          stageReached.set(i, (stageReached.get(i) ?? 0) + 1);
-        }
-        if (order > baseOrder) respondedBase += 1;
-        if (reuniaoAgOrder && order >= reuniaoAgOrder) reuniaoAgendada += 1;
-        if (reuniaoReOrder && order >= reuniaoReOrder) reuniaoRealizada += 1;
-      }
-    }
-
-    const total = filtered.length;
-    const closed = won + lost;
-    const convRate = closed > 0 ? won / closed : 0;
-    const respRate = total > 0 ? respondedBase / total : 0;
-    const noShow =
-      reuniaoAgendada > 0 ? (reuniaoAgendada - reuniaoRealizada) / reuniaoAgendada : 0;
-    const avgCycle = cycleMs.length
-      ? cycleMs.reduce((a, b) => a + b, 0) / cycleMs.length
-      : 0;
-
-    return {
-      total,
-      won,
-      lost,
-      open,
-      revenue: revenueDisplay,
-      convRate,
-      respRate,
-      noShow,
-      avgCycle,
-      stageReached,
-      reuniaoAgendada,
-      reuniaoRealizada,
-    };
-  }, [filtered, currentStages, stageOrderById, currency, rate, phantomWonIds]);
-
-  const funnelData = useMemo(() => {
-    const max = metrics.stageReached.get(1) ?? 0;
-    return currentStages.map((s) => {
-      const count = metrics.stageReached.get(s.stage_order) ?? 0;
-      const pct = max > 0 ? count / max : 0;
-      return { label: s.label, count, pct, type: s.type };
-    });
-  }, [currentStages, metrics]);
-
-  const lostLabelById = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const l of lostStatuses) if (l.label) m.set(l.id, l.label);
-    return m;
-  }, [lostStatuses]);
-
-  const lostData = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const d of filtered) {
-      if (d.status !== "LOST" || !d.lost_status_id) continue;
-      m.set(d.lost_status_id, (m.get(d.lost_status_id) ?? 0) + 1);
-    }
-    return Array.from(m.entries())
-      .map(([id, count]) => ({
-        id,
-        name: lostLabelById.get(id) ?? `Motivo ${id.slice(0, 6)}`,
-        unnamed: !lostLabelById.has(id),
-        value: count,
-      }))
-      .sort((a, b) => b.value - a.value);
-  }, [filtered, lostLabelById]);
-
-  const sellers = useMemo(() => {
-    const usingRange = !!dateRange?.from;
-    const start = usingRange ? dateRange!.from! : periodStart(period);
-    const end =
-      usingRange && dateRange?.to
-        ? new Date(dateRange.to.getTime() + 24 * 60 * 60 * 1000 - 1)
-        : null;
-
-    const map = new Map<
-      string,
-      {
-        name: string;
-        email: string;
-        leads: number;
-        won: number;
-        lost: number;
-        open: number;
-        revenue: number;
-      }
-    >();
-
-    // Leads recebidos no período (created_at), todos os funis
-    for (const d of filteredAllOrigins) {
-      if (!d.user_id) continue;
-      const cur = map.get(d.user_id) ?? {
-        name: cleanSellerName(d.user_name ?? d.user_email ?? "—"),
-        email: d.user_email ?? "",
-        leads: 0,
-        won: 0,
-        lost: 0,
-        open: 0,
-        revenue: 0,
-      };
-      cur.leads += 1;
-      if (d.status === "OPEN") cur.open += 1;
-      else if (d.status === "LOST") cur.lost += 1;
-      map.set(d.user_id, cur);
-    }
-
-    // Ganhos do período por won_at — conta vendas FECHADAS no período,
-    // independente de quando o lead foi criado ou em qual funil
-    for (const d of deals) {
-      if (d.status !== "WON" || !d.won_at || !(d.value && d.value > 0)) continue;
-      if (phantomWonIds.has(d.id)) continue;
-      const winner = effectiveWinner(d);
-      if (!winner) continue;
-      const wonDate = new Date(d.won_at);
-      if (start && wonDate < start) continue;
-      if (end && wonDate > end) continue;
-
-      if (!map.has(winner.id)) {
-        map.set(winner.id, {
-          name: cleanSellerName(winner.name),
-          email: winner.email,
-          leads: 0,
-          won: 0,
-          lost: 0,
-          open: 0,
-          revenue: 0,
-        });
-      }
-      const cur = map.get(winner.id)!;
-      cur.won += 1;
-      const v = d.value ?? 0;
-      const dealCur = (d.currency ?? "BRL").toUpperCase();
-      let display = v;
-      if (dealCur !== currency) {
-        if (dealCur === "EUR" && currency === "BRL") display = v * rate;
-        else if (dealCur === "BRL" && currency === "EUR") display = v / rate;
-      }
-      cur.revenue += display;
-    }
-
-    return Array.from(map.values())
-      .filter((s) => !isExcludedSeller(s.name))
-      .sort((a, b) => b.revenue - a.revenue);
-  }, [deals, filteredAllOrigins, period, dateRange, currency, rate, phantomWonIds]);
+  const metrics: ComercialDashboard["metrics"] = data?.metrics ?? {
+    total: 0,
+    won: 0,
+    lost: 0,
+    open: 0,
+    revenue: 0,
+    convRate: 0,
+    respRate: 0,
+    noShow: 0,
+    avgCycle: 0,
+    reuniaoAgendada: 0,
+    reuniaoRealizada: 0,
+  };
+  const funnelData: ComercialDashboard["funnelData"] = data?.funnelData ?? [];
+  const lostData: ComercialDashboard["lostData"] = data?.lostData ?? [];
+  const sellers: ComercialDashboard["sellers"] = data?.sellers ?? [];
 
   const setLabelFn = useServerFn(setLostStatusLabel);
   const renameMutation = useMutation({
-    mutationFn: async (vars: { id: string; label: string | null }) =>
-      setLabelFn({ data: vars }),
+    mutationFn: async (vars: { id: string; label: string | null }) => setLabelFn({ data: vars }),
     onSuccess: () => {
       toast.success("Motivo atualizado");
       qc.invalidateQueries({ queryKey: ["clint_lost_statuses"] });
@@ -505,9 +289,7 @@ function Comercial() {
           disabled={syncMutation.isPending}
           size="sm"
         >
-          <RefreshCw
-            className={cn("h-4 w-4 mr-2", syncMutation.isPending && "animate-spin")}
-          />
+          <RefreshCw className={cn("h-4 w-4 mr-2", syncMutation.isPending && "animate-spin")} />
           {syncMutation.isPending ? "Sincronizando…" : "Sincronizar Clint"}
         </Button>
       </div>
@@ -531,8 +313,7 @@ function Comercial() {
                     const sc = stages.filter((s) => s.origin_id === o.id).length;
                     return (
                       <SelectItem key={o.id} value={o.id}>
-                        {o.name}{" "}
-                        <span className="text-muted-foreground ml-1">({sc} etapas)</span>
+                        {o.name} <span className="text-muted-foreground ml-1">({sc} etapas)</span>
                       </SelectItem>
                     );
                   })}
@@ -609,7 +390,7 @@ function Comercial() {
 
       {isLoading ? (
         <div className="text-muted-foreground">Carregando…</div>
-      ) : deals.length === 0 ? (
+      ) : !lastSync ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
             <Users className="h-12 w-12 text-muted-foreground" />
@@ -621,9 +402,7 @@ function Comercial() {
               </p>
             </div>
             <Button onClick={() => syncMutation.mutate(false)} disabled={syncMutation.isPending}>
-              <RefreshCw
-                className={cn("h-4 w-4 mr-2", syncMutation.isPending && "animate-spin")}
-              />
+              <RefreshCw className={cn("h-4 w-4 mr-2", syncMutation.isPending && "animate-spin")} />
               Sincronizar agora
             </Button>
           </CardContent>
@@ -845,7 +624,9 @@ function Comercial() {
             <div className="mb-4 flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-lg font-semibold">Detalhe por vendedor</h3>
-              <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">todos os funis</span>
+              <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
+                todos os funis
+              </span>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {sellers.map((s, i) => {
@@ -853,10 +634,7 @@ function Comercial() {
                 const conv = closed > 0 ? s.won / closed : 0;
                 return (
                   <Card key={s.email || s.name} className="overflow-hidden">
-                    <div
-                      className="h-1"
-                      style={{ background: COLORS[i % COLORS.length] }}
-                    />
+                    <div className="h-1" style={{ background: COLORS[i % COLORS.length] }} />
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2">
                         <CardTitle className="text-base">{s.name}</CardTitle>
@@ -874,9 +652,7 @@ function Comercial() {
                       <Stat label="Em aberto" value={formatInt(s.open)} />
                       <div className="col-span-2 rounded-md border border-border bg-secondary/30 p-2.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Taxa de conversão
-                          </span>
+                          <span className="text-xs text-muted-foreground">Taxa de conversão</span>
                           <span className="text-sm font-semibold">{formatPct(conv)}</span>
                         </div>
                         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
@@ -926,10 +702,7 @@ function LostRow({
         }}
         className="flex items-center gap-2 rounded-md border border-border bg-secondary/30 p-2"
       >
-        <span
-          className="h-3 w-3 shrink-0 rounded-sm"
-          style={{ background: color }}
-        />
+        <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: color }} />
         <Input
           autoFocus
           value={val}
@@ -959,7 +732,9 @@ function LostRow({
       className="flex w-full items-center gap-2 rounded-md border border-border bg-secondary/30 p-2 text-left hover:bg-secondary/60 transition"
     >
       <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: color }} />
-      <span className={cn("flex-1 text-sm truncate", item.unnamed && "italic text-muted-foreground")}>
+      <span
+        className={cn("flex-1 text-sm truncate", item.unnamed && "italic text-muted-foreground")}
+      >
         {item.name}
       </span>
       <span className="text-sm font-semibold tabular-nums">{formatInt(item.value)}</span>
@@ -1006,15 +781,7 @@ function Kpi({
   );
 }
 
-function Stat({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: "success";
-}) {
+function Stat({ label, value, accent }: { label: string; value: string; accent?: "success" }) {
   return (
     <div className="rounded-md border border-border bg-secondary/30 p-2.5">
       <span className="text-xs text-muted-foreground">{label}</span>

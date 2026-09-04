@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchChannelsFn } from "@/lib/data.functions";
 import type { Channel } from "@/lib/channels";
 
@@ -19,24 +20,29 @@ export async function fetchChannels(): Promise<ChannelRow[]> {
  * linha em bi_channels — sempre sobrescreve, porque o dicionário hoje só é
  * editado via código (não há tela de edição ainda).
  */
-export const syncChannels = createServerFn({ method: "POST" }).handler(async () => {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { CHANNELS } = await import("@/lib/channels");
+export const syncChannels = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { CHANNELS } = await import("@/lib/channels");
 
-  const rows = (CHANNELS as Channel[]).map((c) => ({
-    id: c.id,
-    label: c.label,
-    tipo: c.tipo,
-    clint_group_names: c.clintGroupNames,
-    sck_prefixes: c.sckPrefixes,
-    updated_at: new Date().toISOString(),
-  }));
+    const rows = (CHANNELS as Channel[]).map((c) => ({
+      id: c.id,
+      label: c.label,
+      tipo: c.tipo,
+      clint_group_names: c.clintGroupNames,
+      sck_prefixes: c.sckPrefixes,
+      updated_at: new Date().toISOString(),
+    }));
 
-  const { error } = await supabaseAdmin.from("bi_channels").upsert(rows, { onConflict: "id" });
-  if (error) throw error;
+    const { error } = await supabaseAdmin.from("bi_channels").upsert(rows, { onConflict: "id" });
+    if (error) throw error;
 
-  const ids = rows.map((r) => r.id);
-  await supabaseAdmin.from("bi_channels").delete().not("id", "in", `(${ids.join(",")})`);
+    const ids = rows.map((r) => r.id);
+    await supabaseAdmin
+      .from("bi_channels")
+      .delete()
+      .not("id", "in", `(${ids.join(",")})`);
 
-  return { synced: rows.length };
-});
+    return { synced: rows.length };
+  });

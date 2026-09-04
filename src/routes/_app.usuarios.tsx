@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { ADMIN_EMAILS } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, KeyRound, UserPlus } from "lucide-react";
 import {
-  listAppUsersFn, createAppUserFn, resetAppUserPasswordFn, deleteAppUserFn, setAppUserRoleFn,
+  listAppUsersFn,
+  createAppUserFn,
+  resetAppUserPasswordFn,
+  deleteAppUserFn,
+  setAppUserRoleFn,
 } from "@/lib/users.functions";
 
 export const Route = createFileRoute("/_app/usuarios")({
@@ -23,7 +28,12 @@ function UsuariosPage() {
     queryFn: () => listAppUsersFn(),
   });
 
-  const [form, setForm] = useState({ full_name: "", email: "", password: "", role: "vendedor" as "vendedor" | "gestor" | "admin" });
+  const [form, setForm] = useState({
+    full_name: "",
+    email: "",
+    password: "",
+    role: "vendedor" as "vendedor" | "gestor" | "admin",
+  });
 
   const createM = useMutation({
     mutationFn: () => createAppUserFn({ data: form }),
@@ -43,13 +53,20 @@ function UsuariosPage() {
 
   const delM = useMutation({
     mutationFn: (userId: string) => deleteAppUserFn({ data: { userId } }),
-    onSuccess: () => { toast.success("Usuário removido"); qc.invalidateQueries({ queryKey: ["app-users"] }); },
+    onSuccess: () => {
+      toast.success("Usuário removido");
+      qc.invalidateQueries({ queryKey: ["app-users"] });
+    },
     onError: (e: any) => toast.error(e?.message ?? "Falha ao remover usuário"),
   });
 
   const roleM = useMutation({
-    mutationFn: (v: { userId: string; role: "admin" | "gestor" | "vendedor" }) => setAppUserRoleFn({ data: v }),
-    onSuccess: () => { toast.success("Perfil atualizado"); qc.invalidateQueries({ queryKey: ["app-users"] }); },
+    mutationFn: (v: { userId: string; role: "admin" | "gestor" | "vendedor" }) =>
+      setAppUserRoleFn({ data: v }),
+    onSuccess: () => {
+      toast.success("Perfil atualizado");
+      qc.invalidateQueries({ queryKey: ["app-users"] });
+    },
     onError: (e: any) => toast.error(e?.message ?? "Falha ao alterar perfil"),
   });
 
@@ -58,7 +75,8 @@ function UsuariosPage() {
       <div>
         <h1 className="text-2xl font-semibold">Usuários</h1>
         <p className="text-sm text-muted-foreground">
-          Cadastre vendedores e gestores. Novos usuários já entram confirmados e podem acessar direto.
+          Cadastre vendedores e gestores. Novos usuários já entram confirmados e podem acessar
+          direto.
         </p>
       </div>
 
@@ -71,26 +89,46 @@ function UsuariosPage() {
         <CardContent>
           <form
             className="grid gap-3 md:grid-cols-5"
-            onSubmit={(e) => { e.preventDefault(); createM.mutate(); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              createM.mutate();
+            }}
           >
             <div className="md:col-span-1 space-y-1.5">
               <Label>Nome</Label>
-              <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required />
+              <Input
+                value={form.full_name}
+                onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                required
+              />
             </div>
             <div className="md:col-span-2 space-y-1.5">
               <Label>Email</Label>
-              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+              />
             </div>
             <div className="md:col-span-1 space-y-1.5">
               <Label>Senha</Label>
-              <Input type="text" minLength={6} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+              <Input
+                type="text"
+                minLength={6}
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+              />
             </div>
             <div className="md:col-span-1 space-y-1.5">
               <Label>Perfil</Label>
               <select
                 className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                 value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value as "vendedor" | "gestor" | "admin" })}
+                onChange={(e) =>
+                  setForm({ ...form, role: e.target.value as "vendedor" | "gestor" | "admin" })
+                }
               >
                 <option value="vendedor">Vendedor</option>
                 <option value="gestor">Gestor</option>
@@ -127,14 +165,20 @@ function UsuariosPage() {
                 </thead>
                 <tbody>
                   {users.map((u) => (
-                    <UserRow key={u.id} u={u}
+                    <UserRow
+                      key={u.id}
+                      u={u}
                       onReset={(pw) => resetM.mutate({ userId: u.id, password: pw })}
                       onDelete={() => delM.mutate(u.id)}
                       onRoleChange={(role) => roleM.mutate({ userId: u.id, role })}
                     />
                   ))}
                   {users.length === 0 && (
-                    <tr><td colSpan={5} className="py-6 text-center text-muted-foreground">Nenhum usuário.</td></tr>
+                    <tr>
+                      <td colSpan={5} className="py-6 text-center text-muted-foreground">
+                        Nenhum usuário.
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
@@ -146,10 +190,22 @@ function UsuariosPage() {
   );
 }
 
-const HARDCODED_ADMINS = ["kesiawnandi@gmail.com", "kesia@llmidiaco.com"];
+// Segunda cópia da lista de admin; a fonte é src/lib/auth.ts.
+const HARDCODED_ADMINS = ADMIN_EMAILS;
 
-function UserRow({ u, onReset, onDelete, onRoleChange }: {
-  u: { id: string; email: string | null; full_name: string | null; role: string; last_sign_in_at: string | null };
+function UserRow({
+  u,
+  onReset,
+  onDelete,
+  onRoleChange,
+}: {
+  u: {
+    id: string;
+    email: string | null;
+    full_name: string | null;
+    role: string;
+    last_sign_in_at: string | null;
+  };
   onReset: (pw: string) => void;
   onDelete: () => void;
   onRoleChange: (role: "admin" | "gestor" | "vendedor") => void;
@@ -162,7 +218,9 @@ function UserRow({ u, onReset, onDelete, onRoleChange }: {
       <td className="py-2 pr-3">{u.email}</td>
       <td className="py-2 pr-3">
         <div className="flex items-center gap-2">
-          <Badge variant={u.role === "admin" ? "default" : u.role === "gestor" ? "secondary" : "outline"}>
+          <Badge
+            variant={u.role === "admin" ? "default" : u.role === "gestor" ? "secondary" : "outline"}
+          >
             {u.role}
           </Badge>
           <select
@@ -171,7 +229,11 @@ function UserRow({ u, onReset, onDelete, onRoleChange }: {
             onChange={(e) => {
               const next = e.target.value as "admin" | "gestor" | "vendedor";
               if (next === u.role) return;
-              if (next === "admin" && !confirm(`Tornar ${u.email} administrador? Terá acesso total.`)) return;
+              if (
+                next === "admin" &&
+                !confirm(`Tornar ${u.email} administrador? Terá acesso total.`)
+              )
+                return;
               onRoleChange(next);
             }}
             disabled={isHardcoded}
@@ -196,16 +258,27 @@ function UserRow({ u, onReset, onDelete, onRoleChange }: {
               onChange={(e) => setPw(e.target.value)}
               disabled={isHardcoded}
             />
-            <Button size="sm" variant="outline"
-              onClick={() => { if (pw.length >= 6) { onReset(pw); setPw(""); } }}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (pw.length >= 6) {
+                  onReset(pw);
+                  setPw("");
+                }
+              }}
               disabled={isHardcoded || pw.length < 6}
               title="Redefinir senha"
             >
               <KeyRound className="h-3.5 w-3.5" />
             </Button>
           </div>
-          <Button size="sm" variant="ghost"
-            onClick={() => { if (confirm(`Remover ${u.email}?`)) onDelete(); }}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              if (confirm(`Remover ${u.email}?`)) onDelete();
+            }}
             disabled={isHardcoded}
             title="Remover"
           >

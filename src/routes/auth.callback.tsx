@@ -2,15 +2,21 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isAdminUser, ALLOWED_NON_ADMIN_ROUTES } from "@/lib/auth";
-import logoIcon from "@/assets/logo-icon.png";
+import logoIcon from "@/assets/logo-icon.webp";
 
 export const Route = createFileRoute("/auth/callback")({
   head: () => ({
     meta: [
       { title: "Concluindo acesso | Dashcomercial LLMídia" },
-      { name: "description", content: "Conclusão segura do acesso ao painel comercial da LLMídia." },
+      {
+        name: "description",
+        content: "Conclusão segura do acesso ao painel comercial da LLMídia.",
+      },
       { property: "og:title", content: "Concluindo acesso | Dashcomercial LLMídia" },
-      { property: "og:description", content: "Conclusão segura do acesso ao painel comercial da LLMídia." },
+      {
+        property: "og:description",
+        content: "Conclusão segura do acesso ao painel comercial da LLMídia.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -44,7 +50,10 @@ async function completeOAuthSession() {
   const accessToken = hashParams.get("access_token");
   const refreshToken = hashParams.get("refresh_token");
   if (accessToken && refreshToken) {
-    const result = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    const result = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
     if (result.error) throw result.error;
     return result;
   }
@@ -85,7 +94,13 @@ function AuthCallbackPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm rounded-lg border border-border bg-card p-6 text-center shadow-sm">
-        <img src={logoIcon} alt="" className="mx-auto h-10 w-10 object-contain" />
+        <img
+          src={logoIcon}
+          alt=""
+          width={40}
+          height={40}
+          className="mx-auto h-10 w-10 object-contain"
+        />
         <h1 className="mt-4 text-base font-semibold">Dashcomercial LLMídia</h1>
         <p className="mt-2 text-sm text-muted-foreground">{message}</p>
       </div>
