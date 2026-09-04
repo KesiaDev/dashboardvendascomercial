@@ -14,13 +14,10 @@ import {
   Share2,
   LogOut,
   Users,
-  Plane,
   Swords,
   Bot,
   Megaphone,
   Network,
-  Receipt,
-  Upload,
 } from "lucide-react";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -59,7 +56,6 @@ const NAV_SECTIONS = [
         adminOnly: false,
       },
       { to: "/leads-dia", label: "Leads por Dia", icon: CalendarRange, adminOnly: false },
-      { to: "/import", label: "Importar CSV", icon: Upload, adminOnly: true },
     ],
   },
   {
@@ -69,7 +65,6 @@ const NAV_SECTIONS = [
   {
     section: "Metas e Dinheiro",
     items: [
-      { to: "/vendas-reais", label: "Vendas Reais", icon: Receipt, adminOnly: true },
       { to: "/comissionamento", label: "Comissionamento", icon: DollarSign, adminOnly: true },
     ],
   },
@@ -79,7 +74,7 @@ const NAV_SECTIONS = [
     items: [
       { to: "/coach", label: "Coach Comercial", icon: Sparkles, adminOnly: false },
       { to: "/arena", label: "Arena Comercial", icon: Swords, adminOnly: false },
-      { to: "/ferias", label: "Férias da Equipe", icon: Plane, adminOnly: false },
+      
       { to: "/indicacoes", label: "Indicações", icon: Share2, adminOnly: false },
       { to: "/usuarios", label: "Usuários", icon: Users, adminOnly: true },
     ],
