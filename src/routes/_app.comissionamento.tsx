@@ -168,7 +168,15 @@ function Dashboard() {
   const activePeriod = useMemo((): CommissionPeriod | null => {
     if (periods.length === 0) return null;
     if (periodId) return periods.find((p) => p.id === periodId) ?? periods[0];
-    return periods[0];
+    // Mês vigente: período cujo intervalo contém a data de hoje
+    const now = new Date();
+    const vigente =
+      periods.find((p) => {
+        const start = new Date(`${p.data_inicio}T00:00:00`);
+        const end = new Date(`${p.data_fim}T23:59:59`);
+        return now >= start && now <= end;
+      }) ?? periods[0];
+    return vigente;
   }, [periods, periodId]);
 
   const { data: sales = [] } = useQuery({
