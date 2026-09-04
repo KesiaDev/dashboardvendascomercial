@@ -899,6 +899,74 @@ export const fetchPerfisLeadsFn = createServerFn({ method: "GET" })
       }
     }
 
+    // ── Reconciliação com o fechamento ────────────────────────────────────────
+    // Toda venda registrada no fechamento no período entra em algum perfil.
+    // Quem tem conversa analisada herda o perfil da conversa; quem não tem
+    // (venda de call/LDP, sem histórico na Clint) cai em "Venda sem conversa
+    // registrada". Assim a soma das vendas por perfil = vendas do fechamento.
+    const perfilPorConversa = new Map<string, string>();
+    for (const v of validos) {
+      const hits = hitsById.get(v.c.id) ?? [];
+      perfilPorConversa.set(String(v.c.id), hits[0] ?? NAO_IDENTIFICADO);
+    }
+    const convPorEmail = new Map<string, string>();
+    const convPorNome = new Map<string, string>();
+    for (const v of validos) {
+      const em = v.c.contact_email ? String(v.c.contact_email).trim().toLowerCase() : "";
+      const nm = v.c.contact_name ? normalize(String(v.c.contact_name).trim()) : "";
+      if (em && !convPorEmail.has(em)) convPorEmail.set(em, String(v.c.id));
+      if (nm && !convPorNome.has(nm)) convPorNome.set(nm, String(v.c.id));
+    }
+
+    const ensureBucket = (nome: string) => {
+      let a = agg.get(nome);
+      if (!a) {
+        a = {
+          total: 0,
+          humano: 0,
+          ia: 0,
+          vendas: 0,
+          ganhos: 0,
+          perdidos: 0,
+          abertos: 0,
+          scores: [],
+          exemplos: [],
+          sellers: new Map(),
+          profissoes: new Map(),
+          conversas: [],
+          vendasClientes: [],
+          semPergunta: 0,
+        };
+        agg.set(nome, a);
+      }
+      return a;
+    };
+
+    const vendasDetalhe: VendaPerfil[] = [];
+    for (const s of vendasPeriodo) {
+      const em = s.client_email ? String(s.client_email).trim().toLowerCase() : "";
+      const nm = s.client_name ? normalize(String(s.client_name).trim()) : "";
+      const convId = (em && convPorEmail.get(em)) || (nm && convPorNome.get(nm)) || null;
+      const perfil = convId ? (perfilPorConversa.get(convId) ?? NAO_IDENTIFICADO) : SEM_CONVERSA;
+      const item: VendaPerfil = {
+        cliente: String(s.client_name ?? s.client_email ?? "—").trim(),
+        email: s.client_email ? String(s.client_email).trim() : null,
+        seller: String(s.seller_name ?? "—").trim(),
+        produto: String(s.product ?? "—"),
+        funil: String(s.funnel ?? "—"),
+        data: String(s.sale_date ?? ""),
+        perfil,
+        vinculo: convId ? "conversa" : "sem_conversa",
+      };
+      vendasDetalhe.push(item);
+      const a = ensureBucket(perfil);
+      a.vendas++;
+      a.vendasClientes.push(item);
+    }
+    vendasDetalhe.sort((a, b) => b.data.localeCompare(a.data) || a.cliente.localeCompare(b.cliente));
+
+
+
     const ranking: PerfilRow[] = Array.from(agg.entries())
       .map(([perfil, a]) => ({
         perfil,
