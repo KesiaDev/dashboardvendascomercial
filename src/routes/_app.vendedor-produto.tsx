@@ -1,14 +1,8 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  fetchAllDeals,
-  fetchAllSales,
-  matchSellerProduct,
-  periodRange,
-  type Period,
-} from "@/lib/bi";
-import { fetchProductConfig } from "@/lib/product-config.functions";
+import { periodRange, type Period } from "@/lib/bi";
+import { fetchVendedorProdutoFn } from "@/lib/vendedor-produto.functions";
 import { formatInt } from "@/lib/format";
 import { useCurrency } from "@/lib/currency-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,40 +17,24 @@ export const Route = createFileRoute("/_app/vendedor-produto")({
 function VendedorProduto() {
   const { format: formatBRL } = useCurrency();
   const [period, setPeriod] = useState<Period>("month");
-  const { data: deals = [], isLoading: l1 } = useQuery({
-    queryKey: ["bi_deals"],
-    queryFn: fetchAllDeals,
-  });
-  const { data: sales = [], isLoading: l2 } = useQuery({
-    queryKey: ["bi_sales"],
-    queryFn: fetchAllSales,
-  });
-  // Falha silenciosa se a tabela ainda não existir (migration bi_product_config
-  // pendente) — nesse caso nenhum produto é filtrado, comportamento de hoje.
-  const { data: productConfig = [] } = useQuery({
-    queryKey: ["bi_product_config"],
-    queryFn: fetchProductConfig,
-    retry: false,
-    throwOnError: false,
-  });
-
-  const inactiveProductIds = useMemo(
-    () => new Set(productConfig.filter((p) => !p.ativo).map((p) => p.product_id)),
-    [productConfig],
-  );
-  const activeSales = useMemo(
-    () =>
-      inactiveProductIds.size === 0
-        ? sales
-        : sales.filter((s) => !inactiveProductIds.has(s.produto_grupo)),
-    [sales, inactiveProductIds],
-  );
-
   const { start, end } = periodRange(period);
-  const result = useMemo(
-    () => matchSellerProduct(deals, activeSales, start, end),
-    [deals, activeSales, start, end],
-  );
+
+  // O cruzamento acontece no servidor (src/lib/vendedor-produto.functions.ts).
+  // Esta tela tem 161 linhas de interface e baixava DUAS tabelas inteiras para
+  // cruzá-las no navegador.
+  const {
+    data: result = { rows: [], matched: 0, unmatched: 0, unmatchedRevenue: 0, inactiveProducts: 0 },
+    isLoading,
+  } = useQuery({
+    queryKey: ["vendedor_produto", period],
+    queryFn: () =>
+      fetchVendedorProdutoFn({
+        data: {
+          from: start ? start.toISOString() : null,
+          to: end ? end.toISOString() : null,
+        },
+      }),
+  });
 
   const bySeller = useMemo(() => {
     const m = new Map<string, { total: number; revenue: number; produtos: typeof result.rows }>();
@@ -72,7 +50,6 @@ function VendedorProduto() {
       .sort((a, b) => b.revenue - a.revenue);
   }, [result]);
 
-  const isLoading = l1 || l2;
   const totalSales = result.matched + result.unmatched;
   const matchRate = totalSales > 0 ? result.matched / totalSales : 0;
 
@@ -85,10 +62,10 @@ function VendedorProduto() {
             Cruza vendas aprovadas da Hotmart com negócios ganhos da Clint pelo e-mail do cliente —
             mostra qual produto cada vendedor mais vende.
           </p>
-          {inactiveProductIds.size > 0 && (
+          {result.inactiveProducts > 0 && (
             <p className="text-xs text-muted-foreground mt-1">
-              {inactiveProductIds.size} produto{inactiveProductIds.size > 1 ? "s" : ""} marcado
-              {inactiveProductIds.size > 1 ? "s" : ""} como inativo em{" "}
+              {result.inactiveProducts} produto{result.inactiveProducts > 1 ? "s" : ""} marcado
+              {result.inactiveProducts > 1 ? "s" : ""} como inativo em{" "}
               <a href="/areas" className="underline">
                 /areas
               </a>{" "}
