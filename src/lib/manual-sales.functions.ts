@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { APPROVED_STATUS_DB_VALUES } from "@/lib/sales-status";
+import { activeSellers } from "@/lib/sellers";
 
 async function adminDb() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -29,13 +30,17 @@ export const FUNNELS = [
   "IGT 24",
 ] as const;
 
-export const SELLERS = [
-  "Gisele Pimentel",
-  "João Pessoa",
-  "Fabio Nadal",
-  "Rita Bandeira",
-  "Kesia Nandi",
-] as const;
+/**
+ * Opções do seletor "quem vendeu" nos formulários de lançamento.
+ *
+ * Deriva do quadro vigente HOJE (src/lib/sellers.ts), porque serve para
+ * registrar venda nova. A lista fixa que ficava aqui não tinha a Pamela e ainda
+ * oferecia o Nadal, que saiu do time comercial em setembro/2026.
+ *
+ * Para LER dados históricos use isMetricSeller com a data do fato — o histórico
+ * continua contendo quem estava no time na época.
+ */
+export const SELLERS: readonly string[] = activeSellers(new Date()).map((s) => s.name);
 
 export type RoletaType = "mentoria" | "accelerator";
 export type BonusSemanalEur = 30 | 60;

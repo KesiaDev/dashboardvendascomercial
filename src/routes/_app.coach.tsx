@@ -80,6 +80,7 @@ import {
 } from "@/lib/ccpbx.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { isAllowedSellerEmail, isCaseOwnerEmail } from "@/lib/auth";
+import { canonicalSellerName, isMetricSeller as isMetricSellerCanonical } from "@/lib/sellers";
 import { useAppAuth } from "@/routes/_app";
 import { CasesTab } from "@/components/coach-cases";
 import { ObjecoesTab } from "@/components/coach-objecoes";
@@ -129,38 +130,27 @@ function sentimentColor(s: string | null | undefined) {
   if (s === "negativo") return "bg-destructive/15 text-destructive-fg";
   return "bg-slate-500/15 text-slate-700 dark:text-slate-300";
 }
-const SELLER_NAME_MAP: { match: string[]; name: string }[] = [
-  { name: "João Pessoa", match: ["joaopessoa", "jpessoa20", "joao pessoa", "joão pessoa"] },
-  { name: "Fabio Nadal", match: ["fabionadal", "fabio nadal", "nadal"] },
-  {
-    name: "Luana Guimarães",
-    match: ["luanaguimaraes", "luana.guimaraes", "luana guimaraes", "luana guimarães", "luana"],
-  },
-  { name: "Kesia Nandi", match: ["kesiawnandi", "kesia nandi", "kesia", "késia", "nandi"] },
-  {
-    name: "Gisele Pimentel",
-    match: ["giselegagliano", "gisele gagliano", "gisele pimentel", "gisele"],
-  },
-  { name: "Rita Bandeira", match: ["ritabandeira", "rita bandeira", "rita"] },
-];
+// A lista de vendedores que ficava aqui era cópia byte-a-byte da de
+// performance.functions.ts — e nenhuma das duas tinha a Pamela. Agora ambas
+// leem src/lib/sellers.ts.
 function displaySellerName(nameOrEmail: string | null | undefined): string {
-  const raw = (nameOrEmail ?? "").trim().replace(/\s+/g, " ");
+  const raw = (nameOrEmail ?? "").trim().replace(/s+/g, " ");
   if (!raw) return "—";
-  const lower = raw.toLowerCase();
-  for (const { match, name } of SELLER_NAME_MAP) {
-    for (const m of match) if (lower === m || lower.includes(m)) return name;
-  }
-  // Se veio email genérico, mostra a parte antes do @
+  const canonical = canonicalSellerName(raw);
+  if (canonical !== raw) return canonical;
+  // E-mail não reconhecido: mostra o que vem antes do @
   if (raw.includes("@")) return raw.split("@")[0];
   return raw;
 }
-// Nomes que não fazem parte da equipa comercial (não entram nas métricas).
-// Luana saiu da empresa — fora das métricas. Kesia agora entra como vendedora.
-const EXCLUDED_SELLER_KEYS = ["camila", "aline", "luana", "—"];
-function isMetricSeller(nameOrEmail: string | null | undefined): boolean {
-  const n = displaySellerName(nameOrEmail).toLowerCase().trim();
-  if (!n || n === "—") return false;
-  return !EXCLUDED_SELLER_KEYS.some((k) => n.includes(k));
+
+/**
+ * Conta nas métricas desta tela?
+ *
+ * `on` é a data do fato (última mensagem, data da venda). Sem ela, tirar alguém
+ * do quadro mudaria retroativamente os meses já fechados.
+ */
+function isMetricSeller(nameOrEmail: string | null | undefined, on: Date | string): boolean {
+  return isMetricSellerCanonical(nameOrEmail, on);
 }
 function scoreColor(n: number | null | undefined) {
   if (n == null) return "text-muted-foreground";
@@ -414,7 +404,9 @@ function WeeklyChart({ stats }: { stats: WeeklyStats[] }) {
   const byCanonical = new Map<string, Map<string, Agg>>(); // canonical → week → agg
   for (const s of stats) {
     const canonical = displaySellerName(s.seller_name ?? s.seller_email ?? "—");
-    if (!isMetricSeller(canonical)) continue;
+    // Datado pela semana da própria linha: uma semana de agosto continua
+    // mostrando quem estava no time naquela semana.
+    if (!isMetricSeller(canonical, s.week_start)) continue;
     let weekMap = byCanonical.get(canonical);
 
     if (!weekMap) {
@@ -494,7 +486,12 @@ function VisaoGeral() {
 
   const analyzed = convs.filter(
     (c: any) =>
-      c.analysis && c.analysis.status === "ok" && isMetricSeller(c.seller_name ?? c.seller_email),
+      c.analysis &&
+      c.analysis.status === "ok" &&
+      isMetricSeller(
+        c.seller_name ?? c.seller_email,
+        c.last_message_at ?? c.analysis.analyzed_at ?? new Date(),
+      ),
   );
 
   const avgScore = analyzed.length
@@ -523,7 +520,8 @@ function VisaoGeral() {
     const a: any = c.analysis;
     const raw = (c as any).seller_name ?? (c as any).seller_email ?? "—";
     const canonical = displaySellerName(raw);
-    if (!isMetricSeller(canonical)) continue;
+    if (!isMetricSeller(canonical, (c as any).last_message_at ?? a?.analyzed_at ?? new Date()))
+      continue;
     const cur = bySeller.get(canonical) ?? { name: canonical, count: 0, sum: 0, wins: 0 };
 
     cur.count += 1;

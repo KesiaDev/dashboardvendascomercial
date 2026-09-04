@@ -18,9 +18,21 @@ import { formatInt, formatPct } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts";
 import { format as formatDate } from "date-fns";
 import { Users, Trophy, Target, Clock, LayoutGrid } from "lucide-react";
+import { conversionRate } from "@/lib/conversion";
 
 export const Route = createFileRoute("/_app/produtividade")({
   component: Produtividade,
@@ -38,8 +50,16 @@ async function fetchLostStatuses(): Promise<LostStatus[]> {
 }
 
 const COLORS = [
-  "#8b5cf6", "#6366f1", "#3b82f6", "#06b6d4", "#10b981",
-  "#84cc16", "#f59e0b", "#ef4444", "#ec4899", "#a855f7",
+  "#8b5cf6",
+  "#6366f1",
+  "#3b82f6",
+  "#06b6d4",
+  "#10b981",
+  "#84cc16",
+  "#f59e0b",
+  "#ef4444",
+  "#ec4899",
+  "#a855f7",
 ];
 
 function fmtDuration(ms: number): string {
@@ -54,19 +74,40 @@ function Produtividade() {
   const [area, setArea] = useState<BusinessArea>("COMERCIAL");
   const { format: money } = useCurrency();
 
-  const { data: deals = [], isLoading } = useQuery({ queryKey: ["bi_deals"], queryFn: fetchAllDeals });
-  const { data: pipelineAreas = [] } = useQuery({ queryKey: ["bi_pipeline_areas"], queryFn: fetchPipelineAreas });
+  const { data: deals = [], isLoading } = useQuery({
+    queryKey: ["bi_deals"],
+    queryFn: fetchAllDeals,
+  });
+  const { data: pipelineAreas = [] } = useQuery({
+    queryKey: ["bi_pipeline_areas"],
+    queryFn: fetchPipelineAreas,
+  });
   const { data: stages = [] } = useQuery({ queryKey: ["clint_stages"], queryFn: fetchStages });
-  const { data: lostStatuses = [] } = useQuery({ queryKey: ["clint_lost_statuses"], queryFn: fetchLostStatuses });
-  const { data: teamActivity = [] } = useQuery({ queryKey: ["bi_team_activity"], queryFn: fetchTeamActivity });
-  const { data: followupActivities = [] } = useQuery({ queryKey: ["bi_followup_activities"], queryFn: fetchFollowupActivities });
+  const { data: lostStatuses = [] } = useQuery({
+    queryKey: ["clint_lost_statuses"],
+    queryFn: fetchLostStatuses,
+  });
+  const { data: teamActivity = [] } = useQuery({
+    queryKey: ["bi_team_activity"],
+    queryFn: fetchTeamActivity,
+  });
+  const { data: followupActivities = [] } = useQuery({
+    queryKey: ["bi_followup_activities"],
+    queryFn: fetchFollowupActivities,
+  });
 
   const areaMap = useMemo(() => buildAreaMap(pipelineAreas), [pipelineAreas]);
-  const dealsInArea = useMemo(() => filterDealsByArea(deals, areaMap, area), [deals, areaMap, area]);
+  const dealsInArea = useMemo(
+    () => filterDealsByArea(deals, areaMap, area),
+    [deals, areaMap, area],
+  );
   const { start, end } = periodRange(period);
 
   const stageLabel = useMemo(() => new Map(stages.map((s) => [s.id, s.label])), [stages]);
-  const lostLabel = useMemo(() => new Map(lostStatuses.map((s) => [s.id, s.label ?? "Outro"])), [lostStatuses]);
+  const lostLabel = useMemo(
+    () => new Map(lostStatuses.map((s) => [s.id, s.label ?? "Outro"])),
+    [lostStatuses],
+  );
 
   function inPeriod(iso: string | null) {
     if (!iso) return false;
@@ -80,21 +121,24 @@ function Produtividade() {
     const leads = dealsInArea.filter((d) => inPeriod(d.created_at));
     const won = dealsInArea.filter((d) => d.status === "WON" && inPeriod(d.won_at));
     const lost = dealsInArea.filter((d) => d.status === "LOST" && inPeriod(d.lost_at));
-    const closed = won.length + lost.length;
+    // Esta tela já datava ganhos e perdidos pelo fechamento — estava certa
+    // antes da consolidação. Passa a usar a função canônica para não voltar a
+    // divergir quando alguém mexer numa das telas e esquecer das outras.
+    const conv = conversionRate(dealsInArea, start, end);
     const revenue = won.reduce((s, d) => s + (d.value ?? 0), 0);
     const cycles = won
       .filter((d) => d.created_at && d.won_at)
       .map((d) => new Date(d.won_at!).getTime() - new Date(d.created_at!).getTime())
       .filter((ms) => ms > 0);
     const avgCycleMs = cycles.length > 0 ? cycles.reduce((a, b) => a + b, 0) / cycles.length : 0;
-    return { leads: leads.length, won: won.length, convRate: closed > 0 ? won.length / closed : 0, revenue, avgCycleMs };
+    return { leads: leads.length, won: won.length, convRate: conv.rate, revenue, avgCycleMs };
   }, [dealsInArea, start, end]);
 
   const lossReasons = useMemo(() => {
     const lost = dealsInArea.filter((d) => d.status === "LOST" && inPeriod(d.lost_at));
     const map = new Map<string, number>();
     for (const d of lost) {
-      const label = d.lost_status_id ? lostLabel.get(d.lost_status_id) ?? "Outro" : "Sem motivo";
+      const label = d.lost_status_id ? (lostLabel.get(d.lost_status_id) ?? "Outro") : "Sem motivo";
       map.set(label, (map.get(label) ?? 0) + 1);
     }
     const total = lost.length;
@@ -122,12 +166,13 @@ function Produtividade() {
     const sellers = new Map<string, Map<string, number>>();
     for (const d of dealsInArea) {
       const user = d.user_name ?? d.user_email ?? "—";
-      const stage = d.stage_id ? stageLabel.get(d.stage_id) ?? d.stage ?? "—" : d.stage ?? "—";
+      const stage = d.stage_id ? (stageLabel.get(d.stage_id) ?? d.stage ?? "—") : (d.stage ?? "—");
       if (!sellers.has(user)) sellers.set(user, new Map());
       const m = sellers.get(user)!;
       m.set(stage, (m.get(stage) ?? 0) + 1);
     }
-    const groups: { user: string; total: number; stages: { stage: string; count: number }[] }[] = [];
+    const groups: { user: string; total: number; stages: { stage: string; count: number }[] }[] =
+      [];
     for (const [user, stageMap] of sellers) {
       const stages = Array.from(stageMap.entries())
         .map(([stage, count]) => ({ stage, count }))
@@ -154,7 +199,10 @@ function Produtividade() {
   }, [dealsInArea, start, end]);
 
   const salesByVendor = useMemo(() => {
-    const groups = new Map<string, { vendedor: string; total: number; items: typeof salesDetail }>();
+    const groups = new Map<
+      string,
+      { vendedor: string; total: number; items: typeof salesDetail }
+    >();
     for (const s of salesDetail) {
       const g = groups.get(s.vendedor) ?? { vendedor: s.vendedor, total: 0, items: [] };
       g.total += s.valor;
@@ -169,7 +217,10 @@ function Produtividade() {
   // recebidos por vendedor no mesmo intervalo de datas.
   const latestActivityPeriod = useMemo(() => {
     if (teamActivity.length === 0) return null;
-    return teamActivity.reduce((latest, r) => (r.periodo_fim > latest.periodo_fim ? r : latest), teamActivity[0]);
+    return teamActivity.reduce(
+      (latest, r) => (r.periodo_fim > latest.periodo_fim ? r : latest),
+      teamActivity[0],
+    );
   }, [teamActivity]);
 
   const teamProductivity = useMemo(() => {
@@ -185,7 +236,11 @@ function Produtividade() {
       leadsByUser.set(user, (leadsByUser.get(user) ?? 0) + 1);
     }
     return teamActivity
-      .filter((r) => r.periodo_inicio === latestActivityPeriod.periodo_inicio && r.periodo_fim === latestActivityPeriod.periodo_fim)
+      .filter(
+        (r) =>
+          r.periodo_inicio === latestActivityPeriod.periodo_inicio &&
+          r.periodo_fim === latestActivityPeriod.periodo_fim,
+      )
       .map((r) => {
         const recebidos = leadsByUser.get(cleanSellerName(r.user_name)) ?? 0;
         return {
@@ -199,13 +254,20 @@ function Produtividade() {
 
   const latestFollowupPeriod = useMemo(() => {
     if (followupActivities.length === 0) return null;
-    return followupActivities.reduce((latest, r) => (r.periodo_fim > latest.periodo_fim ? r : latest), followupActivities[0]);
+    return followupActivities.reduce(
+      (latest, r) => (r.periodo_fim > latest.periodo_fim ? r : latest),
+      followupActivities[0],
+    );
   }, [followupActivities]);
 
   const followupRows = useMemo(() => {
     if (!latestFollowupPeriod) return [];
     return followupActivities
-      .filter((r) => r.periodo_inicio === latestFollowupPeriod.periodo_inicio && r.periodo_fim === latestFollowupPeriod.periodo_fim)
+      .filter(
+        (r) =>
+          r.periodo_inicio === latestFollowupPeriod.periodo_inicio &&
+          r.periodo_fim === latestFollowupPeriod.periodo_fim,
+      )
       .sort((a, b) => b.quantidade - a.quantidade);
   }, [followupActivities, latestFollowupPeriod]);
 
@@ -255,10 +317,27 @@ function Produtividade() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Kpi title="Negócios recebidos" value={formatInt(kpis.leads)} icon={<Users className="h-4 w-4 text-primary" />} />
-            <Kpi title="Vendas" value={formatInt(kpis.won)} icon={<Trophy className="h-4 w-4 text-success" />} accent="success" />
-            <Kpi title="Taxa de conversão" value={formatPct(kpis.convRate)} icon={<Target className="h-4 w-4 text-primary" />} />
-            <Kpi title="Ciclo médio de venda" value={fmtDuration(kpis.avgCycleMs)} icon={<Clock className="h-4 w-4 text-primary" />} />
+            <Kpi
+              title="Negócios recebidos"
+              value={formatInt(kpis.leads)}
+              icon={<Users className="h-4 w-4 text-primary" />}
+            />
+            <Kpi
+              title="Vendas"
+              value={formatInt(kpis.won)}
+              icon={<Trophy className="h-4 w-4 text-success" />}
+              accent="success"
+            />
+            <Kpi
+              title="Taxa de conversão"
+              value={formatPct(kpis.convRate)}
+              icon={<Target className="h-4 w-4 text-primary" />}
+            />
+            <Kpi
+              title="Ciclo médio de venda"
+              value={fmtDuration(kpis.avgCycleMs)}
+              icon={<Clock className="h-4 w-4 text-primary" />}
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -268,7 +347,9 @@ function Produtividade() {
               </CardHeader>
               <CardContent>
                 {lossReasons.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-12 text-center">Nenhuma perda no período.</p>
+                  <p className="text-sm text-muted-foreground py-12 text-center">
+                    Nenhuma perda no período.
+                  </p>
                 ) : (
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                     <div className="h-[200px] w-full sm:w-1/2">
@@ -286,7 +367,12 @@ function Produtividade() {
                             ))}
                           </Pie>
                           <Tooltip
-                            contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)" }}
+                            contentStyle={{
+                              background: "var(--popover)",
+                              border: "1px solid var(--border)",
+                              borderRadius: 8,
+                              color: "var(--foreground)",
+                            }}
                           />
                         </PieChart>
                       </ResponsiveContainer>
@@ -295,7 +381,10 @@ function Produtividade() {
                       {lossReasons.map((r, i) => (
                         <div key={r.label} className="flex items-center justify-between text-sm">
                           <span className="flex items-center gap-2 truncate">
-                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                            <span
+                              className="h-2 w-2 rounded-full"
+                              style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                            />
                             <span className="truncate">{r.label}</span>
                           </span>
                           <span className="tabular-nums text-muted-foreground">
@@ -315,13 +404,17 @@ function Produtividade() {
               </CardHeader>
               <CardContent className="max-h-[400px] overflow-y-auto space-y-4">
                 {funnelBySeller.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-12 text-center">Nenhum negócio encontrado.</p>
+                  <p className="text-sm text-muted-foreground py-12 text-center">
+                    Nenhum negócio encontrado.
+                  </p>
                 ) : (
                   funnelBySeller.map((g) => (
                     <div key={g.user}>
                       <div className="flex items-center justify-between border-b border-border pb-1.5 mb-1.5">
                         <Badge className="text-xs">{g.user}</Badge>
-                        <span className="text-xs text-muted-foreground">{formatInt(g.total)} negócios</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatInt(g.total)} negócios
+                        </span>
                       </div>
                       <table className="w-full text-sm">
                         <tbody>
@@ -346,7 +439,9 @@ function Produtividade() {
             </CardHeader>
             <CardContent className="h-[200px]">
               {lostByDay.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-12 text-center">Nenhuma perda no período.</p>
+                <p className="text-sm text-muted-foreground py-12 text-center">
+                  Nenhuma perda no período.
+                </p>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={lostByDay} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
@@ -354,9 +449,20 @@ function Produtividade() {
                     <XAxis dataKey="day" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
                     <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
                     <Tooltip
-                      contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)" }}
+                      contentStyle={{
+                        background: "var(--popover)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 8,
+                        color: "var(--foreground)",
+                      }}
                     />
-                    <Area type="monotone" dataKey="count" stroke="#ef4444" fill="#ef4444" fillOpacity={0.2} />
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#ef4444"
+                      fill="#ef4444"
+                      fillOpacity={0.2}
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
@@ -369,7 +475,7 @@ function Produtividade() {
               <p className="text-xs text-muted-foreground">
                 {latestActivityPeriod
                   ? `Período importado: ${formatDate(new Date(latestActivityPeriod.periodo_inicio), "dd/MM/yy")} – ${formatDate(new Date(latestActivityPeriod.periodo_fim), "dd/MM/yy")}. Ligações/e-mails/tarefas/reuniões/WhatsApp vêm de CSV (sem API na Clint) — importe em /import.`
-                  : "Nenhum dado importado ainda. Vá em /import → \"Atividade do time\" para subir o CSV exportado da Clint."}
+                  : 'Nenhum dado importado ainda. Vá em /import → "Atividade do time" para subir o CSV exportado da Clint.'}
               </p>
             </CardHeader>
             {teamProductivity.length > 0 && (
@@ -391,18 +497,33 @@ function Produtividade() {
                     {teamProductivity.map((r) => (
                       <tr key={r.user_name} className="border-b border-border/50">
                         <td className="py-1.5 pr-4 font-medium">{r.user_name}</td>
-                        <td className="py-1.5 pr-4 text-right tabular-nums">{formatInt(r.ligacoes)}</td>
-                        <td className="py-1.5 pr-4 text-right tabular-nums">{formatInt(r.emails)}</td>
-                        <td className="py-1.5 pr-4 text-right tabular-nums">{formatInt(r.tarefas)}</td>
-                        <td className="py-1.5 pr-4 text-right tabular-nums">{formatInt(r.reunioes_agendadas)}</td>
-                        <td className="py-1.5 pr-4 text-right tabular-nums">{formatInt(r.whatsapp)}</td>
+                        <td className="py-1.5 pr-4 text-right tabular-nums">
+                          {formatInt(r.ligacoes)}
+                        </td>
+                        <td className="py-1.5 pr-4 text-right tabular-nums">
+                          {formatInt(r.emails)}
+                        </td>
+                        <td className="py-1.5 pr-4 text-right tabular-nums">
+                          {formatInt(r.tarefas)}
+                        </td>
+                        <td className="py-1.5 pr-4 text-right tabular-nums">
+                          {formatInt(r.reunioes_agendadas)}
+                        </td>
+                        <td className="py-1.5 pr-4 text-right tabular-nums">
+                          {formatInt(r.whatsapp)}
+                        </td>
                         <td className="py-1.5 pr-4 text-right tabular-nums">
                           {formatInt(r.negocios_trabalhados)}
-                          <span className="text-muted-foreground"> / {formatInt(r.negociosRecebidos)}</span>
+                          <span className="text-muted-foreground">
+                            {" "}
+                            / {formatInt(r.negociosRecebidos)}
+                          </span>
                         </td>
                         <td className="py-1.5 text-right tabular-nums">
                           {r.pctTrabalhados !== null ? (
-                            <Badge variant="secondary" className="text-xs">{formatPct(r.pctTrabalhados)}</Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {formatPct(r.pctTrabalhados)}
+                            </Badge>
                           ) : (
                             "—"
                           )}
@@ -421,7 +542,8 @@ function Produtividade() {
                 <CardTitle className="text-base">Atividades de follow-up — time todo</CardTitle>
                 {latestFollowupPeriod && (
                   <p className="text-xs text-muted-foreground">
-                    Período importado: {formatDate(new Date(latestFollowupPeriod.periodo_inicio), "dd/MM/yy")} –{" "}
+                    Período importado:{" "}
+                    {formatDate(new Date(latestFollowupPeriod.periodo_inicio), "dd/MM/yy")} –{" "}
                     {formatDate(new Date(latestFollowupPeriod.periodo_fim), "dd/MM/yy")}
                   </p>
                 )}
@@ -438,7 +560,9 @@ function Produtividade() {
                     {followupRows.map((r) => (
                       <tr key={r.titulo_atividade} className="border-b border-border/50">
                         <td className="py-1.5 pr-4">{r.titulo_atividade}</td>
-                        <td className="py-1.5 text-right tabular-nums">{formatInt(r.quantidade)}</td>
+                        <td className="py-1.5 text-right tabular-nums">
+                          {formatInt(r.quantidade)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -449,18 +573,24 @@ function Produtividade() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Detalhamento das vendas — {AREA_LABELS[area]}</CardTitle>
+              <CardTitle className="text-base">
+                Detalhamento das vendas — {AREA_LABELS[area]}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               {salesByVendor.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-12 text-center">Nenhuma venda no período.</p>
+                <p className="text-sm text-muted-foreground py-12 text-center">
+                  Nenhuma venda no período.
+                </p>
               ) : (
                 salesByVendor.map((g) => (
                   <div key={g.vendedor}>
                     <div className="flex items-center justify-between border-b border-border pb-2 mb-2">
                       <div className="flex items-center gap-2">
                         <Badge className="text-xs">{g.vendedor}</Badge>
-                        <span className="text-xs text-muted-foreground">{formatInt(g.items.length)} venda{g.items.length > 1 ? "s" : ""}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatInt(g.items.length)} venda{g.items.length > 1 ? "s" : ""}
+                        </span>
                       </div>
                       <span className="text-sm font-semibold tabular-nums">{money(g.total)}</span>
                     </div>
@@ -480,7 +610,9 @@ function Produtividade() {
                               <td className="py-1.5 pr-4">{s.contato}</td>
                               <td className="py-1.5 pr-4 text-muted-foreground">{s.email}</td>
                               <td className="py-1.5 pr-4 text-muted-foreground">{s.origem}</td>
-                              <td className="py-1.5 text-right tabular-nums font-medium">{money(s.valor)}</td>
+                              <td className="py-1.5 text-right tabular-nums font-medium">
+                                {money(s.valor)}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -515,7 +647,10 @@ function Kpi({
         {icon}
       </CardHeader>
       <CardContent>
-        <p className="text-2xl font-semibold tracking-tight" style={accent === "success" ? { color: "var(--success)" } : undefined}>
+        <p
+          className="text-2xl font-semibold tracking-tight"
+          style={accent === "success" ? { color: "var(--success)" } : undefined}
+        >
           {value}
         </p>
       </CardContent>

@@ -2,7 +2,13 @@ import { useMemo, useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { fetchOriginsFn, fetchStagesFn, fetchLostStatusesFn, fetchLastSyncFn, fetchAllDealsFn } from "@/lib/data.functions";
+import {
+  fetchOriginsFn,
+  fetchStagesFn,
+  fetchLostStatusesFn,
+  fetchLastSyncFn,
+  fetchAllDealsFn,
+} from "@/lib/data.functions";
 import {
   syncClintUsers,
   syncClintDeals,
@@ -11,7 +17,13 @@ import {
   setLostStatusLabel,
   backfillLostStatuses,
 } from "@/lib/clint.functions";
-import { fetchAllSales, findPhantomWonDeals, isExcludedSeller, effectiveWinner, cleanSellerName } from "@/lib/bi";
+import {
+  fetchAllSales,
+  findPhantomWonDeals,
+  isExcludedSeller,
+  effectiveWinner,
+  cleanSellerName,
+} from "@/lib/bi";
 import { useCurrency } from "@/lib/currency-context";
 import { formatInt, formatPct } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +72,7 @@ import {
   Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { conversionRate } from "@/lib/conversion";
 
 export const Route = createFileRoute("/_app/comercial")({
   component: Comercial,
@@ -100,7 +113,8 @@ function periodStart(p: Period): Date | null {
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if (p === "week") d.setDate(d.getDate() - 7);
   else if (p === "month") return new Date(now.getFullYear(), now.getMonth(), 1);
-  else if (p === "quarter") return new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+  else if (p === "quarter")
+    return new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
   else if (p === "semester") return new Date(now.getFullYear(), now.getMonth() < 6 ? 0 : 6, 1);
   else if (p === "year") return new Date(now.getFullYear(), 0, 1);
   return d;
@@ -127,9 +141,21 @@ async function fetchLastSync() {
 }
 
 const COLORS = [
-  "#8b5cf6", "#6366f1", "#3b82f6", "#06b6d4", "#10b981",
-  "#84cc16", "#f59e0b", "#ef4444", "#ec4899", "#a855f7",
-  "#0ea5e9", "#14b8a6", "#eab308", "#f97316", "#f43f5e",
+  "#8b5cf6",
+  "#6366f1",
+  "#3b82f6",
+  "#06b6d4",
+  "#10b981",
+  "#84cc16",
+  "#f59e0b",
+  "#ef4444",
+  "#ec4899",
+  "#a855f7",
+  "#0ea5e9",
+  "#14b8a6",
+  "#eab308",
+  "#f97316",
+  "#f43f5e",
 ];
 
 function fmtDuration(ms: number): string {
@@ -216,9 +242,7 @@ function Comercial() {
 
   const currentStages = useMemo(
     () =>
-      stages
-        .filter((s) => s.origin_id === originId)
-        .sort((a, b) => a.stage_order - b.stage_order),
+      stages.filter((s) => s.origin_id === originId).sort((a, b) => a.stage_order - b.stage_order),
     [stages, originId],
   );
 
@@ -318,14 +342,32 @@ function Comercial() {
     }
 
     const total = filtered.length;
-    const closed = won + lost;
-    const convRate = closed > 0 ? won / closed : 0;
+
+    // Conversão pela DEFINIÇÃO OFICIAL (src/lib/conversion.ts): ganhos e
+    // perdidos ambos pela data de FECHAMENTO. Os contadores `won`/`lost` do
+    // laço acima são datados por created_at, junto com o resto do funil — bons
+    // para "o que entrou no período", errados como denominador da conversão.
+    // Era essa diferença que fazia esta tela discordar de /executivo.
+    const convStart = dateRange?.from ?? periodStart(period);
+    const convEnd =
+      dateRange?.from && dateRange?.to
+        ? new Date(dateRange.to.getTime() + 24 * 60 * 60 * 1000 - 1)
+        : null;
+    const conv = conversionRate(
+      deals.filter((d) => {
+        if (originId && d.origin_id !== originId) return false;
+        const winner = effectiveWinner(d);
+        if (isExcludedSeller(d.user_name)) return false;
+        if (winner && isExcludedSeller(winner.name)) return false;
+        return !phantomWonIds.has(d.id);
+      }),
+      convStart,
+      convEnd,
+    );
+    const convRate = conv.rate;
     const respRate = total > 0 ? respondedBase / total : 0;
-    const noShow =
-      reuniaoAgendada > 0 ? (reuniaoAgendada - reuniaoRealizada) / reuniaoAgendada : 0;
-    const avgCycle = cycleMs.length
-      ? cycleMs.reduce((a, b) => a + b, 0) / cycleMs.length
-      : 0;
+    const noShow = reuniaoAgendada > 0 ? (reuniaoAgendada - reuniaoRealizada) / reuniaoAgendada : 0;
+    const avgCycle = cycleMs.length ? cycleMs.reduce((a, b) => a + b, 0) / cycleMs.length : 0;
 
     return {
       total,
@@ -454,8 +496,7 @@ function Comercial() {
 
   const setLabelFn = useServerFn(setLostStatusLabel);
   const renameMutation = useMutation({
-    mutationFn: async (vars: { id: string; label: string | null }) =>
-      setLabelFn({ data: vars }),
+    mutationFn: async (vars: { id: string; label: string | null }) => setLabelFn({ data: vars }),
     onSuccess: () => {
       toast.success("Motivo atualizado");
       qc.invalidateQueries({ queryKey: ["clint_lost_statuses"] });
@@ -508,9 +549,7 @@ function Comercial() {
           disabled={syncMutation.isPending}
           size="sm"
         >
-          <RefreshCw
-            className={cn("h-4 w-4 mr-2", syncMutation.isPending && "animate-spin")}
-          />
+          <RefreshCw className={cn("h-4 w-4 mr-2", syncMutation.isPending && "animate-spin")} />
           {syncMutation.isPending ? "Sincronizando…" : "Sincronizar Clint"}
         </Button>
       </div>
@@ -534,8 +573,7 @@ function Comercial() {
                     const sc = stages.filter((s) => s.origin_id === o.id).length;
                     return (
                       <SelectItem key={o.id} value={o.id}>
-                        {o.name}{" "}
-                        <span className="text-muted-foreground ml-1">({sc} etapas)</span>
+                        {o.name} <span className="text-muted-foreground ml-1">({sc} etapas)</span>
                       </SelectItem>
                     );
                   })}
@@ -624,9 +662,7 @@ function Comercial() {
               </p>
             </div>
             <Button onClick={() => syncMutation.mutate(false)} disabled={syncMutation.isPending}>
-              <RefreshCw
-                className={cn("h-4 w-4 mr-2", syncMutation.isPending && "animate-spin")}
-              />
+              <RefreshCw className={cn("h-4 w-4 mr-2", syncMutation.isPending && "animate-spin")} />
               Sincronizar agora
             </Button>
           </CardContent>
@@ -848,7 +884,9 @@ function Comercial() {
             <div className="mb-4 flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-lg font-semibold">Detalhe por vendedor</h3>
-              <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">todos os funis</span>
+              <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
+                todos os funis
+              </span>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {sellers.map((s, i) => {
@@ -856,10 +894,7 @@ function Comercial() {
                 const conv = closed > 0 ? s.won / closed : 0;
                 return (
                   <Card key={s.email || s.name} className="overflow-hidden">
-                    <div
-                      className="h-1"
-                      style={{ background: COLORS[i % COLORS.length] }}
-                    />
+                    <div className="h-1" style={{ background: COLORS[i % COLORS.length] }} />
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2">
                         <CardTitle className="text-base">{s.name}</CardTitle>
@@ -877,9 +912,7 @@ function Comercial() {
                       <Stat label="Em aberto" value={formatInt(s.open)} />
                       <div className="col-span-2 rounded-md border border-border bg-secondary/30 p-2.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Taxa de conversão
-                          </span>
+                          <span className="text-xs text-muted-foreground">Taxa de conversão</span>
                           <span className="text-sm font-semibold">{formatPct(conv)}</span>
                         </div>
                         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
@@ -929,10 +962,7 @@ function LostRow({
         }}
         className="flex items-center gap-2 rounded-md border border-border bg-secondary/30 p-2"
       >
-        <span
-          className="h-3 w-3 shrink-0 rounded-sm"
-          style={{ background: color }}
-        />
+        <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: color }} />
         <Input
           autoFocus
           value={val}
@@ -962,7 +992,9 @@ function LostRow({
       className="flex w-full items-center gap-2 rounded-md border border-border bg-secondary/30 p-2 text-left hover:bg-secondary/60 transition"
     >
       <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: color }} />
-      <span className={cn("flex-1 text-sm truncate", item.unnamed && "italic text-muted-foreground")}>
+      <span
+        className={cn("flex-1 text-sm truncate", item.unnamed && "italic text-muted-foreground")}
+      >
         {item.name}
       </span>
       <span className="text-sm font-semibold tabular-nums">{formatInt(item.value)}</span>
@@ -1009,15 +1041,7 @@ function Kpi({
   );
 }
 
-function Stat({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: "success";
-}) {
+function Stat({ label, value, accent }: { label: string; value: string; accent?: "success" }) {
   return (
     <div className="rounded-md border border-border bg-secondary/30 p-2.5">
       <span className="text-xs text-muted-foreground">{label}</span>

@@ -21,6 +21,7 @@ import {
 } from "@/lib/manual-sales.functions";
 import { isRenewalProduct } from "@/lib/product-groups";
 import { useAppAuth } from "@/routes/_app";
+import { canonicalSellerName } from "@/lib/sellers";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -222,27 +223,11 @@ function isAdminEmail(e: string) {
   return ADMIN_EMAILS.includes((e ?? "").trim().toLowerCase());
 }
 
-// Normaliza vendedor: mapeia e-mails corporativos para o nome canônico
-const SELLER_CANONICAL: Record<string, string> = {
-  "joaopessoa@llmidiaco.com": "João Pessoa",
-  "joaopessoa@lucianolarrossa.com": "João Pessoa",
-  "jpessoa20@hotmail.com": "João Pessoa",
-  "giselegagliano@lucianolarrossa.com": "Gisele Pimentel",
-  "gp5230158@gmail.com": "Gisele Pimentel",
-  "fabionadal@llmidiaco.com": "Fabio Nadal",
-  "fabionadal@lucianolarrossa.com": "Fabio Nadal",
-  "fabio.nadal19@gmail.com": "Fabio Nadal",
-  "ritabandeira@lucianolarrossa.com": "Rita Bandeira",
-  "kesiawnandi@gmail.com": "Kesia Nandi",
-  "kesia@llmidiaco.com": "Kesia Nandi",
-};
+// O mapa de e-mail → nome que ficava aqui era a quinta cópia da mesma lista.
+// Agora usa src/lib/sellers.ts.
 function normalizeSeller(raw: string | null | undefined): string {
   if (!raw) return "—";
-  const lower = raw.toLowerCase();
-  for (const [email, name] of Object.entries(SELLER_CANONICAL)) {
-    if (lower === email || lower.includes(email.split("@")[0])) return name;
-  }
-  return raw;
+  return canonicalSellerName(raw) || "—";
 }
 
 function FechamentoForm({ session }: { session: any }) {
@@ -1026,10 +1011,7 @@ function SaleCard({
           <Button
             variant={isPendingInst ? "default" : "ghost"}
             size="sm"
-            className={cn(
-              "h-7 px-2",
-              isPendingInst && "bg-success hover:bg-success text-white",
-            )}
+            className={cn("h-7 px-2", isPendingInst && "bg-success hover:bg-success text-white")}
             onClick={() => onMarkPaid(!sale.installment_paid)}
           >
             {isPendingInst ? (

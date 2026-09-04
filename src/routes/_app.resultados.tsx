@@ -143,12 +143,20 @@ const PRODUCT_HEX: Record<ProductId, string> = {
 };
 
 import { isApproved } from "@/lib/sales-status";
+import { isMetricSeller } from "@/lib/sellers";
 
-const SELLER_CODES = ["gisele", "nadal", "joao", "rita", "luana"];
+/**
+ * A venda é do time comercial?
+ *
+ * A lista hardcoded que ficava aqui — ["gisele","nadal","joao","rita","luana"] —
+ * NÃO incluía a Kesia, então as vendas dela eram invisíveis nesta tela. E ainda
+ * incluía a Luana, que já tinha saído. Agora usa o quadro canônico, datado pela
+ * venda: assim o Nadal continua contando nos meses até agosto/2026 e para de
+ * contar em setembro, sem reescrever o histórico.
+ */
 function isCommercial(sale: SaleResultado) {
-  const af = (sale.nome_afiliado ?? "").toLowerCase();
-  const sck = (sale.origem_checkout ?? "").toLowerCase();
-  return SELLER_CODES.some((c) => af.includes(c) || sck.includes(c));
+  const on = sale.data_venda ?? new Date().toISOString();
+  return isMetricSeller(sale.nome_afiliado, on) || isMetricSeller(sale.origem_checkout, on);
 }
 
 function isRenovacao(sale: SaleResultado): boolean {

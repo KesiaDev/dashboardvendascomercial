@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { canonicalSellerName, isMetricSeller, resolveSeller } from "@/lib/sellers";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { cleanSellerName, isExcludedSeller } from "@/lib/bi";
 import { FUNIS_LEADS } from "@/lib/performance-funnels";
@@ -157,40 +158,12 @@ function rangeBounds(
 // Mapeia emails corporativos e variantes para o nome canônico — evita
 // duplicar linhas do mesmo vendedor no ranking (ex.: "Gisele Gagliano" vs
 // "giselegagliano@..." vs "Gisele Pimentel").
-// Aliases → nome canônico. Cobre variantes de e-mail (com/sem ponto), locais
-// (joaopessoa, gisele, gagliano, pimentel...) e o próprio nome escrito.
-const SELLER_ALIASES: { match: string[]; name: string }[] = [
-  { name: "João Pessoa", match: ["joaopessoa", "jpessoa20", "joao pessoa", "joão pessoa"] },
-  {
-    name: "Gisele Pimentel",
-    match: ["giselegagliano", "gisele gagliano", "gisele pimentel", "gisele"],
-  },
-  { name: "Fabio Nadal", match: ["fabionadal", "fabio nadal", "nadal"] },
-  { name: "Rita Bandeira", match: ["ritabandeira", "rita bandeira", "rita"] },
-  {
-    name: "Luana Guimarães",
-    match: ["luanaguimaraes", "luana.guimaraes", "luana guimaraes", "luana guimarães", "luana"],
-  },
-  { name: "Kesia Nandi", match: ["kesiawnandi", "kesia nandi", "kesia", "késia", "nandi"] },
-];
-
-// Fora das métricas de performance: Luana saiu da empresa.
-const EXCLUDED_PERF_KEYS = ["luana"];
-
-function canonicalFrom(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const lower = raw.trim().toLowerCase();
-  if (!lower) return null;
-  for (const { match, name } of SELLER_ALIASES) {
-    for (const m of match) {
-      if (lower === m || lower.includes(m)) return name;
-    }
-  }
-  return null;
-}
-
+// A lista de vendedores e a de exclusão vivem em src/lib/sellers.ts. As cópias
+// que ficavam aqui não tinham a Pamela, então ela era invisível em Performance,
+// e a exclusão local só cobria a Luana — Camila e Aline entravam nas métricas
+// desta tela e saíam de /executivo.
 function normalizeSeller(raw: string | null | undefined): string {
-  return canonicalFrom(raw) ?? (raw?.trim() || "—");
+  return canonicalSellerName(raw) || "—";
 }
 
 /**
@@ -343,7 +316,9 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
     type Acc = SellerPerf & { _scoreSum: number; _scoreN: number };
     const sellerMap = new Map<string, Acc>();
     const ensure = (email: string | null, name: string | null): Acc => {
-      const canonical = canonicalFrom(email) ?? canonicalFrom(name);
+      const byEmail = resolveSeller(email)?.name ?? null;
+      const byName = resolveSeller(name)?.name ?? null;
+      const canonical = byEmail ?? byName;
       const cleaned = canonical ?? cleanSellerName(name ?? email ?? "—");
       const key = cleaned.toLowerCase();
       let cur = sellerMap.get(key);
@@ -500,7 +475,12 @@ export const fetchPerformanceFn = createServerFn({ method: "POST" })
         leadsNovos: s.leadsNovos,
         conversaoLead: s.leadsNovos > 0 ? s.vendas / s.leadsNovos : 0,
       }))
-      .filter((s) => !EXCLUDED_PERF_KEYS.some((k) => s.name.toLowerCase().includes(k)))
+      // Quadro vigente no fim do período analisado, não "hoje": assim uma
+      // semana de agosto continua mostrando o Nadal depois de ele sair em
+      // setembro. A exclusão da equipe interna (Camila, Aline) vem junto —
+      // antes só a Luana era filtrada aqui, e elas entravam nesta tela e saíam
+      // de /executivo.
+      .filter((s) => isMetricSeller(s.name, endDate))
       .sort((a, b) => b.faturamento - a.faturamento || b.vendas - a.vendas);
 
     const teamAt = sellers.reduce((a, s) => a + s.atendimentos, 0);

@@ -47,6 +47,9 @@ function aggregate(
       lost += 1;
     }
   }
+  // O laço acima já data ganhos por won_at e perdidos por lost_at, que é a
+  // definição oficial (src/lib/conversion.ts). Mantido inline porque agrega por
+  // vendedor no mesmo passo; se for mexer aqui, use conversionRate().
   const sellers = Array.from(bySeller.entries())
     .map(([name, s]) => ({
       name,
