@@ -31,3 +31,17 @@ export function leadBucket(
   if (/pipeline[\s_-]*comercial[\s_-]*v3/i.test(o)) return tagBucket(contactTags);
   return null;
 }
+
+/**
+ * Estágios da Clint em que o lead ainda é só cadastro/automação — ninguém do
+ * comercial assumiu. Fora desta lista consideramos "levantada de mão": o lead
+ * respondeu a automação/template e virou responsabilidade do vendedor.
+ */
+const ESTAGIOS_SEM_ATENDIMENTO = /^(base|nutri|abertura|novo|lead|inscri)/i;
+
+/** true quando o lead saiu da automação e passou a ser trabalhado pelo vendedor. */
+export function levantouMao(stage: string | null | undefined): boolean {
+  const s = String(stage ?? "").trim();
+  if (!s) return false;
+  return !ESTAGIOS_SEM_ATENDIMENTO.test(s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+}
