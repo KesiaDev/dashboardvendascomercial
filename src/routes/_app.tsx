@@ -68,24 +68,16 @@ const NAV_SECTIONS = [
   },
   {
     section: "Performance",
-    items: [
-      { to: "/comercial", label: "Análise Comercial", icon: BarChart3, adminOnly: true },
-      { to: "/executivo", label: "Visão Executiva", icon: LineChart, adminOnly: true },
-      { to: "/produtividade", label: "Produtividade", icon: Gauge, adminOnly: true },
-      { to: "/funis", label: "Funis", icon: Filter, adminOnly: true },
-      { to: "/vendedor-produto", label: "Vendedor × Produto", icon: Package, adminOnly: true },
-      { to: "/ranking", label: "Ranking", icon: Trophy, adminOnly: true },
-    ],
+    items: [{ to: "/ranking", label: "Ranking", icon: Trophy, adminOnly: true }],
   },
   {
     section: "Metas e Dinheiro",
     items: [
-      { to: "/metas-comercial", label: "Metas Comercial", icon: Target, adminOnly: true },
-      { to: "/resultados", label: "Resultados", icon: Briefcase, adminOnly: true },
       { to: "/vendas-reais", label: "Vendas Reais", icon: Receipt, adminOnly: true },
       { to: "/comissionamento", label: "Comissionamento", icon: DollarSign, adminOnly: true },
     ],
   },
+
   {
     section: "Time",
     items: [
