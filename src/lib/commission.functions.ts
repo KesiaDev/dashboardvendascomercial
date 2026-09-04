@@ -1,8 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { assertAdmin } from "@/lib/authz.server";
+import { assertAdmin, commissionScope } from "@/lib/authz.server";
 import { fetchAllRows } from "@/lib/supabase-paging";
-import type { ManualSaleRow } from "@/lib/commission";
+import { calculateCommissions } from "@/lib/commission";
+import type { CommissionPeriod, ManualSaleRow } from "@/lib/commission";
+import { eurBrlRate } from "@/lib/eur-rate";
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -465,4 +467,142 @@ export const generateRoletaSpinsFn = createServerFn({ method: "POST" })
     const { error: e3 } = await db.from("bi_roleta_spins").insert(novos);
     if (e3) throw new Error(e3.message);
     return { created: novos.length };
+  });
+
+// ── Comissionamento individual do vendedor ───────────────────────────────────
+// Vendedor não-admin nunca recebe as vendas do time no browser: o cálculo roda
+// aqui e só a linha dele volta. A identidade vem do token (commissionScope).
+export const fetchMyCommissionFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { periodId?: number | null } | undefined) => d ?? {})
+  .handler(async ({ data, context }) => {
+    const scope = commissionScope(context.claims);
+    if (!scope.sellerName) throw new Error("Utilizador sem vendedor associado");
+    const db = await admin();
+
+    const { data: periodsRaw, error: pErr } = await db
+      .from("bi_commission_periods")
+      .select("id,nome,data_inicio,data_fim,roleta_pool_brl,roleta_pool_eur,cotacao_eur")
+      .order("data_inicio", { ascending: false });
+    if (pErr) throw new Error(pErr.message);
+    const periods = (periodsRaw ?? []) as CommissionPeriod[];
+    if (periods.length === 0) return null;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const period =
+      (data.periodId ? periods.find((p) => p.id === data.periodId) : null) ??
+      periods.find((p) => p.data_inicio <= today && today <= p.data_fim) ??
+      periods[0];
+
+    const [sellersRes, ratesRes, bonusesRes, spinsRes] = await Promise.all([
+      db
+        .from("bi_seller_config")
+        .select("seller_name,hotmart_affiliate_name,clint_user_name,moeda_padrao,is_active"),
+      db
+        .from("bi_commission_rates")
+        .select("seller_name,produto_grupo,rate_pct,manager_rate_pct,effective_from"),
+      db
+        .from("bi_commission_bonuses")
+        .select("id,period_id,seller_name,tipo,valor,moeda,notas,created_at"),
+      db.from("bi_roleta_spins").select(SPIN_COLS),
+    ]);
+    for (const r of [sellersRes, ratesRes, bonusesRes, spinsRes]) {
+      if (r.error) throw new Error(r.error.message);
+    }
+
+    const [wise, overrides, manualSales, hotmartSales] = await Promise.all([
+      fetchAllRows(
+        ({ from, to }) =>
+          db
+            .from("bi_wise_payments")
+            .select(
+              "id,data_pagamento,cliente,valor_eur,cotacao_eur,valor_brl,descricao,seller_name,produto_grupo,period_id,email_cliente,situacao,inadimplente,sheet_tab,source,synced_at",
+            )
+            .range(from, to),
+        () => db.from("bi_wise_payments").select("*", { count: "exact", head: true }),
+      ),
+      fetchAllRows(
+        ({ from, to }) =>
+          db
+            .from("bi_sale_overrides")
+            .select("transacao,seller_name,produto_grupo,excluir,observacao")
+            .range(from, to),
+        () => db.from("bi_sale_overrides").select("*", { count: "exact", head: true }),
+      ),
+      fetchAllRows(
+        ({ from, to }) =>
+          db
+            .from("manual_sales")
+            .select(
+              "id,seller_name,product,funnel,value_eur,sale_date,confirmation_status,confirmed_hotmart_valor_brl,client_email,client_name,installment_number,installment_total,installment_paid",
+            )
+            .eq("installment_paid", true)
+            .gte("sale_date", period.data_inicio)
+            .lte("sale_date", period.data_fim)
+            .range(from, to),
+        () =>
+          db
+            .from("manual_sales")
+            .select("*", { count: "exact", head: true })
+            .eq("installment_paid", true)
+            .gte("sale_date", period.data_inicio)
+            .lte("sale_date", period.data_fim),
+      ),
+      fetchAllRows(
+        ({ from, to }) =>
+          db
+            .from("sales")
+            .select(
+              "transacao,produto_grupo,produto_original,status,data_venda,nome_cliente,email_cliente,nome_afiliado,origem_checkout,faturamento_liquido_brl,preco_total,moeda_original,numero_parcela",
+            )
+            .gte("data_venda", `${period.data_inicio}T00:00:00`)
+            .lte("data_venda", `${period.data_fim}T23:59:59`)
+            .range(from, to),
+        () =>
+          db
+            .from("sales")
+            .select("*", { count: "exact", head: true })
+            .gte("data_venda", `${period.data_inicio}T00:00:00`)
+            .lte("data_venda", `${period.data_fim}T23:59:59`),
+      ),
+    ]);
+
+    const summary = calculateCommissions(
+      period,
+      (sellersRes.data ?? []) as any,
+      (ratesRes.data ?? []) as any,
+      hotmartSales as any,
+      wise as any,
+      (bonusesRes.data ?? []) as any,
+      manualSales as any,
+      (spinsRes.data ?? []) as any,
+      overrides as any,
+    );
+
+    const me = summary.sellers.find((s) => s.sellerName === scope.sellerName) ?? null;
+
+    return {
+      sellerName: scope.sellerName,
+      period,
+      periods: periods.map((p) => ({ id: p.id, nome: p.nome })),
+      cotacao: eurBrlRate(period),
+      me,
+      rates: (ratesRes.data ?? []).filter((r: any) => r.seller_name === scope.sellerName),
+      spins: ((spinsRes.data ?? []) as RoletaSpinRow[]).filter(
+        (s) =>
+          s.seller_name === scope.sellerName &&
+          s.spin_date >= period.data_inicio &&
+          s.spin_date <= period.data_fim,
+      ),
+      vendas: summary.vendas
+        .filter((v) => v.seller === scope.sellerName && !v.override?.excluir)
+        .map((v) => ({
+          transacao: v.transacao,
+          data_venda: v.data_venda,
+          nome_cliente: v.nome_cliente,
+          produto_grupo: v.produto_grupo,
+          base_brl: v.base_brl,
+          source: v.source,
+        })),
+    };
   });
