@@ -400,6 +400,69 @@ export const deleteRoletaSpinFn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// Lança (ou zera) o valor manual da roleta do mês de um vendedor.
+// Guarda uma única linha por vendedor/período com source="manual_mes".
+export const setSellerRoletaFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      period_id: number;
+      seller_name: string;
+      spin_date: string;
+      value_eur: number;
+      notes?: string | null;
+    }) => {
+      if (!d.period_id) throw new Error("Período obrigatório");
+      if (!d.seller_name?.trim()) throw new Error("Vendedor obrigatório");
+      if (!d.spin_date) throw new Error("Data obrigatória");
+      return d;
+    },
+  )
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.claims);
+    const db = await admin();
+    const { data: existing, error: eFind } = await db
+      .from("bi_roleta_spins")
+      .select("id")
+      .eq("period_id", data.period_id)
+      .eq("seller_name", data.seller_name)
+      .eq("source", "manual_mes");
+    if (eFind) throw new Error(eFind.message);
+    const ids = (existing ?? []).map((r: { id: string }) => r.id);
+    const value = Number(data.value_eur) || 0;
+    if (value <= 0) {
+      if (ids.length > 0) {
+        const { error } = await db.from("bi_roleta_spins").delete().in("id", ids);
+        if (error) throw new Error(error.message);
+      }
+      return { ok: true };
+    }
+    const row = {
+      period_id: data.period_id,
+      seller_name: data.seller_name,
+      spin_date: data.spin_date,
+      wheel: "manual",
+      source: "manual_mes",
+      prize_label: "Roleta do mês",
+      prize_value_eur: value,
+      prize_value_brl: 0,
+      status: "girada",
+      notes: data.notes ?? null,
+    };
+    if (ids.length > 0) {
+      const { error } = await db.from("bi_roleta_spins").update(row).eq("id", ids[0]);
+      if (error) throw new Error(error.message);
+      if (ids.length > 1) {
+        const { error: eDel } = await db.from("bi_roleta_spins").delete().in("id", ids.slice(1));
+        if (eDel) throw new Error(eDel.message);
+      }
+    } else {
+      const { error } = await db.from("bi_roleta_spins").insert(row);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
 // Gera os giros pendentes a partir das vendas do Fechamento marcadas com roleta
 // (1ª parcela apenas, sem renovações), sem duplicar o que já existe.
 export const generateRoletaSpinsFn = createServerFn({ method: "POST" })
