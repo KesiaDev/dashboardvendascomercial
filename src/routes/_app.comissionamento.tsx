@@ -19,7 +19,7 @@ import {
   fetchMyCommissionFn,
   type RoletaSpinRow,
 } from "@/lib/commission.functions";
-import { RoletaSpinsCard } from "@/components/roleta-spins";
+import { RoletaManualCard } from "@/components/roleta-manual";
 import { useAppAuth } from "@/lib/app-auth";
 import { sellerNameForEmail } from "@/lib/auth";
 import { FALLBACK_EUR_BRL, eurBrlRate } from "@/lib/eur-rate";
@@ -640,7 +640,7 @@ function Dashboard() {
 
       {/* ── Roleta ── */}
       {activePeriod && (
-        <RoletaSpinsCard
+        <RoletaManualCard
           period={activePeriod}
           sellerNames={sellers.filter((x: any) => x.is_active).map((x: any) => x.seller_name)}
         />
