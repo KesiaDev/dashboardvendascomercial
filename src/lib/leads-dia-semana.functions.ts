@@ -74,7 +74,7 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
   .inputValidator((d: { from: string; to: string }) => d)
   .handler(async ({ data }): Promise<LeadsDiaSemanaResult> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { leadBucket, LEADS_ORIGINS, levantouMao } = await import(
+    const { leadBucket, LEADS_ORIGINS, levantouMao, entregueAoComercial } = await import(
       "@/lib/leads-comercial.server"
     );
 
@@ -91,9 +91,14 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
       origin_name: string | null;
       contact_tags: string[] | null;
       stage: string | null;
+      contact_id: string | null;
     }>(
       ({ from, to }) =>
-        f(supabaseAdmin.from("clint_deals").select("created_at,origin_name,contact_tags,stage"))
+        f(
+          supabaseAdmin
+            .from("clint_deals")
+            .select("created_at,origin_name,contact_tags,stage,contact_id"),
+        )
           .order("created_at", { ascending: true })
           .range(from, to),
       () => f(supabaseAdmin.from("clint_deals").select("*", { count: "exact", head: true })),
@@ -110,14 +115,25 @@ export const fetchLeadsDiaSemanaFn = createServerFn({ method: "GET" })
     const bucketSet = new Set<string>();
     const estagios = new Map<string, { leads: number; atendido: boolean }>();
     let totalAtendidos = 0;
+    // O mesmo contato pode ter negócio no funil de marketing e no comercial:
+    // conta uma vez só (a primeira entrada, por data).
+    const vistos = new Set<string>();
 
     for (const r of rows) {
       const cls = leadBucket(r.origin_name, r.contact_tags ?? null);
       if (!cls) continue;
+      if (r.contact_id) {
+        if (vistos.has(r.contact_id)) continue;
+        vistos.add(r.contact_id);
+      }
       bucketSet.add(cls.bucket);
       const { dow, date, hour } = lisbonParts(r.created_at);
-      const atendido = levantouMao(r.stage);
+      const mkt = /minicurso|ebook/i.test(String(r.origin_name ?? ""));
+      const atendido = mkt
+        ? entregueAoComercial(r.contact_tags ?? null)
+        : levantouMao(r.stage);
       if (atendido) totalAtendidos++;
+
 
       const est = String(r.stage ?? "").trim() || "Sem estágio";
       const e = estagios.get(est) ?? { leads: 0, atendido };
